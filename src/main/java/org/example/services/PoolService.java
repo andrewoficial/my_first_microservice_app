@@ -1,6 +1,6 @@
 package org.example.services;
 
-import org.example.ProtocolsList;
+import org.example.utilites.ProtocolsList;
 import org.example.device.*;
 
 import javax.swing.*;
@@ -34,16 +34,16 @@ public class PoolService implements Runnable{
                 millisPrev = System.currentTimeMillis();
                 SomeDevice device = null;
                 switch (protocol) {
-                    case ProtocolsList.IGM10ASCII -> {
+                    case IGM10ASCII -> {
                         device = new IGM_10(comPorts.activePort);
                     }
-                    case ProtocolsList.ARD_BAD_VOLTMETER -> {
+                    case ARD_BAD_VOLTMETER -> {
                         device = new ARD_BAD_VLT(comPorts.activePort);
                     }
-                    case ProtocolsList.ARD_BAD_FEE_BRD -> {
+                    case ARD_BAD_FEE_BRD -> {
                         device = new ARD_BAD_FEE_BRD(comPorts.activePort);
                     }
-                    case ProtocolsList.ARD_FEE_BRD_METER -> {
+                    case ARD_FEE_BRD_METER -> {
                         device = new ARD_FEE_BRD_METER(comPorts.activePort);
                     }
                 }
@@ -55,14 +55,15 @@ public class PoolService implements Runnable{
                 //System.out.println(dtf.format(now)); //2016/11/16 12:08:43
 
                 if (device.hasAnswer()) {
-                    String uxAnswer = receivedText.getText() + "\n" + dtf.format(now) + " " + device.getAnswer();
-                    receivedText.setText(uxAnswer);
+                    String uxAnswer = "\n" + dtf.format(now) + " " + device.getAnswer().trim();
+                    receivedText.setText(receivedText.getText() + uxAnswer);
 
                     logSome(uxAnswer);
                 } else {
-                    String uxAnswer = receivedText.getText() + "\n" + dtf.format(now) + " " + device.getAnswer();
-                    receivedText.setText(uxAnswer);
-                    logSome(uxAnswer);
+                    String uxAnswer = "\n" + dtf.format(now) + " " + device.getAnswer().trim();
+                    receivedText.setText(receivedText.getText() + uxAnswer);
+
+                    logSome(uxAnswer );
                 }
                 System.out.println();
             }

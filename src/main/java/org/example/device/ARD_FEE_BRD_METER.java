@@ -28,10 +28,11 @@ public class ARD_FEE_BRD_METER implements SerialPortDataListener, SomeDevice {
     }
 
     public void enable() {
-
         //SerialPort comPort = SerialPort.getCommPort(portName);
         //System.out.println(comPort.getDescriptivePortName());
-        comPort.openPort();
+        if(! comPort.isOpen()){
+            comPort.openPort();
+        }
         comPort.flushDataListener();
         comPort.removeDataListener();
         //comPort.addDataListener(this);

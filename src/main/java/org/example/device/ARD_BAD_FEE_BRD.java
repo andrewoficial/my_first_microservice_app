@@ -31,6 +31,7 @@ public class ARD_BAD_FEE_BRD implements SerialPortDataListener, SomeDevice {
 
         //SerialPort comPort = SerialPort.getCommPort(portName);
         //System.out.println(comPort.getDescriptivePortName());
+
         comPort.openPort();
         comPort.flushDataListener();
         comPort.removeDataListener();

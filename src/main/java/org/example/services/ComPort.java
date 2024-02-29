@@ -1,4 +1,4 @@
-package org.example;
+package org.example.services;
 
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
@@ -60,12 +60,5 @@ public class ComPort {
         Arrays.fill(ports, null);
         ports = SerialPort.getCommPorts();
     }
-    public void start() {
-        showAllPort();
-        Scanner reader = new Scanner(System.in);
-        System.out.print("Port? ");
-        int p = reader.nextInt();
-        setPort(p);
-        reader.close();
-    }
+
 }

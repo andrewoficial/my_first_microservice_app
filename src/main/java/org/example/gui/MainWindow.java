@@ -1,9 +1,12 @@
-package org.example;
+package org.example.gui;
 
 import com.fazecast.jSerialComm.SerialPort;
-import org.example.services.PoolLogger;
+import org.example.Main;
+import org.example.utilites.BaudRatesList;
+import org.example.utilites.ProtocolsList;
 import org.example.services.PoolService;
-import org.w3c.dom.ls.LSOutput;
+import org.example.utilites.MyUtilities;
+import org.springframework.boot.SpringApplication;
 
 import javax.swing.*;
 import java.awt.event.*;
@@ -43,6 +46,7 @@ public class MainWindow extends JDialog {
     private ProtocolsList protocol = ProtocolsList.IGM10ASCII;
 
     public MainWindow() {
+        SpringApplication.run(Main.class);
         setContentPane(contentPane);
         setModal(true);
         //getRootPane().setDefaultButton(buttonOK);
@@ -130,7 +134,7 @@ public class MainWindow extends JDialog {
                     Thread myThread = new Thread(new PoolService(protocol, textToSendString, receivedText, CB_Pool));
                     myThread.setName("Pool_"+tabbedPane1.getTitleAt(tabbedPane1.getSelectedIndex()));
                     threads.add(myThread);
-                    threads.getLast().start();
+                    myThread.start();
                     System.out.println("Поток создан и запущен");
                     System.out.println(myThread.getState());
                 }else if(pool && MyUtilities.containThreadByName(threads, thName)){//Надо запустить опрос и поток уже существует
@@ -144,7 +148,7 @@ public class MainWindow extends JDialog {
                             myThread = new Thread(new PoolService(protocol, textToSendString, receivedText, CB_Pool));
                             myThread.setName("Pool_"+tabbedPane1.getTitleAt(tabbedPane1.getSelectedIndex()));
                             threads.add(myThread);
-                            threads.getLast().start();
+                            myThread.start();
                             System.out.println("Поток запущен повторно");
                         }
                     }else{
