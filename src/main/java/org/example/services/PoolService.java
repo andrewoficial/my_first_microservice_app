@@ -55,13 +55,23 @@ public class PoolService implements Runnable{
                 //System.out.println(dtf.format(now)); //2016/11/16 12:08:43
 
                 if (device.hasAnswer()) {
-                    receivedText.setText(receivedText.getText() + "\n" + dtf.format(now) + " " + device.getAnswer());
+                    String uxAnswer = receivedText.getText() + "\n" + dtf.format(now) + " " + device.getAnswer();
+                    receivedText.setText(uxAnswer);
+
+                    logSome(uxAnswer);
                 } else {
-                    receivedText.setText(receivedText.getText() + "\n" + dtf.format(now) + " " + device.getAnswer());
+                    String uxAnswer = receivedText.getText() + "\n" + dtf.format(now) + " " + device.getAnswer();
+                    receivedText.setText(uxAnswer);
+                    logSome(uxAnswer);
                 }
                 System.out.println();
             }
 
         }
+    }
+
+    private void logSome(String str){
+        PoolLogger poolLogger = PoolLogger.getInstance();
+        PoolLogger.writeLine(str);
     }
 }

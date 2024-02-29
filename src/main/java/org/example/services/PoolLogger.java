@@ -47,7 +47,7 @@ public class PoolLogger {
         PoolLogger.logFile = logFile;
     }
 
-    public void writeLine (String line){
+    public static void writeLine (String line){
         FileWriter fw = null;
         try {
             fw = new FileWriter(logFile, true);

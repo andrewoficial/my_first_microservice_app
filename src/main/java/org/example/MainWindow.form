@@ -283,7 +283,7 @@
                     </constraints>
                     <properties>
                       <background color="-16777216"/>
-                      <enabled value="false"/>
+                      <enabled value="true"/>
                       <foreground color="-1"/>
                       <text value="Лог"/>
                     </properties>

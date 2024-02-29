@@ -1,6 +1,7 @@
 package org.example;
 
 import com.fazecast.jSerialComm.SerialPort;
+import org.example.services.PoolLogger;
 import org.example.services.PoolService;
 import org.w3c.dom.ls.LSOutput;
 
@@ -211,4 +212,6 @@ public class MainWindow extends JDialog {
     private void createUIComponents() {
         // TODO: place custom component creation code here
     }
+
+
 }
