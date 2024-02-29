@@ -1,3 +1,8 @@
+/*
+Файл содержит активное соединение по ком-порту
+ToDo
+Переделать в коллекцию асинхронную (volatite)
+ */
 package org.example.services;
 
 import com.fazecast.jSerialComm.SerialPort;

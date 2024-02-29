@@ -1,3 +1,6 @@
+/*
+Перечень типичных скоростей ком-порта
+ */
 package org.example.utilites;
 
 import java.util.*;

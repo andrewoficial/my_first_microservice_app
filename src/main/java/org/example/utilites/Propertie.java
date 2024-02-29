@@ -14,18 +14,12 @@ import java.util.Properties;
  */
 
 public class Propertie {
-    private String gitLogin;
-    private String gitPass;
-    private String gitAdress;
-    private String tgToken;
-    private String tgName;
+    private String lastComPort;
+
 
     public Propertie(){
-        this.gitPass = null;
-        this.gitLogin = null;
 
-        Propertie properties = new Propertie();
-        InputStream  inputStream = null;
+
         System.out.println("Start load configAcces.properties");
         try{
             File f = new File("conf"+"configAcces.properties");
@@ -73,62 +67,17 @@ public class Propertie {
             }
         }
 
-            /*
-            ClassLoader classLoader = getClass().getClassLoader();
-            InputStream  inputStream2 = classLoader.getResourceAsStream(myObj);
-            InputStream inputStream2 = new FileInputStream(myObj.getAbsolutePath());
-            if (inputStream2 != null) {
+        // Получение значений из файла
+        String lastComPortReadet = props.getProperty("lastComPort");
+        System.out.println(lastComPortReadet);
 
-                inputStream = inputStream2;
-            } else {
-                System.out.println("Resource configAcces.properties not found");
-                inputStream = new FileInputStream("src/main/resources/configAcces.properties");
-            }
-            */
-
-
-
-
-
-
-        // Получение значений логина и пароля из файла
-        String username = props.getProperty("username");
-        String password = props.getProperty("password");
-        String addressGit = props.getProperty("addressGit");
-        String tgToken = props.getProperty("tgtoken");
-        String tgName = props.getProperty("tgname");
-        System.out.println(username);
-        System.out.println(password.substring(0, 3));
-        System.out.println(addressGit);
-        System.out.println(tgToken.substring(0,3));
-        System.out.println(tgName);
-
-
-        this.gitLogin = username;
-        this.gitPass = password;
-        this.gitAdress = addressGit;
-        this.tgToken = tgToken;
-        this.tgName = tgName;
+        this.lastComPort = lastComPortReadet;
     }
 
-    public String getTgToken() {
-        return tgToken;
+    public String getLastComPort() {
+        return lastComPort;
     }
 
-    public String getTgName() {
-        return tgName;
-    }
 
-    public String getGitLogin() {
-        return gitLogin;
-    }
-
-    public String getGitPass() {
-        return gitPass;
-    }
-
-    public String getGitAdress() {
-        return gitAdress;
-    }
 }
 

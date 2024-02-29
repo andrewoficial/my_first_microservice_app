@@ -3,6 +3,7 @@ package org.example;
 
 import org.example.gui.MainWindow;
 import org.example.services.ComPort;
+import org.example.utilites.Propertie;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -13,7 +14,7 @@ public class Main {
 
     public static void main(String[] args) {
 
-
+        Propertie prop = new Propertie();
         MainWindow dialog = new MainWindow();
         dialog.pack();
 

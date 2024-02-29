@@ -1,3 +1,8 @@
+/*
+Процесс (не демон), запускающийся, когда пользователь начинает опрос прибора
+ToDo
+Логирование последнего значения не только в файл но и в б.д
+ */
 package org.example.services;
 
 import org.example.utilites.ProtocolsList;

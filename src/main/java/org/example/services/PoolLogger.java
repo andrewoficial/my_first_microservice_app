@@ -1,3 +1,7 @@
+/*
+Сингл-тон объект, который при ините создает файл и если нужно дописывает в него принимаемые ответы
+
+ */
 package org.example.services;
 
 import java.io.BufferedWriter;

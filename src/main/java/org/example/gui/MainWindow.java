@@ -1,3 +1,6 @@
+/*
+Файл содержит код, выполняющийся при взаимодействии с виндовс-окном приложения
+ */
 package org.example.gui;
 
 import com.fazecast.jSerialComm.SerialPort;

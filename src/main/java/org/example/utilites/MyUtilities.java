@@ -1,3 +1,6 @@
+/*
+Вспомогательные сложно классифицируемые утилиты
+ */
 package org.example.utilites;
 
 import java.util.ArrayList;

@@ -1,3 +1,6 @@
+/*
+Перечень протоколов обмена данными с приборами
+ */
 package org.example.utilites;
 
 import java.util.ArrayList;
