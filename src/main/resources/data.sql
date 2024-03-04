@@ -1,6 +1,8 @@
-INSERT INTO tb_test (created_at, in_archive, name, description, url)
-VALUES ('01-01-2022', false, 'Натюрморт', 'Описание', 'stilllife');
+-- INSERT INTO tb_test (created_at, in_archive, name, description, url)
+-- VALUES ('01-01-2022', false, 'Натюрморт', 'Описание', 'stilllife');
 
+SELECT * FROM tb_test
+WHERE url='stilllife';
 
 -- INSERT INTO tb_picture (created_at, in_archive, description, genre_url, image_path, name)
 -- VALUES ('01-01-2023', false, 'Описание...', 'stilllife', 'picture01.png', 'Картина №1');
