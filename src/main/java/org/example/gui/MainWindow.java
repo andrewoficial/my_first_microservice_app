@@ -49,7 +49,7 @@ public class MainWindow extends JDialog {
     private ProtocolsList protocol = ProtocolsList.IGM10ASCII;
 
     public MainWindow() {
-        SpringApplication.run(Main.class);
+        //SpringApplication.run(Main.class);
         setContentPane(contentPane);
         setModal(true);
         //getRootPane().setDefaultButton(buttonOK);
@@ -163,7 +163,9 @@ public class MainWindow extends JDialog {
                     if( myThread != null){
                         System.out.println(myThread.getState()); //RUNNABLE
                         if(myThread.isAlive()){
-                            myThread.interrupt();
+                            while (myThread.isAlive()){
+                                myThread.interrupt();
+                            }
                             System.out.println("Поток приостановлен");
                         }
                     }else{

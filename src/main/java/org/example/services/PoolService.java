@@ -11,6 +11,7 @@ import org.example.device.*;
 import javax.swing.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.TimeUnit;
 
 import static org.example.Main.comPorts;
 
@@ -21,6 +22,8 @@ public class PoolService implements Runnable{
     private JCheckBox CB_Pool;
     private JTextPane receivedText;
 
+    DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    LocalDateTime now = LocalDateTime.now();
     public PoolService(ProtocolsList protocol, String textToSendString, JTextPane receivedText,JCheckBox CB_Pool) {
         super();
         this.protocol = protocol;
@@ -55,22 +58,25 @@ public class PoolService implements Runnable{
 
                 assert device != null;
                 device.sendData(textToSendString);
-                DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-                LocalDateTime now = LocalDateTime.now();
-                //System.out.println(dtf.format(now)); //2016/11/16 12:08:43
+                now = LocalDateTime.now();
 
                 if (device.hasAnswer()) {
                     String uxAnswer = "\n" + dtf.format(now) + " " + device.getAnswer().trim();
                     receivedText.setText(receivedText.getText() + uxAnswer);
-
                     logSome(uxAnswer);
                 } else {
                     String uxAnswer = "\n" + dtf.format(now) + " " + device.getAnswer().trim();
                     receivedText.setText(receivedText.getText() + uxAnswer);
-
                     logSome(uxAnswer );
                 }
                 System.out.println();
+            }else {
+                try {
+                    Thread.sleep(millisLimit/3);
+                } catch (InterruptedException e) {
+                    //throw new RuntimeException(e);
+                }
+
             }
 
         }
