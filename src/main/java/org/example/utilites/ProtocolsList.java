@@ -46,4 +46,18 @@ public enum ProtocolsList {
         List<String> values = ProtocolsList.getValues();
         return ProtocolsList.valueOf(values.get(number));
     }
+
+    public static int getNumber (ProtocolsList pr){
+        List<String> values = ProtocolsList.getValues();
+        for (int i = 0; i < values.size(); i++) {
+            //System.out.println("Compare " + values.get(i) + " and " + pr.value);
+            if(values.get(i).equalsIgnoreCase(pr.value)){
+                return i;
+            }
+        }
+        return -1;
+
+    }
+
+
 }

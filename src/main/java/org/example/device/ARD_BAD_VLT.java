@@ -20,7 +20,7 @@ public class ARD_BAD_VLT implements SerialPortDataListener, SomeDevice {
 
     private boolean subsequentLaunchComWait = false;
     public ARD_BAD_VLT(SerialPort port){
-        System.out.println("Create obj");
+        //System.out.println("Create obj");
         this.comPort = port;
         this.enable();
     }
@@ -33,7 +33,7 @@ public class ARD_BAD_VLT implements SerialPortDataListener, SomeDevice {
         comPort.flushDataListener();
         comPort.removeDataListener();
         //comPort.addDataListener(this);
-        System.out.println("open port and add listener");
+        //System.out.println("open port and add listener");
         int timeout = 1000 - comPort.getBaudRate();
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, timeout, timeout);
     }

@@ -22,7 +22,7 @@ public class ARD_BAD_FEE_BRD implements SerialPortDataListener, SomeDevice {
 
     private boolean subsequentLaunchComWait = false;
     public ARD_BAD_FEE_BRD(SerialPort port){
-        System.out.println("Create obj");
+        //System.out.println("Create obj");
         this.comPort = port;
         this.enable();
     }

@@ -18,7 +18,7 @@ public class IGM_10 implements SerialPortDataListener, SomeDevice {
     private volatile boolean hasAnswer = false;
     private volatile String lastAnswer = "";
     public IGM_10(SerialPort port){
-        System.out.println("Create obj");
+        //System.out.println("Create obj");
         this.comPort = port;
         this.enable();
     }
@@ -56,7 +56,7 @@ public class IGM_10 implements SerialPortDataListener, SomeDevice {
 
     public void sendData(String data){
         //byte [] buffer = {0x46, 0x0D};
-        System.out.println("sendData");
+        //System.out.println("sendData");
         Charset charset = StandardCharsets.US_ASCII;
         byte[] buffer = data.getBytes(charset);
         int timeout = 1000 - comPort.getBaudRate();
