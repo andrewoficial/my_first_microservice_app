@@ -9,19 +9,38 @@
 package org.example.web.controller;
 
 
+import org.example.web.entity.MyUser;
 import org.example.web.service.StateMeasureService;
+import org.example.web.service.UserService;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @Validated // в классе будет использоваться валидация по аннотациям
 @RestController
-@RequestMapping("/measure_archive") // обработка запросов, начинающихся с ./genre
+@RequestMapping("/api/v1/apps") // обработка запросов, начинающихся с ./genre
 public class StateMeasureController {
     private final StateMeasureService stateMeasureService;
+    private final UserService userService;
 
-    public StateMeasureController(StateMeasureService StateMeasureService) {
+    public StateMeasureController(StateMeasureService StateMeasureService, UserService userService) {
         this.stateMeasureService = StateMeasureService;
+        this.userService = userService;
+    }
+
+    @GetMapping("/welcome")
+    public String welcome(){
+        return "Welcome";
+    }
+
+    @GetMapping("/sys-setting")
+    public String setting(){
+        return  "Setting";
+    }
+
+    @PostMapping("/new-user")
+    public String addUser(@RequestBody MyUser user){
+        userService.AddUser(user);
+        return user.getName()+" is saved";
     }
 
 

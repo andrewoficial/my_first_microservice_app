@@ -99,6 +99,10 @@ public class PoolService implements Runnable{
 
                 try {
                     Thread.sleep(Math.min((millisLimit / 3), 300L));
+                    /*
+                    ToDo
+                    Проверить первый запуск, нет ли лишнего ожидания
+                     */
                 } catch (InterruptedException e) {
                     //throw new RuntimeException(e);
                 }

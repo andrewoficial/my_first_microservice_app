@@ -4,11 +4,14 @@
 package org.example.gui;
 
 import com.fazecast.jSerialComm.SerialPort;
+import org.example.Main;
 import org.example.services.ComPort;
 import org.example.utilites.BaudRatesList;
 import org.example.utilites.ProtocolsList;
 import org.example.services.PoolService;
 import org.example.utilites.MyUtilities;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
@@ -61,7 +64,7 @@ public class MainWindow extends JDialog {
     private ProtocolsList protocol = ProtocolsList.IGM10ASCII;
 
     public MainWindow() {
-        //SpringApplication.run(Main.class);
+
         poolComConnections.add(new ComPort());
 
         // Создание строки главного меню

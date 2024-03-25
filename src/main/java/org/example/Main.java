@@ -16,9 +16,11 @@ public class Main {
 
         Propertie prop = new Propertie();
         MainWindow dialog = new MainWindow();
+        SpringApplication.run(Main.class);
         dialog.pack();
 
         dialog.setVisible(true);
+
         System.exit(0);
     }
 }
