@@ -18,22 +18,18 @@ public class IGM_10 implements SerialPortDataListener, SomeDevice {
     private volatile boolean hasAnswer = false;
     private volatile String lastAnswer = "";
     public IGM_10(SerialPort port){
-        //System.out.println("Create obj");
+        System.out.println("Create obj IGM_10");
         this.comPort = port;
         this.enable();
     }
 
     public void enable() {
-
-        //SerialPort comPort = SerialPort.getCommPort(portName);
-        //System.out.println(comPort.getDescriptivePortName());
         comPort.openPort();
         comPort.flushDataListener();
         comPort.removeDataListener();
-        //comPort.addDataListener(this);
-        System.out.println("open port and add listener");
-        int timeout = 1000 - comPort.getBaudRate();
+        int timeout = 15000 - comPort.getBaudRate();
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, timeout, timeout);
+        System.out.println("open port and set timeOut");
     }
 
     @Override
@@ -47,7 +43,7 @@ public class IGM_10 implements SerialPortDataListener, SomeDevice {
     @Override
     public void serialEvent(SerialPortEvent event) {
         byte[] newData = event.getReceivedData();
-        System.out.println("Received data of size: " + newData.length);
+        System.out.println("Received data via eventListener on IGM_10 of size: " + newData.length);
         for (byte newDatum : newData) System.out.print((char) newDatum);
         System.out.println("\n");
         hasAnswer = true;
@@ -55,12 +51,11 @@ public class IGM_10 implements SerialPortDataListener, SomeDevice {
     }
 
     public void sendData(String data){
-        //byte [] buffer = {0x46, 0x0D};
-        //System.out.println("sendData");
+        System.out.println("sendData: [" + data + "]");
+        data = data + '\n';
+
         Charset charset = StandardCharsets.US_ASCII;
         byte[] buffer = data.getBytes(charset);
-        int timeout = 1000 - comPort.getBaudRate();
-        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, timeout, timeout);
         comPort.writeBytes(buffer, buffer.length);
         this.loop();
     }
@@ -69,10 +64,6 @@ public class IGM_10 implements SerialPortDataListener, SomeDevice {
     private void loop() {
         int errCount = 0;
         int errLimit = 5;
-        int timeout = 1000 - comPort.getBaudRate();
-        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, timeout, timeout);
-        InputStream comInput = comPort.getInputStream();
-        OutputStream comOutput = comPort.getOutputStream();
         int received = comPort.bytesAvailable();
         long millisLimit = 5000L;
         long millisDela = 0L;
@@ -84,22 +75,17 @@ public class IGM_10 implements SerialPortDataListener, SomeDevice {
             if(received > 0) {
                 byte[] buffer = new byte[comPort.bytesAvailable()];
                 comPort.readBytes(buffer, comPort.bytesAvailable());
-                for (int i = 0; i < buffer.length; i++) {
-                    System.out.println(buffer[i] + "-");
-                }
+                //for (int i = 0; i < buffer.length; i++) {
+                    //System.out.println(buffer[i] + "-");
+                //}
                 //lastAnswer = new String(buffer, StandardCharsets.US_ASCII);
 
-                String utf8String = "ff";
                 try {
                     lastAnswer = new String(buffer, "Cp1251");
                 } catch (UnsupportedEncodingException e) {
                     lastAnswer = new String(buffer);
                 }
-                System.out.println(utf8String);
                 hasAnswer = true;
-                /*
-                ALMH?
-                 */
             }
         System.out.println("Set flags" + hasAnswer + " received " + received);
     }
@@ -111,7 +97,7 @@ public class IGM_10 implements SerialPortDataListener, SomeDevice {
     }
 
     public boolean hasAnswer(){
-        System.out.println("return flags" + hasAnswer);
+        System.out.println("return flag " + hasAnswer);
         return hasAnswer;
     }
 }

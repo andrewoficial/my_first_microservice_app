@@ -16,6 +16,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
@@ -56,6 +58,7 @@ public class MainWindow extends JDialog {
     private JTabbedPane tabbedPane1;
     private JButton BT_AddDev;
     private JButton BT_RemoveDev;
+    private JTextField IN_PoolDelay;
     private JButton buttonOK;
     private JButton buttonCancel;
     private String textToSendString = "";
@@ -161,9 +164,20 @@ public class MainWindow extends JDialog {
                 String thName = "Pool_"+tabbedPane1.getTitleAt(tabbedPane1.getSelectedIndex());
                 System.out.println("Начинаю работу с потоком " + thName);
                 boolean pool = CB_Pool.isSelected();
+                int poolDelay = 1000;
+                try{
+                    poolDelay = Integer.parseInt(IN_PoolDelay.getText());
+                }catch (Exception e1){
+                    IN_PoolDelay.setText("1000");
+                }
                 if(pool && (! MyUtilities.containThreadByName(threads, thName))){ //Надо запустить опрос но потока еще нету
                     System.out.println("Надо запустить опрос но потока еще нету");
-                    poolServices.add(new PoolService(protocol, textToSendValue.get(tabbedPane1.getSelectedIndex()), logDataTransferJtextPanel.get(tabbedPane1.getSelectedIndex()), CB_Pool,  poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort));
+                    poolServices.add(new PoolService(protocol,
+                            textToSendValue.get(tabbedPane1.getSelectedIndex()),
+                            logDataTransferJtextPanel.get(tabbedPane1.getSelectedIndex()),
+                            CB_Pool,
+                            poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort,
+                            poolDelay));
                     Thread myThread = new Thread(poolServices.get(poolServices.size() - 1));
                     myThread.setName("Pool_"+tabbedPane1.getTitleAt(tabbedPane1.getSelectedIndex()));
                     threads.add(myThread);
@@ -178,7 +192,12 @@ public class MainWindow extends JDialog {
                         System.out.println(myThread.getState());
                         if(! myThread.isAlive()){
                             threads.remove(MyUtilities.getThreadByName(threads, thName));
-                            poolServices.add(new PoolService(protocol, textToSendValue.get(tabbedPane1.getSelectedIndex()), logDataTransferJtextPanel.get(tabbedPane1.getSelectedIndex()), CB_Pool, poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort));
+                            poolServices.add(new PoolService(protocol,
+                                    textToSendValue.get(tabbedPane1.getSelectedIndex()),
+                                    logDataTransferJtextPanel.get(tabbedPane1.getSelectedIndex()),
+                                    CB_Pool,
+                                    poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort,
+                                    poolDelay));
                             myThread = new Thread(poolServices.get(poolServices.size() - 1));
 
                             myThread.setName("Pool_"+tabbedPane1.getTitleAt(tabbedPane1.getSelectedIndex()));
@@ -305,26 +324,56 @@ public class MainWindow extends JDialog {
                 boolean threadExist = MyUtilities.containThreadByName(threads, thName);
                 CB_Pool.setSelected(threadExist);
                 if(threadExist){
-
-
                     System.out.println(poolServices.get(tabbedPane1.getSelectedIndex()).getProtocolForJCombo());
                     CB_Protocol.setSelectedIndex(poolServices.get(tabbedPane1.getSelectedIndex()).getProtocolForJCombo());
                     CB_ComPorts.setSelectedIndex(poolServices.get(tabbedPane1.getSelectedIndex()).getComPortForJCombo());
                     //CB_Protocol.setSelectedIndex(ProtocolsList.getByName);
                 }
-
-
-
             }
         });
 
+
+
         textToSendValue.add(textToSend.getText());
         BT_AddDev.doClick();
+
+        textToSend.getDocument().addDocumentListener(new DocumentListener() {
+            public void changedUpdate(DocumentEvent e) {
+                update();
+            }
+            public void removeUpdate(DocumentEvent e) {
+                update();
+            }
+            public void insertUpdate(DocumentEvent e) {
+                update();
+            }
+            public void update() {
+                System.out.println("Update command");
+                if(poolServices.size() > tabbedPane1.getSelectedIndex())
+                    poolServices.get(tabbedPane1.getSelectedIndex()).setTextToSendString(textToSend.getText());
+            }
+        });
+
+        IN_PoolDelay.getDocument().addDocumentListener(new DocumentListener() {
+            public void changedUpdate(DocumentEvent e) {
+                update();
+            }
+            public void removeUpdate(DocumentEvent e) {
+                update();
+            }
+            public void insertUpdate(DocumentEvent e) {
+                update();
+            }
+            public void update() {
+                System.out.println("Update PoolDelay");
+                if(poolServices.get(tabbedPane1.getSelectedIndex()) != null)
+                    poolServices.get(tabbedPane1.getSelectedIndex()).setPoolDelay(IN_PoolDelay.getText());
+            }
+        });
     }
 
 
     private void onOK() {
-        // add your code here
         System.out.println("Pressed BT_Ok");
         dispose();
     }
