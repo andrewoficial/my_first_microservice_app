@@ -22,7 +22,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
 
-
+@SpringBootApplication
 public class MainWindow extends JDialog {
 
     private ArrayList <Thread> threads = new ArrayList<>();
@@ -61,7 +61,7 @@ public class MainWindow extends JDialog {
     private JTextField IN_PoolDelay;
     private JButton buttonOK;
     private JButton buttonCancel;
-    private String textToSendString = "";
+
 
 
     private ProtocolsList protocol = ProtocolsList.IGM10ASCII;
@@ -240,7 +240,7 @@ public class MainWindow extends JDialog {
                 System.out.println("Pressed BT_Send");
                 protocol = ProtocolsList.getLikeArrayEnum(CB_Protocol.getSelectedIndex());
                 System.out.println("Protocol: " + protocol);
-                textToSendString = textToSend.getText();
+                textToSendValue.set(tabbedPane1.getSelectedIndex(), textToSend.getText());
                 //sendCommand(textToSendString);
 
             }
@@ -333,9 +333,11 @@ public class MainWindow extends JDialog {
         });
 
 
-
+        //SpringApplication.run(MainWindow.class);
+        textToSendValue.add(textToSend.getText());
         textToSendValue.add(textToSend.getText());
         BT_AddDev.doClick();
+
 
         textToSend.getDocument().addDocumentListener(new DocumentListener() {
             public void changedUpdate(DocumentEvent e) {
@@ -349,7 +351,9 @@ public class MainWindow extends JDialog {
             }
             public void update() {
                 System.out.println("Update command");
-                if(poolServices.size() > tabbedPane1.getSelectedIndex())
+                if(tabbedPane1.getSelectedIndex() < textToSendValue.size())
+                    textToSendValue.set(tabbedPane1.getSelectedIndex(), textToSend.getText());
+                if(tabbedPane1.getSelectedIndex() < poolServices.size())
                     poolServices.get(tabbedPane1.getSelectedIndex()).setTextToSendString(textToSend.getText());
             }
         });

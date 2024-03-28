@@ -93,10 +93,10 @@ public class PoolService implements Runnable{
 
                 if (device.hasAnswer()) {
                     uxAnswer.append(device.getAnswer());
-                    receivedText.setText(receivedText.getText() + uxAnswer.toString());
+                    receivedText.setText(uxAnswer.toString() + receivedText.getText());
                     logSome(uxAnswer.toString());
                 } else {
-                    receivedText.setText(receivedText.getText() + uxAnswer.toString());
+                    receivedText.setText(uxAnswer.toString() + receivedText.getText());
                     logSome(uxAnswer.toString());
                 }
                 System.out.println();

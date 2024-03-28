@@ -16,7 +16,7 @@ import static org.example.Main.comPorts;
 public class IGM_10 implements SerialPortDataListener, SomeDevice {
     private final SerialPort comPort;
     private volatile boolean hasAnswer = false;
-    private volatile String lastAnswer = "";
+    private volatile StringBuilder lastAnswer;
     public IGM_10(SerialPort port){
         System.out.println("Create obj IGM_10");
         this.comPort = port;
@@ -47,7 +47,6 @@ public class IGM_10 implements SerialPortDataListener, SomeDevice {
         for (byte newDatum : newData) System.out.print((char) newDatum);
         System.out.println("\n");
         hasAnswer = true;
-        lastAnswer = "Something";
     }
 
     public void sendData(String data){
@@ -81,15 +80,24 @@ public class IGM_10 implements SerialPortDataListener, SomeDevice {
                 //lastAnswer = new String(buffer, StandardCharsets.US_ASCII);
 
                 try {
-                    lastAnswer = new String(buffer, "Cp1251");
+
+                    lastAnswer = new StringBuilder(new String(buffer, "Cp1251"));
                 } catch (UnsupportedEncodingException e) {
-                    lastAnswer = new String(buffer);
+                    lastAnswer = new StringBuilder(new String(buffer));
                 }
                 hasAnswer = true;
             }
         System.out.println("Set flags" + hasAnswer + " received " + received);
     }
     public String getAnswer(){
+        int index = lastAnswer.indexOf("\n");
+        if(index > 0){
+            lastAnswer.deleteCharAt(index);
+        }
+        index = lastAnswer.indexOf("\r");
+        if(index > 0){
+            lastAnswer.deleteCharAt(index);
+        }
         String forReturn = new String(lastAnswer);
         lastAnswer = null;
         hasAnswer = false;
