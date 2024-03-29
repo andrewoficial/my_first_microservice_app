@@ -6,10 +6,8 @@ package org.example.gui;
 import com.fazecast.jSerialComm.SerialPort;
 import org.example.Main;
 import org.example.services.ComPort;
-import org.example.utilites.BaudRatesList;
-import org.example.utilites.ProtocolsList;
+import org.example.utilites.*;
 import org.example.services.PoolService;
-import org.example.utilites.MyUtilities;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -21,10 +19,12 @@ import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
 
 @SpringBootApplication
 public class MainWindow extends JDialog {
-
+    private  MyProperties prop = new MyProperties();
     private ArrayList <Thread> threads = new ArrayList<>();
 
     private ArrayList <String> textToSendValue = new ArrayList<>();
@@ -69,6 +69,7 @@ public class MainWindow extends JDialog {
     public MainWindow() {
 
         poolComConnections.add(new ComPort());
+        MyUtilities.restoreLastComPort(poolComConnections.get(0), prop);
 
         // Создание строки главного меню
         JMenuBar menuBar = new JMenuBar();
@@ -87,38 +88,58 @@ public class MainWindow extends JDialog {
 
 
 
+        BaudRatesList[] baudRate = BaudRatesList.values();
+        for (int i = 0; i < baudRate.length; i++) {
+            CB_BaudRate.addItem( baudRate[i].getValue() + "");
+            if(prop.getLastComSpeed() == baudRate[i].getValue()){
+                CB_BaudRate.setSelectedIndex(i);
+            }
+        }
 
+        DataBitsList[] dataBits = DataBitsList.values();
+        for (int i = 0; i < dataBits.length; i++) {
+            CB_DataBits.addItem( dataBits[i].getValue() );
+            if(prop.getLastDataBits() == dataBits[i].getValue()){
+                CB_DataBits.setSelectedIndex(i);
+            }
+        }
 
+        ParityList[] parityLists = ParityList.values();
+        for (int i = 0; i < parityLists.length; i++) {
+            CB_Parity.addItem( parityLists[i].getName() );
+            if(prop.getLastParity().equalsIgnoreCase(parityLists[i].getName())){
+                CB_Parity.setSelectedIndex(i);
+            }
+        }
+
+        StopBitsList[] stopBitsLists = StopBitsList.values();
+        for (int i = 0; i < stopBitsLists.length; i++) {
+            CB_StopBit.addItem( stopBitsLists[i].getValue() );
+            if(prop.getLastStopBits() == stopBitsLists[i].getValue()){
+                CB_StopBit.setSelectedIndex(i);
+            }
+        }
         /*
-        addWindowListener(new WindowAdapter() {
-            public void windowClosing(WindowEvent e) {
-                //onCancel();
+        ToDo
+        fix me
+         */
+
+        for (int i = 0; i < poolComConnections.get(0).getAllPorts().size(); i++) {
+            SerialPort currentPort = poolComConnections.get(0).getAllPorts().get(i);
+            CB_ComPorts.addItem( currentPort.getSystemPortName() + " (" + MyUtilities.removeComWord(currentPort.getPortDescription()) + ")");
+            if(i == poolComConnections.get(0).getComNumber()){
+                CB_ComPorts.setSelectedIndex(i);
             }
-        });
-        */
-        // call onCancel() on ESCAPE
-        contentPane.registerKeyboardAction(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                //onCancel();
+        }
+
+        ProtocolsList[] protocolsLists = ProtocolsList.values();
+        for (int i = 0; i < protocolsLists.length; i++) {
+            CB_Protocol.addItem( protocolsLists[i].getValue() );
+            if(prop.getLastProtocol().equalsIgnoreCase(protocolsLists[i].getValue())){
+                CB_Protocol.setSelectedIndex(i);
             }
-        }, KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
-
-        for(BaudRatesList baudRate : BaudRatesList.values()){
-            CB_BaudRate.addItem( baudRate.getValue() + "");
-
-            //CB_ComPorts.addItem( port.getSystemPortName());
         }
-        CB_BaudRate.setSelectedIndex(6);
 
-
-        for (SerialPort port : poolComConnections.get(0).getAllPorts()) {
-            CB_ComPorts.addItem( port.getSystemPortName() + " (" + MyUtilities.removeComWord(port.getPortDescription()) + ")");
-            //CB_ComPorts.addItem( port.getSystemPortName());
-        }
-        for (ProtocolsList protocol : ProtocolsList.values()) {
-            CB_Protocol.addItem( protocol.getValue());
-            //CB_ComPorts.addItem( port.getSystemPortName());
-        }
         BT_Update.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -138,12 +159,22 @@ public class MainWindow extends JDialog {
             public void actionPerformed(ActionEvent e) {
                 System.out.println("Pressed BT_Open");
 
-                //System.out.println(CB_ComPorts.getSelectedIndex());
+
                 poolComConnections.get(tabbedPane1.getSelectedIndex()).setPort(CB_ComPorts.getSelectedIndex());
-                //System.out.println("Speed index:" + CB_BaudRate.getSelectedIndex());
-                System.out.println("Speed value:" + BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()));
-                poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort.setBaudRate(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()));
                 poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort.setComPortParameters(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()),8, 1, SerialPort.NO_PARITY, false);
+
+                poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort.setBaudRate(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()));
+                poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort.setNumDataBits(DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
+                poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort.setParity(ParityList.values()[CB_Parity.getSelectedIndex()].getValue()); //Работает за счет совпадения индексов с библиотечными
+                poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort.setNumStopBits(StopBitsList.getLikeArray(CB_StopBit.getSelectedIndex()));
+
+
+                prop.setLastComPort(poolComConnections.get(tabbedPane1.getSelectedIndex()).getCurrentComName());
+                prop.setLastComSpeed(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()));
+                prop.setLastDataBits(DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
+                prop.setLastParity(ParityList.values()[CB_Parity.getSelectedIndex()].getName());
+                prop.setLastStopBits(StopBitsList.getLikeArray(CB_StopBit.getSelectedIndex()));
+                prop.setLastProtocol(ProtocolsList.getLikeArray(CB_Protocol.getSelectedIndex()));
             }
         });
 

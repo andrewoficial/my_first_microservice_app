@@ -8,14 +8,21 @@ package org.example.services;
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
+import lombok.Getter;
+import org.example.utilites.MyUtilities;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Scanner;
 
 public class ComPort {
-    public SerialPort activePort;
-    SerialPort[] ports = SerialPort.getCommPorts();
+    public  SerialPort activePort;
+    private SerialPort[] ports = SerialPort.getCommPorts();
+
+    @Getter
+    private int comNumber = 0;
+
+
 
     public void showAllPort() {
         int i = 0;
@@ -27,18 +34,14 @@ public class ComPort {
     }
 
     public ArrayList<SerialPort> getAllPorts(){
-        /*
-        ArrayList <SerialPort> forReturn = new ArrayList<SerialPort>();
-        for(SerialPort port : ports) {
-            forReturn.add(port);
-        }
-         */
+
         ArrayList <SerialPort> forReturn = new ArrayList<SerialPort>();
         forReturn.addAll(Arrays.asList(ports));
         return forReturn;
     }
     public void setPort(int portIndex) {
         activePort = ports[portIndex];
+        comNumber = portIndex;
 
         if (activePort.openPort())
             System.out.println(activePort.getPortDescription() + " port opened.");
@@ -64,6 +67,10 @@ public class ComPort {
     public void updatePorts(){
         Arrays.fill(ports, null);
         ports = SerialPort.getCommPorts();
+    }
+
+    public String getCurrentComName(){
+        return MyUtilities.removeComWord(activePort.getSystemPortName());
     }
 
 }

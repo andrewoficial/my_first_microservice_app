@@ -3,6 +3,9 @@
  */
 package org.example.utilites;
 
+import com.fazecast.jSerialComm.SerialPort;
+import org.example.services.ComPort;
+
 import java.util.ArrayList;
 
 public class MyUtilities {
@@ -46,5 +49,20 @@ public class MyUtilities {
         }
 
         return null;
+    }
+
+    public static void restoreLastComPort(ComPort comPort, MyProperties properties){
+        System.out.println("Restore " + properties.getLastComPort());
+        comPort.updatePorts();
+        int i = 0;
+        for (SerialPort port : comPort.getAllPorts() ) {
+            if(port.getSystemPortName().contains(properties.getLastComPort())){
+                comPort.setPort(i);
+                System.out.println("com found");
+                break;
+            }
+            i++;
+        }
+        System.out.println("com doest exist");
     }
 }
