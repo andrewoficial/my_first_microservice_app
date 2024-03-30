@@ -116,8 +116,8 @@ public class MyProperties {
         }
 
         try{
-            this.lastDataBits = Integer.parseInt(props.getProperty("lastStopBits"));
-            System.out.println("Last lastStopBits" + lastDataBits);
+            this.lastStopBits = Integer.parseInt(props.getProperty("lastStopBits"));
+            System.out.println("Last lastStopBits: " + lastStopBits);
         }catch (NumberFormatException exception){
             this.lastStopBits = 0;
             System.out.println("configAccess.properties contain incorrect value of lastStopBits");

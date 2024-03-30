@@ -10,6 +10,7 @@ import org.example.utilites.*;
 import org.example.services.PoolService;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
@@ -19,16 +20,15 @@ import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
 
-@SpringBootApplication
+
 public class MainWindow extends JDialog {
-    private  MyProperties prop = new MyProperties();
-    private ArrayList <Thread> threads = new ArrayList<>();
 
-    private ArrayList <String> textToSendValue = new ArrayList<>();
-    private ArrayList <JScrollPane> logDataTransferJscrollPanel = new ArrayList<>();
+    private final MyProperties prop = new MyProperties();
+    private final ArrayList <Thread> threads = new ArrayList<>();
+
+    private final ArrayList <String> textToSendValue = new ArrayList<>();
+    private final ArrayList <JScrollPane> logDataTransferJscrollPanel = new ArrayList<>();
 
     private ArrayList <JTextPane> logDataTransferJtextPanel = new ArrayList<>();
 
@@ -53,8 +53,6 @@ public class MainWindow extends JDialog {
     private JComboBox CB_Protocol;
     private JCheckBox CB_Pool;
 
-    private JCheckBox CB_Server;
-    private JTextField IN_ServerPort;
     private JTabbedPane tabbedPane1;
     private JButton BT_AddDev;
     private JButton BT_RemoveDev;
@@ -119,10 +117,7 @@ public class MainWindow extends JDialog {
                 CB_StopBit.setSelectedIndex(i);
             }
         }
-        /*
-        ToDo
-        fix me
-         */
+
 
         for (int i = 0; i < poolComConnections.get(0).getAllPorts().size(); i++) {
             SerialPort currentPort = poolComConnections.get(0).getAllPorts().get(i);
@@ -148,9 +143,7 @@ public class MainWindow extends JDialog {
                 CB_ComPorts.removeAllItems();
                 for (SerialPort port :  poolComConnections.get(tabbedPane1.getSelectedIndex()).getAllPorts()) {
                     CB_ComPorts.addItem( port.getSystemPortName() + " (" + MyUtilities.removeComWord(port.getPortDescription()) + ")");
-                    //CB_ComPorts.addItem( port.getSystemPortName());
                 }
-
             }
         });
 
@@ -158,23 +151,13 @@ public class MainWindow extends JDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.out.println("Pressed BT_Open");
-
-
                 poolComConnections.get(tabbedPane1.getSelectedIndex()).setPort(CB_ComPorts.getSelectedIndex());
                 poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort.setComPortParameters(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()),8, 1, SerialPort.NO_PARITY, false);
-
                 poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort.setBaudRate(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()));
                 poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort.setNumDataBits(DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
                 poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort.setParity(ParityList.values()[CB_Parity.getSelectedIndex()].getValue()); //Работает за счет совпадения индексов с библиотечными
                 poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort.setNumStopBits(StopBitsList.getLikeArray(CB_StopBit.getSelectedIndex()));
-
-
-                prop.setLastComPort(poolComConnections.get(tabbedPane1.getSelectedIndex()).getCurrentComName());
-                prop.setLastComSpeed(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()));
-                prop.setLastDataBits(DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
-                prop.setLastParity(ParityList.values()[CB_Parity.getSelectedIndex()].getName());
-                prop.setLastStopBits(StopBitsList.getLikeArray(CB_StopBit.getSelectedIndex()));
-                prop.setLastProtocol(ProtocolsList.getLikeArray(CB_Protocol.getSelectedIndex()));
+                saveParameters(null);
             }
         });
 
@@ -364,7 +347,7 @@ public class MainWindow extends JDialog {
         });
 
 
-        //SpringApplication.run(MainWindow.class);
+
         textToSendValue.add(textToSend.getText());
         textToSendValue.add(textToSend.getText());
         BT_AddDev.doClick();
@@ -487,10 +470,23 @@ public class MainWindow extends JDialog {
             public void actionPerformed(ActionEvent arg0) {
                 System.out.println("LogWindows");
                 LogSettingWindows logWindows = new LogSettingWindows();
+                logWindows.setName("Log settings");
+                logWindows.setTitle("Log settings");
                 logWindows.pack();
-
                 logWindows.setVisible(true);
+            }
+        });
 
+        server.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                System.out.println("ServerWindows");
+                ServerSettingsWindow srvWindows = new ServerSettingsWindow();
+                srvWindows.setName("Server settings");
+                srvWindows.setTitle("Server settings");
+                srvWindows.pack();
+                srvWindows.setVisible(true);
             }
         });
         return viewMenu;
@@ -511,4 +507,47 @@ public class MainWindow extends JDialog {
         }
     }
 
+    /* --- Метод обновления настроек ---
+        Если вызван с параметром NULL, то
+        обновляет все.
+        Если массив строк, то обновляет
+        перечисленное в массиве (по названию
+        параметров)
+     */
+    private void saveParameters(String [] parametersArray){
+        if(parametersArray == null){
+            prop.setLastComPort(poolComConnections.get(tabbedPane1.getSelectedIndex()).getCurrentComName());
+            prop.setLastComSpeed(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()));
+            prop.setLastDataBits(DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
+            prop.setLastParity(ParityList.values()[CB_Parity.getSelectedIndex()].getName());
+            prop.setLastStopBits(StopBitsList.getLikeArray(CB_StopBit.getSelectedIndex()));
+            prop.setLastProtocol(ProtocolsList.getLikeArray(CB_Protocol.getSelectedIndex()));
+        }else{
+            for (String s : parametersArray) {
+                switch (s){
+                    case "LastComPort":
+                        prop.setLastComPort(poolComConnections.get(tabbedPane1.getSelectedIndex()).getCurrentComName());
+                        break;
+                    case "LastComSpeed":
+                        prop.setLastComSpeed(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()));
+                        break;
+                    case "LastDataBits":
+                        prop.setLastDataBits(DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
+                        break;
+                    case "LastParity":
+                        prop.setLastParity(ParityList.values()[CB_Parity.getSelectedIndex()].getName());
+                        break;
+                    case "LastStopBit":
+                        prop.setLastStopBits(StopBitsList.getLikeArray(CB_StopBit.getSelectedIndex()));
+                        break;
+                    case "LastProtocol":
+                        prop.setLastProtocol(ProtocolsList.getLikeArray(CB_Protocol.getSelectedIndex()));
+                        break;
+                    default:
+                        System.out.println("Unknown parameter");
+
+                }
+            }
+        }
+    }
 }
