@@ -482,7 +482,7 @@ public class MainWindow extends JDialog {
             @Override
             public void actionPerformed(ActionEvent arg0) {
                 System.out.println("ServerWindows");
-                ServerSettingsWindow srvWindows = new ServerSettingsWindow();
+                ServerSettingsWindow srvWindows = new ServerSettingsWindow(prop);
                 srvWindows.setName("Server settings");
                 srvWindows.setTitle("Server settings");
                 srvWindows.pack();

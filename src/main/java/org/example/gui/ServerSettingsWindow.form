@@ -35,7 +35,7 @@
               </grid>
             </constraints>
             <properties>
-              <text value="postgres"/>
+              <text value="org.postgresql.Driver"/>
             </properties>
           </component>
         </children>
@@ -53,7 +53,7 @@
           <text value="url"/>
         </properties>
       </component>
-      <component id="8aa7c" class="javax.swing.JTextField" default-binding="true">
+      <component id="8aa7c" class="javax.swing.JTextField" binding="IN_Url">
         <constraints>
           <grid row="1" column="2" row-span="1" col-span="2" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
             <preferred-size width="150" height="-1"/>
@@ -71,7 +71,7 @@
           <text value="username"/>
         </properties>
       </component>
-      <component id="7c911" class="javax.swing.JTextField" default-binding="true">
+      <component id="7c911" class="javax.swing.JTextField" binding="IN_Login">
         <constraints>
           <grid row="2" column="2" row-span="1" col-span="2" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
             <preferred-size width="150" height="-1"/>
@@ -89,7 +89,7 @@
           <text value="password"/>
         </properties>
       </component>
-      <component id="70c1f" class="javax.swing.JPasswordField" binding="ecrvEk0pw2UaY6jdKY16R3RGiBrefui1PasswordField" default-binding="true">
+      <component id="70c1f" class="javax.swing.JPasswordField" binding="IN_Pwd">
         <constraints>
           <grid row="3" column="2" row-span="1" col-span="2" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
             <preferred-size width="150" height="-1"/>

@@ -9,6 +9,8 @@ import org.example.services.ComPort;
 import java.util.ArrayList;
 
 public class MyUtilities {
+
+
     public static String removeComWord(String arg){
         if(arg == null || arg.length() < 1){
             return " ";
