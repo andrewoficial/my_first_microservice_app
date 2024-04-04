@@ -7,6 +7,7 @@ package org.example.services;
 
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
+import lombok.Setter;
 import org.example.utilites.ProtocolsList;
 import org.example.device.*;
 
@@ -30,11 +31,15 @@ public class PoolService implements Runnable{
     private int poolDelay;
     private SomeDevice device = null;
 
+    private boolean needLog = false;
+
 
 
     DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     LocalDateTime now = LocalDateTime.now();
-    public PoolService(ProtocolsList protocol, String textToSendString, JTextPane receivedText, JCheckBox CB_Pool, SerialPort comPort, int poolDelay) {
+
+    StringBuilder uxAnswer = new StringBuilder("\n");
+    public PoolService(ProtocolsList protocol, String textToSendString, JTextPane receivedText, JCheckBox CB_Pool, SerialPort comPort, int poolDelay, boolean needLog) {
         super();
         this.protocol = protocol;
         this.textToSendString = textToSendString;
@@ -42,6 +47,7 @@ public class PoolService implements Runnable{
         this.CB_Pool = CB_Pool;
         this.comPort = comPort;
         this.poolDelay = poolDelay;
+        this.needLog = needLog;
     }
 
     public int getProtocolForJCombo(){
@@ -87,18 +93,22 @@ public class PoolService implements Runnable{
                 assert device != null;
                 device.sendData(textToSendString);
                 now = LocalDateTime.now();
-                StringBuilder uxAnswer = new StringBuilder("\n");
+
                 uxAnswer.append(dtf.format(now));
                 uxAnswer.append(" ");
-
+                uxAnswer.append(Thread.currentThread().getName());
+                uxAnswer.append(" ");
                 if (device.hasAnswer()) {
                     uxAnswer.append(device.getAnswer());
-                    receivedText.setText(uxAnswer.toString() + receivedText.getText());
+                    uxAnswer.append("\n");
+                    //receivedText.setText(uxAnswer.toString() + receivedText.getText());
                     logSome(uxAnswer.toString());
                 } else {
-                    receivedText.setText(uxAnswer.toString() + receivedText.getText());
+                    uxAnswer.append("\n");
+                    //receivedText.setText(uxAnswer.toString() + receivedText.getText());
                     logSome(uxAnswer.toString());
                 }
+                uxAnswer.delete(0, uxAnswer.length());
                 System.out.println();
             }else {
                 try {
@@ -113,8 +123,13 @@ public class PoolService implements Runnable{
     }
 
     private void logSome(String str){
-        PoolLogger poolLogger = PoolLogger.getInstance();
-        PoolLogger.writeLine(str);
+        if(needLog) {
+            System.out.println("Do log");
+            PoolLogger poolLogger = PoolLogger.getInstance();
+            PoolLogger.writeLine(str);
+        }else{
+            System.out.println("Skip log");
+        }
     }
 
     public void setPoolDelay(String poolDelay) {
@@ -134,5 +149,13 @@ public class PoolService implements Runnable{
         textToSendString = cmd;
     }
 
+    public void setNeedLog(boolean bool){
+        this.needLog = bool;
+        System.out.println("Now logging " + bool);
+    }
+
+    public boolean isNeedLog(){
+        return this.needLog;
+    }
 
 }

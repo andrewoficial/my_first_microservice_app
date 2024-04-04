@@ -36,6 +36,8 @@ public class MainWindow extends JDialog {
 
     private ArrayList <ComPort> poolComConnections = new ArrayList<>();
 
+    private ArrayList <Boolean> logState = new ArrayList<>();
+
     private JPanel contentPane;
 
     private JComboBox<String> CB_ComPorts;
@@ -191,7 +193,8 @@ public class MainWindow extends JDialog {
                             logDataTransferJtextPanel.get(tabbedPane1.getSelectedIndex()),
                             CB_Pool,
                             poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort,
-                            poolDelay));
+                            poolDelay,
+                            logState.get(tabbedPane1.getSelectedIndex())));
                     Thread myThread = new Thread(poolServices.get(poolServices.size() - 1));
                     myThread.setName("Pool_"+tabbedPane1.getTitleAt(tabbedPane1.getSelectedIndex()));
                     threads.add(myThread);
@@ -211,7 +214,8 @@ public class MainWindow extends JDialog {
                                     logDataTransferJtextPanel.get(tabbedPane1.getSelectedIndex()),
                                     CB_Pool,
                                     poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort,
-                                    poolDelay));
+                                    poolDelay,
+                                    logState.get(tabbedPane1.getSelectedIndex())));
                             myThread = new Thread(poolServices.get(poolServices.size() - 1));
 
                             myThread.setName("Pool_"+tabbedPane1.getTitleAt(tabbedPane1.getSelectedIndex()));
@@ -255,6 +259,7 @@ public class MainWindow extends JDialog {
                 protocol = ProtocolsList.getLikeArrayEnum(CB_Protocol.getSelectedIndex());
                 System.out.println("Protocol: " + protocol);
                 textToSendValue.set(tabbedPane1.getSelectedIndex(), textToSend.getText());
+                logState.set(tabbedPane1.getSelectedIndex(), CB_Log.isSelected());
                 //sendCommand(textToSendString);
 
             }
@@ -265,6 +270,7 @@ public class MainWindow extends JDialog {
             public void actionPerformed(ActionEvent e) {
                 System.out.println("Pressed BT_AddDev");
                 textToSendValue.add("");
+                logState.add(true);
                 JPanel panel = new JPanel();
                 panel.setLayout( new BorderLayout());
                 logDataTransferJscrollPanel.add(new JScrollPane());
@@ -290,6 +296,7 @@ public class MainWindow extends JDialog {
                 int curTab = tabbedPane1.getSelectedIndex();
                 System.out.println("Pressed BT_RemoveDev on Tab" + curTab);
                 textToSendValue.remove(curTab);
+                logState.remove(curTab);
                 System.out.println("Надо остановить опрос и поток уже существует");
                 String thName = "Pool_"+tabbedPane1.getTitleAt(curTab);
                 Thread myThread = MyUtilities.getThreadByName(threads, thName);
@@ -322,10 +329,26 @@ public class MainWindow extends JDialog {
             public void actionPerformed(ActionEvent e) {
                 if(textToSendValue.size() > tabbedPane1.getSelectedIndex()){
                     textToSendValue.set(tabbedPane1.getSelectedIndex(), textToSend.getText());
+                    if(poolServices.size() > tabbedPane1.getSelectedIndex()) {
+                        poolServices.get(tabbedPane1.getSelectedIndex()).setTextToSendString(textToSend.getText());
+                    }
                 }else{
                     System.out.println("Ошибка при обновлении пула команд для опроса");
                 }
+            }
+        });
 
+        CB_Log.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if(logState.size() > tabbedPane1.getSelectedIndex()){
+                    logState.set(tabbedPane1.getSelectedIndex(), CB_Log.isSelected());
+                    if(poolServices.size() > tabbedPane1.getSelectedIndex()) {
+                        poolServices.get(tabbedPane1.getSelectedIndex()).setNeedLog(CB_Log.isSelected());
+                    }
+                }else{
+                    System.out.println("Ошибка при обновлении пула команд для ведения лога");
+                }
             }
         });
 
@@ -341,6 +364,7 @@ public class MainWindow extends JDialog {
                     System.out.println(poolServices.get(tabbedPane1.getSelectedIndex()).getProtocolForJCombo());
                     CB_Protocol.setSelectedIndex(poolServices.get(tabbedPane1.getSelectedIndex()).getProtocolForJCombo());
                     CB_ComPorts.setSelectedIndex(poolServices.get(tabbedPane1.getSelectedIndex()).getComPortForJCombo());
+                    CB_Log.setSelected(poolServices.get(tabbedPane1.getSelectedIndex()).isNeedLog());
                     //CB_Protocol.setSelectedIndex(ProtocolsList.getByName);
                 }
             }
@@ -350,6 +374,8 @@ public class MainWindow extends JDialog {
 
         textToSendValue.add(textToSend.getText());
         textToSendValue.add(textToSend.getText());
+        logState.add(true);
+        logState.add(true);
         BT_AddDev.doClick();
 
 
