@@ -9,11 +9,17 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Calendar;
 
 public class PoolLogger {
     private static final String fileName = (new SimpleDateFormat("yyyyMMdd_HHmmss").format(Calendar.getInstance().getTime())) + ".txt";
     private static File logFile;
+
+    private static Long dateTimeLastWrite = System.currentTimeMillis();
+
+    private static final ArrayList<String> stringsBuffer = new ArrayList<>();
     public static class SingletonHolder {
         public static final PoolLogger HOLDER_INSTANCE = new PoolLogger();
     }
@@ -52,23 +58,37 @@ public class PoolLogger {
     }
 
     public static void writeLine (String line){
-        FileWriter fw = null;
-        try {
-            fw = new FileWriter(logFile, true);
-        } catch (IOException e) {
-            //throw new RuntimeException(e);
-            System.out.println("Ошибка создания FileWriter");
-        }
-        assert fw != null;
-        BufferedWriter bw = new BufferedWriter(fw);
-        try {
-            bw.write(line);
+        if((System.currentTimeMillis() - dateTimeLastWrite ) < 3000L ){
+            stringsBuffer.add(line);
+            System.out.println("Log buffered");
+        }else {
+            dateTimeLastWrite = System.currentTimeMillis();
+            stringsBuffer.add(line);
+            StringBuilder stringBuilder = new StringBuilder();
+            for (String s : stringsBuffer) {
+                stringBuilder.append(s);
+            }
+            stringsBuffer.clear();
+            line = stringBuilder.toString();
+            FileWriter fw = null;
+            try {
+                fw = new FileWriter(logFile, true);
+            } catch (IOException e) {
+                //throw new RuntimeException(e);
+                System.out.println("Ошибка создания FileWriter");
+            }
+            assert fw != null;
+            BufferedWriter bw = new BufferedWriter(fw);
+            try {
+                bw.write(line);
 
-            bw.close();
-        } catch (IOException e) {
-            //throw new RuntimeException(e);
-            System.out.println("Ошибка выполнения  write ");
+                bw.close();
+            } catch (IOException e) {
+                //throw new RuntimeException(e);
+                System.out.println("Ошибка выполнения  write ");
+            }
         }
-
     }
+
+
 }

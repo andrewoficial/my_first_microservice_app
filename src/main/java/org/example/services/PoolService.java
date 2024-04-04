@@ -109,7 +109,7 @@ public class PoolService implements Runnable{
                     logSome(uxAnswer.toString());
                 }
                 uxAnswer.delete(0, uxAnswer.length());
-                System.out.println();
+                //System.out.println();
             }else {
                 try {
                     Thread.sleep(Math.min((millisLimit / 3), 300L));
@@ -124,11 +124,9 @@ public class PoolService implements Runnable{
 
     private void logSome(String str){
         if(needLog) {
-            System.out.println("Do log");
+            //System.out.println("Do log");
             PoolLogger poolLogger = PoolLogger.getInstance();
             PoolLogger.writeLine(str);
-        }else{
-            System.out.println("Skip log");
         }
     }
 
@@ -137,7 +135,7 @@ public class PoolService implements Runnable{
         try {
             newPoolDelay = Integer.parseInt(poolDelay);
         }catch (Exception e){
-            System.out.println("Wrong newPoolDelay value");
+            System.out.println("Неверное значение параметра задержки опроса");
         }
         this.poolDelay = newPoolDelay;
     }
@@ -151,7 +149,7 @@ public class PoolService implements Runnable{
 
     public void setNeedLog(boolean bool){
         this.needLog = bool;
-        System.out.println("Now logging " + bool);
+        System.out.println("Значение записи в файл изменено на: " + bool);
     }
 
     public boolean isNeedLog(){

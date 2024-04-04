@@ -18,7 +18,7 @@ public class IGM_10 implements SerialPortDataListener, SomeDevice {
     private volatile boolean hasAnswer = false;
     private volatile StringBuilder lastAnswer;
     public IGM_10(SerialPort port){
-        System.out.println("Create obj IGM_10");
+        System.out.println("Создан объект протокола ИГМ-10");
         this.comPort = port;
         this.enable();
     }
@@ -29,7 +29,7 @@ public class IGM_10 implements SerialPortDataListener, SomeDevice {
         comPort.removeDataListener();
         int timeout = 15000 - comPort.getBaudRate();
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, timeout, timeout);
-        System.out.println("open port and set timeOut");
+        System.out.println("Порт открыт, задержки выставлены");
     }
 
     @Override
@@ -45,12 +45,12 @@ public class IGM_10 implements SerialPortDataListener, SomeDevice {
         byte[] newData = event.getReceivedData();
         System.out.println("Received data via eventListener on IGM_10 of size: " + newData.length);
         for (byte newDatum : newData) System.out.print((char) newDatum);
-        System.out.println("\n");
+        //System.out.println("\n");
         hasAnswer = true;
     }
 
     public void sendData(String data){
-        System.out.println("sendData: [" + data + "]");
+        //System.out.println("sendData: [" + data + "]");
         data = data + '\n';
 
         Charset charset = StandardCharsets.US_ASCII;
@@ -87,7 +87,7 @@ public class IGM_10 implements SerialPortDataListener, SomeDevice {
                 }
                 hasAnswer = true;
             }
-        System.out.println("Set flags" + hasAnswer + " received " + received);
+        //System.out.println("Set flags " + hasAnswer + " received " + received);
     }
     public String getAnswer(){
         int index = lastAnswer.indexOf("\n");
@@ -105,7 +105,7 @@ public class IGM_10 implements SerialPortDataListener, SomeDevice {
     }
 
     public boolean hasAnswer(){
-        System.out.println("return flag " + hasAnswer);
+        //System.out.println("return flag " + hasAnswer);
         return hasAnswer;
     }
 }
