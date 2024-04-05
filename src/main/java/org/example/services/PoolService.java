@@ -19,10 +19,14 @@ import java.util.ArrayList;
 import static org.example.Main.comPorts;
 
 public class PoolService implements Runnable{
+
+    private StringBuffer answersCollection = new StringBuffer();
     private ProtocolsList protocol = null;
     private String textToSendString;
 
-    private JCheckBox CB_Pool;
+    private DeviceLogger deviceLogger;
+
+
     private JTextPane receivedText;
 
     private SerialPort comPort;
@@ -32,6 +36,7 @@ public class PoolService implements Runnable{
     private SomeDevice device = null;
 
     private boolean needLog = false;
+    private long timerWinUpdate = System.currentTimeMillis();
 
 
 
@@ -39,15 +44,15 @@ public class PoolService implements Runnable{
     LocalDateTime now = LocalDateTime.now();
 
     StringBuilder uxAnswer = new StringBuilder("\n");
-    public PoolService(ProtocolsList protocol, String textToSendString, JTextPane receivedText, JCheckBox CB_Pool, SerialPort comPort, int poolDelay, boolean needLog) {
+    public PoolService(ProtocolsList protocol, String textToSendString, JTextPane receivedText, SerialPort comPort, int poolDelay, boolean needLog) {
         super();
         this.protocol = protocol;
         this.textToSendString = textToSendString;
         this.receivedText = receivedText;
-        this.CB_Pool = CB_Pool;
         this.comPort = comPort;
         this.poolDelay = poolDelay;
         this.needLog = needLog;
+
     }
 
     public int getProtocolForJCombo(){
@@ -57,7 +62,7 @@ public class PoolService implements Runnable{
     public int getComPortForJCombo(){
         ArrayList <SerialPort> ports = comPorts.getAllPorts();
         for (int i = 0; i < ports.size(); i++) {
-            if(ports.get(i).getSystemPortName().equalsIgnoreCase(this.comPort.getSystemPortName())){
+            if(ports.get(i) != null && ports.get(i).getSystemPortName().equalsIgnoreCase(this.comPort.getSystemPortName())){
                 return i;
             }
         }
@@ -69,6 +74,7 @@ public class PoolService implements Runnable{
         long millisLimit = poolDelay;
         long millisPrev = System.currentTimeMillis() - millisLimit - millisLimit;
         long millisDela = 0L;
+        deviceLogger = new DeviceLogger(Thread.currentThread().getName());
         while (!Thread.currentThread().isInterrupted()) {
             if (System.currentTimeMillis() - millisPrev > millisLimit) {
                 millisPrev = System.currentTimeMillis();
@@ -86,6 +92,9 @@ public class PoolService implements Runnable{
                         case ARD_FEE_BRD_METER -> {
                             device = new ARD_FEE_BRD_METER(comPort);
                         }
+                        case ERSTEVAK_MTP4D -> {
+                            device = new ERSTEVAK_MTP4D(comPort);
+                        }
                     }
                 }
 
@@ -101,12 +110,21 @@ public class PoolService implements Runnable{
                 if (device.hasAnswer()) {
                     uxAnswer.append(device.getAnswer());
                     uxAnswer.append("\n");
-                    //receivedText.setText(uxAnswer.toString() + receivedText.getText());
                     logSome(uxAnswer.toString());
+                    answersCollection.append(uxAnswer.toString());
+                    //receivedText.setText("2342342342342342342342342342342342342423");
+                    //receivedText.setText(uxAnswer.toString() + receivedText.getText());
+
                 } else {
                     uxAnswer.append("\n");
-                    //receivedText.setText(uxAnswer.toString() + receivedText.getText());
                     logSome(uxAnswer.toString());
+                    answersCollection.append(uxAnswer.toString());
+                    //receivedText.setText("2342342342342342342342342342342342342423");
+                }
+                if((System.currentTimeMillis() - timerWinUpdate ) > 550L ){
+                    timerWinUpdate = System.currentTimeMillis();
+                    //receivedText.setText(Thread.currentThread().getName() + " " + String.valueOf(Math.random()));
+                    receivedText.setText(answersCollection.toString());
                 }
                 uxAnswer.delete(0, uxAnswer.length());
                 //System.out.println();
@@ -127,6 +145,7 @@ public class PoolService implements Runnable{
             //System.out.println("Do log");
             PoolLogger poolLogger = PoolLogger.getInstance();
             PoolLogger.writeLine(str);
+            deviceLogger.writeLine(str);
         }
     }
 

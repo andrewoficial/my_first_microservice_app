@@ -1,7 +1,3 @@
-/*
-Сингл-тон объект, который при ините создает файл и если нужно дописывает в него принимаемые ответы
-
- */
 package org.example.services;
 
 import java.io.BufferedWriter;
@@ -9,26 +5,17 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Calendar;
 
-public class PoolLogger {
-    private static final String fileName = (new SimpleDateFormat("yyyyMMdd_HHmmss").format(Calendar.getInstance().getTime())) + ".txt";
-    private static File logFile;
+public class DeviceLogger {
+    private String fileName = (new SimpleDateFormat("yyyyMMdd_HHmmss").format(Calendar.getInstance().getTime()));
+    private File logFile;
+    private Long dateTimeLastWrite = System.currentTimeMillis();
+    private final ArrayList<String> stringsBuffer = new ArrayList<>();
 
-    private static Long dateTimeLastWrite = System.currentTimeMillis();
-
-    private static final ArrayList<String> stringsBuffer = new ArrayList<>();
-    public static class SingletonHolder {
-        public static final PoolLogger HOLDER_INSTANCE = new PoolLogger();
-    }
-
-    public static PoolLogger getInstance() {
-        return SingletonHolder.HOLDER_INSTANCE;
-    }
-
-    private PoolLogger(){
+    public DeviceLogger(String name){
+        this.fileName = this.fileName + " " + name + ".txt";
         File logFile = null;
         try{
             logFile = new File("logs"+fileName);
@@ -45,19 +32,19 @@ public class PoolLogger {
             logFile = new File("logs/"+fileName);
             if (logFile.createNewFile()) {
                 //System.out.println("File created: " + myObj.getName());
-                System.out.println("File created: " + logFile.getAbsolutePath());
+                //System.out.println("File created: " + logFile.getAbsolutePath());
             } else {
-                System.out.println("File already exists.");
-                System.out.println(logFile.getAbsolutePath());
+                //System.out.println("File already exists.");
+                //System.out.println(logFile.getAbsolutePath());
             }
         } catch (IOException e) {
-            System.out.println("An error occurred.");
+            //System.out.println("An error occurred.");
             //e.printStackTrace();
         }
-        PoolLogger.logFile = logFile;
+        this.logFile = logFile;
     }
 
-    public static void writeLine (String line){
+    public void writeLine (String line){
         if((System.currentTimeMillis() - dateTimeLastWrite ) < 300L ){
             stringsBuffer.add(line);
             //System.out.println("Log buffered");
@@ -89,6 +76,4 @@ public class PoolLogger {
             }
         }
     }
-
-
 }

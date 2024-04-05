@@ -4,13 +4,9 @@
 package org.example.gui;
 
 import com.fazecast.jSerialComm.SerialPort;
-import org.example.Main;
 import org.example.services.ComPort;
 import org.example.utilites.*;
 import org.example.services.PoolService;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.ConfigurableApplicationContext;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
@@ -59,6 +55,7 @@ public class MainWindow extends JDialog {
     private JButton BT_AddDev;
     private JButton BT_RemoveDev;
     private JTextField IN_PoolDelay;
+    private JButton BT_Search;
     private JButton buttonOK;
     private JButton buttonCancel;
 
@@ -177,8 +174,13 @@ public class MainWindow extends JDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.out.print("Pressed CB_Pool "); System.out.println(CB_Pool.isSelected());
-                String thName = "Pool_"+tabbedPane1.getTitleAt(tabbedPane1.getSelectedIndex());
-                System.out.println("Начинаю работу с потоком " + thName);
+                protocol = ProtocolsList.getLikeArrayEnum(CB_Protocol.getSelectedIndex());
+                textToSendValue.set(tabbedPane1.getSelectedIndex(), textToSend.getText());
+                String stringToSend = textToSendValue.get(tabbedPane1.getSelectedIndex());
+                JTextPane paneForShow = logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1);
+                logState.set(tabbedPane1.getSelectedIndex(), CB_Log.isSelected());
+                SerialPort comPort = poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort;
+
                 boolean pool = CB_Pool.isSelected();
                 int poolDelay = 1000;
                 try{
@@ -186,15 +188,20 @@ public class MainWindow extends JDialog {
                 }catch (Exception e1){
                     IN_PoolDelay.setText("1000");
                 }
+                boolean logStateCb = logState.get(tabbedPane1.getSelectedIndex());
+                String thName = "Pool_"+tabbedPane1.getTitleAt(tabbedPane1.getSelectedIndex());
+                System.out.println("Начинаю работу с потоком " + thName);
+
                 if(pool && (! MyUtilities.containThreadByName(threads, thName))){ //Надо запустить опрос но потока еще нету
                     System.out.println("Надо запустить опрос но потока еще нету");
-                    poolServices.add(new PoolService(protocol,
+                    poolServices.add(new PoolService(
+                            ProtocolsList.getLikeArrayEnum(CB_Protocol.getSelectedIndex()),
                             textToSendValue.get(tabbedPane1.getSelectedIndex()),
-                            logDataTransferJtextPanel.get(tabbedPane1.getSelectedIndex()),
-                            CB_Pool,
+                            logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1),
                             poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort,
                             poolDelay,
                             logState.get(tabbedPane1.getSelectedIndex())));
+
                     Thread myThread = new Thread(poolServices.get(poolServices.size() - 1));
                     myThread.setName("Pool_"+tabbedPane1.getTitleAt(tabbedPane1.getSelectedIndex()));
                     threads.add(myThread);
@@ -209,10 +216,10 @@ public class MainWindow extends JDialog {
                         System.out.println(myThread.getState());
                         if(! myThread.isAlive()){
                             threads.remove(MyUtilities.getThreadByName(threads, thName));
-                            poolServices.add(new PoolService(protocol,
+                            poolServices.add(new PoolService(
+                                    ProtocolsList.getLikeArrayEnum(CB_Protocol.getSelectedIndex()),
                                     textToSendValue.get(tabbedPane1.getSelectedIndex()),
-                                    logDataTransferJtextPanel.get(tabbedPane1.getSelectedIndex()),
-                                    CB_Pool,
+                                    logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1),
                                     poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort,
                                     poolDelay,
                                     logState.get(tabbedPane1.getSelectedIndex())));
@@ -275,12 +282,16 @@ public class MainWindow extends JDialog {
                 panel.setLayout( new BorderLayout());
                 logDataTransferJscrollPanel.add(new JScrollPane());
                 logDataTransferJtextPanel.add(new JTextPane());
+                logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1).setEditable(false);
+                logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1).setDoubleBuffered(true);
                 logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1).setText("dev" + (tabbedPane1.getTabCount() + 1) + "1 \n 1 \n 1 \n 1 1 \n 1 \n 1 \n 1 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n ");
                 logDataTransferJscrollPanel.get(logDataTransferJscrollPanel.size() -1).setViewportView(logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1));
                 logDataTransferJscrollPanel.get(logDataTransferJscrollPanel.size() - 1).setPreferredSize(new Dimension(400,400));
 
                 poolComConnections.add(new ComPort());
                 panel.add(logDataTransferJscrollPanel.get(logDataTransferJscrollPanel.size() - 1), BorderLayout.CENTER);
+                panel.setDoubleBuffered(true);
+                panel.setEnabled(false);
                 tabbedPane1.addTab("dev" + (tabbedPane1.getTabCount() + 1), panel);
 
                 if(tabbedPane1.getTabCount() > 0){
@@ -313,7 +324,10 @@ public class MainWindow extends JDialog {
                     System.out.println("Поток для остановки не найден");
                 }
                 if(poolComConnections.size() >= curTab){
-                    poolComConnections.get(curTab).activePort.closePort();
+                    if (poolComConnections.get(curTab).activePort != null){
+                        poolComConnections.get(curTab).activePort.closePort();
+                    }
+
                     poolComConnections.remove(curTab);
                 }
 
@@ -361,7 +375,7 @@ public class MainWindow extends JDialog {
                 boolean threadExist = MyUtilities.containThreadByName(threads, thName);
                 CB_Pool.setSelected(threadExist);
                 if(threadExist){
-                    System.out.println(poolServices.get(tabbedPane1.getSelectedIndex()).getProtocolForJCombo());
+                    //System.out.println(poolServices.get(tabbedPane1.getSelectedIndex()).getProtocolForJCombo());
                     CB_Protocol.setSelectedIndex(poolServices.get(tabbedPane1.getSelectedIndex()).getProtocolForJCombo());
                     CB_ComPorts.setSelectedIndex(poolServices.get(tabbedPane1.getSelectedIndex()).getComPortForJCombo());
                     CB_Log.setSelected(poolServices.get(tabbedPane1.getSelectedIndex()).isNeedLog());
@@ -390,7 +404,7 @@ public class MainWindow extends JDialog {
                 update();
             }
             public void update() {
-                System.out.println("Update command");
+                //System.out.println("Update command");
                 if(tabbedPane1.getSelectedIndex() < textToSendValue.size())
                     textToSendValue.set(tabbedPane1.getSelectedIndex(), textToSend.getText());
                 if(tabbedPane1.getSelectedIndex() < poolServices.size())
