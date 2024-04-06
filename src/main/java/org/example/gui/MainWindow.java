@@ -299,21 +299,35 @@ public class MainWindow extends JDialog {
                 //textToSendValue.set(tabbedPane1.getSelectedIndex(), textToSend.getText());
                 //logState.set(tabbedPane1.getSelectedIndex(), CB_Log.isSelected());
                 //sendCommand(textToSendString);
+                // ТЕСТ НА УТЕЧКУ ПАМЯТИ
                 for (int i = 0; i < 10000; i++) {
 
 
-                            //logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1).setText(poolService.getAnswersForTab(tabbedPane1.getSelectedIndex()).toString());
-                            String str = "234234";
-                            logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1).setText(null);
-                            Document doc = logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1).getDocument();
+                    //logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1).setText(poolService.getAnswersForTab(tabbedPane1.getSelectedIndex()).toString());
+                    String str = "234234";
+                    logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1).setText(null); //Очищает поле и не потреблят (почти) память
+                    Document doc = logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1).getDocument();//Пробовал через док
 
-                            //logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1).setText(str);
-                            textField1.setText(str);
-                            str = null;
-                            doc = null;
+                    try {
+                        doc.insertString(doc.getLength(), str, null);
+                    } catch (BadLocationException ex) {
+                        throw new RuntimeException(ex);
+                    }
+
+                    //logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1).setText(str);
+                    textField1.setText(str);
+                    str = null;
+                    doc = null;
 
 
                 }
+                //Делает лучше, без вызова сборщика вообще улетает за гигобайт.
+                //Пробовал из JtextPane извлекать Document и ему делать setContent. Становится лучше
+                //Пробовал на JavaFX повторять этот же тест. С 98 до 120 подскакивает, дальше каждый повторный запуск занимает два мегабайта
+                //
+                System.gc();
+                System.runFinalization ();
+                Runtime.getRuntime().gc();
 
             }
         });
