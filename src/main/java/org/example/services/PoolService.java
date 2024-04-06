@@ -12,6 +12,9 @@ import org.example.utilites.ProtocolsList;
 import org.example.device.*;
 
 import javax.swing.*;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
+import javax.swing.text.PlainDocument;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -21,11 +24,14 @@ import static org.example.Main.comPorts;
 public class PoolService implements Runnable{
     private ArrayList <Integer> currentTab = new ArrayList<>();
     private ArrayList <String> textToSend = new ArrayList<>();
+    @Getter
     private ArrayList <StringBuffer> answersCollection = new ArrayList<>();
     private ArrayList <DeviceLogger> deviceLoggerArrayList = new ArrayList<>();
     private ArrayList <Boolean> needLogArrayList = new ArrayList<>();
     private ArrayList <JTextPane> receivedTextArrayList = new ArrayList<>();
     private ArrayList <StringBuilder> uxAnswerArrayList = new ArrayList<>();
+
+    private ArrayList <Document> uxAnswerArrayListDoc = new ArrayList<>();
 
     private ArrayList <String> deviceNames = new ArrayList<>();
 
@@ -50,6 +56,7 @@ public class PoolService implements Runnable{
         this.protocol = protocol;
         this.textToSend.add(textToSendString);
         this.receivedTextArrayList.add(receivedText);
+        this.uxAnswerArrayListDoc.add(receivedText.getDocument());
         this.needLogArrayList.add(needLog);
         this.currentTab.add(tabNumber);
         this.comPort = comPort;
@@ -117,26 +124,22 @@ public class PoolService implements Runnable{
                     uxAnswerArrayList.get(i).append(" ");
                     if (device.hasAnswer()) {
                         uxAnswerArrayList.get(i).append(device.getAnswer());
-                        uxAnswerArrayList.get(i).append("\n");
-                        logSome(uxAnswerArrayList.get(i).toString(), i);
-                        answersCollection.get(i).append(uxAnswerArrayList.get(i).toString());
-                        //receivedText.setText("2342342342342342342342342342342342342423");
-                        //receivedText.setText(uxAnswer.toString() + receivedText.getText());
-
-                    } else {
-                        uxAnswerArrayList.get(i).append("\n");
-                        logSome(uxAnswerArrayList.get(i).toString(), i);
-                        answersCollection.get(i).append(uxAnswerArrayList.get(i).toString());
-                        //receivedText.setText("2342342342342342342342342342342342342423");
                     }
-                    if((System.currentTimeMillis() - timerWinUpdate ) > 100L ){
-                        timerWinUpdate = System.currentTimeMillis();
+                    uxAnswerArrayList.get(i).append("\n");
+                    logSome(uxAnswerArrayList.get(i).toString(), i);
+                    answersCollection.get(i).append(uxAnswerArrayList.get(i).toString());
+                    //if((System.currentTimeMillis() - timerWinUpdate ) > 100L ){
+                        //timerWinUpdate = System.currentTimeMillis();
+                        //uxAnswerArrayListDoc.get(0).re
                         //receivedText.setText(Thread.currentThread().getName() + " " + String.valueOf(Math.random()));
-                        receivedTextArrayList.get(i).setText(answersCollection.get(i).toString());
-                    }
-                    System.out.println("Now"+i);
-                    System.out.println("Command" + textToSend.get(i));
-                    System.out.println("Answer" + uxAnswerArrayList.get(i));
+                        //receivedTextArrayList.get(i).setText(answersCollection.get(i).toString());
+                        //throw new RuntimeException(e);
+
+                        //receivedTextArrayList.get(i).set
+                    //}
+                    //System.out.println("Now"+i);
+                    //System.out.println("Command" + textToSend.get(i));
+                    //System.out.println("Answer" + uxAnswerArrayList.get(i));
                     uxAnswerArrayList.get(i).delete(0, uxAnswerArrayList.get(i).length());
 
                 }
@@ -161,6 +164,11 @@ public class PoolService implements Runnable{
         }
     }
 
+    public StringBuffer getAnswersForTab(int tab){
+        if(findSubDevByTabNumber(tab) < 0)
+            return null;
+        return answersCollection.get(findSubDevByTabNumber(tab));
+    }
     public void setPoolDelay(String poolDelay) {
         int newPoolDelay = 2000;
         try {

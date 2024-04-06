@@ -13,6 +13,7 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.text.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
@@ -33,6 +34,8 @@ public class MainWindow extends JDialog {
     private final ArrayList <JScrollPane> logDataTransferJscrollPanel = new ArrayList<>();
 
     private ArrayList <JTextPane> logDataTransferJtextPanel = new ArrayList<>();
+
+    private ArrayList <JTextPane> logDataTransferJtextPanel_NEW = new ArrayList<>();
 
     private ArrayList <PoolService> poolServices = new ArrayList<>();
 
@@ -62,6 +65,7 @@ public class MainWindow extends JDialog {
     private JButton BT_RemoveDev;
     private JTextField IN_PoolDelay;
     private JButton BT_Search;
+    private JTextField textField1;
     private JButton buttonOK;
     private JButton buttonCancel;
 
@@ -71,8 +75,8 @@ public class MainWindow extends JDialog {
 
     public MainWindow() {
 
+
         poolComConnections.add(new ComPort());
-        MyUtilities.restoreLastComPort(poolComConnections.get(0), prop);
 
         // Создание строки главного меню
         JMenuBar menuBar = new JMenuBar();
@@ -290,11 +294,26 @@ public class MainWindow extends JDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.out.println("Pressed BT_Send");
-                protocol = ProtocolsList.getLikeArrayEnum(CB_Protocol.getSelectedIndex());
-                System.out.println("Protocol: " + protocol);
-                textToSendValue.set(tabbedPane1.getSelectedIndex(), textToSend.getText());
-                logState.set(tabbedPane1.getSelectedIndex(), CB_Log.isSelected());
+                //protocol = ProtocolsList.getLikeArrayEnum(CB_Protocol.getSelectedIndex());
+                //System.out.println("Protocol: " + protocol);
+                //textToSendValue.set(tabbedPane1.getSelectedIndex(), textToSend.getText());
+                //logState.set(tabbedPane1.getSelectedIndex(), CB_Log.isSelected());
                 //sendCommand(textToSendString);
+                for (int i = 0; i < 10000; i++) {
+
+
+                            //logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1).setText(poolService.getAnswersForTab(tabbedPane1.getSelectedIndex()).toString());
+                            String str = "234234";
+                            logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1).setText(null);
+                            Document doc = logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1).getDocument();
+
+                            //logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1).setText(str);
+                            textField1.setText(str);
+                            str = null;
+                            doc = null;
+
+
+                }
 
             }
         });
