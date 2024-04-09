@@ -94,6 +94,11 @@ public class ARD_FEE_BRD_METER implements SerialPortDataListener, SomeDevice {
         while((received == 0) && (millisLimit > millisDela)){
             millisDela = System.currentTimeMillis() - millisPrev;
             received = comPort.bytesAvailable();
+            try {
+                Thread.sleep(Math.min((millisLimit / 4), 200L));
+            } catch (InterruptedException e) {
+                //throw new RuntimeException(e);
+            }
         }
         if(received > 0) {
             //System.out.println("Received bytes " + received);

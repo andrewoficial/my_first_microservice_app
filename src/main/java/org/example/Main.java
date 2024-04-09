@@ -15,11 +15,11 @@ public class Main {
 
 
         MainWindow dialog = new MainWindow();
-
+        dialog.setModal(false);
         dialog.pack();
-
+        //dialog.setDefaultCloseOperation(3);
         dialog.setVisible(true);
 
-        System.exit(0);
+        //System.exit(0);
     }
 }

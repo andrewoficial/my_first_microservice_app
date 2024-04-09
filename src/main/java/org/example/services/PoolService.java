@@ -5,6 +5,7 @@ ToDo
  */
 package org.example.services;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,36 +19,35 @@ import javax.swing.text.PlainDocument;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Objects;
 
 import static org.example.Main.comPorts;
 
 public class PoolService implements Runnable{
+    private boolean threadLive = true;
     private ArrayList <Integer> currentTab = new ArrayList<>();
     private ArrayList <String> textToSend = new ArrayList<>();
     @Getter
     private ArrayList <StringBuffer> answersCollection = new ArrayList<>();
     private ArrayList <DeviceLogger> deviceLoggerArrayList = new ArrayList<>();
     private ArrayList <Boolean> needLogArrayList = new ArrayList<>();
-    private ArrayList <JTextPane> receivedTextArrayList = new ArrayList<>();
-    private ArrayList <StringBuilder> uxAnswerArrayList = new ArrayList<>();
 
-    private ArrayList <Document> uxAnswerArrayListDoc = new ArrayList<>();
-
-    private ArrayList <String> deviceNames = new ArrayList<>();
+    private HashMap <Integer, Boolean> needPool = new HashMap<>(); //TabNumber -- PoolFlag
 
     private ProtocolsList protocol = null;
+    @Getter
     private SerialPort comPort;
     @Getter
     private int poolDelay;
     private SomeDevice device = null;
-    private long timerWinUpdate = System.currentTimeMillis();
+
     DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     LocalDateTime now = LocalDateTime.now();
 
 
     public PoolService(ProtocolsList protocol,
                        String textToSendString,
-                       JTextPane receivedText,
                        SerialPort comPort,
                        int poolDelay,
                        boolean needLog,
@@ -55,12 +55,11 @@ public class PoolService implements Runnable{
         super();
         this.protocol = protocol;
         this.textToSend.add(textToSendString);
-        this.receivedTextArrayList.add(receivedText);
-        this.uxAnswerArrayListDoc.add(receivedText.getDocument());
         this.needLogArrayList.add(needLog);
         this.currentTab.add(tabNumber);
         this.comPort = comPort;
         this.poolDelay = poolDelay;
+        needPool.put(tabNumber, true);
     }
 
     public int getProtocolForJCombo(){
@@ -70,7 +69,7 @@ public class PoolService implements Runnable{
     public int getComPortForJCombo(){
         ArrayList <SerialPort> ports = comPorts.getAllPorts();
         for (int i = 0; i < ports.size(); i++) {
-            if(ports.get(i) != null && ports.get(i).getSystemPortName().equalsIgnoreCase(this.comPort.getSystemPortName())){
+            if(ports.get(i) != null && this.comPort != null && ports.get(i).getSystemPortName().equalsIgnoreCase(this.comPort.getSystemPortName())){
                 return i;
             }
         }
@@ -78,18 +77,15 @@ public class PoolService implements Runnable{
         return 0;
     }
 
-
-
     @Override
     public void run() {
+        Thread.currentThread().setName("Thread Pool Tab"+currentTab.get(0));
+        System.out.println(Thread.currentThread().getName());
         long millisLimit = poolDelay;
         long millisPrev = System.currentTimeMillis() - millisLimit - millisLimit;
-        long millisDela = 0L;
-        deviceNames.add(Thread.currentThread().getName());
-        deviceLoggerArrayList.add(new DeviceLogger(deviceNames.get(0)));
-        uxAnswerArrayList.add(new StringBuilder());
+        deviceLoggerArrayList.add(new DeviceLogger(currentTab.get(0).toString()));
         answersCollection.add(new StringBuffer());
-        while (!Thread.currentThread().isInterrupted()) {
+        while ((!Thread.currentThread().isInterrupted()) && threadLive) {
             if (System.currentTimeMillis() - millisPrev > millisLimit) {
                 millisPrev = System.currentTimeMillis();
                 if(device == null){
@@ -115,33 +111,23 @@ public class PoolService implements Runnable{
 
                 assert device != null;
                 for (int i = 0; i < textToSend.size(); i++) {
+                    //Если для внутренней очереди нет номера вкладки ИЛИ флаг опроса FALSE
+                    if(getTabNumberByInnerNumber(i) < 0 || (!needPool.get(getTabNumberByInnerNumber(i)))){
+                        continue;
+                    }
+                    DeviceAnswer answer = new DeviceAnswer(
+                            LocalDateTime.now(),
+                            textToSend.get(i),
+                            currentTab.get(i));
                     device.sendData(textToSend.get(i));
                     now = LocalDateTime.now();
-
-                    uxAnswerArrayList.get(i).append(dtf.format(now));
-                    uxAnswerArrayList.get(i).append(" ");
-                    uxAnswerArrayList.get(i).append(Thread.currentThread().getName());
-                    uxAnswerArrayList.get(i).append(" ");
+                    answer.setDeviceType(device);
+                    answer.setAnswerReceivedTime(LocalDateTime.now());
                     if (device.hasAnswer()) {
-                        uxAnswerArrayList.get(i).append(device.getAnswer());
+                        answer.setAnswerReceivedString(device.getAnswer());
                     }
-                    uxAnswerArrayList.get(i).append("\n");
-                    logSome(uxAnswerArrayList.get(i).toString(), i);
-                    answersCollection.get(i).append(uxAnswerArrayList.get(i).toString());
-                    //if((System.currentTimeMillis() - timerWinUpdate ) > 100L ){
-                        //timerWinUpdate = System.currentTimeMillis();
-                        //uxAnswerArrayListDoc.get(0).re
-                        //receivedText.setText(Thread.currentThread().getName() + " " + String.valueOf(Math.random()));
-                        //receivedTextArrayList.get(i).setText(answersCollection.get(i).toString());
-                        //throw new RuntimeException(e);
-
-                        //receivedTextArrayList.get(i).set
-                    //}
-                    //System.out.println("Now"+i);
-                    //System.out.println("Command" + textToSend.get(i));
-                    //System.out.println("Answer" + uxAnswerArrayList.get(i));
-                    uxAnswerArrayList.get(i).delete(0, uxAnswerArrayList.get(i).length());
-
+                    AnswerStorage.addAnswer(answer);
+                    logSome(answer.toString(), i);
                 }
             }else {
                 try {
@@ -155,6 +141,35 @@ public class PoolService implements Runnable{
         }
     }
 
+    public void setNeedPool (int tabNum, boolean bool){
+        needPool.put(tabNum, bool);
+        if((!bool) && (! isRootTab(tabNum))){
+            System.out.println("Поток будет закрыт");
+            this.threadLive = false;
+        }
+        if(bool){
+            threadLive = true;
+        }
+    }
+
+
+    private int getTabNumberByInnerNumber(int innerNumber){
+        for (int i = 0; i < currentTab.size(); i++) {
+            if(i == innerNumber){
+                return currentTab.get(i);
+            }
+        }
+        return -1;
+    }
+
+    private int getInnerNumberByTabNumber(int tabNumber){
+        for (int i = 0; i < currentTab.size(); i++) {
+            if(currentTab.get(i).equals(tabNumber)){
+                return i;
+            }
+        }
+        return -1;
+    }
     private void logSome(String str, int subDevNum){
         if(needLogArrayList.get(subDevNum)) {
             //System.out.println("Do log");
@@ -164,11 +179,7 @@ public class PoolService implements Runnable{
         }
     }
 
-    public StringBuffer getAnswersForTab(int tab){
-        if(findSubDevByTabNumber(tab) < 0)
-            return null;
-        return answersCollection.get(findSubDevByTabNumber(tab));
-    }
+
     public void setPoolDelay(String poolDelay) {
         int newPoolDelay = 2000;
         try {
@@ -190,6 +201,13 @@ public class PoolService implements Runnable{
         }
     }
 
+    public String getTextToSensByTab(int tabNum){
+        if(findSubDevByTabNumber(tabNum) != -1){
+            return textToSend.get(findSubDevByTabNumber(tabNum));
+        }
+        return  null;
+    }
+
     public void setNeedLog(boolean bool, int tabNum){
         if(findSubDevByTabNumber(tabNum) != -1){
             needLogArrayList.set(findSubDevByTabNumber(tabNum), bool);
@@ -200,6 +218,19 @@ public class PoolService implements Runnable{
     public boolean isNeedLog(int tabNum){
         if(findSubDevByTabNumber(tabNum) != -1){
             return needLogArrayList.get(findSubDevByTabNumber(tabNum));
+        }
+        System.out.println("Подустройство не найдено для вкладки номер " + tabNum);
+        return false;
+    }
+
+    public boolean isNeedPool(int tabNum){
+        if(findSubDevByTabNumber(tabNum) != -1){
+            //System.out.println("Определение логирования для вкладки номер" + tabNum);
+            //System.out.println(needPool.toString());
+            //for (Integer i : needPool.keySet()) {
+                //System.out.println("Key" + i + " val: " + needPool.get(i));
+            //}
+            return needPool.get(tabNum);
         }
         System.out.println("Подустройство не найдено для вкладки номер " + tabNum);
         return false;
@@ -223,28 +254,23 @@ public class PoolService implements Runnable{
         return false;
     }
 
-    public void addDeviceToService(int tabNumber, String command, JTextPane textPane, boolean needLog, String devName) {
+    public void addDeviceToService(int tabNumber, String command, boolean needLog) {
         currentTab.add(tabNumber);
         textToSend.add(command);
-        receivedTextArrayList.add(textPane);
         needLogArrayList.add(needLog);
         deviceLoggerArrayList.add(new DeviceLogger(Thread.currentThread().getName()));
-        uxAnswerArrayList.add(new StringBuilder());
         answersCollection.add(new StringBuffer());
-        deviceNames.add(devName);
+        needPool.put(tabNumber, true);
     }
 
-    public void removeDeviceToService(int tabNumber){
+    public void removeDeviceToService(int tabNumber){ //Когда вкладка закрывается
         int forRemove = findSubDevByTabNumber(tabNumber);
         if(forRemove > 0){
             currentTab.remove(forRemove);
             textToSend.remove(forRemove);
-            receivedTextArrayList.remove(forRemove);
             needLogArrayList.remove(forRemove);
             deviceLoggerArrayList.remove(forRemove);
-            uxAnswerArrayList.remove(forRemove);
             answersCollection.remove(forRemove);
-            deviceNames.remove(forRemove);
         }
     }
 
@@ -254,6 +280,21 @@ public class PoolService implements Runnable{
                return needLogArrayList.get(i);
             }
         }
+        return false;
+    }
+
+
+
+    public boolean isRootTab(Integer tabNum){
+        for (int i = 0; i < currentTab.size(); i++) {
+            if(Objects.equals(currentTab.get(i), tabNum)){
+                continue;
+            }
+            if(needPool.get(currentTab.get(i))){
+                return true;
+            }
+        }
+        //System.out.println("Попытка закрыть поток опроса, у которого есть дочерние вкладки");
         return false;
     }
 }

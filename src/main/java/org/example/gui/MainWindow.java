@@ -4,6 +4,7 @@
 package org.example.gui;
 
 import com.fazecast.jSerialComm.SerialPort;
+import org.example.services.AnswerStorage;
 import org.example.services.ComPort;
 import org.example.utilites.*;
 import org.example.services.PoolService;
@@ -22,27 +23,14 @@ import java.util.concurrent.Executors;
 
 
 public class MainWindow extends JDialog {
-    /*
-        Перевести в пул потоков
 
-     */
-    private ExecutorService thPool = Executors.newCachedThreadPool();
+    private final ExecutorService thPool = Executors.newCachedThreadPool();
     private final MyProperties prop = new MyProperties();
-    private final ArrayList <Thread> threads = new ArrayList<>();
-
     private final ArrayList <String> textToSendValue = new ArrayList<>();
     private final ArrayList <JScrollPane> logDataTransferJscrollPanel = new ArrayList<>();
-
     private ArrayList <JTextPane> logDataTransferJtextPanel = new ArrayList<>();
-
-    private ArrayList <JTextPane> logDataTransferJtextPanel_NEW = new ArrayList<>();
-
     private ArrayList <PoolService> poolServices = new ArrayList<>();
-
     private ArrayList <ComPort> poolComConnections = new ArrayList<>();
-
-    private ArrayList <Boolean> logState = new ArrayList<>();
-
     private JPanel contentPane;
 
     private JComboBox<String> CB_ComPorts;
@@ -59,31 +47,32 @@ public class MainWindow extends JDialog {
     private JButton BT_Send;
     private JComboBox CB_Protocol;
     private JCheckBox CB_Pool;
-
     private JTabbedPane tabbedPane1;
     private JButton BT_AddDev;
     private JButton BT_RemoveDev;
     private JTextField IN_PoolDelay;
     private JButton BT_Search;
-    private JTextField textField1;
-    private JButton buttonOK;
-    private JButton buttonCancel;
+
 
 
 
     private ProtocolsList protocol = ProtocolsList.IGM10ASCII;
 
+    /**
+    Number active tab
+     **/
+    private int tab = 0;
+
     public MainWindow() {
-
-
         poolComConnections.add(new ComPort());
-
+        JmenuFile jmenu = new JmenuFile();
         // Создание строки главного меню
         JMenuBar menuBar = new JMenuBar();
 
         // Добавление в главное меню выпадающих пунктов меню
-        menuBar.add(createFileMenu());
-        menuBar.add(createViewMenu());
+        menuBar.add(jmenu.createFileMenu());
+        menuBar.add(jmenu.createViewMenu());
+        menuBar.add(jmenu.createSystemParametrs());
 
         setJMenuBar(menuBar);
         setContentPane(contentPane);
@@ -148,9 +137,9 @@ public class MainWindow extends JDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.out.println("Pressed BT_Update");
-                poolComConnections.get(tabbedPane1.getSelectedIndex()).updatePorts();
+                poolComConnections.get(tab).updatePorts();
                 CB_ComPorts.removeAllItems();
-                for (SerialPort port :  poolComConnections.get(tabbedPane1.getSelectedIndex()).getAllPorts()) {
+                for (SerialPort port :  poolComConnections.get(tab).getAllPorts()) {
                     CB_ComPorts.addItem( port.getSystemPortName() + " (" + MyUtilities.removeComWord(port.getPortDescription()) + ")");
                 }
             }
@@ -160,12 +149,12 @@ public class MainWindow extends JDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.out.println("Pressed BT_Open");
-                poolComConnections.get(tabbedPane1.getSelectedIndex()).setPort(CB_ComPorts.getSelectedIndex());
-                poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort.setComPortParameters(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()),8, 1, SerialPort.NO_PARITY, false);
-                poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort.setBaudRate(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()));
-                poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort.setNumDataBits(DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
-                poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort.setParity(ParityList.values()[CB_Parity.getSelectedIndex()].getValue()); //Работает за счет совпадения индексов с библиотечными
-                poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort.setNumStopBits(StopBitsList.getLikeArray(CB_StopBit.getSelectedIndex()));
+                poolComConnections.get(tab).setPort(CB_ComPorts.getSelectedIndex());
+                poolComConnections.get(tab).activePort.setComPortParameters(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()),8, 1, SerialPort.NO_PARITY, false);
+                poolComConnections.get(tab).activePort.setBaudRate(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()));
+                poolComConnections.get(tab).activePort.setNumDataBits(DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
+                poolComConnections.get(tab).activePort.setParity(ParityList.values()[CB_Parity.getSelectedIndex()].getValue()); //Работает за счет совпадения индексов с библиотечными
+                poolComConnections.get(tab).activePort.setNumStopBits(StopBitsList.getLikeArray(CB_StopBit.getSelectedIndex()));
                 saveParameters(null);
             }
         });
@@ -176,8 +165,8 @@ public class MainWindow extends JDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.out.println("Pressed BT_Close");
-                poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort.flushDataListener();
-                poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort.closePort();
+                poolComConnections.get(tab).activePort.flushDataListener();
+                poolComConnections.get(tab).activePort.closePort();
             }
         });
         CB_Pool.addActionListener(new ActionListener() {
@@ -185,12 +174,8 @@ public class MainWindow extends JDialog {
             public void actionPerformed(ActionEvent e) {
                 System.out.print("Pressed CB_Pool "); System.out.println(CB_Pool.isSelected());
                 protocol = ProtocolsList.getLikeArrayEnum(CB_Protocol.getSelectedIndex());
-                textToSendValue.set(tabbedPane1.getSelectedIndex(), textToSend.getText());
-                String stringToSend = textToSendValue.get(tabbedPane1.getSelectedIndex());
-                JTextPane paneForShow = logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1);
-                logState.set(tabbedPane1.getSelectedIndex(), CB_Log.isSelected());
-                SerialPort comPort = poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort;
-
+                textToSendValue.set(tab, textToSend.getText());
+                String stringToSend = textToSendValue.get(tab);
                 boolean pool = CB_Pool.isSelected();
                 int poolDelay = 1000;
                 try{
@@ -198,137 +183,77 @@ public class MainWindow extends JDialog {
                 }catch (Exception e1){
                     IN_PoolDelay.setText("1000");
                 }
-                boolean logStateCb = logState.get(tabbedPane1.getSelectedIndex());
-                String thName = "Pool_"+tabbedPane1.getTitleAt(tabbedPane1.getSelectedIndex());
-                if(findPoolServiceByOpenedPort() != null){
-                    System.out.println("Порт уже используется");
-                    PoolService poolService = findPoolServiceByOpenedPort();
-                    if(poolService.containTabDev(tabbedPane1.getSelectedIndex())){
-                        System.out.println("Для текущей вкладки устройство существует в сервисе опроса");
-                        return;
+                PoolService psT = findPoolServiceByTabNumber();
+                PoolService psC = findPoolServiceByOpenedPort();
+                PoolService ps = null;
+                if(psT != null)
+                    ps = psT;
+                else
+                    ps = psC;
+
+                if(ps != null){
+                    System.out.println("Порт уже используется, проверка  среди запущенных потоков");
+                    if(ps.containTabDev(tab)){
+                        System.out.println("Для текущей вкладки устройство существует в потоке опроса");
+                        if(pool){
+                            System.out.println("Команда к запуску");
+                            ps.setNeedPool(tab, true);
+                        }else{
+                            System.out.println("Команда к остановке опроса");
+                            if(ps.isRootTab(tab)){
+                                System.out.println("Текущий поток является корневым для других");
+                                ps.setNeedPool(tab, false);
+                            }else{
+                                System.out.println("Вкладка одинока. Поток будет завершен");
+                                ps.setNeedPool(tab, false);
+                                poolServices.remove(tab);
+                            }
+                        }
+                        ps.setNeedPool(tab, pool);
                     }else{
-                        System.out.println("Для текущей вкладки устройство не существует в сервисе опроса");
-                        poolService.addDeviceToService(
-                                tabbedPane1.getSelectedIndex(),
-                                stringToSend,
-                                logDataTransferJtextPanel.get(tabbedPane1.getSelectedIndex()),
-                                logStateCb,
-                                "Pool_"+tabbedPane1.getTitleAt(tabbedPane1.getSelectedIndex())
-                        );
-                        return;
+                        System.out.println("Для текущей вкладки устройство не существует в потоке опроса");
+                        ps.addDeviceToService(tab, stringToSend, false);
                     }
-
-                }
-                System.out.println("Начинаю работу с потоком " + thName);
-
-                if(pool && (! MyUtilities.containThreadByName(threads, thName))){ //Надо запустить опрос но потока еще нету
-                    System.out.println("Надо запустить опрос но потока еще нету");
+                }else{
+                    System.out.println("Порт не используется, создание нового потока");
                     poolServices.add(new PoolService(
                             ProtocolsList.getLikeArrayEnum(CB_Protocol.getSelectedIndex()),
-                            textToSendValue.get(tabbedPane1.getSelectedIndex()),
-                            logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1),
-                            poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort,
+                            textToSendValue.get(tab),
+                            poolComConnections.get(tab).activePort,
                             poolDelay,
-                            logState.get(tabbedPane1.getSelectedIndex()),
-                            tabbedPane1.getSelectedIndex()));
-
-                    Thread myThread = new Thread(poolServices.get(poolServices.size() - 1));
-                    myThread.setName("Pool_"+tabbedPane1.getTitleAt(tabbedPane1.getSelectedIndex()));
-                    threads.add(myThread);
-                    myThread.start();
+                            false,
+                            tab));
+                    thPool.submit(poolServices.get(poolServices.size() - 1));
                     System.out.println("Поток создан и запущен");
-                    System.out.println(myThread.getState());
-                }else if(pool && MyUtilities.containThreadByName(threads, thName)){//Надо запустить опрос и поток уже существует
-                    System.out.println("Надо запустить опрос и поток уже существует");
-                    Thread myThread = MyUtilities.getThreadByName(threads, thName);
-
-                    if( myThread != null){
-                        System.out.println(myThread.getState());
-                        if(! myThread.isAlive()){
-                            threads.remove(MyUtilities.getThreadByName(threads, thName));
-                            poolServices.add(new PoolService(
-                                    ProtocolsList.getLikeArrayEnum(CB_Protocol.getSelectedIndex()),
-                                    textToSendValue.get(tabbedPane1.getSelectedIndex()),
-                                    logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1),
-                                    poolComConnections.get(tabbedPane1.getSelectedIndex()).activePort,
-                                    poolDelay,
-                                    logState.get(tabbedPane1.getSelectedIndex()),
-                                    tabbedPane1.getSelectedIndex()));
-                            myThread = new Thread(poolServices.get(poolServices.size() - 1));
-
-                            myThread.setName("Pool_"+tabbedPane1.getTitleAt(tabbedPane1.getSelectedIndex()));
-                            threads.add(myThread);
-                            myThread.start();
-                            System.out.println("Поток запущен повторно");
-                        }
-                    }else{
-                        System.out.println("Поток для повторного запуска не найден");
-                    }
-                } else if ((! pool) && MyUtilities.containThreadByName(threads, thName)) {//Надо остановить опрос и поток уже существует
-                    System.out.println("Надо остановить опрос и поток уже существует");
-                    Thread myThread = MyUtilities.getThreadByName(threads, thName);
-                    if( myThread != null){
-                        System.out.println(myThread.getState()); //RUNNABLE
-                        if(myThread.isAlive()){
-                            while (myThread.isAlive()){
-                                myThread.interrupt();
-                            }
-                            System.out.println("Поток приостановлен");
-                        }
-                    }else{
-                        System.out.println("Поток для остановки не найден");
-                    }
-
-                }else {
-                    System.out.println("Потока не было, останавливать нечего");
                 }
-
-
-                //sendCommand(textToSendString);
-
             }
         });
 
+        CB_Log.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                PoolService ps = findPoolServiceByTabNumber();
+                if(ps != null){
+                    ps.setNeedLog(CB_Log.isSelected(), tab);
+                }else{
+                    System.out.println("Для текущей влкадки потока опроса не существует");
+                }
+            }
+        });
 
         BT_Send.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.out.println("Pressed BT_Send");
-                //protocol = ProtocolsList.getLikeArrayEnum(CB_Protocol.getSelectedIndex());
-                //System.out.println("Protocol: " + protocol);
-                //textToSendValue.set(tabbedPane1.getSelectedIndex(), textToSend.getText());
-                //logState.set(tabbedPane1.getSelectedIndex(), CB_Log.isSelected());
-                //sendCommand(textToSendString);
-                // ТЕСТ НА УТЕЧКУ ПАМЯТИ
-                for (int i = 0; i < 10000; i++) {
-
-
-                    //logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1).setText(poolService.getAnswersForTab(tabbedPane1.getSelectedIndex()).toString());
-                    String str = "234234";
-                    logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1).setText(null); //Очищает поле и не потреблят (почти) память
-                    Document doc = logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1).getDocument();//Пробовал через док
-
-                    try {
-                        doc.insertString(doc.getLength(), str, null);
-                    } catch (BadLocationException ex) {
-                        throw new RuntimeException(ex);
-                    }
-
-                    //logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1).setText(str);
-                    textField1.setText(str);
-                    str = null;
-                    doc = null;
-
-
+                Document doc = logDataTransferJtextPanel.get(tab).getDocument();//Пробовал через док
+                try {
+                    doc.remove(0, doc.getLength());
+                    doc.insertString(doc.getLength(), AnswerStorage.getAnswersForTab(tab, true), null);
+                } catch (BadLocationException ex) {
+                    //throw new RuntimeException(ex);
                 }
-                //Делает лучше, без вызова сборщика вообще улетает за гигобайт.
-                //Пробовал из JtextPane извлекать Document и ему делать setContent. Становится лучше
-                //Пробовал на JavaFX повторять этот же тест. С 98 до 120 подскакивает, дальше каждый повторный запуск занимает два мегабайта
-                //
-                System.gc();
-                System.runFinalization ();
-                Runtime.getRuntime().gc();
-
+                doc = null;
+                System.gc(); //Runtime.getRuntime().gc();
             }
         });
 
@@ -337,7 +262,6 @@ public class MainWindow extends JDialog {
             public void actionPerformed(ActionEvent e) {
                 System.out.println("Pressed BT_AddDev");
                 textToSendValue.add("");
-                logState.add(true);
                 JPanel panel = new JPanel();
                 panel.setLayout( new BorderLayout());
                 logDataTransferJscrollPanel.add(new JScrollPane());
@@ -350,7 +274,6 @@ public class MainWindow extends JDialog {
 
                 poolComConnections.add(new ComPort());
                 panel.add(logDataTransferJscrollPanel.get(logDataTransferJscrollPanel.size() - 1), BorderLayout.CENTER);
-                panel.setDoubleBuffered(true);
                 panel.setEnabled(false);
                 tabbedPane1.addTab("dev" + (tabbedPane1.getTabCount() + 1), panel);
                 checkIsUsedPort();
@@ -364,35 +287,19 @@ public class MainWindow extends JDialog {
         BT_RemoveDev.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                int curTab = tabbedPane1.getSelectedIndex();
-                System.out.println("Pressed BT_RemoveDev on Tab" + curTab);
-                textToSendValue.remove(curTab);
-                logState.remove(curTab);
-                System.out.println("Надо остановить опрос и поток уже существует");
-                String thName = "Pool_"+tabbedPane1.getTitleAt(curTab);
-                Thread myThread = MyUtilities.getThreadByName(threads, thName);
-                if( myThread != null){
-                    System.out.println(myThread.getState()); //RUNNABLE
-                    if(myThread.isAlive()){
-                        while (myThread.isAlive()){
-                            myThread.interrupt();
-                        }
-                        System.out.println("Поток приостановлен");
-                        logDataTransferJtextPanel.get(curTab);
+                tab = tabbedPane1.getSelectedIndex();
+                System.out.println("Pressed BT_RemoveDev on Tab" + tab);
+                textToSendValue.remove(tab);
+                PoolService ps = findPoolServiceByOpenedPort();
+                if(ps != null){
+                    if(ps.containTabDev(tab)){
+                        ps.setNeedPool(tab, false);
+                        System.out.println("Задача была удалена");
+                    }else{
+                        System.out.println("Выбранная вкладка не найдена в потоке");
                     }
-                }else{
-                    System.out.println("Поток для остановки не найден");
                 }
-                if(poolComConnections.size() >= curTab){
-                    if (poolComConnections.get(curTab).activePort != null){
-                        poolComConnections.get(curTab).activePort.closePort();
-                    }
-
-                    poolComConnections.remove(curTab);
-                }
-
-
-                tabbedPane1.removeTabAt(curTab);
+                tabbedPane1.removeTabAt(tab);
                 if(tabbedPane1.getTabCount() == 0){
                     BT_RemoveDev.setEnabled(false);
                 }
@@ -401,27 +308,13 @@ public class MainWindow extends JDialog {
         textToSend.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if(textToSendValue.size() > tabbedPane1.getSelectedIndex()){
-                    textToSendValue.set(tabbedPane1.getSelectedIndex(), textToSend.getText());
-                    if(poolServices.size() > tabbedPane1.getSelectedIndex()) {
-                        poolServices.get(tabbedPane1.getSelectedIndex()).setTextToSendString(textToSend.getText(), tabbedPane1.getSelectedIndex());
+                if(textToSendValue.size() > tab){
+                    textToSendValue.set(tab, textToSend.getText());
+                    if(poolServices.size() > tab) {
+                        poolServices.get(tab).setTextToSendString(textToSend.getText(), tab);
                     }
                 }else{
                     System.out.println("Ошибка при обновлении пула команд для опроса");
-                }
-            }
-        });
-
-        CB_Log.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if(logState.size() > tabbedPane1.getSelectedIndex()){
-                    logState.set(tabbedPane1.getSelectedIndex(), CB_Log.isSelected());
-                    if(poolServices.size() > tabbedPane1.getSelectedIndex()) {
-                        poolServices.get(tabbedPane1.getSelectedIndex()).setNeedLog(CB_Log.isSelected(), tabbedPane1.getSelectedIndex());
-                    }
-                }else{
-                    System.out.println("Ошибка при обновлении пула команд для ведения лога");
                 }
             }
         });
@@ -447,35 +340,17 @@ public class MainWindow extends JDialog {
 
         tabbedPane1.addChangeListener(new ChangeListener() {
             public void stateChanged(ChangeEvent e) {
-                System.out.println("Tab: " + tabbedPane1.getSelectedIndex());
-                textToSend.setText(textToSendValue.get(tabbedPane1.getSelectedIndex()));
-                String thName = "Pool_"+tabbedPane1.getTitleAt(tabbedPane1.getSelectedIndex());
-                boolean threadExist = MyUtilities.containThreadByName(threads, thName);
-                boolean comInUse = checkIsUsedPort();
-
-                if(threadExist){
-                    CB_Pool.setSelected(true);
-                    //System.out.println(poolServices.get(tabbedPane1.getSelectedIndex()).getProtocolForJCombo());
-                    CB_Protocol.setSelectedIndex(poolServices.get(tabbedPane1.getSelectedIndex()).getProtocolForJCombo());
-                    CB_ComPorts.setSelectedIndex(poolServices.get(tabbedPane1.getSelectedIndex()).getComPortForJCombo());
-                    CB_Log.setSelected(poolServices.get(tabbedPane1.getSelectedIndex()).isNeedLog(tabbedPane1.getSelectedIndex()));
-                    //CB_Protocol.setSelectedIndex(ProtocolsList.getByName);
-                } else if (comInUse) {
-                    PoolService ps = findPoolServiceByOpenedPort();
-                    assert ps != null;
-                    CB_Log.setSelected(ps.isLoggedTab(tabbedPane1.getSelectedIndex()));
-                }
+                tab = tabbedPane1.getSelectedIndex();
+                System.out.println("Tab: " + tab);
+                textToSend.setText(textToSendValue.get(tab));
+                CB_Pool.setSelected(isPooled());
+                CB_Log.setSelected(isLogged());
+                textToSend.setText(getPoolText());
             }
         });
 
-
-
         textToSendValue.add(textToSend.getText());
-        textToSendValue.add(textToSend.getText());
-        logState.add(true);
-        logState.add(true);
         BT_AddDev.doClick();
-
 
         textToSend.getDocument().addDocumentListener(new DocumentListener() {
             public void changedUpdate(DocumentEvent e) {
@@ -489,10 +364,11 @@ public class MainWindow extends JDialog {
             }
             public void update() {
                 //System.out.println("Update command");
-                if(tabbedPane1.getSelectedIndex() < textToSendValue.size())
-                    textToSendValue.set(tabbedPane1.getSelectedIndex(), textToSend.getText());
-                if(tabbedPane1.getSelectedIndex() < poolServices.size())
-                    poolServices.get(tabbedPane1.getSelectedIndex()).setTextToSendString(textToSend.getText(), tabbedPane1.getSelectedIndex());
+                if(tab < textToSendValue.size()) {
+                    PoolService ps = findPoolServiceByTabNumber();
+                    if(ps != null)
+                        ps.setTextToSendString(textToSend.getText(), tab);
+                }
             }
         });
 
@@ -508,25 +384,34 @@ public class MainWindow extends JDialog {
             }
             public void update() {
                 System.out.println("Update PoolDelay");
-                if(poolServices.get(tabbedPane1.getSelectedIndex()) != null)
-                    poolServices.get(tabbedPane1.getSelectedIndex()).setPoolDelay(IN_PoolDelay.getText());
+                if(poolServices.get(tab) != null)
+                    poolServices.get(tab).setPoolDelay(IN_PoolDelay.getText());
+            }
+        });
+
+        addWindowListener(new WindowAdapter()
+        {
+            @Override
+            public void windowClosing(WindowEvent e)
+            {
+                thPool.shutdownNow();
+                e.getWindow().dispose();
             }
         });
     }
 
-    private boolean checkIsUsedPort(){
-        //poolComConnections.get(tabbedPane1.getSelectedIndex()).setPort(CB_ComPorts.getSelectedIndex());
+    private void checkIsUsedPort(){
+        //poolComConnections.get(tab).setPort(CB_ComPorts.getSelectedIndex());
         for (PoolService poolService : poolServices) {
             if(CB_ComPorts.getSelectedIndex() == poolService.getComPortForJCombo()){
                 BT_Open.setEnabled(false);
                 CB_Protocol.setEnabled(false);
-                CB_Protocol.setSelectedIndex(poolService.getComPortForJCombo());
-                return true;
+                CB_Protocol.setSelectedIndex(poolService.getProtocolForJCombo());
+                return;
             }
         }
         BT_Open.setEnabled(true);
         CB_Protocol.setEnabled(true);
-        return false;
     }
 
     private PoolService findPoolServiceByOpenedPort(){
@@ -537,121 +422,59 @@ public class MainWindow extends JDialog {
         }
         return null;
     }
+
+    private PoolService findPoolServiceByTabNumber(){
+        for (PoolService poolService : poolServices) {
+            if(poolService.containTabDev(tab)){
+                return poolService;
+            }
+        }
+        return null;
+    }
+
+    private boolean isPooled (){
+        PoolService ps = findPoolServiceByTabNumber();
+        if(ps != null){
+            return ps.isNeedPool(tab);
+        }
+        return false;
+    }
+
+    private boolean isLogged (){
+        PoolService ps = findPoolServiceByTabNumber();
+        if(ps != null){
+            return ps.isNeedLog(tab);
+        }
+        return false;
+    }
+
+    private String getPoolText(){
+        PoolService ps = findPoolServiceByTabNumber();
+        if(ps != null){
+            return ps.getTextToSensByTab(tab);
+        }
+        return "";
+    }
+    private boolean havePoolService(){
+        for (PoolService poolService : poolServices) {
+            if(poolService.containTabDev(tab)){
+                return true;
+            }
+        }
+        return false;
+    }
     private void onOK() {
         System.out.println("Pressed BT_Ok");
         dispose();
     }
 
-    private void onCancel() {
-        // add your code here if necessary
-        dispose();
-    }
 
-    private void createUIComponents() {
-        // TODO: place custom component creation code here
-    }
 
-//--------------------------------------------------------
-    /**
-     * Функция создания меню "Файл"
-     */
-    private JMenu createFileMenu()
-    {
-        // Создание выпадающего меню
-        JMenu file = new JMenu("Файл");
-        // Пункт меню "Открыть" с изображением
-        JMenuItem open = new JMenuItem("Открыть",
-                new ImageIcon("images/open.png"));
-        // Пункт меню из команды с выходом из программы
-        JMenuItem exit = new JMenuItem(new ExitAction());
-        // Добавление к пункту меню изображения
-        exit.setIcon(new ImageIcon("images/exit.png"));
-        // Добавим в меню пункта open
-        file.add(open);
-        // Добавление разделителя
-        file.addSeparator();
-        file.add(exit);
 
-        open.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent arg0) {
-                System.out.println ("ActionListener.actionPerformed : open");
-            }
-        });
-        return file;
-    }
-    //--------------------------------------------------------
-    // создадим забавное меню
-    /**
-     * Функция создания меню
-     */
-    private JMenu createViewMenu()
-    {
-        // создадим выпадающее меню
-        JMenu viewMenu = new JMenu("Настройки");
-        // меню-флажки
-        JMenuItem logging  = new JMenuItem("Ведение лога");
-        JMenuItem server  = new JMenuItem("Сервер");
-        JMenuItem debugging = new JMenuItem("Отладка");
-        // меню-переключатели
-        JRadioButtonMenuItem one = new JRadioButtonMenuItem("Работа в обычном режиме");
-        JRadioButtonMenuItem two = new JRadioButtonMenuItem("Работа в режиме отладки");
-        // организуем переключатели в логическую группу
-        ButtonGroup bg = new ButtonGroup();
-        bg.add(one);
-        bg.add(two);
-        // добавим все в меню
-        viewMenu.add(logging);
-        viewMenu.add(server);
-        viewMenu.add(debugging);
-        // разделитель можно создать и явно
-        viewMenu.add( new JSeparator());
-        viewMenu.add(one);
-        viewMenu.add(two);
 
-        logging.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent arg0) {
-                System.out.println("LogWindows");
-                LogSettingWindows logWindows = new LogSettingWindows();
-                logWindows.setName("Log settings");
-                logWindows.setTitle("Log settings");
-                logWindows.pack();
-                logWindows.setVisible(true);
-            }
-        });
 
-        server.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent arg0) {
-                System.out.println("ServerWindows");
-                ServerSettingsWindow srvWindows = new ServerSettingsWindow(prop);
-                srvWindows.setName("Server settings");
-                srvWindows.setTitle("Server settings");
-                srvWindows.pack();
-                srvWindows.setVisible(true);
-            }
-        });
-        return viewMenu;
-    }
 
-    //--------------------------------------------------------
-    /**
-     * Вложенный класс завершения работы приложения
-     */
-    class ExitAction extends AbstractAction
-    {
-        private static final long serialVersionUID = 1L;
-        ExitAction() {
-            putValue(NAME, "Выход");
-        }
-        public void actionPerformed(ActionEvent e) {
-            System.exit(0);
-        }
-    }
+
 
     /* --- Метод обновления настроек ---
         Если вызван с параметром NULL, то
@@ -662,7 +485,7 @@ public class MainWindow extends JDialog {
      */
     private void saveParameters(String [] parametersArray){
         if(parametersArray == null){
-            prop.setLastComPort(poolComConnections.get(tabbedPane1.getSelectedIndex()).getCurrentComName());
+            prop.setLastComPort(poolComConnections.get(tab).getCurrentComName());
             prop.setLastComSpeed(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()));
             prop.setLastDataBits(DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
             prop.setLastParity(ParityList.values()[CB_Parity.getSelectedIndex()].getName());
@@ -672,7 +495,7 @@ public class MainWindow extends JDialog {
             for (String s : parametersArray) {
                 switch (s){
                     case "LastComPort":
-                        prop.setLastComPort(poolComConnections.get(tabbedPane1.getSelectedIndex()).getCurrentComName());
+                        prop.setLastComPort(poolComConnections.get(tab).getCurrentComName());
                         break;
                     case "LastComSpeed":
                         prop.setLastComSpeed(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()));
@@ -695,5 +518,7 @@ public class MainWindow extends JDialog {
                 }
             }
         }
+
     }
+
 }

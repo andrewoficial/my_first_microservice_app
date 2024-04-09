@@ -70,6 +70,12 @@ public class ERSTEVAK_MTP4D implements SerialPortDataListener, SomeDevice {
         while((received == 0) && (millisLimit > millisDela)){
             millisDela = System.currentTimeMillis() - millisPrev;
             received = comPort.bytesAvailable();
+
+            try {
+                Thread.sleep(Math.min((millisLimit / 4), 200L));
+            } catch (InterruptedException e) {
+                //throw new RuntimeException(e);
+            }
         }
         if(received > 0) {
             byte[] buffer = new byte[comPort.bytesAvailable()];
@@ -80,7 +86,6 @@ public class ERSTEVAK_MTP4D implements SerialPortDataListener, SomeDevice {
             //lastAnswer = new String(buffer, StandardCharsets.US_ASCII);
 
             try {
-
                 lastAnswer = new StringBuilder(new String(buffer, "Cp1251"));
             } catch (UnsupportedEncodingException e) {
                 lastAnswer = new StringBuilder(new String(buffer));

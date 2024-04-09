@@ -13,7 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 
-public class ServerSettingsWindow extends JDialog {
+public class ServerSettingsWindow extends JDialog{
     private String driver;
     private JPanel serverParametersPanel;
     private JTextField IN_DbDriver;
@@ -43,7 +43,7 @@ public class ServerSettingsWindow extends JDialog {
 
 
 
-    public ServerSettingsWindow(MyProperties prop) {
+    public ServerSettingsWindow() {
         this.app = SpringLoader.app;
         this.ctx = SpringLoader.ctx;
         setModal(true);
