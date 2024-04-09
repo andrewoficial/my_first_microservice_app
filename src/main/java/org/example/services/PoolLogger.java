@@ -14,11 +14,9 @@ import java.util.ArrayList;
 import java.util.Calendar;
 
 public class PoolLogger {
-    private static final String fileName = (new SimpleDateFormat("yyyyMMdd_HHmmss").format(Calendar.getInstance().getTime())) + ".txt";
+    private static final String fileName = (new SimpleDateFormat("yyyy.MM.dd HH-mm-ss").format(Calendar.getInstance().getTime())) + " SumLog.txt";
     private static File logFile;
-
     private static Long dateTimeLastWrite = System.currentTimeMillis();
-
     private static final ArrayList<String> stringsBuffer = new ArrayList<>();
     public static class SingletonHolder {
         public static final PoolLogger HOLDER_INSTANCE = new PoolLogger();

@@ -42,7 +42,7 @@ public class PoolService implements Runnable{
     private int poolDelay;
     private SomeDevice device = null;
 
-    DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm:ss");
     LocalDateTime now = LocalDateTime.now();
 
 
@@ -113,12 +113,13 @@ public class PoolService implements Runnable{
                 for (int i = 0; i < textToSend.size(); i++) {
                     //Если для внутренней очереди нет номера вкладки ИЛИ флаг опроса FALSE
                     if(getTabNumberByInnerNumber(i) < 0 || (!needPool.get(getTabNumberByInnerNumber(i)))){
+                        System.out.println(needPool.get(getTabNumberByInnerNumber(i)));
                         continue;
                     }
                     DeviceAnswer answer = new DeviceAnswer(
                             LocalDateTime.now(),
                             textToSend.get(i),
-                            currentTab.get(i));
+                            getTabNumberByInnerNumber(i));
                     device.sendData(textToSend.get(i));
                     now = LocalDateTime.now();
                     answer.setDeviceType(device);
@@ -171,12 +172,15 @@ public class PoolService implements Runnable{
         return -1;
     }
     private void logSome(String str, int subDevNum){
+
         if(needLogArrayList.get(subDevNum)) {
             //System.out.println("Do log");
             PoolLogger poolLogger = PoolLogger.getInstance();
             PoolLogger.writeLine(str);
             deviceLoggerArrayList.get(subDevNum).writeLine(str);
         }
+
+
     }
 
 
@@ -258,7 +262,7 @@ public class PoolService implements Runnable{
         currentTab.add(tabNumber);
         textToSend.add(command);
         needLogArrayList.add(needLog);
-        deviceLoggerArrayList.add(new DeviceLogger(Thread.currentThread().getName()));
+        deviceLoggerArrayList.add(new DeviceLogger(String.valueOf(tabNumber)));
         answersCollection.add(new StringBuffer());
         needPool.put(tabNumber, true);
     }

@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 
 public class DeviceLogger {
-    private String fileName = (new SimpleDateFormat("yyyyMMdd_HHmmss").format(Calendar.getInstance().getTime()));
+    private String fileName = (new SimpleDateFormat("yyyy.MM.dd HH.mm.ss.SS").format(Calendar.getInstance().getTime()));
     private File logFile;
     private Long dateTimeLastWrite = System.currentTimeMillis();
     private final ArrayList<String> stringsBuffer = new ArrayList<>();

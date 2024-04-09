@@ -4,7 +4,9 @@ import lombok.Getter;
 import lombok.Setter;
 import org.example.device.SomeDevice;
 
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class DeviceAnswer {
     @Setter @Getter
@@ -33,6 +35,9 @@ public class DeviceAnswer {
 
     @Override
     public String toString(){
-        return deviceType + "\t" + answerReceivedTime + "\t" + answerReceivedString + "\n";
+        //String className = deviceType.getClass().toString().replace("class org.example.device.", "");
+        DateTimeFormatter CUSTOM_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        String formattedString = answerReceivedTime.format(CUSTOM_FORMATTER);
+        return formattedString + "\t" + "className" + "\t" + answerReceivedString + "\n";
     }
 }
