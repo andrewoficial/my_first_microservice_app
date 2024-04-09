@@ -22,9 +22,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 
-public class MainWindow extends JDialog {
+public class MainWindow extends JDialog implements Rendeble{
+    private int countRender = 0;
 
     private final ExecutorService thPool = Executors.newCachedThreadPool();
+
+    private final ExecutorService uiThPool = Executors.newCachedThreadPool();
     private final MyProperties prop = new MyProperties();
     private final ArrayList <String> textToSendValue = new ArrayList<>();
     private final ArrayList <JScrollPane> logDataTransferJscrollPanel = new ArrayList<>();
@@ -72,7 +75,7 @@ public class MainWindow extends JDialog {
         // Добавление в главное меню выпадающих пунктов меню
         menuBar.add(jmenu.createFileMenu());
         menuBar.add(jmenu.createViewMenu());
-        menuBar.add(jmenu.createSystemParametrs());
+        menuBar.add(jmenu.createSystemParametrs(uiThPool));
 
         setJMenuBar(menuBar);
         setContentPane(contentPane);
@@ -245,15 +248,8 @@ public class MainWindow extends JDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.out.println("Pressed BT_Send");
-                Document doc = logDataTransferJtextPanel.get(tab).getDocument();//Пробовал через док
-                try {
-                    doc.remove(0, doc.getLength());
-                    doc.insertString(doc.getLength(), AnswerStorage.getAnswersForTab(tab, true), null);
-                } catch (BadLocationException ex) {
-                    //throw new RuntimeException(ex);
-                }
-                doc = null;
-                System.gc(); //Runtime.getRuntime().gc();
+                renderData();
+
             }
         });
 
@@ -351,6 +347,7 @@ public class MainWindow extends JDialog {
 
         textToSendValue.add(textToSend.getText());
         BT_AddDev.doClick();
+        uiThPool.submit(new RenderThread(this));
 
         textToSend.getDocument().addDocumentListener(new DocumentListener() {
             public void changedUpdate(DocumentEvent e) {
@@ -398,6 +395,8 @@ public class MainWindow extends JDialog {
                 e.getWindow().dispose();
             }
         });
+
+
     }
 
     private void checkIsUsedPort(){
@@ -463,17 +462,23 @@ public class MainWindow extends JDialog {
         }
         return false;
     }
-    private void onOK() {
-        System.out.println("Pressed BT_Ok");
-        dispose();
+
+
+    public void renderData(){
+        Document doc = logDataTransferJtextPanel.get(tab).getDocument();//Пробовал через док
+        try {
+            doc.remove(0, doc.getLength());
+            doc.insertString(doc.getLength(), AnswerStorage.getAnswersForTab(tab, true), null);
+        } catch (BadLocationException ex) {
+            //throw new RuntimeException(ex);
+        }
+        doc = null;
+        countRender++;
+        if(countRender > 20){
+            System.gc(); //Runtime.getRuntime().gc();
+        }
+
     }
-
-
-
-
-
-
-
 
 
     /* --- Метод обновления настроек ---

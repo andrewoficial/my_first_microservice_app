@@ -80,7 +80,7 @@ public class PoolService implements Runnable{
     @Override
     public void run() {
         Thread.currentThread().setName("Thread Pool Tab"+currentTab.get(0));
-        System.out.println(Thread.currentThread().getName());
+        //System.out.println(Thread.currentThread().getName());
         long millisLimit = poolDelay;
         long millisPrev = System.currentTimeMillis() - millisLimit - millisLimit;
         deviceLoggerArrayList.add(new DeviceLogger(currentTab.get(0).toString()));
@@ -128,7 +128,7 @@ public class PoolService implements Runnable{
                         answer.setAnswerReceivedString(device.getAnswer());
                     }
                     AnswerStorage.addAnswer(answer);
-                    logSome(answer.toString(), i);
+                    logSome(answer, i);
                 }
             }else {
                 try {
@@ -171,13 +171,13 @@ public class PoolService implements Runnable{
         }
         return -1;
     }
-    private void logSome(String str, int subDevNum){
+    private void logSome(DeviceAnswer answer, int subDevNum){
 
         if(needLogArrayList.get(subDevNum)) {
             //System.out.println("Do log");
             PoolLogger poolLogger = PoolLogger.getInstance();
-            PoolLogger.writeLine(str);
-            deviceLoggerArrayList.get(subDevNum).writeLine(str);
+            PoolLogger.writeLine(answer);
+            deviceLoggerArrayList.get(subDevNum).writeLine(answer);
         }
 
 

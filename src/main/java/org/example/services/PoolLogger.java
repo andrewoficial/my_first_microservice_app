@@ -10,6 +10,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
 
@@ -55,19 +56,30 @@ public class PoolLogger {
         PoolLogger.logFile = logFile;
     }
 
-    public static void writeLine (String line){
+    public static void writeLine (DeviceAnswer answer){
+        DateTimeFormatter CUSTOM_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        StringBuilder line = new StringBuilder(answer.getAnswerReceivedTime().format(CUSTOM_FORMATTER));
+        line.append("\t");
+        line.append(answer.getDeviceType().getClass().toString().replace("class org.example.device.", ""));
+        line.append("\t");
+        line.append(answer.getAnswerReceivedString());
+        line.append("\t");
+        line.append(answer.getAnswerReceivedValue());
+        line.append("\n");
+
+
+        String formattedString = answer.getAnswerReceivedTime().format(CUSTOM_FORMATTER);
         if((System.currentTimeMillis() - dateTimeLastWrite ) < 300L ){
-            stringsBuffer.add(line);
+            stringsBuffer.add(line.toString());
             //System.out.println("Log buffered");
         }else {
             dateTimeLastWrite = System.currentTimeMillis();
-            stringsBuffer.add(line);
+            stringsBuffer.add(line.toString());
             StringBuilder stringBuilder = new StringBuilder();
             for (String s : stringsBuffer) {
                 stringBuilder.append(s);
             }
             stringsBuffer.clear();
-            line = stringBuilder.toString();
             FileWriter fw = null;
             try {
                 fw = new FileWriter(logFile, true);
@@ -78,7 +90,7 @@ public class PoolLogger {
             assert fw != null;
             BufferedWriter bw = new BufferedWriter(fw);
             try {
-                bw.write(line);
+                bw.write(stringBuilder.toString());
 
                 bw.close();
             } catch (IOException e) {

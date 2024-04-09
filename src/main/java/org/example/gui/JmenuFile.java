@@ -3,6 +3,8 @@ package org.example.gui;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 
 public class JmenuFile {
 
@@ -59,7 +61,7 @@ public class JmenuFile {
     /**
      * Функция создания меню "Настройки"
      */
-    public JMenu createSystemParametrs()
+    public JMenu createSystemParametrs(ExecutorService thPool)
     {
         // создадим выпадающее меню
         JMenu viewMenu = new JMenu("Система");
@@ -79,6 +81,9 @@ public class JmenuFile {
                 logWindows.setModal(false);
                 logWindows.setVisible(true);
                 logWindows.startMonitor();
+                thPool.submit(new RenderThread(logWindows));
+
+
             }
         });
         return viewMenu;
