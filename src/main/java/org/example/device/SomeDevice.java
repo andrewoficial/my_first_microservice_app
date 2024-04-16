@@ -13,9 +13,9 @@ public interface SomeDevice {
 
     void sendData(String data);
 
+    boolean hasAnswer();
     String getAnswer();
 
-    boolean hasAnswer();
-
-
+    boolean hasValue();
+    String getValue();
 }

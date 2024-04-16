@@ -147,4 +147,12 @@ public class ARD_BAD_VLT implements SerialPortDataListener, SomeDevice {
         System.out.println("return flags" + hasAnswer);
         return hasAnswer;
     }
+
+    public boolean hasValue(){
+        return false;
+    }
+
+    public String getValue(){
+        return null;
+    }
 }

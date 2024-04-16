@@ -79,7 +79,7 @@ public class PoolService implements Runnable{
 
     @Override
     public void run() {
-        Thread.currentThread().setName("Thread Pool Tab"+currentTab.get(0));
+        Thread.currentThread().setName("Thread Pool Tab "+currentTab.get(0));
         //System.out.println(Thread.currentThread().getName());
         long millisLimit = poolDelay;
         long millisPrev = System.currentTimeMillis() - millisLimit - millisLimit;
@@ -105,6 +105,9 @@ public class PoolService implements Runnable{
                         case ERSTEVAK_MTP4D -> {
                             device = new ERSTEVAK_MTP4D(comPort);
                         }
+                        case EDWARDS_D397_00_000 -> {
+                            device = new EDWARDS_D397_00_000(comPort);
+                        }
                     }
                 }
 
@@ -126,6 +129,7 @@ public class PoolService implements Runnable{
                     answer.setAnswerReceivedTime(LocalDateTime.now());
                     if (device.hasAnswer()) {
                         answer.setAnswerReceivedString(device.getAnswer());
+                        answer.setAnswerReceivedValue(device.getValue());
                     }
                     AnswerStorage.addAnswer(answer);
                     logSome(answer, i);

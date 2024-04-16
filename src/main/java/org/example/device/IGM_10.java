@@ -113,4 +113,12 @@ public class IGM_10 implements SerialPortDataListener, SomeDevice {
         //System.out.println("return flag " + hasAnswer);
         return hasAnswer;
     }
+
+    public boolean hasValue(){
+        return false;
+    }
+
+    public String getValue(){
+        return null;
+    }
 }

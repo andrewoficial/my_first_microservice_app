@@ -120,6 +120,7 @@ public class ARD_FEE_BRD_METER implements SerialPortDataListener, SomeDevice {
             hasAnswer = true;
             //System.out.println("CurrPart " + currPart);
         }
+
         lastAnswer += currPart;
         System.out.println("Set flags ARD " + hasAnswer + " receive count " + received + " part " + currPart);
         System.out.println("Received Str " + lastAnswer);
@@ -157,5 +158,13 @@ public class ARD_FEE_BRD_METER implements SerialPortDataListener, SomeDevice {
     public boolean hasAnswer(){
         System.out.println("return flags" + hasAnswer);
         return hasAnswer;
+    }
+
+    public boolean hasValue(){
+        return false;
+    }
+
+    public String getValue(){
+        return null;
     }
 }

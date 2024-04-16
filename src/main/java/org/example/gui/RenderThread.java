@@ -15,7 +15,7 @@ public class RenderThread implements Runnable{
     private boolean threadLive = true;
 
     @Getter
-    private int renderDelay = 700;
+    private long renderDelay = 1600L;
     public RenderThread(Rendeble mainWindow){
         super();
         renderedWindow = mainWindow;
@@ -23,15 +23,14 @@ public class RenderThread implements Runnable{
 
     @Override
     public void run() {
-        long millisLimit = renderDelay;
-        long millisPrev = System.currentTimeMillis() - millisLimit - millisLimit;
-        while ((!Thread.currentThread().isInterrupted()) && threadLive) {
-            if (System.currentTimeMillis() - millisPrev > millisLimit) {
+        long millisPrev = System.currentTimeMillis() - renderDelay - renderDelay;
+        while ((!Thread.currentThread().isInterrupted()) && threadLive && renderedWindow.isEnable()) {
+            if (System.currentTimeMillis() - millisPrev > renderDelay) {
                 millisPrev = System.currentTimeMillis();
                 renderedWindow.renderData();
             }else{
                 try {
-                    Thread.sleep(Math.min((millisLimit / 3), 300L));
+                    Thread.sleep(renderDelay/ 2L);
                     //System.out.println("Sleep " + (Math.min((millisLimit / 3), 300L)) + " time limit is " + millisLimit);
                 } catch (InterruptedException e) {
                     //throw new RuntimeException(e);

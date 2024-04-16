@@ -94,7 +94,7 @@ public class JmenuFile {
     /**
      * Функция создания меню "Настройки"
      */
-    public JMenu createViewMenu()
+    public JMenu createSettingsMenu()
     {
         // создадим выпадающее меню
         JMenu viewMenu = new JMenu("Настройки");
@@ -145,4 +145,53 @@ public class JmenuFile {
         return viewMenu;
     }
 
+
+
+    /**
+     * Функция создания меню "Настройки"
+     */
+    public JMenu createViewMenu(ExecutorService thPool)
+    {
+        // создадим выпадающее меню
+        JMenu viewMenu = new JMenu("Представления");
+        // меню-флажки
+        JMenuItem graph  = new JMenuItem("График");
+
+
+
+        // добавим все в меню
+        viewMenu.add(graph);
+
+
+        graph.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                System.out.println("ViewMode");
+                ChartWindow chartWindow = new ChartWindow();
+                chartWindow.setName("Log settings");
+                chartWindow.setTitle("Log settings");
+                chartWindow.pack();
+                chartWindow.setVisible(true);
+                chartWindow.renderData();
+                System.out.println(chartWindow.isShowing());
+                //chartWindow.isEnabled();
+                thPool.submit(new RenderThread(chartWindow));
+            }
+        });
+
+        return viewMenu;
+    }
+
 }
+
+/*
+    public static void main(String[] args) {
+
+        EventQueue.invokeLater(() -> {
+
+            var ex = new LineChartEx2();
+            ex.setVisible(true);
+        });
+    }
+ */

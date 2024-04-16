@@ -152,7 +152,15 @@ public class ARD_BAD_FEE_BRD implements SerialPortDataListener, SomeDevice {
     }
 
     public boolean hasAnswer(){
-        System.out.println("return flags" + hasAnswer);
+        //System.out.println("return flags" + hasAnswer);
         return hasAnswer;
+    }
+
+    public boolean hasValue(){
+        return false;
+    }
+
+    public String getValue(){
+        return null;
     }
 }

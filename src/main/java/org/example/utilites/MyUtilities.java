@@ -6,7 +6,11 @@ package org.example.utilites;
 import com.fazecast.jSerialComm.SerialPort;
 import org.example.services.ComPort;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Date;
 
 public class MyUtilities {
 
@@ -51,6 +55,17 @@ public class MyUtilities {
         }
 
         return null;
+    }
+
+
+    public static Date convertToLocalDateViaMilisecond(LocalDateTime dateToConvert) {
+        return java.util.Date
+                .from(dateToConvert.atZone(ZoneId.systemDefault())
+                        .toInstant());
+    }
+
+    public static Date convertToDateViaSqlDate(LocalDate dateToConvert) {
+        return java.sql.Date.valueOf(dateToConvert);
     }
 
     public static void restoreLastComPort(ComPort comPort, MyProperties properties){

@@ -8,7 +8,7 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-public class ERSTEVAK_MTP4D implements SerialPortDataListener, SomeDevice {
+public class EDWARDS_D397_00_000 implements SerialPortDataListener, SomeDevice {
     private final SerialPort comPort;
     private volatile boolean hasAnswer = false;
     private volatile StringBuilder lastAnswer;
@@ -27,10 +27,10 @@ public class ERSTEVAK_MTP4D implements SerialPortDataListener, SomeDevice {
     private long millisLimit = 5000L;
     private long millisDela = 0L;
     private long millisPrev = System.currentTimeMillis();
-    private long value = 0;
+    private double value = 0;
     private long degree = 0;
 
-    public ERSTEVAK_MTP4D(SerialPort port){
+    public EDWARDS_D397_00_000(SerialPort port){
         System.out.println("Создан объект протокола ERSTEVAK_MTP4D");
         this.comPort = port;
         this.enable();
@@ -100,19 +100,20 @@ public class ERSTEVAK_MTP4D implements SerialPortDataListener, SomeDevice {
             if(knownCommand && lastAnswer.length() > 11){
                 value = 0;
                 degree = 0;
+                int firstPart = lastAnswer.lastIndexOf("V913 ")+5;
+                //System.out.println(firstPart);
                 try{
-                    value = Integer.parseInt(lastAnswer.substring(4, lastAnswer.length()-3));
-                    degree = Integer.parseInt(lastAnswer.substring(lastAnswer.length()-3, lastAnswer.length()-2));
+                    value = Double.parseDouble(lastAnswer.substring(firstPart, lastAnswer.indexOf(";")));
+                    //System.out.println("Parsed");
                 } catch (NumberFormatException e) {
                     //throw new RuntimeException(e);
+                    //System.out.println("Cant parse");
                     hasValue = false;
                     return;
                 }
-                hasValue = true;
-
-                long val = value * (long) Math.pow(10, degree);
-                val /= 1000;
-                lastValue = String.valueOf(val);
+            hasValue = true;
+                //System.out.println(value);
+            lastValue = String.valueOf(value);
             }else{
                 hasValue = false;
             }
@@ -120,7 +121,7 @@ public class ERSTEVAK_MTP4D implements SerialPortDataListener, SomeDevice {
     }
 
     private boolean isKnownCommand(String cmd){
-        return cmd != null && cmd.contains("M^") && cmd.length() == ("001M^".length());
+        return cmd != null && cmd.contains("913") && ((cmd.length() == ("#01:01?V00913".length()) || cmd.length() == ("?V00913".length())));
     }
     public String getAnswer(){
 
