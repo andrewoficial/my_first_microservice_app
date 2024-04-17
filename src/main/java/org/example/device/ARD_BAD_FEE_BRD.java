@@ -3,6 +3,7 @@ package org.example.device;
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
+import org.example.services.AnswerValues;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -160,7 +161,7 @@ public class ARD_BAD_FEE_BRD implements SerialPortDataListener, SomeDevice {
         return false;
     }
 
-    public String getValue(){
+    public AnswerValues getValues(){
         return null;
     }
 }

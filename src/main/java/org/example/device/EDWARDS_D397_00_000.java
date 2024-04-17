@@ -3,6 +3,7 @@ package org.example.device;
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
+import org.example.services.AnswerValues;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
@@ -148,7 +149,9 @@ public class EDWARDS_D397_00_000 implements SerialPortDataListener, SomeDevice {
         return knownCommand && hasAnswer;
     }
 
-    public String getValue(){
-        return lastValue;
+    public AnswerValues getValues(){
+        AnswerValues val =  new AnswerValues(1);
+        val.addValue((double) value, "bar");
+        return val;
     }
 }

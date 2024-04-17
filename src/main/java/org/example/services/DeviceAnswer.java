@@ -20,7 +20,7 @@ public class DeviceAnswer {
     @Setter @Getter
     private String answerReceivedString;
     @Setter @Getter
-    private String answerReceivedValue;
+    private AnswerValues answerReceivedValues;
     @Setter @Getter
     private Integer tabNumber;
 

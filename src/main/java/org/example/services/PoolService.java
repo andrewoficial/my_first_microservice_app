@@ -42,7 +42,6 @@ public class PoolService implements Runnable{
     private int poolDelay;
     private SomeDevice device = null;
 
-    DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm:ss");
     LocalDateTime now = LocalDateTime.now();
 
 
@@ -129,7 +128,7 @@ public class PoolService implements Runnable{
                     answer.setAnswerReceivedTime(LocalDateTime.now());
                     if (device.hasAnswer()) {
                         answer.setAnswerReceivedString(device.getAnswer());
-                        answer.setAnswerReceivedValue(device.getValue());
+                        answer.setAnswerReceivedValues(device.getValues());
                     }
                     AnswerStorage.addAnswer(answer);
                     logSome(answer, i);

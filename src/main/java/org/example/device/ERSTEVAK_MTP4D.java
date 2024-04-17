@@ -3,10 +3,12 @@ package org.example.device;
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
+import org.example.services.AnswerValues;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.stream.Stream;
 
 public class ERSTEVAK_MTP4D implements SerialPortDataListener, SomeDevice {
     private final SerialPort comPort;
@@ -29,6 +31,11 @@ public class ERSTEVAK_MTP4D implements SerialPortDataListener, SomeDevice {
     private long millisPrev = System.currentTimeMillis();
     private long value = 0;
     private long degree = 0;
+    private long val;
+
+    //For JUnits
+    private StringBuilder strToSend;
+    private String deviceAnswer;
 
     public ERSTEVAK_MTP4D(SerialPort port){
         System.out.println("Создан объект протокола ERSTEVAK_MTP4D");
@@ -36,6 +43,10 @@ public class ERSTEVAK_MTP4D implements SerialPortDataListener, SomeDevice {
         this.enable();
     }
 
+    public ERSTEVAK_MTP4D(String inpString){
+        System.out.println("Создан объект протокола ERSTEVAK_MTP4D (виртуализация)");
+        comPort = null;
+    }
     public void enable() {
         comPort.openPort();
         comPort.flushDataListener();
@@ -70,16 +81,34 @@ public class ERSTEVAK_MTP4D implements SerialPortDataListener, SomeDevice {
         for (int i = 0; i < data.length(); i++) {
             buffer[i] = (byte) data.charAt(i);
         }
-        buffer [data.length()] = 13;
+        buffer [data.length()] = 13;//CR
+        if (comPort == null){ //For Tests
+            strToSend = new StringBuilder();
+            for (byte b : buffer) {
+                strToSend.append((char)b);
+            }
+            return;
+        }
         comPort.writeBytes(buffer, buffer.length);
         //comPort.bytesAwaitingWrite();
         this.loop();
     }
+    public StringBuilder getForSend(){
+        return strToSend;
+    }
 
+    public void setReceived(String answer){
+        this.received = answer.length();
+        deviceAnswer = answer;
+        this.loop();
+    }
 
     private void loop() {
-        received = comPort.bytesAvailable();
-        millisPrev = System.currentTimeMillis();
+        if(comPort != null){
+            received = comPort.bytesAvailable();
+            millisPrev = System.currentTimeMillis();
+        }
+
         while((received == 0) && (millisLimit > millisDela)){
             millisDela = System.currentTimeMillis() - millisPrev;
             received = comPort.bytesAvailable();
@@ -91,29 +120,41 @@ public class ERSTEVAK_MTP4D implements SerialPortDataListener, SomeDevice {
         }
 
         if(received > 0) {
-            //System.out.println("Начинаю разбор посылки длиною " + received);
-            byte[] buffer = new byte[comPort.bytesAvailable()];
-            comPort.readBytes(buffer, comPort.bytesAvailable());
-
-            lastAnswer = new StringBuilder(new String(buffer));
+            if(comPort != null) {
+                //System.out.println("Начинаю разбор посылки длиною " + received);
+                byte[] buffer = new byte[comPort.bytesAvailable()];
+                //System.out.println("Создал буфер ");
+                comPort.readBytes(buffer, comPort.bytesAvailable());
+                //System.out.println("Считал данные " );
+                lastAnswer = new StringBuilder(new String(buffer));
+                //System.out.println("Сохранил ответ " );
+            }else{
+                lastAnswer = new StringBuilder(deviceAnswer);
+            }
             hasAnswer = true;
-            if(knownCommand && lastAnswer.length() > 11){
+            if(knownCommand && isCorrectAnswer() && hasAnswer){
+                //System.out.println("Ответ правильный " + lastAnswer.toString());
                 value = 0;
                 degree = 0;
                 try{
-                    value = Integer.parseInt(lastAnswer.substring(4, lastAnswer.length()-3));
-                    degree = Integer.parseInt(lastAnswer.substring(lastAnswer.length()-3, lastAnswer.length()-2));
+                    int firstPart = lastAnswer.indexOf("M") + 1;
+                    //System.out.println(firstPart);
+                    value = Integer.parseInt(lastAnswer.substring(firstPart, firstPart+5));
+                    degree = Integer.parseInt(lastAnswer.substring(firstPart+5, firstPart+6));
                 } catch (NumberFormatException e) {
+                    //System.out.println("Parse error");
                     //throw new RuntimeException(e);
                     hasValue = false;
                     return;
                 }
                 hasValue = true;
 
-                long val = value * (long) Math.pow(10, degree);
+                val = value * (long) Math.pow(10, degree);
                 val /= 1000;
-                lastValue = String.valueOf(val);
+                System.out.println(val);
+                //lastValue = String.valueOf(val);
             }else{
+                //System.out.println("Ответ с ошибкой " + lastAnswer.toString());
                 hasValue = false;
             }
         }
@@ -121,6 +162,13 @@ public class ERSTEVAK_MTP4D implements SerialPortDataListener, SomeDevice {
 
     private boolean isKnownCommand(String cmd){
         return cmd != null && cmd.contains("M^") && cmd.length() == ("001M^".length());
+    }
+    private boolean isCorrectAnswer(){
+        if((lastAnswer.length() == 11 || lastAnswer.length() == 12 || lastAnswer.length() == 13)){
+            //ToDo add CRC
+            return true;
+        }
+        return false;
     }
     public String getAnswer(){
 
@@ -144,10 +192,12 @@ public class ERSTEVAK_MTP4D implements SerialPortDataListener, SomeDevice {
     }
 
     public boolean hasValue(){
-        return knownCommand && hasAnswer;
+        return hasValue;
     }
 
-    public String getValue(){
-        return lastValue;
+    public AnswerValues getValues(){
+        AnswerValues valToSend =  new AnswerValues(1);
+        valToSend.addValue((double) val, "bar");
+        return valToSend;
     }
 }

@@ -7,6 +7,7 @@ ToDo
 package org.example.device;
 
 import com.fazecast.jSerialComm.SerialPortEvent;
+import org.example.services.AnswerValues;
 
 public interface SomeDevice {
     void enable();
@@ -17,5 +18,5 @@ public interface SomeDevice {
     String getAnswer();
 
     boolean hasValue();
-    String getValue();
+    AnswerValues getValues();
 }

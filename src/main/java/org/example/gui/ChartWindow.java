@@ -114,8 +114,8 @@ public class ChartWindow extends JDialog implements Rendeble {
             timeSeries.add(new TimeSeries("tab" + (tab + 1)));
             for (DeviceAnswer answer : deviceAnswers) {
                 if (answer.getTabNumber() == i) {
-                    if (!(answer.getAnswerReceivedValue() == null)) {
-                        timeSeries.get(i).addOrUpdate(new Millisecond(convertToLocalDateViaMilisecond(answer.getAnswerReceivedTime())), Double.parseDouble(answer.getAnswerReceivedValue()));
+                    if (!(answer.getAnswerReceivedValues() == null)) {
+                        timeSeries.get(i).addOrUpdate(new Millisecond(convertToLocalDateViaMilisecond(answer.getAnswerReceivedTime())), answer.getAnswerReceivedValues().getValues()[0]);
                     }
                 }
             }
