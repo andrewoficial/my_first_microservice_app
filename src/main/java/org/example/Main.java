@@ -40,9 +40,6 @@ public class Main {
         //dialog.setDefaultCloseOperation(3);
         dialog.setVisible(true);
 
-        if(! dialog.isDisplayable()){
-            System.exit(0);
-        }
 
     }
 }
