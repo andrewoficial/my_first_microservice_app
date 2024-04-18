@@ -27,6 +27,8 @@ public class PoolLogger {
         return SingletonHolder.HOLDER_INSTANCE;
     }
 
+    public static FileWriter fw = null;
+
     private PoolLogger(){
         File logFile = null;
         try{
@@ -54,26 +56,35 @@ public class PoolLogger {
             //e.printStackTrace();
         }
         PoolLogger.logFile = logFile;
+        try {
+            PoolLogger.fw = new FileWriter(logFile, true);
+        } catch (IOException e) {
+            //throw new RuntimeException(e);
+            System.out.println("Ошибка создания FileWriter");
+        }
     }
 
-    public static void writeLine (DeviceAnswer answer){
+    public static void writeLine(DeviceAnswer answer){
+
         DateTimeFormatter CUSTOM_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
         StringBuilder line = new StringBuilder(answer.getAnswerReceivedTime().format(CUSTOM_FORMATTER));
         line.append("\t");
         line.append(answer.getDeviceType().getClass().toString().replace("class org.example.device.", ""));
         line.append("\t");
         line.append(answer.getAnswerReceivedString());
-        for (int i = 0; i < answer.getAnswerReceivedValues().getCounter(); i++) {
-            line.append("\t");
-            line.append(answer.getAnswerReceivedValues().getValues()[i]);
-            line.append("\t");
-            line.append(answer.getAnswerReceivedValues().getUnits()[i]);
+        if(answer.getAnswerReceivedValues() != null) {
+            for (int i = 0; i < answer.getAnswerReceivedValues().getCounter(); i++) {
+                line.append("\t");
+                line.append(answer.getAnswerReceivedValues().getValues()[i]);
+                line.append("\t");
+                line.append(answer.getAnswerReceivedValues().getUnits()[i]);
+            }
         }
         line.append("\n");
 
 
-        String formattedString = answer.getAnswerReceivedTime().format(CUSTOM_FORMATTER);
-        if((System.currentTimeMillis() - dateTimeLastWrite ) < 300L ){
+        if((System.currentTimeMillis() - dateTimeLastWrite ) < 100L ){
             stringsBuffer.add(line.toString());
             //System.out.println("Log buffered");
         }else {
@@ -84,24 +95,25 @@ public class PoolLogger {
                 stringBuilder.append(s);
             }
             stringsBuffer.clear();
-            FileWriter fw = null;
-            try {
-                fw = new FileWriter(logFile, true);
-            } catch (IOException e) {
-                //throw new RuntimeException(e);
-                System.out.println("Ошибка создания FileWriter");
-            }
-            assert fw != null;
-            BufferedWriter bw = new BufferedWriter(fw);
-            try {
-                bw.write(stringBuilder.toString());
 
-                bw.close();
-            } catch (IOException e) {
-                //throw new RuntimeException(e);
-                System.out.println("Ошибка выполнения  write ");
+
+            if(PoolLogger.fw != null) {
+                BufferedWriter bw = new BufferedWriter(PoolLogger.fw);
+                try {
+
+                    bw.write(stringBuilder.toString());
+                    bw.flush();
+                } catch (IOException e) {
+                    //throw new RuntimeException(e);
+                    System.out.println("Ошибка выполнения  write " + e.getMessage());
+                } finally {
+                    line = null;
+                    bw = null;
+                }
             }
         }
+
+
     }
 
 

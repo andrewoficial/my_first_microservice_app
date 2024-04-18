@@ -26,7 +26,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 
-public class MainWindow extends JDialog implements Rendeble {
+public class MainWindow extends JFrame implements Rendeble {
     private JPanel contentPane;
 
 
@@ -75,7 +75,6 @@ public class MainWindow extends JDialog implements Rendeble {
     private int tab = 0;
 
     public MainWindow() {
-        super(new DummyFrame("Name on task bar"));
         contentPane.getName();
         poolComConnections.add(new ComPort());
         JmenuFile jmenu = new JmenuFile();
@@ -90,11 +89,7 @@ public class MainWindow extends JDialog implements Rendeble {
 
         setJMenuBar(menuBar);
         setContentPane(contentPane);
-        setModal(true);
-        //getRootPane().setDefaultButton(buttonOK);
 
-        // call onCancel() when cross is clicked
-        //setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
 

@@ -131,6 +131,7 @@ public class PoolService implements Runnable{
                         answer.setAnswerReceivedValues(device.getValues());
                     }
                     AnswerStorage.addAnswer(answer);
+                    //System.out.println("Run log");
                     logSome(answer, i);
                 }
             }else {
@@ -175,11 +176,13 @@ public class PoolService implements Runnable{
         return -1;
     }
     private void logSome(DeviceAnswer answer, int subDevNum){
-
+        System.out.println("Делаю общий лог");
+        PoolLogger poolLogger = PoolLogger.getInstance();
+        PoolLogger.writeLine(answer);
         if(needLogArrayList.get(subDevNum)) {
-            //System.out.println("Do log");
-            PoolLogger poolLogger = PoolLogger.getInstance();
-            PoolLogger.writeLine(answer);
+            System.out.println("Делаю лог отдельный для прибора");
+            //PoolLogger poolLogger = PoolLogger.getInstance();
+            //PoolLogger.writeLine(answer);
             deviceLoggerArrayList.get(subDevNum).writeLine(answer);
         }
 

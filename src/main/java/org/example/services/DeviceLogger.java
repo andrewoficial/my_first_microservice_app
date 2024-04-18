@@ -55,14 +55,16 @@ public class DeviceLogger {
         line.append(answer.getAnswerReceivedTime().format(CUSTOM_FORMATTER));
         line.append("\t");
         line.append(answer.getAnswerReceivedString());
-        for (int i = 0; i < answer.getAnswerReceivedValues().getCounter(); i++) {
-            line.append("\t");
-            line.append(answer.getAnswerReceivedValues().getValues()[i]);
-            line.append("\t");
-            line.append(answer.getAnswerReceivedValues().getUnits()[i]);
+        if(answer.getAnswerReceivedValues() != null) {
+            for (int i = 0; i < answer.getAnswerReceivedValues().getCounter(); i++) {
+                line.append("\t");
+                line.append(answer.getAnswerReceivedValues().getValues()[i]);
+                line.append("\t");
+                line.append(answer.getAnswerReceivedValues().getUnits()[i]);
+            }
         }
-
         line.append("\n");
+
         if((System.currentTimeMillis() - dateTimeLastWrite ) < 300L ){
             stringsBuffer.add(line.toString());
             //System.out.println("Log buffered");

@@ -1,3 +1,6 @@
 Manifest-Version: 1.0
 Main-Class: org.example.Main
+Implementation-Title: ${pom.name}
+Implementation-Version: ${pom.version}
+Created-By: ${pom.artifactId}
 

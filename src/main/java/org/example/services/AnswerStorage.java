@@ -15,7 +15,7 @@ public class AnswerStorage {
             AnswerStorage.AN.clear();
         }
         AnswerStorage.AN.add(answer);
-        //System.out.println("Save " + answer.getTabNumber());
+        //System.out.println("Store " + answer.getTabNumber());
     }
 
     public static TabAnswerPart getAnswersQueForTab(Integer lastPosition, Integer tabNumber, boolean showCommands){
