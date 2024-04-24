@@ -37,6 +37,8 @@ import java.util.Date;
 import java.util.HashSet;
 
 import javax.swing.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import static org.example.utilites.MyUtilities.convertToLocalDateViaMilisecond;
 
@@ -59,6 +61,8 @@ public class ChartWindow extends JDialog implements Rendeble {
     private JPanel setup;
 
     private JPanel controlPanel = new JPanel();
+    private JSlider slider = new JSlider();
+    private int range = 0;
 
     public ChartWindow() {
         super();
@@ -66,15 +70,25 @@ public class ChartWindow extends JDialog implements Rendeble {
     }
 
     private void initUI() {
+        slider.setMaximum(10000);
+        slider.setMinimum(10);
+        slider.addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                range = slider.getValue();
+            }
+        });
         getLastData();
         JFreeChart chart = createChart(dataset);
         ChartPanel chartPanel = new ChartPanel(chart);
         chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         chartPanel.setBackground(Color.white);
         add(chartPanel);
+
+
         //updateCB();
 
-        //add(box);
+        //add(slider);
 
 
         setTitle("Time chart");
@@ -94,7 +108,6 @@ public class ChartWindow extends JDialog implements Rendeble {
                 true,
                 false
         );
-
 
 
         var renderer = new XYLineAndShapeRenderer();
@@ -159,13 +172,22 @@ public class ChartWindow extends JDialog implements Rendeble {
         for (JCheckBox jCheckBox : seriesBox) {
             controlPanel.add(jCheckBox);
         }
+
+        slider.setValue(range);
+        controlPanel.add(slider);
         add(controlPanel, BorderLayout.SOUTH);
+
+
         pack();
     }
 
     private void getLastData() {
         deviceAnswers.clear();
-        deviceAnswers.addAll(AnswerStorage.AN);
+        int to = Math.max(AnswerStorage.AN.size() - range - 1, 0);
+        for (int i = AnswerStorage.AN.size() - 1; i > to; i--) {
+            deviceAnswers.add(AnswerStorage.AN.get(i));
+        }
+        //deviceAnswers.addAll(AnswerStorage.AN);
 
         tabs.clear();
 
