@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE log4j:configuration PUBLIC "-//log4j/log4j Configuration//EN" "log4j.dtd">
+
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/">
+
+    <appender name="pdi-execution-appender" class="org.apache.log4j.rolling.RollingFileAppender">
+        <!-- The active file to log to; this example is for Pentaho Server.-->
+        <param name="Append" value="true" />
+        <param name="Threshold" value="INFO"/>
+        <rollingPolicy class="org.apache.log4j.rolling.TimeBasedRollingPolicy">
+            <!-- See javadoc for TimeBasedRollingPolicy %d{yyyy.MM.dd HH-mm-ss}-->
+            <param name="FileNamePattern" value="logs/%d{yyyy.MM.dd} EM-LogFile.log" />
+        </rollingPolicy>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern" value='%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p [%t] %m \n'/>
+        </layout>
+    </appender>
+
+    <root>
+        <priority value="DEBUG"/>
+        <appender-ref ref="pdi-execution-appender" />
+    </root>
+
+</log4j:configuration>

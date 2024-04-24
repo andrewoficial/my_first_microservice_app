@@ -3,6 +3,7 @@ package org.example.device;
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
+import org.apache.log4j.Logger;
 import org.example.services.AnswerValues;
 
 import java.io.UnsupportedEncodingException;
@@ -10,6 +11,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 public class EDWARDS_D397_00_000 implements SerialPortDataListener, SomeDevice {
+    private static final Logger log = Logger.getLogger(ERSTEVAK_MTP4D.class);
     private final SerialPort comPort;
     private volatile boolean hasAnswer = false;
     private volatile StringBuilder lastAnswer;
@@ -32,7 +34,7 @@ public class EDWARDS_D397_00_000 implements SerialPortDataListener, SomeDevice {
     private long degree = 0;
 
     public EDWARDS_D397_00_000(SerialPort port){
-        System.out.println("Создан объект протокола ERSTEVAK_MTP4D");
+        log.info("Создан объект протокола ERSTEVAK_MTP4D");
         this.comPort = port;
         this.enable();
     }
@@ -44,21 +46,21 @@ public class EDWARDS_D397_00_000 implements SerialPortDataListener, SomeDevice {
         int timeout = 25;// !!!
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 15, 10);
         if(comPort.isOpen()){
-            System.out.println("Порт открыт, задержки выставлены");
+            log.info("Порт открыт, задержки выставлены");
         }
         millisDela = 0L;
     }
 
     @Override
     public int getListeningEvents() {
-        System.out.println("return Listening Events");
+        log.info("return Listening Events");
         return SerialPort.LISTENING_EVENT_DATA_AVAILABLE;
     }
 
     @Override
     public void serialEvent(SerialPortEvent event) {
         byte[] newData = event.getReceivedData();
-        System.out.println("Received data via eventListener on ERSTEVAK_MTP4D of size: " + newData.length);
+        log.info("Received data via eventListener on ERSTEVAK_MTP4D of size: " + newData.length);
         for (byte newDatum : newData) System.out.print((char) newDatum);
         //System.out.println("\n");
         hasAnswer = true;
@@ -92,7 +94,7 @@ public class EDWARDS_D397_00_000 implements SerialPortDataListener, SomeDevice {
         }
 
         if(received > 0) {
-            //System.out.println("Начинаю разбор посылки длиною " + received);
+            log.info("Начинаю разбор посылки длиною " + received);
             byte[] buffer = new byte[comPort.bytesAvailable()];
             comPort.readBytes(buffer, comPort.bytesAvailable());
 
@@ -151,7 +153,7 @@ public class EDWARDS_D397_00_000 implements SerialPortDataListener, SomeDevice {
 
     public AnswerValues getValues(){
         AnswerValues val =  new AnswerValues(1);
-        val.addValue((double) value, "Па");
+        val.addValue(value, "Па");
         return val;
     }
 }

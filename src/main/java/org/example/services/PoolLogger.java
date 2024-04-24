@@ -66,7 +66,7 @@ public class PoolLogger {
 
     public static void writeLine(DeviceAnswer answer){
 
-        DateTimeFormatter CUSTOM_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        DateTimeFormatter CUSTOM_FORMATTER = DateTimeFormatter.ofPattern("yyyy.MM.dd HH-mm-ss");
 
         StringBuilder line = new StringBuilder(answer.getAnswerReceivedTime().format(CUSTOM_FORMATTER));
         line.append("\t");

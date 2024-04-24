@@ -1,9 +1,11 @@
 package org.example.services;
 
 import lombok.Getter;
+import org.apache.log4j.Logger;
+import org.example.gui.ChartWindow;
 
 public class AnswerValues {
-
+    private static final Logger log = Logger.getLogger(ChartWindow.class);
     private int quantity = 1;
     @Getter
     private double [] values;
@@ -21,7 +23,7 @@ public class AnswerValues {
 
     public void addValue(double val, String unit){
         if(values.length < counter){
-            System.out.println("Слишком много значений одного измерения");
+            log.error("Получено  слишком много значений одного измерения");
             return;
         }
         //System.out.println("add " + val + " units " + unit);

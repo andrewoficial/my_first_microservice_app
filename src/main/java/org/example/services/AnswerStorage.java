@@ -1,10 +1,14 @@
 package org.example.services;
 
+import org.apache.log4j.Logger;
+import org.example.gui.ChartWindow;
+
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Objects;
 
 public class AnswerStorage {
+    private static final Logger log = Logger.getLogger(ChartWindow.class);
     static StringBuilder sbAnswer = new StringBuilder();
     static DateTimeFormatter dtfAnswer = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
     public static ArrayList<DeviceAnswer> AN = new ArrayList<>();
@@ -15,7 +19,7 @@ public class AnswerStorage {
             AnswerStorage.AN.clear();
         }
         AnswerStorage.AN.add(answer);
-        //System.out.println("Store " + answer.getTabNumber());
+        log.trace("Получено новое значение ответа от прибора со вкладки " + answer.getTabNumber());
     }
 
     public static TabAnswerPart getAnswersQueForTab(Integer lastPosition, Integer tabNumber, boolean showCommands){

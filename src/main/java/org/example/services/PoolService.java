@@ -176,11 +176,11 @@ public class PoolService implements Runnable{
         return -1;
     }
     private void logSome(DeviceAnswer answer, int subDevNum){
-        System.out.println("Делаю общий лог");
+        //System.out.println("Делаю общий лог");
         PoolLogger poolLogger = PoolLogger.getInstance();
         PoolLogger.writeLine(answer);
         if(needLogArrayList.get(subDevNum)) {
-            System.out.println("Делаю лог отдельный для прибора");
+            //System.out.println("Делаю лог отдельный для прибора");
             //PoolLogger poolLogger = PoolLogger.getInstance();
             //PoolLogger.writeLine(answer);
             deviceLoggerArrayList.get(subDevNum).writeLine(answer);

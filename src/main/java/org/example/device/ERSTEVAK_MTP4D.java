@@ -3,6 +3,8 @@ package org.example.device;
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
+import org.apache.log4j.Logger;
+import org.example.gui.ChartWindow;
 import org.example.services.AnswerValues;
 
 import java.io.UnsupportedEncodingException;
@@ -11,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.stream.Stream;
 
 public class ERSTEVAK_MTP4D implements SerialPortDataListener, SomeDevice {
+    private static final Logger log = Logger.getLogger(ERSTEVAK_MTP4D.class);
     private final SerialPort comPort;
     private volatile boolean hasAnswer = false;
     private volatile StringBuilder lastAnswer;
@@ -31,20 +34,20 @@ public class ERSTEVAK_MTP4D implements SerialPortDataListener, SomeDevice {
     private long millisPrev = System.currentTimeMillis();
     private long value = 0;
     private long degree = 0;
-    private long val;
+    private double val;
 
     //For JUnits
     private StringBuilder strToSend;
     private String deviceAnswer;
 
     public ERSTEVAK_MTP4D(SerialPort port){
-        System.out.println("Создан объект протокола ERSTEVAK_MTP4D");
+        log.info("Создан объект протокола ERSTEVAK_MTP4D");
         this.comPort = port;
         this.enable();
     }
 
     public ERSTEVAK_MTP4D(String inpString){
-        System.out.println("Создан объект протокола ERSTEVAK_MTP4D (виртуализация)");
+        log.info("Создан объект протокола ERSTEVAK_MTP4D (виртуализация)");
         comPort = null;
     }
     public void enable() {
@@ -54,21 +57,21 @@ public class ERSTEVAK_MTP4D implements SerialPortDataListener, SomeDevice {
         int timeout = 25;// !!!
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 15, 10);
         if(comPort.isOpen()){
-            System.out.println("Порт открыт, задержки выставлены");
+            log.info("Порт открыт, задержки выставлены");
         }
         millisDela = 0L;
     }
 
     @Override
     public int getListeningEvents() {
-        System.out.println("return Listening Events");
+        log.info("return Listening Events");
         return SerialPort.LISTENING_EVENT_DATA_AVAILABLE;
     }
 
     @Override
     public void serialEvent(SerialPortEvent event) {
         byte[] newData = event.getReceivedData();
-        System.out.println("Received data via eventListener on ERSTEVAK_MTP4D of size: " + newData.length);
+        log.info("Received data via eventListener on ERSTEVAK_MTP4D of size: " + newData.length);
         for (byte newDatum : newData) System.out.print((char) newDatum);
         //System.out.println("\n");
         hasAnswer = true;
@@ -121,7 +124,7 @@ public class ERSTEVAK_MTP4D implements SerialPortDataListener, SomeDevice {
 
         if(received > 0) {
             if(comPort != null) {
-                //System.out.println("Начинаю разбор посылки длиною " + received);
+                log.trace("Начинаю разбор посылки длиною " + received);
                 byte[] buffer = new byte[comPort.bytesAvailable()];
                 //System.out.println("Создал буфер ");
                 comPort.readBytes(buffer, comPort.bytesAvailable());
@@ -133,7 +136,7 @@ public class ERSTEVAK_MTP4D implements SerialPortDataListener, SomeDevice {
             }
             hasAnswer = true;
             if(knownCommand && isCorrectAnswer() && hasAnswer){
-                //System.out.println("Ответ правильный " + lastAnswer.toString());
+                log.trace("Ответ правильный " + lastAnswer.toString());
                 value = 0;
                 degree = 0;
                 try{
@@ -150,11 +153,11 @@ public class ERSTEVAK_MTP4D implements SerialPortDataListener, SomeDevice {
                 hasValue = true;
 
                 val = value * (long) Math.pow(10, degree);
-                val /= 10000;
+                val /= 10000.0;
                 System.out.println(val);
                 //lastValue = String.valueOf(val);
             }else{
-                //System.out.println("Ответ с ошибкой " + lastAnswer.toString());
+                log.trace("Ответ с ошибкой " + lastAnswer.toString());
                 hasValue = false;
             }
         }
@@ -197,7 +200,7 @@ public class ERSTEVAK_MTP4D implements SerialPortDataListener, SomeDevice {
 
     public AnswerValues getValues(){
         AnswerValues valToSend =  new AnswerValues(1);
-        valToSend.addValue((double) val, "bar");
+        valToSend.addValue(val, "bar");
         return valToSend;
     }
 }

@@ -1,6 +1,7 @@
 package org.example.gui;
 
 import com.intellij.uiDesigner.core.GridLayoutManager;
+import org.apache.log4j.Logger;
 import org.example.services.AnswerStorage;
 import org.example.services.DeviceAnswer;
 import org.jfree.chart.ChartFactory;
@@ -35,6 +36,7 @@ import javax.swing.*;
 import static org.example.utilites.MyUtilities.convertToLocalDateViaMilisecond;
 
 public class ChartWindow extends JDialog implements Rendeble {
+    private static final Logger log = Logger.getLogger(ChartWindow.class);
     private TimeSeriesCollection dataset;
 
     private ArrayList<DeviceAnswer> deviceAnswers = new ArrayList<>();
@@ -131,14 +133,12 @@ public class ChartWindow extends JDialog implements Rendeble {
 
     @Override
     public void renderData() {
-        System.out.println("Rerender graph" + Thread.currentThread().getName());
+        log.info("Обновление графика в потоке " + Thread.currentThread().getName());
         getLastData();
         repaint();
         //dataset = collection;
         //createChart(dataset);
         //initUI();
-
-
     }
 
     @Override

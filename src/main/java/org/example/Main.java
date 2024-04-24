@@ -1,6 +1,8 @@
 package org.example;
 
 
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.example.gui.MainWindow;
 import org.example.services.ComPort;
 import org.example.utilites.MyProperties;
@@ -20,34 +22,23 @@ import java.util.jar.Manifest;
 @SpringBootApplication
 public class Main {
     public static ComPort comPorts = new ComPort();
-
+    private static final Logger log = Logger.getLogger(Main.class);
     public static void main(String[] args) {
         String ver = "Dunno....";
 
         Manifest mf = null;
-
+        log.debug("Ищу файл META-INF/MANIFEST.MF для определения версии");
         try {
             mf = new Manifest(Main.class.getClassLoader().getResourceAsStream("META-INF/MANIFEST.MF"));
         } catch (IOException e) {
-            System.out.println("File not found");
-            //throw new RuntimeException(e);
+            log.error("Файл META-INF/MANIFEST.MF не найден в ресурсах.");
         }
 
 
 
         if(mf != null){
             ver = mf.getMainAttributes().getValue("Implementation-Title") + mf.getMainAttributes().getValue("Implementation-Version");
-            //System.out.println(mf.getMainAttributes().getValue("Implementation-Version"));
-            //ver = mf.
-/*
-            ver = mf.getMainAttributes()
-                    .get(Attributes.Name.IMPLEMENTATION_VERSION)
-                    .getClass()
-                    .toString();
-
- */
-
-
+            log.debug("Установил имя заголовка программы" + ver);
         }
 
         URL resource = Main.class.getClassLoader().getResource("GUI_Images/Pic.png");
@@ -57,10 +48,9 @@ public class Main {
         if(resource != null){
             ImageIcon pic = new ImageIcon(resource);
             dialog.setIconImage(pic.getImage());
+            log.debug("Установка картинки");
         }
         dialog.pack();
         dialog.setVisible(true);
-
-
     }
 }

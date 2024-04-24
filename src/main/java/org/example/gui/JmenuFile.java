@@ -1,19 +1,32 @@
 package org.example.gui;
 
+
+import org.apache.log4j.Category;
+import org.apache.log4j.Logger;
+
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Enumeration;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ThreadPoolExecutor;
+import org.apache.logging.log4j.core.config.Configurator;
+import org.apache.logging.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PropertyConfigurator;
+import org.example.utilites.MyProperties;
+
+import java.util.Properties;
 
 public class JmenuFile {
+    private static final Logger logger = Logger.getLogger(JmenuFile.class);
+    private final MyProperties prop;
 
-    /*
-    private  MainWindow mainWindow;
-    public JmenuFile (MainWindow window){
-        this.mainWindow = window;
+
+    public JmenuFile (MyProperties prop){
+        super();
+        this.prop = prop;
     }
-     */
+
 
     public JMenu createFileMenu()
     {
@@ -118,6 +131,35 @@ public class JmenuFile {
         viewMenu.add(one);
         viewMenu.add(two);
 
+        one.addActionListener(new ActionListener(){
+           @Override
+           public void actionPerformed(ActionEvent arg0) {
+               //Logger.getLogger(JmenuFile.class).setLevel(Level.ERROR);
+               System.out.println("Level ERROR");
+               Logger root = Logger.getRootLogger();
+               Enumeration allLoggers = root.getLoggerRepository().getCurrentCategories();
+               root.setLevel(org.apache.log4j.Level.ERROR);
+               while (allLoggers.hasMoreElements()){
+                   Category tmpLogger = (Category) allLoggers.nextElement();
+                   tmpLogger .setLevel(org.apache.log4j.Level.ERROR);
+               }
+               prop.setLogLevel(root.getLevel());
+           }
+        });
+        two.addActionListener(new ActionListener(){
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                //Logger.getLogger(JmenuFile.class).setLevel(Level.DEBUG);
+                Logger root = Logger.getRootLogger();
+                Enumeration allLoggers = root.getLoggerRepository().getCurrentCategories();
+                root.setLevel(org.apache.log4j.Level.DEBUG);
+                while (allLoggers.hasMoreElements()){
+                    Category tmpLogger = (Category) allLoggers.nextElement();
+                    tmpLogger .setLevel(org.apache.log4j.Level.DEBUG);
+                }
+                prop.setLogLevel(root.getLevel());
+            }
+        });
         logging.addActionListener(new ActionListener()
         {
             @Override

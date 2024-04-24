@@ -10,13 +10,13 @@ import java.util.ArrayList;
 import java.util.Calendar;
 
 public class DeviceLogger {
-    private String fileName = (new SimpleDateFormat("yyyy.MM.dd HH.mm.ss.SS").format(Calendar.getInstance().getTime()));
+    private String fileName = (new SimpleDateFormat("yyyy.MM.dd HH-mm-ss").format(Calendar.getInstance().getTime()));
     private File logFile;
     private Long dateTimeLastWrite = System.currentTimeMillis();
     private final ArrayList<String> stringsBuffer = new ArrayList<>();
 
     public DeviceLogger(String name){
-        this.fileName = this.fileName + " " + name + ".txt";
+        this.fileName = this.fileName + " " + "tab_" + name + ".txt";
         File logFile = null;
         try{
             logFile = new File("logs"+fileName);
@@ -47,7 +47,7 @@ public class DeviceLogger {
 
     public void writeLine (DeviceAnswer answer){
         StringBuilder line = new StringBuilder();
-        DateTimeFormatter CUSTOM_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        DateTimeFormatter CUSTOM_FORMATTER = DateTimeFormatter.ofPattern("yyyy.MM.dd HH-mm-ss");
         line.append(answer.getRequestSendTime().format(CUSTOM_FORMATTER));
         line.append("\t");
         line.append(answer.getRequestSendString());

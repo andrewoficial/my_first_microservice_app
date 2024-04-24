@@ -18,27 +18,27 @@ public class ConvertTest {
         device.setReceived("001M100023D\r");
         assertTrue(device.hasAnswer());
         assertTrue(device.hasValue());
-        assertEquals(10002,device.getValues().getValues()[0]);
+        assertEquals(1000.2,device.getValues().getValues()[0]);
         assertEquals(device.getAnswer(),"001M100023D");
 
 
         device.setReceived("001M495820Z\r");
         assertTrue(device.hasAnswer());
         assertTrue(device.hasValue());
-        assertEquals(device.getValues().getValues()[0],49);
+        assertEquals(4.9582,device.getValues().getValues()[0]);
         assertEquals(device.getAnswer(),"001M495820Z");
 
         device.setReceived("001M495820Z\r\n");
         assertTrue(device.hasAnswer());
         assertTrue(device.hasValue());
-        assertEquals(49,device.getValues().getValues()[0]);
+        assertEquals(4.9582,device.getValues().getValues()[0]);
         assertEquals("001M495820Z", device.getAnswer());
 
 
         device.setReceived("001M495820Z\r");
         assertTrue(device.hasAnswer());
         assertTrue(device.hasValue());
-        assertEquals(49d,device.getValues().getValues()[0]);
+        assertEquals(4.9582,device.getValues().getValues()[0]);
         assertEquals("001M495820Z", device.getAnswer());
 
         /*

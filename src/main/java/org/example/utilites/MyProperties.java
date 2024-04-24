@@ -2,12 +2,17 @@ package org.example.utilites;
 
 
 import lombok.Getter;
+import org.apache.log4j.Category;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.example.Main;
 
 import java.io.*;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.Properties;
 
 /**
@@ -20,6 +25,7 @@ import java.util.Properties;
  */
 
 public class MyProperties {
+    private static final Logger log = Logger.getLogger(MyProperties.class);
     public static String driver = "org.postgresql.Driver";
     public static String url = "jdbc:postgresql://floppy.db.elephantsql.com:5432/zhsiszsk";
     public static String pwd = "EcrvEk0pw2UaY6jdKY16R3RGiBrefui1";
@@ -28,6 +34,9 @@ public class MyProperties {
     public static String prt = "8080";
     @Getter
     private String lastComPort;
+
+    @Getter
+    private String logLevel;
 
     @Getter
     private int lastComSpeed;
@@ -68,14 +77,12 @@ public class MyProperties {
             someFile = new File("config/"+"configAccess.properties");
             if (someFile.createNewFile()) {
                 //System.out.println("File created: " + myObj.getName());
-                System.out.println("File created: " + someFile.getAbsolutePath());
+                log.warn("Создан новый файл с настройками" + someFile.getAbsolutePath());
             } else {
-                System.out.println("File already exists.");
-                System.out.println(someFile.getAbsolutePath());
+                log.info("Файл с настройками найден" + someFile.getAbsolutePath());
             }
         } catch (IOException e) {
-            System.out.println("An error occurred.");
-            //e.printStackTrace();
+            log.warn("Ошибка при работе с файлом настроек " + e.getMessage());
         }
         this.settingFile = someFile;
 
@@ -104,47 +111,60 @@ public class MyProperties {
 
         // Получение значений из файла
         this.lastComPort = props.getProperty("lastComPort");
+        this.logLevel = props.getProperty("logLevel");
+        if(this.logLevel == null){
+            log.info("Уровень логирования сброшен на значение по умолчанию");
+            this.logLevel = "WARN";
+            this.updateFile();
+        }
+        Logger root = Logger.getRootLogger();
+        Enumeration allLoggers = root.getLoggerRepository().getCurrentCategories();
+        root.setLevel(Level.toLevel(this.logLevel));
+        while (allLoggers.hasMoreElements()){
+            Category tmpLogger = (Category) allLoggers.nextElement();
+            tmpLogger .setLevel(Level.toLevel(this.logLevel));
+        }
 
         try{
             this.lastComSpeed = Integer.parseInt(props.getProperty("lastComSpeed"));
-            System.out.println("Last com-port" + lastComPort);
+            log.info("Last lastComSpeed" + lastComPort);
         }catch (NumberFormatException exception){
             this.lastComSpeed = 0;
-            System.out.println("configAccess.properties contain incorrect value of lastComSpeed");
+            log.info("configAccess.properties contain incorrect value of lastComSpeed");
         }
 
         try{
             this.lastDataBits = Integer.parseInt(props.getProperty("lastDataBits"));
-            System.out.println("Last DataBits" + lastDataBits);
+            log.info("Last DataBits" + lastDataBits);
         }catch (NumberFormatException exception){
             this.lastDataBits = 0;
-            System.out.println("configAccess.properties contain incorrect value of lastDataBits");
+            log.info("configAccess.properties contain incorrect value of lastDataBits");
         }
 
         try{
             this.lastStopBits = Integer.parseInt(props.getProperty("lastStopBits"));
-            System.out.println("Last lastStopBits: " + lastStopBits);
+            log.info("Last lastStopBits: " + lastStopBits);
         }catch (NumberFormatException exception){
             this.lastStopBits = 0;
-            System.out.println("configAccess.properties contain incorrect value of lastStopBits");
+            log.info("configAccess.properties contain incorrect value of lastStopBits");
         }
 
         lastParity = props.getProperty("lastParity");
         if(lastParity == null){
             this.lastParity = "dunno";
-            System.out.println("configAccess.properties contain incorrect value of lastParity");
+            log.info("configAccess.properties contain incorrect value of lastParity");
         }else{
             this.lastParity = props.getProperty("lastParity");
-            System.out.println("Last Parity" + lastParity);
+            log.info("Last Parity" + lastParity);
         }
 
         lastProtocol = props.getProperty("lastProtocol");
         if(lastProtocol == null){
             this.lastProtocol = "dunno";
-            System.out.println("configAccess.properties contain incorrect value of lastProtocol");
+            log.info("configAccess.properties contain incorrect value of lastProtocol");
         }else{
             this.lastProtocol = props.getProperty("lastProtocol");
-            System.out.println("Last Protocol " + lastProtocol);
+            log.info("Last Protocol " + lastProtocol);
         }
     }
 
@@ -183,6 +203,16 @@ public class MyProperties {
         properties.setProperty("lastProtocol", lastProtocol);
         this.updateFile();
     }
+
+    public void setLogLevel(org.apache.log4j.Level level){
+        this.logLevel = String.valueOf(level);
+        properties.setProperty("logLevel", String.valueOf(level));
+        this.updateFile();
+    }
+
+    public org.apache.log4j.Level getLogLevel(){
+        return Level.toLevel(this.logLevel);
+    }
     private void updateFile(){
         try (OutputStream file = new FileOutputStream(this.settingFile.getAbsoluteFile())){
             this.properties.store(file, null);
@@ -190,6 +220,7 @@ public class MyProperties {
             //throw new RuntimeException(e);
         }
     }
+
 
 
 }

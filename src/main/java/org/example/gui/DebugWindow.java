@@ -13,8 +13,10 @@ import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import com.sun.management.OperatingSystemMXBean;
+import org.apache.log4j.Logger;
 
 public class DebugWindow extends JDialog implements Rendeble {
+    private static final Logger log = Logger.getLogger(DebugWindow.class);
     private int countRender = 0;
     private JPanel mainField;
     private JTextArea textArea1;
@@ -42,6 +44,7 @@ public class DebugWindow extends JDialog implements Rendeble {
     private Set<Thread> threadSet;
 
     public DebugWindow() {
+        log.info("Открыто окно с информацией о системе");
         setModal(false);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setContentPane(mainField);
@@ -56,6 +59,7 @@ public class DebugWindow extends JDialog implements Rendeble {
     }
 
     private void updateData() {
+        log.trace("Обновление данных в окне с информацией о системе");
         threadSet = Thread.getAllStackTraces().keySet();
         maxMemory = runtime.maxMemory();
         allocatedMemory = runtime.totalMemory();
