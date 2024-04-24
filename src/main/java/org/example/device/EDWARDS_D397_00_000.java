@@ -151,7 +151,7 @@ public class EDWARDS_D397_00_000 implements SerialPortDataListener, SomeDevice {
 
     public AnswerValues getValues(){
         AnswerValues val =  new AnswerValues(1);
-        val.addValue((double) value, "bar");
+        val.addValue((double) value, "Па");
         return val;
     }
 }

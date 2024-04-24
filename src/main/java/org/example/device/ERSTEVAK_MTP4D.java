@@ -150,7 +150,7 @@ public class ERSTEVAK_MTP4D implements SerialPortDataListener, SomeDevice {
                 hasValue = true;
 
                 val = value * (long) Math.pow(10, degree);
-                val /= 1000;
+                val /= 10000;
                 System.out.println(val);
                 //lastValue = String.valueOf(val);
             }else{
