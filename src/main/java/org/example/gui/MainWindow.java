@@ -502,6 +502,7 @@ public class MainWindow extends JFrame implements Rendeble {
 
             lastGotedValueFromStorage.set(tab, an.getPosition());
             doc.insertString(doc.getLength(), an.getAnswerPart(), null);
+            logDataTransferJtextPanel.get(tab).setCaretPosition(doc.getLength());
         } catch (BadLocationException ex) {
             //throw new RuntimeException(ex);
         }

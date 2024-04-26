@@ -6,15 +6,21 @@ import com.intellij.uiDesigner.core.Spacer;
 import org.apache.log4j.Logger;
 import org.example.services.AnswerStorage;
 import org.example.services.DeviceAnswer;
-import org.jfree.chart.ChartFactory;
-import org.jfree.chart.ChartPanel;
-import org.jfree.chart.JFreeChart;
+import org.jfree.chart.*;
+import org.jfree.chart.annotations.XYLineAnnotation;
+import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.axis.LogarithmicAxis;
 import org.jfree.chart.block.BlockBorder;
-import org.jfree.chart.plot.PlotOrientation;
-import org.jfree.chart.plot.XYPlot;
+import org.jfree.chart.entity.XYItemEntity;
+import org.jfree.chart.labels.ItemLabelAnchor;
+import org.jfree.chart.labels.ItemLabelPosition;
+import org.jfree.chart.labels.StandardXYItemLabelGenerator;
+import org.jfree.chart.labels.XYItemLabelGenerator;
+import org.jfree.chart.plot.*;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.chart.title.TextTitle;
+import org.jfree.chart.ui.RectangleAnchor;
+import org.jfree.chart.ui.TextAnchor;
 import org.jfree.data.time.*;
 import org.jfree.data.xy.XYDataItem;
 import org.jfree.data.xy.XYDataset;
@@ -26,6 +32,7 @@ import javax.swing.JFrame;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
@@ -62,16 +69,21 @@ public class ChartWindow extends JDialog implements Rendeble {
 
     private JPanel controlPanel = new JPanel();
     private JSlider slider = new JSlider();
+
+    private JTextField selectedValue = new JTextField();
     private int range = 0;
+
 
     public ChartWindow() {
         super();
         initUI();
+
     }
 
     private void initUI() {
-        slider.setMaximum(10000);
+        slider.setMaximum(1000);
         slider.setMinimum(10);
+        selectedValue.setText("12345");
         slider.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
@@ -95,6 +107,42 @@ public class ChartWindow extends JDialog implements Rendeble {
         setLocationRelativeTo(null);
 
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        chartPanel.addChartMouseListener(new ChartMouseListener() {
+
+            public void chartMouseClicked(ChartMouseEvent e) {
+                if (e.getEntity() != null) {
+                    XYItemEntity ent = null;
+                    try {
+                        ent = (XYItemEntity) e.getEntity();
+                    } catch (ClassCastException exception) {
+                        System.out.println("Wrong class" + exception.getMessage());
+                    }
+                    if (ent != null) {
+                        System.out.println(ent.toString());
+                        selectedValue.setText("Выбрано[ item:" + ent.getItem() +
+                                " seriesIndex:" + ent.getSeriesIndex() +
+                                " value:" + ent.getDataset().getYValue(ent.getSeriesIndex(), ent.getItem()) + "] ");
+                    }
+                    //System.out.println("==");
+                    //System.out.println(e.getEntity());
+                    //XYItemEntity: series = 0, item = 3, dataset = org.jfree.data.time.TimeSeriesCollection@357bbd6
+                    //System.out.println(e.getEntity().getURLText());
+                    //System.out.println(dataset.getSeries(0).getDataItem(3));
+
+                    //dataset.getSeries(0).getDataItem(3);
+                    //System.out.println(dataset.getSeries(0).getValue(3));
+
+                    //e.getChart().getXYPlot().getRenderer().setSeriesItemLabelsVisible(0, true);
+
+                    //System.out.println("==");
+                }
+            }
+
+            public void chartMouseMoved(ChartMouseEvent e) {
+            }
+
+        });
     }
 
     private JFreeChart createChart(final XYDataset dataset) {
@@ -109,33 +157,50 @@ public class ChartWindow extends JDialog implements Rendeble {
                 false
         );
 
-
+        chart.setBackgroundPaint(Color.WHITE);
+        XYPlot plot = chart.getXYPlot();
+        LogarithmicAxis yAxis = new LogarithmicAxis("Y");
+        yAxis.setExpTickLabelsFlag(true);
+        yAxis.setAutoRangeNextLogFlag(true);
         var renderer = new XYLineAndShapeRenderer();
 
-        LogarithmicAxis yAxis = new LogarithmicAxis("Y");
 
-        XYPlot plot = chart.getXYPlot();
+        //plot.addAnnotation(tempMarker);
+
+
         plot.setRangeAxis(yAxis);
+        plot.setRenderer(renderer);
+        plot.setBackgroundPaint(Color.white);
+        plot.setRangeGridlinesVisible(true);
+        plot.setDomainGridlinesVisible(true);
+        plot.setRangeGridlinePaint(Color.ORANGE);
+        plot.setDomainGridlinePaint(Color.ORANGE);
+
 
         renderer.setSeriesPaint(0, Color.RED);
         renderer.setSeriesStroke(0, new BasicStroke(2.0f));
         renderer.setSeriesPaint(1, Color.BLUE);
         renderer.setSeriesStroke(1, new BasicStroke(2.0f));
+        renderer.setSeriesItemLabelsVisible(1, Boolean.TRUE);//
+        renderer.setDefaultItemLabelsVisible(true);//
+        renderer.setDefaultItemLabelGenerator(renderer.getDefaultItemLabelGenerator());
 
-        plot.setRenderer(renderer);
-        plot.setBackgroundPaint(Color.gray);
-        plot.setRangeGridlinesVisible(false);
-        plot.setDomainGridlinesVisible(false);
+
+        NumberFormat format = NumberFormat.getNumberInstance();
+        format.setMaximumFractionDigits(2); // etc.
+        XYItemLabelGenerator generator =
+                new StandardXYItemLabelGenerator("{0} {1} {2}", format, format);
+
+        renderer.setDefaultItemLabelGenerator(generator);//ItemLabelsVisible(true);
+        renderer.setDefaultItemLabelsVisible(false);
+
 
         chart.getLegend().setFrame(BlockBorder.NONE);
 
-        chart.setTitle(new TextTitle("Average Salary per Age",
-                        new Font("Serif", Font.BOLD, 18)
-                )
-        );
 
         return chart;
     }
+
 
     private void updateCB() {
         seriesBox.clear();
@@ -175,6 +240,9 @@ public class ChartWindow extends JDialog implements Rendeble {
 
         slider.setValue(range);
         controlPanel.add(slider);
+        controlPanel.add(selectedValue);
+
+
         add(controlPanel, BorderLayout.SOUTH);
 
 
@@ -216,7 +284,7 @@ public class ChartWindow extends JDialog implements Rendeble {
         collection.removeAllSeries();
         i = 0;
         for (TimeSeries timeSery : timeSeries) {
-            System.out.println("Select to view " + i);
+            //System.out.println("Select to view " + i);
             if (cbStates.size() > i && cbStates.get(i))
                 collection.addSeries(timeSery);
 
