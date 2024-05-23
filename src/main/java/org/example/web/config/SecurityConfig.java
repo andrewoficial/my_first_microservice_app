@@ -1,6 +1,7 @@
 package org.example.web.config;
 
 import org.example.web.controller.MyUserDetailService;
+import org.hibernate.event.internal.DefaultSaveOrUpdateEventListener;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -31,8 +32,11 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain (HttpSecurity http) throws Exception {
         return http.csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry -> authorizationManagerRequestMatcherRegistry.requestMatchers("api/v1/apps/welcome", "api/v1/apps/new-user").permitAll())
-                .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry -> authorizationManagerRequestMatcherRegistry.requestMatchers("api/v1/apps/**").authenticated())
+                //.authorizeHttpRequests(authorizationManagerRequestMatcherRegistry -> authorizationManagerRequestMatcherRegistry.requestMatchers("api/v1/apps/**").authenticated())
+                .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry -> authorizationManagerRequestMatcherRegistry.requestMatchers("**").authenticated())
                 .formLogin(AbstractAuthenticationFilterConfigurer::permitAll)
+                .formLogin(formLogin -> formLogin.loginProcessingUrl("/login")
+                        .defaultSuccessUrl("/", true))
                 .build();
     }
 

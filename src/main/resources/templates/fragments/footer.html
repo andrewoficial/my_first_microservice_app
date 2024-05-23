@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<footer>
+    <div class="footer-container">
+        <p>&copy; 2024 WebUI Elephant Monitor</p>
+        <div class="connection-status">
+            <span id="status-circle" class="status-circle"></span>
+            <span id="status-text">Статус соединения с сервером: неизвестно</span>
+            <span id="response-time">(Задержка: - мс)</span>
+        </div>
+    </div>
+    <script th:src="@{/js/status.js}"></script>
+</footer>
+</body>
+</html>

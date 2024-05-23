@@ -1,0 +1,89 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4faff;
+    color: #333;
+}
+
+.header-container {
+    background-color: #b3e5fc;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-container h1 {
+    margin: 0;
+    color: #0277bd;
+}
+
+.project-title {
+    flex-grow: 1;
+}
+
+.logout-button {
+    background-color: #0277bd;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+}
+
+.logout-button:hover {
+    background-color: #01579b;
+}
+
+.footer-container {
+    background-color: #b3e5fc;
+    padding: 10px;
+    text-align: center;
+    position: fixed;
+    width: 100%;
+    bottom: 0;
+}
+
+.footer-container p {
+    margin: 0;
+    color: #0277bd;
+}
+
+
+.footer-container {
+    background-color: #b3e5fc;
+    padding: 10px;
+    text-align: center;
+    position: fixed;
+    width: 100%;
+    bottom: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.footer-container p {
+    margin: 0;
+    color: #0277bd;
+}
+
+.connection-status {
+    display: flex;
+    align-items: center;
+    margin-right: 25px;
+}
+
+.status-circle {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.status-circle.green {
+    background-color: green;
+}
+
+.status-circle.red {
+    background-color: red;
+}
