@@ -39,11 +39,11 @@ public class PoolService implements Runnable{
     @Getter
     private SerialPort comPort;
     @Getter
-    private int poolDelay;
+    private long poolDelay;
     private SomeDevice device = null;
 
-    LocalDateTime now = LocalDateTime.now();
-
+    //private final long millisLimit = poolDelay;
+    private long millisPrev = System.currentTimeMillis() - poolDelay - poolDelay;
 
     public PoolService(ProtocolsList protocol,
                        String textToSendString,
@@ -58,6 +58,7 @@ public class PoolService implements Runnable{
         this.currentTab.add(tabNumber);
         this.comPort = comPort;
         this.poolDelay = poolDelay;
+        //System.out.println("receive poolDelay" + poolDelay);
         needPool.put(tabNumber, true);
     }
 
@@ -80,37 +81,16 @@ public class PoolService implements Runnable{
     public void run() {
         Thread.currentThread().setName("Thread Pool Tab "+currentTab.get(0));
         //System.out.println(Thread.currentThread().getName());
-        long millisLimit = poolDelay;
-        long millisPrev = System.currentTimeMillis() - millisLimit - millisLimit;
+
         deviceLoggerArrayList.add(new DeviceLogger(currentTab.get(0).toString()));
         answersCollection.add(new StringBuffer());
         while ((!Thread.currentThread().isInterrupted()) && threadLive) {
-            if (System.currentTimeMillis() - millisPrev > millisLimit) {
-                millisPrev = System.currentTimeMillis();
-                if(device == null){
-                    switch (protocol) {
-                        case IGM10ASCII -> {
-                            device = new IGM_10(comPort);
-                        }
-                        case ARD_BAD_VOLTMETER -> {
-                            device = new ARD_BAD_VLT(comPort);
-                        }
-                        case ARD_BAD_FEE_BRD -> {
-                            device = new ARD_BAD_FEE_BRD(comPort);
-                        }
-                        case ARD_FEE_BRD_METER -> {
-                            device = new ARD_FEE_BRD_METER(comPort);
-                        }
-                        case ERSTEVAK_MTP4D -> {
-                            device = new ERSTEVAK_MTP4D(comPort);
-                        }
-                        case EDWARDS_D397_00_000 -> {
-                            device = new EDWARDS_D397_00_000(comPort);
-                        }
-                    }
-                }
-
-
+            if (System.currentTimeMillis() - millisPrev > 1200) {
+                millisPrev = System.currentTimeMillis() + poolDelay;
+                System.out.println("Millis timer");
+                System.out.println("millisPrev" + millisPrev);
+                System.out.println("millisLimit" + poolDelay);
+                System.out.println("currentTimeMillis" + System.currentTimeMillis());
                 assert device != null;
                 for (int i = 0; i < textToSend.size(); i++) {
                     //Если для внутренней очереди нет номера вкладки ИЛИ флаг опроса FALSE
@@ -118,32 +98,54 @@ public class PoolService implements Runnable{
                         System.out.println(needPool.get(getTabNumberByInnerNumber(i)));
                         continue;
                     }
-                    DeviceAnswer answer = new DeviceAnswer(
-                            LocalDateTime.now(),
-                            textToSend.get(i),
-                            getTabNumberByInnerNumber(i));
-                    device.sendData(textToSend.get(i));
-                    now = LocalDateTime.now();
-                    answer.setDeviceType(device);
-                    answer.setAnswerReceivedTime(LocalDateTime.now());
-                    if (device.hasAnswer()) {
-                        answer.setAnswerReceivedString(device.getAnswer());
-                        answer.setAnswerReceivedValues(device.getValues());
-                    }
-                    AnswerStorage.addAnswer(answer);
+
+
+                    sendOnce(textToSend.get(i), i, true);
+
                     //System.out.println("Run log");
-                    logSome(answer, i);
+
                 }
+
             }else {
                 try {
-                    Thread.sleep(Math.min((millisLimit / 3), 300L));
+                    Thread.sleep(Math.min((poolDelay / 3), 300L));
                     //System.out.println("Sleep " + (Math.min((millisLimit / 3), 300L)) + " time limit is " + millisLimit);
                 } catch (InterruptedException e) {
                     //throw new RuntimeException(e);
                 }
             }
-
         }
+    }
+
+
+    public void sendOnce (String arg, int i, boolean internal){
+        if(device == null){
+            switch (protocol) {
+                case IGM10ASCII -> device = new IGM_10(comPort);
+                case ARD_BAD_VOLTMETER -> device = new ARD_BAD_VLT(comPort);
+                case ARD_BAD_FEE_BRD -> device = new ARD_BAD_FEE_BRD(comPort);
+                case ARD_FEE_BRD_METER -> device = new ARD_FEE_BRD_METER(comPort);
+                case ERSTEVAK_MTP4D -> device = new ERSTEVAK_MTP4D(comPort);
+                case EDWARDS_D397_00_000 -> device = new EDWARDS_D397_00_000(comPort);
+            }
+        }
+
+                if(! internal){
+                    i = findSubDevByTabNumber(i);
+                }
+                DeviceAnswer answer = new DeviceAnswer(
+                        LocalDateTime.now(),
+                        textToSend.get(i),
+                        getTabNumberByInnerNumber(i));
+                device.sendData(arg);
+                answer.setDeviceType(device);
+                answer.setAnswerReceivedTime(LocalDateTime.now());
+                if (device.hasAnswer()) {
+                    answer.setAnswerReceivedString(device.getAnswer());
+                    answer.setAnswerReceivedValues(device.getValues());
+                }
+                AnswerStorage.addAnswer(answer);
+                logSome(answer, i);
     }
 
     public void setNeedPool (int tabNum, boolean bool){
@@ -156,8 +158,6 @@ public class PoolService implements Runnable{
             threadLive = true;
         }
     }
-
-
     private int getTabNumberByInnerNumber(int innerNumber){
         for (int i = 0; i < currentTab.size(); i++) {
             if(i == innerNumber){
@@ -197,6 +197,7 @@ public class PoolService implements Runnable{
         }catch (Exception e){
             System.out.println("Неверное значение параметра задержки опроса");
         }
+        System.out.println("change poolDelay to " + poolDelay);
         this.poolDelay = newPoolDelay;
     }
 
