@@ -32,6 +32,8 @@ import javax.swing.JFrame;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -49,7 +51,7 @@ import javax.swing.event.ChangeListener;
 
 import static org.example.utilites.MyUtilities.convertToLocalDateViaMilisecond;
 
-public class ChartWindow extends JDialog implements Rendeble {
+public class ChartWindow extends JFrame implements Rendeble {
     private static final Logger log = Logger.getLogger(ChartWindow.class);
     private TimeSeriesCollection dataset;
 
@@ -68,19 +70,42 @@ public class ChartWindow extends JDialog implements Rendeble {
     private JPanel setup;
 
     private JPanel controlPanel = new JPanel();
+
     private JSlider slider = new JSlider();
 
     private JTextField selectedValue = new JTextField();
     private int range = 0;
 
+    private ChartPanel chartPanel = null;
+    private int currHeight = 400;
+    private int currWidth = 400;
+    private Dimension dimension = new Dimension(currWidth, currHeight);
+    private Dimension dimensionControlPanel = new Dimension();
+
 
     public ChartWindow() {
         super();
+        this.addComponentListener(new ComponentAdapter() {
+            public void componentResized(ComponentEvent componentEvent) {
+                // do stuff
+                System.out.println("Resize!");
+                System.out.println(currHeight);
+                System.out.println(controlPanel.getHeight());
+                //controlPanel.setH
+                currWidth = getWidth();
+                currHeight = getHeight();
+                dimension.setSize(controlPanel.getWidth(), currHeight - controlPanel.getHeight() - 37);
+                System.out.println();
+
+            }
+        });
         initUI();
 
     }
 
     private void initUI() {
+
+        //controlPanel.setMaximumSize(dimensionControlPanel);
         slider.setMaximum(1000);
         slider.setMinimum(10);
         selectedValue.setText("12345");
@@ -92,10 +117,16 @@ public class ChartWindow extends JDialog implements Rendeble {
         });
         getLastData();
         JFreeChart chart = createChart(dataset);
-        ChartPanel chartPanel = new ChartPanel(chart);
+        chartPanel = new ChartPanel(chart);
         chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         chartPanel.setBackground(Color.white);
+        chartPanel.setName("Chart Panel");
+        //chartPanel.setMaximumDrawWidth(4000);
+        chartPanel.setPreferredSize(dimension);
         add(chartPanel);
+        System.out.println(getComponentCount());
+        System.out.println(getComponent(getComponentCount() - 1));
+        System.out.println(getComponent(getComponentCount() - 1).getName());
 
 
         //updateCB();
@@ -294,10 +325,34 @@ public class ChartWindow extends JDialog implements Rendeble {
         dataset = collection;
     }
 
+
     @Override
     public void renderData() {
         log.info("Обновление графика в потоке " + Thread.currentThread().getName());
         getLastData();
+        //123456
+
+
+        //System.out.println(super.getHeight());
+        //System.out.println(this.getHeight());
+        int delta = this.getHeight() - this.getContentPane().getHeight() + 30;
+        int needHeight = this.getRootPane().getHeight() - delta;
+        if (needHeight < 250) {
+            needHeight = 250;
+        }
+
+        System.out.println();
+        System.out.println("======");
+        //System.out.println("currWidth" + currWidth);
+        System.out.println("currHeight" + currHeight);
+        System.out.println("======");
+        System.out.println("Height Root" + this.getRootPane().getHeight());
+        System.out.println("Height Content" + this.getContentPane().getHeight());
+        System.out.println("Height this" + this.getHeight());
+        System.out.println("Height delta" + delta);
+        System.out.println("Height needHeight" + needHeight);
+
+        //chartPanel.setPreferredSize(dimension);
         repaint();
         //dataset = collection;
         //createChart(dataset);
