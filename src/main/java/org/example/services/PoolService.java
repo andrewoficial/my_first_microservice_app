@@ -127,6 +127,7 @@ public class PoolService implements Runnable{
                 case ARD_FEE_BRD_METER -> device = new ARD_FEE_BRD_METER(comPort);
                 case ERSTEVAK_MTP4D -> device = new ERSTEVAK_MTP4D(comPort);
                 case EDWARDS_D397_00_000 -> device = new EDWARDS_D397_00_000(comPort);
+                case ECT_TC290 -> device = new ECT_TC290(comPort);
             }
         }
 

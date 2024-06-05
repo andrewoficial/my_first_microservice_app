@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static org.example.Main.comPorts;
+
 
 public class MainWindow extends JFrame implements Rendeble {
     private JPanel contentPane;
@@ -76,9 +78,15 @@ public class MainWindow extends JFrame implements Rendeble {
     private int tab = 0;
 
     public MainWindow() {
+        log.info("Подготовка к рендеру окна....");
         contentPane.getName();
+        log.info("Получено имя окна " + contentPane.getName());
+        //ComPort comPort = new ComPort();
+        //log.info("Объект ком-портов создан");
         poolComConnections.add(new ComPort());
+        log.info("Объект ком-портов добавлен в пул");
         JmenuFile jmenu = new JmenuFile(prop);
+        log.info("В менюю программы переданы восстановленные параметры");
         // Создание строки главного меню
         JMenuBar menuBar = new JMenuBar();
 
@@ -87,10 +95,10 @@ public class MainWindow extends JFrame implements Rendeble {
         menuBar.add(jmenu.createSettingsMenu());
         menuBar.add(jmenu.createViewMenu(uiThPool));
         menuBar.add(jmenu.createSystemParametrs(uiThPool));
-
+        log.info("Завершено создание элементов меню");
         setJMenuBar(menuBar);
         setContentPane(contentPane);
-
+        log.info("Инициализация панели и меню завершена");
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
 
@@ -143,11 +151,12 @@ public class MainWindow extends JFrame implements Rendeble {
             }
         }
 
+        log.info("Добавление слушатлей действий");
         BT_Update.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 log.info("Нажата кнопка обновления списка ком-портов" + tab);
-                poolComConnections.get(tab).updatePorts();
+                comPorts.updatePorts();
                 CB_ComPorts.removeAllItems();
                 for (SerialPort port : poolComConnections.get(tab).getAllPorts()) {
                     CB_ComPorts.addItem(port.getSystemPortName() + " (" + MyUtilities.removeComWord(port.getPortDescription()) + ")");
