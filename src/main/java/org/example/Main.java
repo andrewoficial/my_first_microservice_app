@@ -5,7 +5,6 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.example.gui.MainWindow;
 import org.example.services.ComPort;
-import org.example.utilites.MyProperties;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 import javax.swing.*;
@@ -24,10 +23,12 @@ public class Main {
     public static ComPort comPorts = new ComPort();
     private static final Logger log = Logger.getLogger(Main.class);
     public static void main(String[] args) {
+        log.info("Запуск программы...");
+
         String ver = "Dunno....";
 
         Manifest mf = null;
-        log.debug("Ищу файл META-INF/MANIFEST.MF для определения версии");
+        log.info("Ищу файл META-INF/MANIFEST.MF для определения версии");
         try {
             mf = new Manifest(Main.class.getClassLoader().getResourceAsStream("META-INF/MANIFEST.MF"));
         } catch (IOException e) {
@@ -38,7 +39,7 @@ public class Main {
 
         if(mf != null){
             ver = mf.getMainAttributes().getValue("Implementation-Title") + mf.getMainAttributes().getValue("Implementation-Version");
-            log.debug("Установил имя заголовка программы" + ver);
+            log.info("Установил имя заголовка программы" + ver);
         }
 
         URL resource = Main.class.getClassLoader().getResource("GUI_Images/Pic.png");
@@ -48,7 +49,7 @@ public class Main {
         if(resource != null){
             ImageIcon pic = new ImageIcon(resource);
             dialog.setIconImage(pic.getImage());
-            log.debug("Установка картинки");
+            log.info("Установка картинки");
         }
         dialog.pack();
         dialog.setVisible(true);

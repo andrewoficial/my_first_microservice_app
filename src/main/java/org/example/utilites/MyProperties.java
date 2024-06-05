@@ -61,7 +61,7 @@ public class MyProperties {
     public MyProperties(){
 
 
-        System.out.println("Start load configAccess.properties");
+        log.info("Start load configAccess.properties");
         try{
             File f = new File("config"+"configAccess.properties");
             if(f.exists() && !f.isDirectory()) {
@@ -127,7 +127,7 @@ public class MyProperties {
 
         try{
             this.lastComSpeed = Integer.parseInt(props.getProperty("lastComSpeed"));
-            log.info("Last lastComSpeed" + lastComPort);
+            log.info("Last ComSpeed: " + lastComSpeed);
         }catch (NumberFormatException exception){
             this.lastComSpeed = 0;
             log.info("configAccess.properties contain incorrect value of lastComSpeed");
@@ -135,7 +135,7 @@ public class MyProperties {
 
         try{
             this.lastDataBits = Integer.parseInt(props.getProperty("lastDataBits"));
-            log.info("Last DataBits" + lastDataBits);
+            log.info("Last DataBits: " + lastDataBits);
         }catch (NumberFormatException exception){
             this.lastDataBits = 0;
             log.info("configAccess.properties contain incorrect value of lastDataBits");
@@ -143,7 +143,7 @@ public class MyProperties {
 
         try{
             this.lastStopBits = Integer.parseInt(props.getProperty("lastStopBits"));
-            log.info("Last lastStopBits: " + lastStopBits);
+            log.info("Last StopBits: " + lastStopBits);
         }catch (NumberFormatException exception){
             this.lastStopBits = 0;
             log.info("configAccess.properties contain incorrect value of lastStopBits");
@@ -155,7 +155,7 @@ public class MyProperties {
             log.info("configAccess.properties contain incorrect value of lastParity");
         }else{
             this.lastParity = props.getProperty("lastParity");
-            log.info("Last Parity" + lastParity);
+            log.info("Last Parity: " + lastParity);
         }
 
         lastProtocol = props.getProperty("lastProtocol");
@@ -164,7 +164,7 @@ public class MyProperties {
             log.info("configAccess.properties contain incorrect value of lastProtocol");
         }else{
             this.lastProtocol = props.getProperty("lastProtocol");
-            log.info("Last Protocol " + lastProtocol);
+            log.info("Last Protocol: " + lastProtocol);
         }
     }
 
@@ -172,6 +172,7 @@ public class MyProperties {
         this.lastComPort = comPort;
         properties.setProperty("lastComPort", comPort);
         this.updateFile();
+        log.info("Обновлено значение последнего ком-порта: " + comPort);
     }
 
     public void setLastDataBits(int dataBits){
@@ -179,38 +180,48 @@ public class MyProperties {
         this.lastDataBits = dataBits;
         properties.setProperty("lastDataBits", String.valueOf(dataBits));
         this.updateFile();
+        log.info("Обновлено значение последнего dataBits: " + String.valueOf(dataBits));
     }
 
     public void setLastStopBits(int lastStopBits){
         this.lastStopBits = lastStopBits;
         properties.setProperty("lastStopBits", String.valueOf(lastStopBits));
         this.updateFile();
+        log.info("Обновлено значение последнего StopBits: " + String.valueOf(lastStopBits));
     }
     public void setLastComSpeed(int lastComSpeed){
         this.lastComSpeed = lastComSpeed;
         properties.setProperty("lastComSpeed", String.valueOf(lastComSpeed));
         this.updateFile();
+        log.info("Обновлено значение последнего ComSpeed: " + String.valueOf(lastComSpeed));
     }
 
     public void setLastParity(String lastParity){
         this.lastParity = lastParity;
         properties.setProperty("lastParity", lastParity);
         this.updateFile();
+        log.info("Обновлено значение последнего Parity: " + String.valueOf(lastParity));
+
     }
 
     public void setLastProtocol(String lastProtocol){
         this.lastProtocol = lastProtocol;
         properties.setProperty("lastProtocol", lastProtocol);
         this.updateFile();
+        log.info("Обновлено значение последнего Protocol: " + String.valueOf(lastProtocol));
+
     }
 
     public void setLogLevel(org.apache.log4j.Level level){
         this.logLevel = String.valueOf(level);
         properties.setProperty("logLevel", String.valueOf(level));
         this.updateFile();
+        log.info("Обновлено значение последнего logLevel: " + String.valueOf(logLevel));
+
     }
 
     public org.apache.log4j.Level getLogLevel(){
+        log.error("Возвращено значение уровня логирования  " + logLevel);
         return Level.toLevel(this.logLevel);
     }
     private void updateFile(){
@@ -218,6 +229,8 @@ public class MyProperties {
             this.properties.store(file, null);
         } catch (IOException e) {
             //throw new RuntimeException(e);
+            log.error("Ошибка обновления файла настроек " + e.getMessage());
+
         }
     }
 

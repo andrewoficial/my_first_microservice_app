@@ -11,6 +11,7 @@ import com.fazecast.jSerialComm.SerialPortEvent;
 import lombok.Getter;
 import org.example.utilites.MyUtilities;
 
+import java.io.Serial;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Scanner;
@@ -65,8 +66,17 @@ public class ComPort {
     }
 
     public void updatePorts(){
-        Arrays.fill(ports, null);
+
+        System.out.println(SerialPort.getVersion());
+        System.out.println(System.getProperty("java.version"));
+        System.out.println(System.getProperty("java.vm.name"));
+        System.out.println(System.getProperty("sun.arch.data.model"));
         ports = SerialPort.getCommPorts();
+        ports = SerialPort.getCommPorts();
+        System.out.println("All OK");
+        //System.out.println(SerialPort.getVersion());
+        //Arrays.fill(ports, null);
+        //ports = SerialPort.getCommPorts();
     }
 
     public String getCurrentComName(){
