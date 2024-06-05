@@ -92,9 +92,18 @@ public class ChartWindow extends JFrame implements Rendeble {
                 System.out.println(currHeight);
                 System.out.println(controlPanel.getHeight());
                 //controlPanel.setH
+
+                if (Math.abs(currHeight - getHeight()) < 15) {
+                    System.out.println("scip Height");
+                    return;
+                }
+                if (Math.abs(currWidth - getWidth()) < 5) {
+                    System.out.println("scip Width");
+                    return;
+                }
                 currWidth = getWidth();
                 currHeight = getHeight();
-                dimension.setSize(controlPanel.getWidth(), currHeight - controlPanel.getHeight() - 37);
+                dimension.setSize(controlPanel.getWidth(), currHeight - controlPanel.getHeight() - 38); //37 dunno....
                 System.out.println();
 
             }
@@ -153,7 +162,7 @@ public class ChartWindow extends JFrame implements Rendeble {
                         System.out.println(ent.toString());
                         selectedValue.setText("Выбрано[ item:" + ent.getItem() +
                                 " seriesIndex:" + ent.getSeriesIndex() +
-                                " value:" + ent.getDataset().getYValue(ent.getSeriesIndex(), ent.getItem()) + "] ");
+                                " значение:" + ent.getDataset().getYValue(ent.getSeriesIndex(), ent.getItem()) + "] ");
                     }
                     //System.out.println("==");
                     //System.out.println(e.getEntity());
@@ -330,33 +339,7 @@ public class ChartWindow extends JFrame implements Rendeble {
     public void renderData() {
         log.info("Обновление графика в потоке " + Thread.currentThread().getName());
         getLastData();
-        //123456
-
-
-        //System.out.println(super.getHeight());
-        //System.out.println(this.getHeight());
-        int delta = this.getHeight() - this.getContentPane().getHeight() + 30;
-        int needHeight = this.getRootPane().getHeight() - delta;
-        if (needHeight < 250) {
-            needHeight = 250;
-        }
-
-        System.out.println();
-        System.out.println("======");
-        //System.out.println("currWidth" + currWidth);
-        System.out.println("currHeight" + currHeight);
-        System.out.println("======");
-        System.out.println("Height Root" + this.getRootPane().getHeight());
-        System.out.println("Height Content" + this.getContentPane().getHeight());
-        System.out.println("Height this" + this.getHeight());
-        System.out.println("Height delta" + delta);
-        System.out.println("Height needHeight" + needHeight);
-
-        //chartPanel.setPreferredSize(dimension);
         repaint();
-        //dataset = collection;
-        //createChart(dataset);
-        //initUI();
     }
 
     @Override
