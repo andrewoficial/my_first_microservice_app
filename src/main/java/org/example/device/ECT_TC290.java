@@ -1,44 +1,50 @@
 package org.example.device;
 
+import java.util.*;
+import java.util.function.Function;
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
+import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.gui.ChartWindow;
 import org.example.services.AnswerValues;
+import org.example.utilites.ParseException;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CoderResult;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Stream;
 
-public class ECT_TC290 implements SerialPortDataListener, SomeDevice {
-    private static final Logger log = Logger.getLogger(ERSTEVAK_MTP4D.class);
+public class ECT_TC290 implements SomeDevice  {
+    private volatile boolean bisy = false;
+    private static final Logger log = Logger.getLogger(IGM_10.class);
     private final SerialPort comPort;
+    private byte [ ] lastAnswerBytes;
+    private final StringBuilder lastAnswer = new StringBuilder();
+    private StringBuilder emulatedAnswer = new StringBuilder();
+    private final boolean knownCommand = false;
     private volatile boolean hasAnswer = false;
-    private volatile StringBuilder lastAnswer;
-
-    private volatile String lastValue;
-
-
-    private boolean knownCommand = false;
-
-    private  volatile boolean hasValue;
-
-    //Loop Vars
-    private int timeout = 0;
-
+    private  volatile boolean hasValue = false;
+    @Setter
+    private byte [] strEndian = {13};//CR
     private int received = 0;
-    private long millisLimit = 5000L;
-    private long millisDela = 0L;
-    private long millisPrev = System.currentTimeMillis();
-    private double value = 0;
-    private long degree = 0;
-    private double val;
+    private final long millisLimit = 500000;
+    private final long repeatGetAnswerTimeDelay = 1;
+    private final int buffClearTimeLimit = 2;
+    private final int repetCounterLimit = 150;
+    private final long millisPrev = System.currentTimeMillis();
+    private final Charset charset = Charset.forName("Cp1251");
+    private final CharsetDecoder decoder = charset.newDecoder();
+    private final CharBuffer charBuffer = CharBuffer.allocate(512);  // Предполагаемый максимальный размер
+    private static AnswerValues answerValues = new AnswerValues(0);
+    String cmdToSend;
 
-    //For JUnits
-    private StringBuilder strToSend;
-    private String deviceAnswer;
+
 
     public ECT_TC290(SerialPort port){
         log.info("Создан объект протокола ECT_TC290");
@@ -50,122 +56,148 @@ public class ECT_TC290 implements SerialPortDataListener, SomeDevice {
         log.info("Создан объект протокола ECT_TC290 (виртуализация)");
         comPort = null;
     }
+
+    @Override
+    public void setCmdToSend(String str) {
+        cmdToSend = str;
+    }
+
+    @Override
+    public Integer getTabForAnswer() {
+        return null;
+    }
+
+    @Override
+    public boolean isBisy(){
+        return bisy;
+    }
+
+    @Override
+    public void setBisy(boolean bisy){
+        this.bisy = bisy;
+    }
+
+    @Override
+    public byte[] getStrEndian() {
+        return this.strEndian;
+    }
+
+    @Override
+    public SerialPort getComPort() {
+        return this.comPort;
+    }
+
+    @Override
+    public boolean isKnownCommand() {
+        return knownCommand;
+    }
+
+    @Override
+    public int getReceivedCounter() {
+        return received;
+    }
+
+    @Override
+    public void setReceivedCounter(int cnt) {
+        received = cnt;
+    }
+
+    @Override
+    public long getMillisPrev() {
+        return millisPrev;
+    }
+
+    @Override
+    public long getMillisLimit() {
+        return millisLimit;
+    }
+
+    @Override
+    public long getRepeatGetAnswerTimeDelay() {
+        return repeatGetAnswerTimeDelay;
+    }
+
+    @Override
+    public void setLastAnswer(byte[] ans) {
+//        for (byte an : ans) {
+//            System.out.print(an);
+//        }
+        lastAnswerBytes = ans;
+    }
+
+    @Override
+    public StringBuilder getEmulatedAnswer() {
+        return emulatedAnswer;
+    }
+
+    @Override
+    public void setEmulatedAnswer(StringBuilder sb) {
+        emulatedAnswer = sb;
+    }
+
+    @Override
+    public int getBuffClearTimeLimit() {
+        return buffClearTimeLimit;
+    }
+
+    @Override
+    public void setHasAnswer(boolean hasAnswer) {
+
+    }
+
     public void enable() {
-        comPort.openPort();
-        comPort.flushDataListener();
-        comPort.removeDataListener();
-        int timeout = 25;// !!!
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 15, 10);
         if(comPort.isOpen()){
             log.info("Порт открыт, задержки выставлены");
         }
-        millisDela = 0L;
     }
 
     @Override
-    public int getListeningEvents() {
-        log.info("return Listening Events");
-        return SerialPort.LISTENING_EVENT_DATA_AVAILABLE;
+    public int getRepetCounterLimit() {
+        return repetCounterLimit;
     }
 
-    @Override
-    public void serialEvent(SerialPortEvent event) {
-        byte[] newData = event.getReceivedData();
-        log.info("Received data via eventListener on ERSTEVAK_MTP4D of size: " + newData.length);
-        for (byte newDatum : newData) System.out.print((char) newDatum);
-        //System.out.println("\n");
-        hasAnswer = true;
-    }
 
-    public void sendData(String data){
-        //System.out.println("sendData[" + data + "]");
-        knownCommand = isKnownCommand(data);
-        byte[] buffer = new byte[data.length() + 1];
-        for (int i = 0; i < data.length(); i++) {
-            buffer[i] = (byte) data.charAt(i);
-        }
-        buffer [data.length()] = 13;//CR
-        if (comPort == null){ //For Tests
-            strToSend = new StringBuilder();
-            for (byte b : buffer) {
-                strToSend.append((char)b);
-            }
-            return;
-        }
-        comPort.writeBytes(buffer, buffer.length);
-        //comPort.bytesAwaitingWrite();
-        this.loop();
-    }
-    public StringBuilder getForSend(){
-        return strToSend;
+    public String getForSend(){
+        return cmdToSend;
     }
 
     public void setReceived(String answer){
         this.received = answer.length();
-        deviceAnswer = answer;
-        this.loop();
+        this.parseData();
     }
 
-    private void loop() {
-        if(comPort != null){
-            received = comPort.bytesAvailable();
-            millisPrev = System.currentTimeMillis();
-        }
-
-        while((received == 0) && (millisLimit > millisDela)){
-            millisDela = System.currentTimeMillis() - millisPrev;
-            received = comPort.bytesAvailable();
-            try {
-                Thread.sleep(15);
-            } catch (InterruptedException e) {
-                //throw new RuntimeException(e);
-            }
-        }
-
-        if(received > 0) {
-            if(comPort != null) {
-                log.trace("Начинаю разбор посылки длиною " + received);
-                byte[] buffer = new byte[comPort.bytesAvailable()];
-                //System.out.println("Создал буфер ");
-                comPort.readBytes(buffer, comPort.bytesAvailable());
-                //System.out.println("Считал данные " );
-                lastAnswer = new StringBuilder(new String(buffer));
-                //System.out.println("Сохранил ответ " );
-            }else{
-                lastAnswer = new StringBuilder(deviceAnswer);
-            }
-            hasAnswer = true;
-            if(knownCommand && isCorrectAnswer() && hasAnswer){
-                log.trace("Ответ правильный " + lastAnswer.toString());
-                value = 0.0;
-                degree = 0;
-                try{
-                    //int firstPart = lastAnswer.indexOf("M") + 1;
-                    //System.out.println(firstPart);
-                    value = Double.parseDouble(lastAnswer.toString());
-                    //degree = Integer.parseInt(lastAnswer.substring(firstPart+5, firstPart+6));
-                } catch (NumberFormatException e) {
-                    //System.out.println("Parse error");
-                    //throw new RuntimeException(e);
-                    hasValue = false;
+    @Override
+    public void parseData() {
+        //System.out.println("ECT_TC290 run parse");
+        if(lastAnswerBytes.length > 0) {
+            ECT_TC290.CommandList knownCommand = ECT_TC290.CommandList.getCommandByName(cmdToSend);
+            lastAnswer.setLength(0);
+            if (knownCommand != null) {
+                answerValues = knownCommand.parseFunction.apply(lastAnswerBytes);
+                hasAnswer = true;
+                if(answerValues == null){
+                    System.out.println("ECT_TC290 done NULL.");
                     return;
                 }
-                hasValue = true;
-
-                val = value;
-                //val /= 10000.0;
-                System.out.println(val);
-                //lastValue = String.valueOf(val);
-            }else{
-                log.trace("Ответ с ошибкой " + lastAnswer.toString());
-                hasValue = false;
+                for (int i = 0; i < answerValues.getValues().length; i++) {
+                    lastAnswer.append(answerValues.getValues()[i]);
+                    lastAnswer.append(" ");
+                    lastAnswer.append(answerValues.getUnits()[i]);
+                    lastAnswer.append("  ");
+                }
+                //System.out.println("ECT_TC290 done correct...[" + lastAnswer.toString() + "]...");
+            }else {
+                System.out.println("ECT_TC290 Cant create answers obj");
             }
+
+
+        }else{
+            System.out.println("ECT_TC290 empty received");
         }
     }
 
-    private boolean isKnownCommand(String cmd){
-        return cmd != null && cmd.contains("CRDG?") && (cmd.length() == "CRDG? 10".length() || cmd.length() == ("CRDG? 5".length()));
-    }
+
     private boolean isCorrectAnswer(){
         if((lastAnswer.length() == 7 || lastAnswer.length() == 6 || lastAnswer.length() == 8)){
             //ToDo add CRC
@@ -175,18 +207,8 @@ public class ECT_TC290 implements SerialPortDataListener, SomeDevice {
     }
     public String getAnswer(){
 
-        int index = lastAnswer.indexOf("\n");
-        if(index > 0){
-            lastAnswer.deleteCharAt(index);
-        }
-        index = lastAnswer.indexOf("\r");
-        if(index > 0){
-            lastAnswer.deleteCharAt(index);
-        }
-        String forReturn = new String(lastAnswer);
-        lastAnswer = null;
         hasAnswer = false;
-        return forReturn;
+        return lastAnswer.toString();
     }
 
     public boolean hasAnswer(){
@@ -198,9 +220,185 @@ public class ECT_TC290 implements SerialPortDataListener, SomeDevice {
         return hasValue;
     }
 
+    private void saveAnswerValue(){
+        answerValues = new AnswerValues(1);
+
+        double ans = Double.parseDouble(lastAnswer.toString());
+        answerValues.addValue(ans, "deg");
+
+    }
     public AnswerValues getValues(){
-        AnswerValues valToSend =  new AnswerValues(1);
-        valToSend.addValue(val, "bar");
-        return valToSend;
+        return this.answerValues;
+    }
+
+    private enum CommandList{
+
+        CRDGdirect("CRDG? ", (response) -> { //"CRDG? 1" - direct
+            answerValues = null;
+            //System.out.println("Proceed CRDG direct");
+            String example = "29.1899";
+            if(response.length >= 7 ){
+                //response[2] == '.' || (response[0] == '-' && response[3] == '.') || (response[0] == '-' && response[4] == '.')
+                //toDo set filters
+                if(true) {
+                    Double value;
+                    StringBuilder sb = new StringBuilder();
+                    for (byte b : response) {
+                        sb.append((char)b);
+                    }
+                    String rsp = sb.toString();
+                    //System.out.println("Parse answer [" + rsp + "] ");
+
+                    rsp = rsp.trim();
+                    //log.debug("Parse " + rsp);
+
+                    rsp = rsp.replaceAll("[^0-9.,-]", ""); // удалится все кроме цифр и указанных знаков
+                    boolean success = false;
+                    try{
+
+                        value = (double) Double.parseDouble(rsp);
+                        success = true;
+                    }catch (NumberFormatException e){
+                        System.out.println("Exception " + e.getMessage());
+                        value = 0.0;
+                        success = false;
+                    }
+                    if(success){
+                        answerValues = new AnswerValues(1);
+                        answerValues.addValue(value, " °C");
+                    }else{
+                        answerValues = null;
+                    }
+                    //System.out.println("Parser result " + value);
+
+                    return answerValues;
+                }else {
+                    System.out.println("Wrong POINT position  " + Arrays.toString(response));
+                }
+
+                //System.out.println("Answer response " + Arrays.toString(response));
+
+
+
+            }else {
+                System.out.println("Wrong answer length " + response.length);
+                for (byte b : response) {
+                    System.out.print(b + " ");
+
+                }
+                System.out.println();
+            }
+            return answerValues;
+        }),
+
+        CRDGbroadCast("CRDG?", (response) -> { //"CRDG?" - spread
+            answerValues = null;
+            //System.out.println("Proceed CRDG direct");
+            String example = "29.1899";
+            if(response.length >= 99 ){
+                StringBuilder sb = new StringBuilder();
+                for (byte b : response) {
+                    sb.append((char)b);
+                }
+                String rsp = sb.toString();
+                //System.out.println("Parse answer [" + rsp + "] ");
+
+                rsp = rsp.trim();
+                String [] strValues = rsp.split(",");
+                //System.out.println("Found" + strValues.length);
+                answerValues = new AnswerValues(10);
+                for (int i = 0; i < strValues.length; i++) {
+                    double value = 0.0;
+                    strValues[i] = strValues[i].replace(",", "");
+                    strValues[i] = strValues[i].trim();
+                    strValues[i] = strValues[i].replaceAll("[^0-9.,-]", ""); // удалится все кроме цифр и указанных знаков
+                    //System.out.println("Parse " + strValues[i]);
+                    boolean success = false;
+                    try{
+                        success = true;
+                        value = Double.parseDouble(strValues[i]);
+                        answerValues.addValue(value, " °C");
+                    }catch (NumberFormatException e){
+                        success = false;
+                        System.out.println("Exception " + e.getMessage());
+                        //Past cleaner here
+                        //Throw exception
+
+
+                    }
+                    if(success){
+                        answerValues.addValue(value, " °C");
+                    }else{
+                        //throw new ParseException("Exception message", "Exception message");
+                        answerValues = null;
+                    }
+                }
+                //System.out.println("Answer response " + Arrays.toString(response));
+
+
+
+            }else {
+                System.out.println("Wrong answer length " + response.length);
+                for (byte b : response) {
+                    System.out.print(b + " ");
+                }
+                System.out.println();
+            }
+            return answerValues;
+        });
+        private final String name;
+        private final Function<byte [], AnswerValues> parseFunction;
+        private static final List<String> VALUES;
+
+        static {
+            VALUES = new ArrayList<>();
+            for (ECT_TC290.CommandList someEnum : ECT_TC290.CommandList.values()) {
+                VALUES.add(someEnum.name);
+            }
+        }
+
+        CommandList(String name, Function<byte [], AnswerValues> parseFunction) {
+            this.name = name;
+            this.parseFunction = parseFunction;
+        }
+
+        public String getValue() {
+            return name;
+        }
+
+        public static List<String> getValues() {
+            return Collections.unmodifiableList(VALUES);
+        }
+
+        public static String getLikeArray(int number) {
+            List<String> values = ECT_TC290.CommandList.getValues();
+            return values.get(number);
+        }
+
+        public AnswerValues parseAnswer(byte [] response) {
+            return parseFunction.apply(response);
+        }
+
+        public static ECT_TC290.CommandList getCommandByName(String name) {
+            answerValues = null;
+            if(name.length() > 5){
+                //System.out.println("Length " + name.length());
+                name = name.substring(0, 6);
+                //System.out.println("Command " + name);
+            }else{
+                name = name.trim();
+                //System.out.println("ERR: Length " + name.length());
+            }
+            for (ECT_TC290.CommandList command : ECT_TC290.CommandList.values()) {
+                //System.out.println("Compare command [" + command.name + "] and [" + name + "] ");
+                if (command.name.equals(name)) {
+                    //System.out.println("Found command " + command.name);
+                    return command;
+                }
+
+            }
+            System.out.println("Command not found");
+            return null;
+        }
     }
 }

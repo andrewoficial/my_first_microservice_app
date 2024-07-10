@@ -73,14 +73,6 @@ public class PoolLogger {
         line.append(answer.getDeviceType().getClass().toString().replace("class org.example.device.", ""));
         line.append("\t");
         line.append(answer.getAnswerReceivedString());
-        if(answer.getAnswerReceivedValues() != null) {
-            for (int i = 0; i < answer.getAnswerReceivedValues().getCounter(); i++) {
-                line.append("\t");
-                line.append(answer.getAnswerReceivedValues().getValues()[i]);
-                line.append("\t");
-                line.append(answer.getAnswerReceivedValues().getUnits()[i]);
-            }
-        }
         line.append("\n");
 
 

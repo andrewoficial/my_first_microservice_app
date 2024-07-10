@@ -1,10 +1,15 @@
 package org.example.device;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Function;
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
+import lombok.Setter;
 import org.example.services.AnswerValues;
-
+import org.apache.log4j.Logger;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -14,126 +19,160 @@ import java.nio.charset.StandardCharsets;
 
 import static org.example.Main.comPorts;
 
-public class ARD_BAD_VLT implements SerialPortDataListener, SomeDevice {
+public class ARD_BAD_VLT implements SomeDevice{
+    private volatile boolean bisy = false;
+    private static final Logger log = Logger.getLogger(DEMO_PROTOCOL.class);
     private final SerialPort comPort;
     private volatile boolean hasAnswer = false;
-    private volatile String lastAnswer = "";
+    private volatile StringBuilder lastAnswer;
+    private AnswerValues answerValues = new AnswerValues(0);
+    private volatile String lastValue;
+    @Setter
+    private byte [] strEndian = {13, 10};//CR + LF
+    private boolean knownCommand = false;
+    private StringBuilder emulatedAnswer;
+    private  volatile boolean hasValue;
+    private int received = 0;
+    private long millisLimit = 5000L;
+    private long repeatGetAnswerTimeDelay = 200;
+    private long millisDela = 0L;
+    private long millisPrev = System.currentTimeMillis();
+    private double value = 0;
+    private long degree = 0;
+    private double val;
+    private int buffClearTimeLimit = 250;
+    //For JUnits
+    private StringBuilder strToSend;
+    private String deviceAnswer;
+    String cmdToSend;
 
-    private boolean subsequentLaunchComWait = false;
     public ARD_BAD_VLT(SerialPort port){
         //System.out.println("Create obj");
         this.comPort = port;
         this.enable();
     }
 
+    @Override
+    public void setCmdToSend(String str) {
+        str = cmdToSend;
+    }
+
+    @Override
+    public Integer getTabForAnswer() {
+        return null;
+    }
+
+    @Override
+    public boolean isBisy(){
+        return bisy;
+    }
+
+    @Override
+    public void setBisy(boolean bisy){
+        this.bisy = bisy;
+    }
+
+    @Override
+    public byte[] getStrEndian() {
+        return this.strEndian;
+    }
+
+    @Override
+    public SerialPort getComPort() {
+        return this.comPort;
+    }
+
+    @Override
+    public boolean isKnownCommand() {
+        return knownCommand;
+    }
+
+    @Override
+    public int getReceivedCounter() {
+        return received;
+    }
+
+    @Override
+    public void setReceivedCounter(int cnt) {
+        this.received = cnt;
+    }
+
+    @Override
+    public long getMillisPrev() {
+        return millisPrev;
+    }
+
+    @Override
+    public long getMillisLimit() {
+        return millisLimit;
+    }
+
+    @Override
+    public long getRepeatGetAnswerTimeDelay() {
+        return repeatGetAnswerTimeDelay;
+    }
+
+    @Override
+    public void setLastAnswer(byte[] sb) {
+        //this.lastAnswer = sb;
+    }
+
+    @Override
+    public StringBuilder getEmulatedAnswer() {
+        return this.emulatedAnswer;
+    }
+
+    @Override
+    public void setEmulatedAnswer(StringBuilder sb) {
+        this.emulatedAnswer = sb;
+    }
+
+    @Override
+    public int getBuffClearTimeLimit() {
+        return this.buffClearTimeLimit;
+    }
+
+    @Override
+    public void setHasAnswer(boolean hasAnswer) {
+        this.hasAnswer = hasAnswer;
+    }
+
     public void enable() {
 
-        //SerialPort comPort = SerialPort.getCommPort(portName);
-        //System.out.println(comPort.getDescriptivePortName());
         comPort.openPort();
         comPort.flushDataListener();
-        comPort.removeDataListener();
         //comPort.addDataListener(this);
         //System.out.println("open port and add listener");
-        int timeout = 1000 - comPort.getBaudRate();
+        int timeout = 600;
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, timeout, timeout);
     }
 
     @Override
-    public int getListeningEvents() {
-        System.out.println("return Listening Events");
-        //return SerialPort.LISTENING_EVENT_DATA_RECEIVED;
-        return SerialPort.LISTENING_EVENT_DATA_AVAILABLE;
-
+    public int getRepetCounterLimit() {
+        return 0;
     }
+
 
     @Override
-    public void serialEvent(SerialPortEvent event) {
-        byte[] newData = event.getReceivedData();
-        System.out.println("Received data of size: " + newData.length);
-        for (byte newDatum : newData) System.out.print((char) newDatum);
-        System.out.println("\n");
-        hasAnswer = true;
-        lastAnswer = "Something";
-    }
+    public void parseData() {
 
-    public void sendData(String data){
-        //byte [] buffer = {0x46, 0x0D};
-        System.out.println("sendData[" + data + "]");
-        byte[] buffer = new byte[data.length() + 1];
-        Charset charset = StandardCharsets.US_ASCII;
-        for (int i = 0; i < data.length(); i++) {
-            buffer[i] = (byte) data.charAt(i);
-        }
-        buffer [data.length()] = 13;
-        for (int i = 0; i < buffer.length; i++) {
-            System.out.print(buffer[i]);
-        }
-        int timeout = 3000 - comPort.getBaudRate();
-        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, timeout, timeout);
-        comPort.writeBytes(buffer, buffer.length);
-        comPort.bytesAwaitingWrite();
-
-        comPort.flushDataListener();
-        //comPort.removeDataListener();
-        comPort.flushIOBuffers();
-        this.loop();
-    }
-
-
-    private void loop() {
-        int timeout = 3000 - comPort.getBaudRate();
-        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, timeout, timeout);
-        int received = comPort.bytesAvailable();
-        long millisLimit = 5000L;
-        long millisDela = 0L;
-        long millisPrev = System.currentTimeMillis();
-        String currPart = "";
-        while((received == 0) && (millisLimit > millisDela)){
-            millisDela = System.currentTimeMillis() - millisPrev;
-            received = comPort.bytesAvailable();
-            try {
-                Thread.sleep(Math.min((millisLimit / 4), 200L));
-            } catch (InterruptedException e) {
-                //throw new RuntimeException(e);
-            }
-        }
         if(received > 0) {
-            //System.out.println("Received bytes " + received);
-            byte[] buffer = new byte[received];
-            comPort.readBytes(buffer, received);
-            for (int i = 0; i < received; i++) {
-                //System.out.println("Byte " + i + " is " + buffer[i]);
+
+            System.out.println("Received Str " + lastAnswer);
+            if(hasAnswer){
+                ARD_BAD_VLT.CommandList cmd = ARD_BAD_VLT.CommandList.getCommandByName(cmdToSend);
+                if (cmd != null) {
+                    Double [] answer = cmd.parseAnswer(lastAnswer.toString());
+                    if(answer.length > 0){
+                        answerValues = new AnswerValues(answer.length);
+                        for (int i = 0; i < answer.length; i++) {
+                            answerValues.addValue(answer[i], " unit");
+                            System.out.println(answerValues.getValues()[i]);
+                        }
+                    }
+                }
             }
 
-            //System.out.println("Received Str 00 " + lastAnswer);
-            //String utf8String = "ff";
-            try {
-                currPart = new String(buffer, "Cp1251");
-                //System.out.println("Received Str 01 " + lastAnswer);
-            } catch (UnsupportedEncodingException e) {
-                currPart = new String(buffer);
-                //System.out.println("Received Str 02 " + lastAnswer);
-            }
-            hasAnswer = true;
-            //System.out.println("CurrPart " + currPart);
-        }
-        lastAnswer += currPart;
-        System.out.println("Set flags ARD " + hasAnswer + " receive count " + received + " part " + currPart);
-        System.out.println("Received Str " + lastAnswer);
-
-        millisLimit = 200L;
-        millisPrev = System.currentTimeMillis();
-        millisDela = 0L;
-        received = 0;
-        while((received == 0) && (millisLimit > millisDela)){
-            millisDela = System.currentTimeMillis() - millisPrev;
-            received = comPort.bytesAvailable();
-        }
-        received = comPort.bytesAvailable();
-        System.out.println("Que " + received);
-        if(received > 0){
-            loop();
         }
 
     }
@@ -155,5 +194,66 @@ public class ARD_BAD_VLT implements SerialPortDataListener, SomeDevice {
 
     public AnswerValues getValues(){
         return null;
+    }
+
+    private enum CommandList{
+
+        SRAL("SRAL?", (response) -> {
+            // Ваш алгоритм проверки для SRAL?
+            Double [] anAr = new Double[0];
+            if(response.length() == 7 && response.contains("\n")){
+                try{
+                    Double answer = Double.parseDouble(response);
+                    anAr = new Double[1];
+                    anAr [0] = answer;
+                }catch (NumberFormatException e){
+                    anAr = new Double[0];
+                }
+                return anAr;
+            }
+            return anAr;
+        });
+
+        private final String name;
+        private final Function<String, Double[]> parseFunction;
+        private static final List<String> VALUES;
+
+        static {
+            VALUES = new ArrayList<>();
+            for (ARD_BAD_VLT.CommandList someEnum : ARD_BAD_VLT.CommandList.values()) {
+                VALUES.add(someEnum.name);
+            }
+        }
+
+        CommandList(String name, Function<String, Double[]> parseFunction) {
+            this.name = name;
+            this.parseFunction = parseFunction;
+        }
+
+        public String getValue() {
+            return name;
+        }
+
+        public static List<String> getValues() {
+            return Collections.unmodifiableList(VALUES);
+        }
+
+        public static String getLikeArray(int number) {
+            List<String> values = ARD_BAD_VLT.CommandList.getValues();
+            return values.get(number);
+        }
+
+        public Double[] parseAnswer(String response) {
+            return parseFunction.apply(response);
+        }
+
+        public static ARD_BAD_VLT.CommandList getCommandByName(String name) {
+            for (ARD_BAD_VLT.CommandList command : ARD_BAD_VLT.CommandList.values()) {
+                if (command.name.equals(name)) {
+                    return command;
+                }
+            }
+            return null;
+        }
     }
 }

@@ -25,7 +25,7 @@ import java.util.Properties;
  */
 
 public class MyProperties {
-    private static final Logger log = Logger.getLogger(MyProperties.class);
+    private static Logger log = null;
     public static String driver = "org.postgresql.Driver";
     public static String url = "jdbc:postgresql://floppy.db.elephantsql.com:5432/zhsiszsk";
     public static String pwd = "EcrvEk0pw2UaY6jdKY16R3RGiBrefui1";
@@ -59,9 +59,10 @@ public class MyProperties {
     private java.util.Properties properties;
 
     public MyProperties(){
-
-
+        //Thread.currentThread().setName("MyProperties");
+        log = Logger.getLogger(MyProperties.class);
         log.info("Start load configAccess.properties");
+        log.info(Thread.currentThread().getName());
         try{
             File f = new File("config"+"configAccess.properties");
             if(f.exists() && !f.isDirectory()) {

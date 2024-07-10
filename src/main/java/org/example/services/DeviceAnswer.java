@@ -33,6 +33,12 @@ public class DeviceAnswer {
         this.tabNumber = tabNumber;
     }
 
+    public void changeTabNum(Integer num){
+        this.tabNumber = num;
+    }
+    public Integer getFieldCount (){
+        return answerReceivedValues.getCounter();
+    }
     @Override
     public String toString(){
         //String className = deviceType.getClass().toString().replace("class org.example.device.", "");

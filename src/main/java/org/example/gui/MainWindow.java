@@ -4,6 +4,8 @@
 package org.example.gui;
 
 import com.fazecast.jSerialComm.SerialPort;
+import com.fazecast.jSerialComm.SerialPortDataListener;
+import com.fazecast.jSerialComm.SerialPortEvent;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
@@ -23,6 +25,7 @@ import javax.swing.text.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -32,7 +35,7 @@ import static org.example.Main.comPorts;
 public class MainWindow extends JFrame implements Rendeble {
     private JPanel contentPane;
 
-    private static final Logger log = Logger.getLogger(MainWindow.class);
+    private static Logger log = Logger.getLogger(MainWindow.class);
     private int countRender = 0;
 
     private final ExecutorService thPool = Executors.newCachedThreadPool();
@@ -44,6 +47,7 @@ public class MainWindow extends JFrame implements Rendeble {
     private ArrayList<JTextPane> logDataTransferJtextPanel = new ArrayList<>();
     private ArrayList<PoolService> poolServices = new ArrayList<>();
     private ArrayList<ComPort> poolComConnections = new ArrayList<>();
+
     private ArrayList<Integer> lastGotedValueFromStorage = new ArrayList<>();
 
     private TabAnswerPart an = new TabAnswerPart(null, -1);
@@ -78,7 +82,10 @@ public class MainWindow extends JFrame implements Rendeble {
     private int tab = 0;
 
     public MainWindow() {
+
+
         log.info("Подготовка к рендеру окна....");
+        log.info(Thread.currentThread().getName());
         contentPane.getName();
         log.info("Получено имя окна " + contentPane.getName());
         //ComPort comPort = new ComPort();
@@ -94,6 +101,7 @@ public class MainWindow extends JFrame implements Rendeble {
         menuBar.add(jmenu.createFileMenu());
         menuBar.add(jmenu.createSettingsMenu());
         menuBar.add(jmenu.createViewMenu(uiThPool));
+        menuBar.add(jmenu.createUtilitiesMenu(uiThPool));
         menuBar.add(jmenu.createSystemParametrs(uiThPool));
         log.info("Завершено создание элементов меню");
         setJMenuBar(menuBar);
@@ -182,12 +190,17 @@ public class MainWindow extends JFrame implements Rendeble {
             @Override
             public void actionPerformed(ActionEvent e) {
                 log.info("Нажата кнопка открытия ком-порта" + tab);
+
                 poolComConnections.get(tab).setPort(CB_ComPorts.getSelectedIndex());
                 poolComConnections.get(tab).activePort.setComPortParameters(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()), 8, 1, SerialPort.NO_PARITY, false);
                 poolComConnections.get(tab).activePort.setBaudRate(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()));
                 poolComConnections.get(tab).activePort.setNumDataBits(DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
                 poolComConnections.get(tab).activePort.setParity(ParityList.values()[CB_Parity.getSelectedIndex()].getValue()); //Работает за счет совпадения индексов с библиотечными
                 poolComConnections.get(tab).activePort.setNumStopBits(StopBitsList.getLikeArray(CB_StopBit.getSelectedIndex()));
+                poolComConnections.get(tab).activePort.removeDataListener();
+                createPoolService(tab, false, false, 1200);
+
+
                 saveParameters(null);
             }
         });
@@ -197,8 +210,14 @@ public class MainWindow extends JFrame implements Rendeble {
             @Override
             public void actionPerformed(ActionEvent e) {
                 log.info("Нажата кнопка закрытия ком-порта" + tab);
+                poolServices.get(tab).setThreadForEvent(false);  //ToDo Блокировка кнопки закрытия, если есть др вкладки использующие ком порт
                 poolComConnections.get(tab).activePort.flushDataListener();
+                poolComConnections.get(tab).activePort.removeDataListener();
+                poolComConnections.get(tab).activePort.flushIOBuffers();
                 poolComConnections.get(tab).activePort.closePort();
+                System.out.println("На вкладке " + tab + " попытка закрыть ком порт");
+                System.out.println("Порт " + poolComConnections.get(tab).activePort.getSystemPortName());
+                System.out.println("Статус открытия " + poolComConnections.get(tab).activePort.isOpen());
             }
         });
         CB_Pool.addActionListener(new ActionListener() {
@@ -394,6 +413,22 @@ public class MainWindow extends JFrame implements Rendeble {
         //isBtn - вызов по кнопке / pool - вызов про чекбоксу
         if (isBtn) {
             log.info("Инициализация отправки по нажатию кнопки ОТПРАВИТЬ");
+            //*SERVICE:SETPAIR:xxx:END
+            if (textToSend.getText().contains("*SERVICE:SETPAIR:") && textToSend.getText().contains(":END")) {
+                String tmp = textToSend.getText();
+                int pos = tmp.indexOf("SETPAIR:");
+                tmp = tmp.substring(pos + 8);
+                if (tmp.length() > 1) {
+                    tmp = tmp.replace(":END", "");
+                    AnswerStorage.registerDeviceTabPair(tmp, tab);
+                    System.out.println("Registered");
+                } else {
+                    System.out.println("TooShortArgument");
+                    System.out.println(tmp);
+                }
+
+                return;
+            }
         } else {
             log.info("Инициализация отправки по по таймеру в цикле");
         }
@@ -405,8 +440,14 @@ public class MainWindow extends JFrame implements Rendeble {
         try {
             poolDelay = Integer.parseInt(IN_PoolDelay.getText());
         } catch (Exception e1) {
-            IN_PoolDelay.setText("1000");
+            IN_PoolDelay.setText("10000");
         }
+
+        createPoolService(tab, pool, isBtn, poolDelay);
+
+    }
+
+    private void createPoolService(int tab, boolean pool, boolean isBtn, int poolDelay) {
         PoolService psT = findPoolServiceByTabNumber();
         PoolService psC = findPoolServiceByOpenedPort();
         PoolService ps = null;
@@ -436,6 +477,11 @@ public class MainWindow extends JFrame implements Rendeble {
                         ps.setPoolDelay(String.valueOf(poolDelay));
                         //ps.run();
                         thPool.submit(ps);
+                        try {
+                            Thread.sleep(60);
+                        } catch (InterruptedException e) {
+                            //throw new RuntimeException(e);
+                        }
                     }
 
 
@@ -455,12 +501,19 @@ public class MainWindow extends JFrame implements Rendeble {
             }
         } else {
             log.info("Порт не используется, создание нового потока");
+            boolean forEvent;
+            if (isBtn) {
+                forEvent = false;
+            } else {
+                forEvent = !pool;
+            }
             poolServices.add(new PoolService(
                     ProtocolsList.getLikeArrayEnum(CB_Protocol.getSelectedIndex()),
                     textToSendValue.get(tab),
                     poolComConnections.get(tab).activePort,
                     poolDelay,
                     false,
+                    forEvent,
                     tab));
 
             if (isBtn) {
@@ -468,10 +521,29 @@ public class MainWindow extends JFrame implements Rendeble {
                 poolServices.get(poolServices.size() - 1).sendOnce(textToSendValue.get(tab), tab, false);
                 thPool.submit(poolServices.get(poolServices.size() - 1));
                 log.info("Поток создан и запущен один раз");
-            } else {
+                try {
+                    Thread.sleep(60);
+                } catch (InterruptedException e) {
+                    //throw new RuntimeException(e);
+                }
+            } else if (pool) {
                 poolServices.get(poolServices.size() - 1).setNeedPool(tab, true);
                 thPool.submit(poolServices.get(poolServices.size() - 1));
                 log.info("Поток создан и запущен");
+                try {
+                    Thread.sleep(60);
+                } catch (InterruptedException e) {
+                    //throw new RuntimeException(e);
+                }
+            } else {
+                poolServices.get(poolServices.size() - 1).setNeedPool(tab, false);
+                thPool.submit(poolServices.get(poolServices.size() - 1));
+                log.info("Поток создан и запущен для Event");
+                try {
+                    Thread.sleep(60);
+                } catch (InterruptedException e) {
+                    //throw new RuntimeException(e);
+                }
             }
         }
     }
@@ -558,7 +630,7 @@ public class MainWindow extends JFrame implements Rendeble {
         if (countRender > 20) {
             System.gc(); //Runtime.getRuntime().gc();
         }
-        log.info("Обновление данных для вкладки " + tab);
+        log.trace("Обновление данных для вкладки " + tab + " в потоке " + Thread.currentThread().getName());
     }
 
     @Override
@@ -786,7 +858,7 @@ public class MainWindow extends JFrame implements Rendeble {
         CB_Pool.setText("Опрос  ");
         panel11.add(CB_Pool, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         IN_PoolDelay = new JTextField();
-        IN_PoolDelay.setText("1200");
+        IN_PoolDelay.setText("1000");
         panel11.add(IN_PoolDelay, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         addRemove = new JPanel();
         addRemove.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));

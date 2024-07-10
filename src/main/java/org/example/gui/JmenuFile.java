@@ -9,13 +9,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.Enumeration;
 import java.util.concurrent.ExecutorService;
-import org.apache.logging.log4j.core.config.Configurator;
-import org.apache.logging.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
-import org.example.utilites.MyProperties;
 
-import java.util.Properties;
+import org.example.utilites.MyProperties;
 
 public class JmenuFile {
     private static final Logger logger = Logger.getLogger(JmenuFile.class);
@@ -72,7 +67,7 @@ public class JmenuFile {
 
 
     /**
-     * Функция создания меню "Настройки"
+     * Функция создания меню "Система"
      */
     public JMenu createSystemParametrs(ExecutorService thPool)
     {
@@ -190,7 +185,7 @@ public class JmenuFile {
 
 
     /**
-     * Функция создания меню "Настройки"
+     * Функция создания меню "Представления"
      */
     public JMenu createViewMenu(ExecutorService thPool)
     {
@@ -198,21 +193,23 @@ public class JmenuFile {
         JMenu viewMenu = new JMenu("Представления");
         // меню-флажки
         JMenuItem graph  = new JMenuItem("График");
+        JMenuItem scheme  = new JMenuItem("Схема");
 
 
 
         // добавим все в меню
         viewMenu.add(graph);
+        viewMenu.add(scheme);
 
 
         graph.addActionListener(new ActionListener()
         {
             @Override
             public void actionPerformed(ActionEvent arg0) {
-                System.out.println("ViewMode");
+                System.out.println("Graph");
                 ChartWindow chartWindow = new ChartWindow();
-                chartWindow.setName("Log settings");
-                chartWindow.setTitle("Log settings");
+                chartWindow.setName("График");
+                chartWindow.setTitle("График");
                 chartWindow.pack();
                 chartWindow.setVisible(true);
                 chartWindow.renderData();
@@ -225,6 +222,41 @@ public class JmenuFile {
         return viewMenu;
     }
 
+    /**
+     * Функция создания меню "Утилиты"
+     */
+    public JMenu createUtilitiesMenu(ExecutorService thPool)
+    {
+        // создадим выпадающее меню
+        JMenu utilitiesMenu = new JMenu("Утилиты");
+        // меню-флажки
+        JMenuItem grabber  = new JMenuItem("Перехват трафика");
+
+
+
+        // добавим все в меню
+        utilitiesMenu.add(grabber);
+
+
+        grabber.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                System.out.println("Grabber Window");
+                GrabberWindow grabberWindow = new GrabberWindow();
+                grabberWindow.setName("Grabber Window");
+                grabberWindow.setTitle("Grabber Window");
+                grabberWindow.pack();
+                grabberWindow.setVisible(true);
+                grabberWindow.renderData();
+                System.out.println(grabberWindow.isShowing());
+                //chartWindow.isEnabled();
+                thPool.submit(new RenderThread(grabberWindow));
+            }
+        });
+
+        return utilitiesMenu;
+    }
 }
 
 /*

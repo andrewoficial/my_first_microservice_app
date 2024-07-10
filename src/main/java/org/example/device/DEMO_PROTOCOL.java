@@ -7,24 +7,23 @@ import java.util.function.Function;
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
-import org.example.services.AnswerValues;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.log4j.Logger;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import org.example.gui.ChartWindow;
+import org.example.services.AnswerValues;
+
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
-import static org.example.Main.comPorts;
-
-public class ARD_FEE_BRD_METER implements SomeDevice {
+public class DEMO_PROTOCOL implements SomeDevice {
     private volatile boolean bisy = false;
     private static final Logger log = Logger.getLogger(DEMO_PROTOCOL.class);
     private final SerialPort comPort;
@@ -56,11 +55,15 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
     String cmdToSend;
 
 
-
-    public ARD_FEE_BRD_METER(SerialPort port){
-        //System.out.println("Create obj");
+    public DEMO_PROTOCOL(SerialPort port){
+        log.info("Создан объект протокола DEMO_PROTOCOL");
         this.comPort = port;
         this.enable();
+    }
+
+    public DEMO_PROTOCOL(StringBuilder emulatedAnswer){
+        log.info("Создан объект протокола DEMO_PROTOCOL (виртуализация)");
+        comPort = null;
     }
 
     @Override
@@ -84,23 +87,39 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
     }
 
     @Override
+    public StringBuilder getEmulatedAnswer(){
+        return this.emulatedAnswer;
+    }
+
+    @Override
+    public void setEmulatedAnswer(StringBuilder sb){
+        this.emulatedAnswer = sb;
+    }
+
+    @Override
+    public int getBuffClearTimeLimit() {
+        return this.buffClearTimeLimit;
+    }
+
+    @Override
+    public void setHasAnswer(boolean hasAnswer) {
+        this.hasAnswer = hasAnswer;
+    }
+
+    @Override
     public byte[] getStrEndian() {
         return this.strEndian;
     }
 
     @Override
-    public SerialPort getComPort() {
-        return this.comPort;
-    }
-
-    @Override
-    public boolean isKnownCommand() {
-        return knownCommand;
+    public boolean isKnownCommand(){
+        String cmd = String.valueOf(this.strToSend);
+        return cmd != null && cmd.contains("CRDG?") && (cmd.length() == "CRDG? 10".length() || cmd.length() == ("CRDG? 5".length()));
     }
 
     @Override
     public int getReceivedCounter() {
-        return received;
+        return this.received;
     }
 
     @Override
@@ -115,51 +134,34 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
 
     @Override
     public long getMillisLimit() {
-        return millisLimit;
+        return this.millisLimit;
     }
 
     @Override
     public long getRepeatGetAnswerTimeDelay() {
-        return repeatGetAnswerTimeDelay;
+        return this.repeatGetAnswerTimeDelay;
     }
 
     @Override
-    public void setLastAnswer(byte[] sb) {
-        //this.lastAnswer = sb;
+    public void setLastAnswer(byte [] ans) {
+
+
+        this.lastAnswer = new StringBuilder(Arrays.toString(ans));
     }
 
     @Override
-    public StringBuilder getEmulatedAnswer() {
-        return this.emulatedAnswer;
-    }
-
-    @Override
-    public void setEmulatedAnswer(StringBuilder sb) {
-        this.emulatedAnswer = sb;
-    }
-
-    @Override
-    public int getBuffClearTimeLimit() {
-        return this.buffClearTimeLimit;
-    }
-
-    @Override
-    public void setHasAnswer(boolean hasAnswer) {
-        this.hasAnswer = hasAnswer;
+    public SerialPort getComPort(){
+        return this.comPort;
     }
     public void enable() {
-
-        comPort.flushDataListener();
-        comPort.removeDataListener();
-        //comPort.addDataListener(this);
-        //System.out.println("open port and add listener");
-        int timeout = 1000 - comPort.getBaudRate();
-        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, timeout, timeout);
+        comPort.openPort();
+        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 85, 95);
         if(comPort.isOpen()){
             log.info("Порт открыт, задержки выставлены");
         }else{
             log.info("Ошибка открытия порта");
         }
+        millisDela = 0L;
     }
 
     @Override
@@ -167,6 +169,9 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
         return 0;
     }
 
+    public StringBuilder getForSend(){
+        return strToSend;
+    }
 
     public void setReceived(String answer){
         this.received = answer.length();
@@ -174,30 +179,17 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
         this.parseData();
     }
 
-    @Override
     public void parseData() {
-        if(received > 0) {
-            if(comPort != null) {
-                log.trace("Начинаю разбор посылки длиною " + received);
-                byte[] buffer = new byte[comPort.bytesAvailable()];
-                //System.out.println("Создал буфер ");
-                comPort.readBytes(buffer, comPort.bytesAvailable());
-                //System.out.println("Считал данные " );
-                lastAnswer = new StringBuilder(new String(buffer));
-                //System.out.println("Сохранил ответ " );
-            }else{
-                lastAnswer = new StringBuilder(deviceAnswer);
-            }
-            hasAnswer = true;
+
             if(knownCommand && isCorrectAnswer() && hasAnswer){
-                log.debug("Ответ правильный " + lastAnswer.toString());
-                value = 0;
+                log.trace("Ответ правильный " + lastAnswer.toString());
+                value = 0.0;
                 degree = 0;
                 try{
-                    int firstPart = lastAnswer.indexOf("M") + 1;
+                    //int firstPart = lastAnswer.indexOf("M") + 1;
                     //System.out.println(firstPart);
-                    value = Integer.parseInt(lastAnswer.substring(firstPart, firstPart+5));
-                    degree = Integer.parseInt(lastAnswer.substring(firstPart+5, firstPart+6));
+                    value = Double.parseDouble(lastAnswer.toString());
+                    //degree = Integer.parseInt(lastAnswer.substring(firstPart+5, firstPart+6));
                 } catch (NumberFormatException e) {
                     //System.out.println("Parse error");
                     //throw new RuntimeException(e);
@@ -206,13 +198,11 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
                 }
                 hasValue = true;
 
-                val = value * (long) Math.pow(10, degree);
-                val /= 10000.0;
-                //System.out.println(val);
-                //lastValue = String.valueOf(val);
-
+                val = value;
+                //val /= 10000.0;
+                System.out.println(val);
                 if(hasAnswer){
-                    ARD_FEE_BRD_METER.CommandList cmd = ARD_FEE_BRD_METER.CommandList.getCommandByName(cmdToSend);
+                    DEMO_PROTOCOL.CommandList cmd = DEMO_PROTOCOL.CommandList.getCommandByName(cmdToSend);
                     if (cmd != null) {
                         Double [] answer = cmd.parseAnswer(lastAnswer.toString());
                         if(answer.length > 0){
@@ -224,16 +214,18 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
                         }
                     }
                 }
+                //System.out.println(lastAnswer.toString());
+                //lastValue = String.valueOf(val);
             }else{
-                log.debug("Ответ с ошибкой " + lastAnswer.toString());
+                log.trace("Ответ с ошибкой " + lastAnswer.toString());
                 hasValue = false;
             }
-        }
 
     }
 
+
     private boolean isCorrectAnswer(){
-        if((lastAnswer.length() == 11 || lastAnswer.length() == 12 || lastAnswer.length() == 13)){
+        if((lastAnswer.length() == 7 || lastAnswer.length() == 6 || lastAnswer.length() == 8)){
             //ToDo add CRC
             return true;
         }
@@ -241,15 +233,22 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
     }
     public String getAnswer(){
 
-        System.out.println("Return answer " + lastAnswer.toString());
+        int index = lastAnswer.indexOf("\n");
+        if(index > 0){
+            lastAnswer.deleteCharAt(index);
+        }
+        index = lastAnswer.indexOf("\r");
+        if(index > 0){
+            lastAnswer.deleteCharAt(index);
+        }
         String forReturn = new String(lastAnswer);
-
         lastAnswer = null;
         hasAnswer = false;
         return forReturn;
     }
 
     public boolean hasAnswer(){
+        //System.out.println("return flag " + hasAnswer);
         return hasAnswer;
     }
 
@@ -259,12 +258,58 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
 
     public AnswerValues getValues(){
         AnswerValues valToSend =  new AnswerValues(1);
-        valToSend.addValue(val, " dunno");
+        valToSend.addValue(val, "°C");
         return valToSend;
     }
 
     private enum CommandList{
 
+
+        TERM("TERM?", (response) -> {
+            // Ваш алгоритм проверки для TERM?
+            Double [] anAr = new Double[0];
+            if(response.length() == 7 && response.contains("\n")){
+                try{
+                    Double answer = Double.parseDouble(response);
+                    anAr = new Double[1];
+                    anAr [0] = answer;
+                }catch (NumberFormatException e){
+                    anAr = new Double[0];
+                }
+                return anAr;
+            }
+            return anAr;
+        }),
+        FF("F", (response) -> {
+            // Ваш алгоритм проверки для F
+            Double [] anAr = new Double[0];
+            if(response.length() == 7 && response.contains("\n")){
+                try{
+                    Double answer = Double.parseDouble(response);
+                    anAr = new Double[1];
+                    anAr [0] = answer;
+                }catch (NumberFormatException e){
+                    anAr = new Double[0];
+                }
+                return anAr;
+            }
+            return anAr;
+        }),
+        SREV("SREV?", (response) -> {
+            // Ваш алгоритм проверки для SREV?
+            Double [] anAr = new Double[0];
+            if(response.length() == 7 && response.contains("\n")){
+                try{
+                    Double answer = Double.parseDouble(response);
+                    anAr = new Double[1];
+                    anAr [0] = answer;
+                }catch (NumberFormatException e){
+                    anAr = new Double[0];
+                }
+                return anAr;
+            }
+            return anAr;
+        }),
         SRAL("SRAL?", (response) -> {
             // Ваш алгоритм проверки для SRAL?
             Double [] anAr = new Double[0];
@@ -287,7 +332,7 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
 
         static {
             VALUES = new ArrayList<>();
-            for (ARD_FEE_BRD_METER.CommandList someEnum : ARD_FEE_BRD_METER.CommandList.values()) {
+            for (DEMO_PROTOCOL.CommandList someEnum : DEMO_PROTOCOL.CommandList.values()) {
                 VALUES.add(someEnum.name);
             }
         }
@@ -306,7 +351,7 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
         }
 
         public static String getLikeArray(int number) {
-            List<String> values = ARD_FEE_BRD_METER.CommandList.getValues();
+            List<String> values = DEMO_PROTOCOL.CommandList.getValues();
             return values.get(number);
         }
 
@@ -314,8 +359,8 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
             return parseFunction.apply(response);
         }
 
-        public static ARD_FEE_BRD_METER.CommandList getCommandByName(String name) {
-            for (ARD_FEE_BRD_METER.CommandList command : ARD_FEE_BRD_METER.CommandList.values()) {
+        public static DEMO_PROTOCOL.CommandList getCommandByName(String name) {
+            for (DEMO_PROTOCOL.CommandList command : DEMO_PROTOCOL.CommandList.values()) {
                 if (command.name.equals(name)) {
                     return command;
                 }

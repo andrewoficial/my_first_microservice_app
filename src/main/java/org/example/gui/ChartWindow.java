@@ -5,6 +5,7 @@ import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import org.apache.log4j.Logger;
 import org.example.services.AnswerStorage;
+import org.example.services.AnswerValues;
 import org.example.services.DeviceAnswer;
 import org.jfree.chart.*;
 import org.jfree.chart.annotations.XYLineAnnotation;
@@ -38,12 +39,10 @@ import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashSet;
+import java.util.*;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
@@ -53,11 +52,12 @@ import static org.example.utilites.MyUtilities.convertToLocalDateViaMilisecond;
 
 public class ChartWindow extends JFrame implements Rendeble {
     private static final Logger log = Logger.getLogger(ChartWindow.class);
-    private TimeSeriesCollection dataset;
+    //private TimeSeriesCollection dataset;
 
     private ArrayList<DeviceAnswer> deviceAnswers = new ArrayList<>();
-    private ArrayList<Boolean> cbStates = new ArrayList<>();
+    private ArrayList<Boolean> cbStates = new ArrayList<>(15);
     private HashSet<Integer> tabs = new HashSet<>();
+    private ArrayList<Integer> tabsFieldCapacity = new ArrayList<>();
 
     private ArrayList<TimeSeries> timeSeries = new ArrayList<>();
     private TimeSeriesCollection collection = new TimeSeriesCollection();
@@ -87,11 +87,6 @@ public class ChartWindow extends JFrame implements Rendeble {
         super();
         this.addComponentListener(new ComponentAdapter() {
             public void componentResized(ComponentEvent componentEvent) {
-                // do stuff
-                System.out.println("Resize!");
-                System.out.println(currHeight);
-                System.out.println(controlPanel.getHeight());
-                //controlPanel.setH
 
                 if (Math.abs(currHeight - getHeight()) < 15) {
                     System.out.println("scip Height");
@@ -125,7 +120,7 @@ public class ChartWindow extends JFrame implements Rendeble {
             }
         });
         getLastData();
-        JFreeChart chart = createChart(dataset);
+        JFreeChart chart = createChart(collection);
         chartPanel = new ChartPanel(chart);
         chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         chartPanel.setBackground(Color.white);
@@ -159,9 +154,8 @@ public class ChartWindow extends JFrame implements Rendeble {
                         System.out.println("Wrong class" + exception.getMessage());
                     }
                     if (ent != null) {
-                        System.out.println(ent.toString());
-                        selectedValue.setText("Выбрано[ item:" + ent.getItem() +
-                                " seriesIndex:" + ent.getSeriesIndex() +
+                        //System.out.println(ent.toString());
+                        selectedValue.setText("Выбрано[ seriesIndex:" + ent.getSeriesIndex() +
                                 " значение:" + ent.getDataset().getYValue(ent.getSeriesIndex(), ent.getItem()) + "] ");
                     }
                     //System.out.println("==");
@@ -188,9 +182,9 @@ public class ChartWindow extends JFrame implements Rendeble {
     private JFreeChart createChart(final XYDataset dataset) {
 
         JFreeChart chart = ChartFactory.createTimeSeriesChart(
-                "Test graph",
+                "Graph",
                 "Time",
-                "Pressure",
+                "Value",
                 dataset,
                 true,
                 true,
@@ -199,16 +193,16 @@ public class ChartWindow extends JFrame implements Rendeble {
 
         chart.setBackgroundPaint(Color.WHITE);
         XYPlot plot = chart.getXYPlot();
-        LogarithmicAxis yAxis = new LogarithmicAxis("Y");
-        yAxis.setExpTickLabelsFlag(true);
-        yAxis.setAutoRangeNextLogFlag(true);
+        //LogarithmicAxis yAxis = new LogarithmicAxis("Y"); // Отключил из-за неподдержки отрицательных значений
+        //yAxis.setExpTickLabelsFlag(true);// Отключил из-за неподдержки отрицательных значений
+        //yAxis.setAutoRangeNextLogFlag(true);// Отключил из-за неподдержки отрицательных значений
         var renderer = new XYLineAndShapeRenderer();
 
 
         //plot.addAnnotation(tempMarker);
 
 
-        plot.setRangeAxis(yAxis);
+        //plot.setRangeAxis(yAxis);// Отключил из-за неподдержки отрицательных значений
         plot.setRenderer(renderer);
         plot.setBackgroundPaint(Color.white);
         plot.setRangeGridlinesVisible(true);
@@ -221,8 +215,8 @@ public class ChartWindow extends JFrame implements Rendeble {
         renderer.setSeriesStroke(0, new BasicStroke(2.0f));
         renderer.setSeriesPaint(1, Color.BLUE);
         renderer.setSeriesStroke(1, new BasicStroke(2.0f));
-        renderer.setSeriesItemLabelsVisible(1, Boolean.TRUE);//
-        renderer.setDefaultItemLabelsVisible(true);//
+        //renderer.setSeriesItemLabelsVisible(1, Boolean.TRUE);//
+        renderer.setDefaultItemLabelsVisible(false);//
         renderer.setDefaultItemLabelGenerator(renderer.getDefaultItemLabelGenerator());
 
 
@@ -244,32 +238,55 @@ public class ChartWindow extends JFrame implements Rendeble {
 
     private void updateCB() {
         seriesBox.clear();
+        tabsFieldCapacity.clear();
+        //cbStates.clear();
         for (Integer tab : tabs) {
-            JCheckBox jb = new JCheckBox();
-            jb.setName(String.valueOf(tab));
-            jb.setText("tab" + (tab + 1));
-            jb.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    log.info("Change visibility for " + jb.getName());
-                    while (cbStates.size() <= tab) {
-                        cbStates.add(true);
-                    }
-                    //System.out.println("seriesBox");
-                    //seriesBox.get(Integer.parseInt(jb.getName()));
-                    //System.out.println("cbStates");
-                    //cbStates.get(Integer.parseInt(jb.getName()));
-                    System.out.println("Setup visibility for " + jb.getName());
-                    cbStates.set(Integer.parseInt(jb.getName()), jb.isSelected());
-                    seriesBox.get(Integer.parseInt(jb.getName())).setSelected(cbStates.get(Integer.parseInt(jb.getName())));
-                    //System.out.println("Change" + jb.getName());
+            int fieldsCounter = 1;
+            //System.out.println("Количество ответов" + deviceAnswers.size());
+            for (DeviceAnswer deviceAnswer : deviceAnswers) {
+                //System.out.println("Сравниваю " + deviceAnswer.getTabNumber() + " и " + tab);
+                if (Objects.equals(deviceAnswer.getTabNumber(), tab)) {
+                    //System.out.println("    BREAK");
+                    fieldsCounter = deviceAnswer.getFieldCount();
+                    break;
                 }
-            });
-            seriesBox.add(jb);
-            //System.out.println("Array size now" + seriesBox.size());
+                //log.debug("Для вкладки " + tab + " еще нет данных");
+                //System.out.println("Для вкладки " + tab + " еще нет данных");
+            }
+            //log.debug("Для вкладки " + tab + " выбрано полей:" + fieldsCounter);
+            //System.out.println("Для вкладки " + tab + " выбрано полей:" + fieldsCounter);
+            tabsFieldCapacity.add(fieldsCounter);
+            for (int j = 0; j < fieldsCounter; j++) {
+                JCheckBox jb = new JCheckBox();
+                jb.setName(seriesBox.size() + "");
+                jb.setText("tab" + (tab + 1) + "_" + j);
+                jb.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        cbStates.clear();
+                        for (JCheckBox jCheckBox : seriesBox) {
+                            cbStates.add(jCheckBox.isSelected());
+                        }
+
+                        int numberSeries = Integer.parseInt(jb.getName());
+                        boolean newState = jb.isSelected();
+                        cbStates.set(numberSeries, newState);
+                        seriesBox.get(numberSeries).setSelected(newState);
+                        log.info("Setup visibility for " + jb.getName() + " now is " + newState);
+                        System.out.println("Setup visibility for " + jb.getName() + " now is " + newState);
+                    }
+                });
+                seriesBox.add(jb);
+                if (cbStates.size() < seriesBox.size()) {
+                    for (JCheckBox jCheckBox : seriesBox) {
+                        cbStates.add(jCheckBox.isSelected());
+                    }
+                }
+
+            }
         }
 
-        for (int i = 0; i < cbStates.size(); i++) {
+        for (int i = 0; i < seriesBox.size(); i++) {
             seriesBox.get(i).setSelected(cbStates.get(i));
         }
 
@@ -282,62 +299,58 @@ public class ChartWindow extends JFrame implements Rendeble {
         controlPanel.add(slider);
         controlPanel.add(selectedValue);
 
-
         add(controlPanel, BorderLayout.SOUTH);
-
 
         pack();
     }
 
     private void getLastData() {
         deviceAnswers.clear();
+
         int to = Math.max(AnswerStorage.AN.size() - range - 1, 0);
         for (int i = AnswerStorage.AN.size() - 1; i > to; i--) {
             deviceAnswers.add(AnswerStorage.AN.get(i));
         }
-        //deviceAnswers.addAll(AnswerStorage.AN);
 
         tabs.clear();
-
         for (DeviceAnswer answer : deviceAnswers) {
             tabs.add(answer.getTabNumber());
         }
-        timeSeries.clear();
-
 
         updateCB();
 
+        for (int tab = 0; tab < tabs.size(); tab++) {
+            for (int j = 0; j < tabsFieldCapacity.get(tab); j++) {
+                int pointer = tab + j;
 
-        int i = 0;
-        for (Integer tab : tabs) {
-            timeSeries.add(new TimeSeries("tab" + (tab + 1)));
+                while (collection.getSeriesCount() <= pointer || collection.getSeries(pointer) == null) {
+                    collection.addSeries(new TimeSeries("graph " + pointer));
+                }
+                collection.getSeries(pointer).clear();
 
-            for (DeviceAnswer answer : deviceAnswers) {
-                if (answer.getTabNumber() == i) {
-                    if (!(answer.getAnswerReceivedValues() == null)) {
-                        timeSeries.get(i).addOrUpdate(new Millisecond(convertToLocalDateViaMilisecond(answer.getAnswerReceivedTime())), answer.getAnswerReceivedValues().getValues()[0]);
+                if (cbStates.get(pointer)) {
+                    for (DeviceAnswer answer : deviceAnswers) {
+                        if (answer != null && answer.getAnswerReceivedValues() != null &&
+                                Objects.equals(answer.getTabNumber(), tab) &&
+                                answer.getAnswerReceivedValues().getValues().length == tabsFieldCapacity.get(tab)) {
+
+                            AnswerValues currentAnswers = answer.getAnswerReceivedValues();
+                            double currentValues = currentAnswers.getValues()[j];
+                            Millisecond millisecond = new Millisecond(convertToLocalDateViaMilisecond(answer.getAnswerReceivedTime()));
+
+                            collection.getSeries(pointer).addOrUpdate(millisecond, currentValues);
+                        }
                     }
+                } else {
+                    collection.getSeries(pointer).clear();
                 }
             }
-            i++;
         }
-        collection.removeAllSeries();
-        i = 0;
-        for (TimeSeries timeSery : timeSeries) {
-            //System.out.println("Select to view " + i);
-            if (cbStates.size() > i && cbStates.get(i))
-                collection.addSeries(timeSery);
-
-            i++;
-        }
-
-        dataset = collection;
     }
-
 
     @Override
     public void renderData() {
-        log.info("Обновление графика в потоке " + Thread.currentThread().getName());
+        log.trace("Обновление графика в потоке " + Thread.currentThread().getName());
         getLastData();
         repaint();
     }

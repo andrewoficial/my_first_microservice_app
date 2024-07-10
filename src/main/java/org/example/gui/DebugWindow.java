@@ -16,7 +16,7 @@ import com.sun.management.OperatingSystemMXBean;
 import org.apache.log4j.Logger;
 
 public class DebugWindow extends JDialog implements Rendeble {
-    private static final Logger log = Logger.getLogger(DebugWindow.class);
+    private Logger log = null;
     private int countRender = 0;
     private JPanel mainField;
     private JTextArea textArea1;
@@ -44,15 +44,19 @@ public class DebugWindow extends JDialog implements Rendeble {
     private Set<Thread> threadSet;
 
     public DebugWindow() {
-        log.info("Открыто окно с информацией о системе");
+
         setModal(false);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setContentPane(mainField);
-        Thread.currentThread().setName("NARUTO JavaResourceMonitor");
-        Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
+        //Thread.currentThread().setName("NARUTO JavaResourceMonitor");
+        log = Logger.getLogger(DebugWindow.class);
+        log.info("Открыто окно с информацией о системе");
+        log.info(Thread.currentThread().getName());
+        Set<Thread> threadSet = null;
 
 
     }
+
 
     public void startMonitor() {
         updateData();
@@ -73,10 +77,18 @@ public class DebugWindow extends JDialog implements Rendeble {
     public void renderData() {
         updateData();
         StringBuilder sb = new StringBuilder();
-        sb.append("free memory: " + format.format(freeMemory / 1024) + "\n");
+        sb.append("\n free memory: " + format.format(freeMemory / 1024) + "\n");
+        log.info("free memory: " + format.format(freeMemory / 1024));
+
         sb.append("allocated memory: " + format.format(allocatedMemory / 1024) + "\n");
+        log.info("allocated memory: " + format.format(allocatedMemory / 1024));
+
         sb.append("max memory: " + format.format(maxMemory / 1024) + "\n");
+        log.info("max memory: " + format.format(maxMemory / 1024));
+
         sb.append("total free memory: " + format.format((freeMemory + (maxMemory - allocatedMemory)) / 1024) + "\n");
+        log.info("total free memory: " + format.format((freeMemory + (maxMemory - allocatedMemory)) / 1024));
+
         PB_Memory.setMaximum(Math.toIntExact(maxMemory / 1024L));
         PB_Memory.setMinimum(0);
         PB_Memory.setValue(Math.toIntExact(allocatedMemory / 1024L));
@@ -84,6 +96,7 @@ public class DebugWindow extends JDialog implements Rendeble {
         PB_Memory.setMinimum(0);
         PB_Memory.setMinimum(100);
         PB_Cpu.setValue((int) startSystemAverage);
+
         //System.out.println(startSystemAverage);
         for (Thread thread : threadSet) {
             sb.append("\t");

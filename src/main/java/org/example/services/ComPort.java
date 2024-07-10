@@ -20,6 +20,8 @@ public class ComPort {
     public  SerialPort activePort;
     private SerialPort[] ports = SerialPort.getCommPorts();
 
+
+
     @Getter
     private int comNumber = 0;
 
@@ -35,7 +37,6 @@ public class ComPort {
     }
 
     public ArrayList<SerialPort> getAllPorts(){
-
         ArrayList <SerialPort> forReturn = new ArrayList<SerialPort>();
         forReturn.addAll(Arrays.asList(ports));
         return forReturn;
@@ -45,28 +46,12 @@ public class ComPort {
         comNumber = portIndex;
 
         if (activePort.openPort())
-            System.out.println(activePort.getPortDescription() + " port opened.");
+            System.out.println(activePort.getPortDescription() + " порт открыт");
 
-        activePort.addDataListener(new SerialPortDataListener() {
-
-            @Override
-            public void serialEvent(SerialPortEvent event) {
-                int size = event.getSerialPort().bytesAvailable();
-                byte[] buffer = new byte[size];
-                event.getSerialPort().readBytes(buffer, size);
-                for(byte b:buffer)
-                    System.out.print((char)b);
-            }
-
-            @Override
-            public int getListeningEvents() {
-                return SerialPort.LISTENING_EVENT_DATA_AVAILABLE;
-            }
-        });
     }
 
     public void updatePorts(){
-
+        /*
         System.out.println(SerialPort.getVersion());
         System.out.println(System.getProperty("java.version"));
         System.out.println(System.getProperty("java.vm.name"));
@@ -75,8 +60,9 @@ public class ComPort {
         ports = SerialPort.getCommPorts();
         System.out.println("All OK");
         //System.out.println(SerialPort.getVersion());
-        //Arrays.fill(ports, null);
-        //ports = SerialPort.getCommPorts();
+         */
+        Arrays.fill(ports, null);
+        ports = SerialPort.getCommPorts();
     }
 
     public String getCurrentComName(){
