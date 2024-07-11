@@ -37,7 +37,10 @@ public class DeviceAnswer {
         this.tabNumber = num;
     }
     public Integer getFieldCount (){
-        return answerReceivedValues.getCounter();
+        if(answerReceivedValues != null){
+            return answerReceivedValues.getCounter();
+        }
+        return 0;
     }
     @Override
     public String toString(){

@@ -143,7 +143,7 @@ public interface SomeDevice {
                     sb.append((char)b);
                 }
                 log.info("Parse answer ASCII [" + sb.toString().trim() + "] ");
-                log.info("Parse answer HEX [" + receivedList.toString() + "] ");
+                log.info("Parse answer HEX " + receivedList.toString() + " ");
                 sb = null;
             }
 

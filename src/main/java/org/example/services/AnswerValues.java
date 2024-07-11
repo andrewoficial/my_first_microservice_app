@@ -22,7 +22,8 @@ public class AnswerValues {
     }
 
     public void addValue(double val, String unit){
-        if(values.length < counter){
+        if(values.length <= counter){
+            //System.out.println("Получено  слишком много значений одного измерения");
             log.error("Получено  слишком много значений одного измерения");
             return;
         }

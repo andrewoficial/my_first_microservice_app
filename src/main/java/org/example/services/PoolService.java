@@ -237,7 +237,7 @@ public class PoolService implements Runnable{
             answer.setAnswerReceivedString(device.getAnswer());
             answer.setAnswerReceivedValues(device.getValues());
         }else{
-            answer.setAnswerReceivedString(null);
+            answer.setAnswerReceivedString(device.getAnswer());
             answer.setAnswerReceivedValues(null);
         }
 
