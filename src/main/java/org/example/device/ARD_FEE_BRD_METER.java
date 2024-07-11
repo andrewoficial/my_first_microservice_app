@@ -1,5 +1,7 @@
 package org.example.device;
 
+import java.nio.CharBuffer;
+import java.nio.charset.CharsetDecoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -26,46 +28,46 @@ import static org.example.Main.comPorts;
 
 public class ARD_FEE_BRD_METER implements SomeDevice {
     private volatile boolean bisy = false;
-    private static final Logger log = Logger.getLogger(DEMO_PROTOCOL.class);
+    private static final Logger log = Logger.getLogger(IGM_10.class);
     private final SerialPort comPort;
+    private byte [ ] lastAnswerBytes;
+    private StringBuilder lastAnswer = new StringBuilder();
+    private StringBuilder emulatedAnswer = new StringBuilder();
+    private final boolean knownCommand = false;
     private volatile boolean hasAnswer = false;
-    private volatile StringBuilder lastAnswer;
-    private AnswerValues answerValues = new AnswerValues(0);
-
-    private volatile String lastValue;
-
+    private  volatile boolean hasValue = false;
     @Setter
-    private byte [] strEndian = {13, 10};//CR + LF
-    private boolean knownCommand = false;
-
-    private StringBuilder emulatedAnswer;
-    private  volatile boolean hasValue;
+    private byte [] strEndian = {13, 10};//CR
     private int received = 0;
-    private long millisLimit = 5000L;
-
-    private long repeatGetAnswerTimeDelay = 200;
-    private long millisDela = 0L;
-    private long millisPrev = System.currentTimeMillis();
-    private double value = 0;
-    private long degree = 0;
-    private double val;
-    private int buffClearTimeLimit = 250;
-    //For JUnits
-    private StringBuilder strToSend;
-    private String deviceAnswer;
+    private final long millisLimit = 500000;
+    private final long repeatGetAnswerTimeDelay = 1;
+    private final int buffClearTimeLimit = 2;
+    private final int repetCounterLimit = 150;
+    private final long millisPrev = System.currentTimeMillis();
+    private final Charset charset = Charset.forName("Cp1251");
+    private final CharsetDecoder decoder = charset.newDecoder();
+    private final CharBuffer charBuffer = CharBuffer.allocate(512);  // Предполагаемый максимальный размер
+    private static AnswerValues answerValues = new AnswerValues(0);
     String cmdToSend;
 
 
 
     public ARD_FEE_BRD_METER(SerialPort port){
-        //System.out.println("Create obj");
+        log.info("Создан объект протокола ECT_TC290");
         this.comPort = port;
         this.enable();
     }
 
+    public ARD_FEE_BRD_METER(String inpString){
+        log.info("Создан объект протокола ECT_TC290 (виртуализация)");
+        comPort = null;
+    }
+
+
+
     @Override
     public void setCmdToSend(String str) {
-        str = cmdToSend;
+        cmdToSend = str;
     }
 
     @Override
@@ -105,7 +107,7 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
 
     @Override
     public void setReceivedCounter(int cnt) {
-        this.received = cnt;
+        received = cnt;
     }
 
     @Override
@@ -124,75 +126,74 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
     }
 
     @Override
-    public void setLastAnswer(byte[] sb) {
-        //this.lastAnswer = sb;
+    public void setLastAnswer(byte[] ans) {
+//        for (byte an : ans) {
+//            System.out.print(an);
+//        }
+        lastAnswerBytes = ans;
     }
 
     @Override
     public StringBuilder getEmulatedAnswer() {
-        return this.emulatedAnswer;
+        return emulatedAnswer;
     }
 
     @Override
     public void setEmulatedAnswer(StringBuilder sb) {
-        this.emulatedAnswer = sb;
+        emulatedAnswer = sb;
     }
 
     @Override
     public int getBuffClearTimeLimit() {
-        return this.buffClearTimeLimit;
+        return buffClearTimeLimit;
     }
 
     @Override
     public void setHasAnswer(boolean hasAnswer) {
-        this.hasAnswer = hasAnswer;
-    }
-    public void enable() {
 
-        comPort.flushDataListener();
-        comPort.removeDataListener();
-        //comPort.addDataListener(this);
-        //System.out.println("open port and add listener");
-        int timeout = 1000 - comPort.getBaudRate();
-        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, timeout, timeout);
+    }
+
+    public void enable() {
+        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 15, 10);
         if(comPort.isOpen()){
             log.info("Порт открыт, задержки выставлены");
-        }else{
-            log.info("Ошибка открытия порта");
         }
     }
 
     @Override
     public int getRepetCounterLimit() {
-        return 0;
+        return repetCounterLimit;
     }
 
+    //ToDo изменить логику обработки, как в остальных протоколах
+    int value = 0;
+    int degree = 0;
+    double val  = 0.0;
+
+    public String getForSend(){
+        return cmdToSend;
+    }
 
     public void setReceived(String answer){
         this.received = answer.length();
-        deviceAnswer = answer;
         this.parseData();
     }
 
     @Override
     public void parseData() {
+        received = lastAnswerBytes.length;
         if(received > 0) {
-            if(comPort != null) {
-                log.trace("Начинаю разбор посылки длиною " + received);
-                byte[] buffer = new byte[comPort.bytesAvailable()];
-                //System.out.println("Создал буфер ");
-                comPort.readBytes(buffer, comPort.bytesAvailable());
-                //System.out.println("Считал данные " );
-                lastAnswer = new StringBuilder(new String(buffer));
-                //System.out.println("Сохранил ответ " );
-            }else{
-                lastAnswer = new StringBuilder(deviceAnswer);
-            }
+
+                lastAnswer.setLength(0);
+                for (int i = 0; i < lastAnswerBytes.length; i++) {
+                    lastAnswer.append( (char) lastAnswerBytes[i]);
+                }
+
             hasAnswer = true;
+
             if(knownCommand && isCorrectAnswer() && hasAnswer){
                 log.debug("Ответ правильный " + lastAnswer.toString());
-                value = 0;
-                degree = 0;
+
                 try{
                     int firstPart = lastAnswer.indexOf("M") + 1;
                     //System.out.println(firstPart);
@@ -226,15 +227,22 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
                 }
             }else{
                 log.debug("Ответ с ошибкой " + lastAnswer.toString());
+                System.out.println("Ответ с ошибкой " + lastAnswer.toString());
+                lastAnswer.setLength(0);
+                for (int i = 0; i < lastAnswerBytes.length; i++) {
+                    lastAnswer.append( (char) lastAnswerBytes[i]);
+                }
                 hasValue = false;
             }
+        }else{
+            log.debug("Ничего не принято в ответ");
+            System.out.println("Ничего не принято в ответ");
         }
 
     }
 
     private boolean isCorrectAnswer(){
         if((lastAnswer.length() == 11 || lastAnswer.length() == 12 || lastAnswer.length() == 13)){
-            //ToDo add CRC
             return true;
         }
         return false;

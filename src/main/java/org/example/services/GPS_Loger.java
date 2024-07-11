@@ -12,7 +12,7 @@ public class GPS_Loger {
     private Long dateTimeLastWrite = System.currentTimeMillis();
     private final ArrayList<String> stringsBuffer = new ArrayList<>();
     private int dev_ident = 0;
-
+    private StringBuilder line = new StringBuilder();
     public GPS_Loger(String name,int  dev_ident){
         this.fileName = "" + name + ".js";
         File logFile = null;
@@ -80,13 +80,12 @@ public class GPS_Loger {
     }
 
     public void writeLine (DeviceAnswer answer){
-        StringBuilder line = new StringBuilder();
         line.setLength(0);
         if(answer != null && answer.getAnswerReceivedValues() != null
                 && answer.getAnswerReceivedValues().getValues().length > 5){
             line.append("var data_"+AnswerStorage.getIdentByTab(dev_ident)+" = [\n");
-            for (int i = 0; i < AnswerStorage.AN.size(); i++) {
-                DeviceAnswer deviceAnswer = AnswerStorage.AN.get(i);
+            for (int i = 0; i < AnswerStorage.getAnswersForGraph(dev_ident).size(); i++) {
+                DeviceAnswer deviceAnswer = AnswerStorage.getAnswersForGraph(dev_ident).get(i);
                 if(deviceAnswer != null && deviceAnswer.getAnswerReceivedValues() != null
                         && deviceAnswer.getAnswerReceivedValues().getValues().length > 5
                         && deviceAnswer.getTabNumber() == dev_ident){
@@ -96,7 +95,7 @@ public class GPS_Loger {
                     line.append(deviceAnswer.getAnswerReceivedValues().getValues()[0]);
                     line.append(", ");
                     line.append("\"1\"");
-                    if(i == AnswerStorage.AN.size() - 1){
+                    if(i == AnswerStorage.getAnswersForGraph(dev_ident).size() - 1){
                         line.append("]");
                     }else{
                         line.append("],");
@@ -136,5 +135,7 @@ public class GPS_Loger {
             pw.close();
 
         }
+
+
     }
 }

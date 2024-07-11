@@ -4,6 +4,7 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
@@ -105,8 +106,9 @@ public class EDWARDS_D397_00_000  implements SomeDevice  {
     }
 
     @Override
-    public void setLastAnswer(byte[] sb) {
+    public void setLastAnswer(byte[] ans) {
         //this.lastAnswer = sb;
+        lastAnswerBytes = ans;
     }
 
     @Override
@@ -173,15 +175,16 @@ public class EDWARDS_D397_00_000  implements SomeDevice  {
 
 
     public String getAnswer(){
+        if(! hasValue){
+            lastAnswer.setLength(0);
+            for (int i = 0; i < lastAnswerBytes.length; i++) {
+                lastAnswer.append( (char) lastAnswerBytes[i]);
+            }
 
-        int index = lastAnswer.indexOf("\n");
-        if(index > 0){
-            lastAnswer.deleteCharAt(index);
+            lastAnswer.append("\n");
+            lastAnswer.append(Arrays.toString(lastAnswerBytes));
         }
-        index = lastAnswer.indexOf("\r");
-        if(index > 0){
-            lastAnswer.deleteCharAt(index);
-        }
+
         String forReturn = new String(lastAnswer);
         lastAnswer = null;
         hasAnswer = false;

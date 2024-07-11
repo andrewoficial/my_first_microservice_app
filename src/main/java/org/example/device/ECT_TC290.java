@@ -188,6 +188,9 @@ public class ECT_TC290 implements SomeDevice  {
                 }
                 //System.out.println("ECT_TC290 done correct...[" + lastAnswer.toString() + "]...");
             }else {
+                for (int i = 0; i < lastAnswerBytes.length; i++) {
+                    lastAnswer.append( (char) lastAnswerBytes[i]);
+                }
                 System.out.println("ECT_TC290 Cant create answers obj");
             }
 
@@ -200,7 +203,6 @@ public class ECT_TC290 implements SomeDevice  {
 
     private boolean isCorrectAnswer(){
         if((lastAnswer.length() == 7 || lastAnswer.length() == 6 || lastAnswer.length() == 8)){
-            //ToDo add CRC
             return true;
         }
         return false;
@@ -317,7 +319,6 @@ public class ECT_TC290 implements SomeDevice  {
                     try{
                         success = true;
                         value = Double.parseDouble(strValues[i]);
-                        answerValues.addValue(value, " °C");
                     }catch (NumberFormatException e){
                         success = false;
                         System.out.println("Exception " + e.getMessage());

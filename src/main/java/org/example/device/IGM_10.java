@@ -138,15 +138,15 @@ public class IGM_10 implements SomeDevice {
     public void parseData() {
         System.out.println("Start parse...");
             if(lastAnswerBytes.length > 0) {
+                answerValues = null;
+                CommandList cmd = CommandList.getCommandByName(cmdToSend);
+                //System.out.println("cmdToSend" + cmdToSend);
+                //lastAnswer = new StringBuilder(lastAnswer.toString().replaceAll("\\p{C}", "?"));
+                if (cmd != null) {
+                    answerValues = cmd.parseAnswer(lastAnswerBytes);
+                    //System.out.println("lastAnswer.toString()" + lastAnswer.toString());
 
-                    CommandList cmd = CommandList.getCommandByName(cmdToSend);
-                    //System.out.println("cmdToSend" + cmdToSend);
-                    //lastAnswer = new StringBuilder(lastAnswer.toString().replaceAll("\\p{C}", "?"));
-                    if (cmd != null) {
-                        answerValues = cmd.parseAnswer(lastAnswerBytes);
-                        //System.out.println("lastAnswer.toString()" + lastAnswer.toString());
-
-                    }
+                }
 
                 lastAnswer.setLength(0);
                 if(answerValues != null){

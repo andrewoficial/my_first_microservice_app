@@ -155,7 +155,7 @@ public class ARD_BAD_VLT implements SomeDevice{
 
     @Override
     public void parseData() {
-
+        //ToDo принять решение: оставлять или удалять этот класс. Переделывать много.
         if(received > 0) {
 
             System.out.println("Received Str " + lastAnswer);
@@ -177,7 +177,7 @@ public class ARD_BAD_VLT implements SomeDevice{
 
     }
     public String getAnswer(){
-        String forReturn = new String(lastAnswer);
+        String forReturn = lastAnswer.toString();
         lastAnswer = null;
         hasAnswer = false;
         return forReturn;

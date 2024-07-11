@@ -29,6 +29,7 @@ public class DEMO_PROTOCOL implements SomeDevice {
     private final SerialPort comPort;
     private volatile boolean hasAnswer = false;
     private volatile StringBuilder lastAnswer;
+    private byte [ ] lastAnswerBytes;
     private AnswerValues answerValues = new AnswerValues(0);
 
     private volatile String lastValue;
@@ -145,7 +146,7 @@ public class DEMO_PROTOCOL implements SomeDevice {
     @Override
     public void setLastAnswer(byte [] ans) {
 
-
+        lastAnswerBytes = ans;
         this.lastAnswer = new StringBuilder(Arrays.toString(ans));
     }
 
@@ -183,9 +184,11 @@ public class DEMO_PROTOCOL implements SomeDevice {
 
             if(knownCommand && isCorrectAnswer() && hasAnswer){
                 log.trace("Ответ правильный " + lastAnswer.toString());
+                System.out.println("Ответ правильный " + lastAnswer.toString());
                 value = 0.0;
                 degree = 0;
                 try{
+                    hasValue = true;
                     //int firstPart = lastAnswer.indexOf("M") + 1;
                     //System.out.println(firstPart);
                     value = Double.parseDouble(lastAnswer.toString());
@@ -196,7 +199,7 @@ public class DEMO_PROTOCOL implements SomeDevice {
                     hasValue = false;
                     return;
                 }
-                hasValue = true;
+
 
                 val = value;
                 //val /= 10000.0;
@@ -218,6 +221,7 @@ public class DEMO_PROTOCOL implements SomeDevice {
                 //lastValue = String.valueOf(val);
             }else{
                 log.trace("Ответ с ошибкой " + lastAnswer.toString());
+                System.out.println("Ответ с ошибкой " + lastAnswer.toString());
                 hasValue = false;
             }
 
@@ -232,15 +236,16 @@ public class DEMO_PROTOCOL implements SomeDevice {
         return false;
     }
     public String getAnswer(){
+    if(! hasValue){
+        lastAnswer.setLength(0);
+        for (int i = 0; i < lastAnswerBytes.length; i++) {
+            lastAnswer.append( (char) lastAnswerBytes[i]);
+        }
 
-        int index = lastAnswer.indexOf("\n");
-        if(index > 0){
-            lastAnswer.deleteCharAt(index);
-        }
-        index = lastAnswer.indexOf("\r");
-        if(index > 0){
-            lastAnswer.deleteCharAt(index);
-        }
+        lastAnswer.append("\n");
+        lastAnswer.append(Arrays.toString(lastAnswerBytes));
+    }
+
         String forReturn = new String(lastAnswer);
         lastAnswer = null;
         hasAnswer = false;

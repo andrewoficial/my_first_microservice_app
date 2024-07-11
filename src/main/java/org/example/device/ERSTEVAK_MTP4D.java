@@ -179,6 +179,9 @@ public class ERSTEVAK_MTP4D implements SomeDevice {
                     }
                     System.out.println("ERSTEVAK_MTP4D done correct...[" + lastAnswer.toString() + "]...");
                 }else {
+                    for (int i = 0; i < lastAnswerBytes.length; i++) {
+                        lastAnswer.append( (char) lastAnswerBytes[i]);
+                    }
                     System.out.println("ERSTEVAK_MTP4D Cant create answers obj");
                 }
 
