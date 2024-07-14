@@ -231,11 +231,13 @@ public class JmenuFile {
         JMenu utilitiesMenu = new JMenu("Утилиты");
         // меню-флажки
         JMenuItem grabber  = new JMenuItem("Перехват трафика");
+        JMenuItem commandList  = new JMenuItem("Список команд");
 
 
 
         // добавим все в меню
         utilitiesMenu.add(grabber);
+        utilitiesMenu.add(commandList);
 
 
         grabber.addActionListener(new ActionListener()
@@ -254,7 +256,22 @@ public class JmenuFile {
                 thPool.submit(new RenderThread(grabberWindow));
             }
         });
-
+        commandList.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                System.out.println("Command List Window");
+                CommandsWindow commandsWindow = new CommandsWindow();
+                commandsWindow.setName("Command List Window");
+                commandsWindow.setTitle("Command List Window");
+                commandsWindow.pack();
+                commandsWindow.setVisible(true);
+                //commandsWindow.renderData();
+                System.out.println(commandsWindow.isShowing());
+                //chartWindow.isEnabled();
+                //thPool.submit(new RenderThread(commandsWindow));
+            }
+        });
         return utilitiesMenu;
     }
 }

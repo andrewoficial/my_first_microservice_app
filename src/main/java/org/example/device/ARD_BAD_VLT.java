@@ -10,6 +10,8 @@ import com.fazecast.jSerialComm.SerialPortEvent;
 import lombok.Setter;
 import org.example.services.AnswerValues;
 import org.apache.log4j.Logger;
+import org.example.utilites.CommandListClass;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -51,7 +53,10 @@ public class ARD_BAD_VLT implements SomeDevice{
         this.comPort = port;
         this.enable();
     }
-
+    public ARD_BAD_VLT(){
+        System.out.println("Создан объект протокола ARD_BAD_VLT-10 эмуляция");
+        this.comPort = null;
+    }
     @Override
     public void setCmdToSend(String str) {
         str = cmdToSend;
@@ -136,7 +141,7 @@ public class ARD_BAD_VLT implements SomeDevice{
     public void setHasAnswer(boolean hasAnswer) {
         this.hasAnswer = hasAnswer;
     }
-
+    private CommandListClass commands = new CommandListClass();
     public void enable() {
 
         comPort.openPort();

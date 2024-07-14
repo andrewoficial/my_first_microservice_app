@@ -6,6 +6,7 @@ import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
+import org.example.utilites.CommandListClass;
 import org.example.utilites.MyUtilities;
 
 import java.nio.ByteBuffer;
@@ -47,7 +48,10 @@ public class IGM_10LORA_P2P implements SomeDevice {
         this.comPort = port;
         this.enable();
     }
-
+    public IGM_10LORA_P2P(){
+        System.out.println("Создан объект протокола IGM_10LORA_P2P эмуляция");
+        this.comPort = null;
+    }
     @Override
     public Integer getTabForAnswer(){
         return TabForAnswer;
@@ -123,6 +127,7 @@ public class IGM_10LORA_P2P implements SomeDevice {
         this.hasAnswer = hasAnswer;
     }
 
+    private CommandListClass commands = new CommandListClass();
     public void enable() {
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 65, 65);
         System.out.println("Порт открыт, задержки выставлены IGM_10LORA_P2P");

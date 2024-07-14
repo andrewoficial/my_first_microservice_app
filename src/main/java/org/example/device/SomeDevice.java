@@ -9,12 +9,14 @@ package org.example.device;
 import com.fazecast.jSerialComm.SerialPort;
 import org.apache.log4j.Logger;
 import org.example.services.AnswerValues;
+import org.example.utilites.CommandListClass;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
 public interface SomeDevice {
 
+
+    public CommandListClass commandList = null;
     byte [] getStrEndian ();
     SerialPort getComPort ();
     boolean isKnownCommand();
@@ -37,7 +39,11 @@ public interface SomeDevice {
     String cmdToSend = "";
     void setBisy(boolean bisy);
     void setCmdToSend(String str);
-     Integer getTabForAnswer();
+    Integer getTabForAnswer();
+    CommandListClass commands = null;
+    default CommandListClass getCommandListClass(){
+        return this.commands;
+    }
     static final Logger log = Logger.getLogger(SomeDevice.class);
     default void sendData(String data, byte [] strEndian, SerialPort comPort, boolean knownCommand, int buffClearTimeLimit, SomeDevice device){
         if(device.isBisy()){

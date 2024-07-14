@@ -12,6 +12,7 @@ import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.gui.ChartWindow;
 import org.example.services.AnswerValues;
+import org.example.utilites.CommandListClass;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
@@ -62,9 +63,9 @@ public class DEMO_PROTOCOL implements SomeDevice {
         this.enable();
     }
 
-    public DEMO_PROTOCOL(StringBuilder emulatedAnswer){
-        log.info("Создан объект протокола DEMO_PROTOCOL (виртуализация)");
-        comPort = null;
+    public DEMO_PROTOCOL(){
+        System.out.println("Создан объект протокола DEMO_PROTOCOL эмуляция");
+        this.comPort = null;
     }
 
     @Override
@@ -154,6 +155,9 @@ public class DEMO_PROTOCOL implements SomeDevice {
     public SerialPort getComPort(){
         return this.comPort;
     }
+
+    private CommandListClass commands = new CommandListClass();
+
     public void enable() {
         comPort.openPort();
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 85, 95);

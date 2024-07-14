@@ -9,7 +9,9 @@ import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.gui.ChartWindow;
 import org.example.services.AnswerValues;
+import org.example.utilites.CommandListClass;
 import org.example.utilites.ParseException;
+import org.example.utilites.SingleCommand;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
@@ -21,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.stream.Stream;
 
 public class ECT_TC290 implements SomeDevice  {
+    public CommandListClass commandListClass = new CommandListClass();
     private volatile boolean bisy = false;
     private static final Logger log = Logger.getLogger(IGM_10.class);
     private final SerialPort comPort;
@@ -49,12 +52,13 @@ public class ECT_TC290 implements SomeDevice  {
     public ECT_TC290(SerialPort port){
         log.info("Создан объект протокола ECT_TC290");
         this.comPort = port;
+
         this.enable();
     }
 
-    public ECT_TC290(String inpString){
-        log.info("Создан объект протокола ECT_TC290 (виртуализация)");
-        comPort = null;
+    public ECT_TC290(){
+        System.out.println("Создан объект протокола ECT_TC290 эмуляция");
+        this.comPort = null;
     }
 
     @Override
@@ -145,6 +149,12 @@ public class ECT_TC290 implements SomeDevice  {
 
     }
 
+    private CommandListClass commands = new CommandListClass();
+
+    @Override
+    public CommandListClass getCommandListClass(){
+        return this.commands;
+    }
     public void enable() {
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 15, 10);
         if(comPort.isOpen()){
@@ -171,13 +181,12 @@ public class ECT_TC290 implements SomeDevice  {
     public void parseData() {
         //System.out.println("ECT_TC290 run parse");
         if(lastAnswerBytes.length > 0) {
-            ECT_TC290.CommandList knownCommand = ECT_TC290.CommandList.getCommandByName(cmdToSend);
             lastAnswer.setLength(0);
-            if (knownCommand != null) {
-                answerValues = knownCommand.parseFunction.apply(lastAnswerBytes);
+            if (commands.isKnownCommand(cmdToSend)) {
+                answerValues = commands.getCommand(cmdToSend).getResult(lastAnswerBytes);
                 hasAnswer = true;
                 if(answerValues == null){
-                    System.out.println("ECT_TC290 done NULL.");
+                    System.out.println("ECT_TC290 done known command. Result NULL.");
                     return;
                 }
                 for (int i = 0; i < answerValues.getValues().length; i++) {
@@ -233,173 +242,118 @@ public class ECT_TC290 implements SomeDevice  {
         return this.answerValues;
     }
 
-    private enum CommandList{
 
-        CRDGdirect("CRDG? ", (response) -> { //"CRDG? 1" - direct
-            answerValues = null;
-            //System.out.println("Proceed CRDG direct");
-            String example = "29.1899";
-            if(response.length >= 7 ){
-                //response[2] == '.' || (response[0] == '-' && response[3] == '.') || (response[0] == '-' && response[4] == '.')
-                //toDo set filters
-                if(true) {
-                    Double value;
-                    StringBuilder sb = new StringBuilder();
-                    for (byte b : response) {
-                        sb.append((char)b);
+
+
+    {
+        commands.addCommand(
+                new SingleCommand(
+                        "CRDG? ", "CRDG? 1 - запрос температуры у первого датчика. CRDG? 10 - запрос температуры у десятого датчика",
+                        (response) -> { //"CRDG? 1" - direct
+                    answerValues = null;
+                    //System.out.println("Proceed CRDG direct");
+                    String example = "29.1899";
+                    if(response.length >= 7 ){
+                        //response[2] == '.' || (response[0] == '-' && response[3] == '.') || (response[0] == '-' && response[4] == '.')
+                        //toDo set filters
+                        if(true) {
+                            Double value;
+                            StringBuilder sb = new StringBuilder();
+                            for (byte b : response) {
+                                sb.append((char)b);
+                            }
+                            String rsp = sb.toString();
+                            //System.out.println("Parse answer [" + rsp + "] ");
+
+                            rsp = rsp.trim();
+                            //log.debug("Parse " + rsp);
+
+                            rsp = rsp.replaceAll("[^0-9.,-]", ""); // удалится все кроме цифр и указанных знаков
+                            boolean success = false;
+                            try{
+
+                                value = (double) Double.parseDouble(rsp);
+                                success = true;
+                            }catch (NumberFormatException e){
+                                System.out.println("Exception " + e.getMessage());
+                                value = 0.0;
+                                success = false;
+                            }
+                            if(success){
+                                answerValues = new AnswerValues(1);
+                                answerValues.addValue(value, " °C");
+                            }else{
+                                answerValues = null;
+                            }
+                            //System.out.println("Parser result " + value);
+
+                            return answerValues;
+                        }else {
+                            System.out.println("Wrong POINT position  " + Arrays.toString(response));
+                        }
+                    }else {
+                        System.out.println("Wrong answer length " + response.length);
+                        for (byte b : response) {
+                            System.out.print(b + " ");
+                        }
+                        System.out.println();
                     }
-                    String rsp = sb.toString();
-                    //System.out.println("Parse answer [" + rsp + "] ");
-
-                    rsp = rsp.trim();
-                    //log.debug("Parse " + rsp);
-
-                    rsp = rsp.replaceAll("[^0-9.,-]", ""); // удалится все кроме цифр и указанных знаков
-                    boolean success = false;
-                    try{
-
-                        value = (double) Double.parseDouble(rsp);
-                        success = true;
-                    }catch (NumberFormatException e){
-                        System.out.println("Exception " + e.getMessage());
-                        value = 0.0;
-                        success = false;
-                    }
-                    if(success){
-                        answerValues = new AnswerValues(1);
-                        answerValues.addValue(value, " °C");
-                    }else{
-                        answerValues = null;
-                    }
-                    //System.out.println("Parser result " + value);
-
                     return answerValues;
-                }else {
-                    System.out.println("Wrong POINT position  " + Arrays.toString(response));
-                }
+                })
+        );
 
-                //System.out.println("Answer response " + Arrays.toString(response));
+        commands.addCommand(
+                new SingleCommand("CRDG?", "CRDG? - без аргументов. Опрос у всех сенсоров ", (response) -> {
+                    answerValues = null;
+                    //System.out.println("Proceed CRDG direct");
+                    String example = "29.1899";
+                    if(response.length >= 99 ){
+                        StringBuilder sb = new StringBuilder();
+                        for (byte b : response) {
+                            sb.append((char)b);
+                        }
+                        String rsp = sb.toString();
+                        //System.out.println("Parse answer [" + rsp + "] ");
 
-
-
-            }else {
-                System.out.println("Wrong answer length " + response.length);
-                for (byte b : response) {
-                    System.out.print(b + " ");
-
-                }
-                System.out.println();
-            }
-            return answerValues;
-        }),
-
-        CRDGbroadCast("CRDG?", (response) -> { //"CRDG?" - spread
-            answerValues = null;
-            //System.out.println("Proceed CRDG direct");
-            String example = "29.1899";
-            if(response.length >= 99 ){
-                StringBuilder sb = new StringBuilder();
-                for (byte b : response) {
-                    sb.append((char)b);
-                }
-                String rsp = sb.toString();
-                //System.out.println("Parse answer [" + rsp + "] ");
-
-                rsp = rsp.trim();
-                String [] strValues = rsp.split(",");
-                //System.out.println("Found" + strValues.length);
-                answerValues = new AnswerValues(10);
-                for (int i = 0; i < strValues.length; i++) {
-                    double value = 0.0;
-                    strValues[i] = strValues[i].replace(",", "");
-                    strValues[i] = strValues[i].trim();
-                    strValues[i] = strValues[i].replaceAll("[^0-9.,-]", ""); // удалится все кроме цифр и указанных знаков
-                    //System.out.println("Parse " + strValues[i]);
-                    boolean success = false;
-                    try{
-                        success = true;
-                        value = Double.parseDouble(strValues[i]);
-                    }catch (NumberFormatException e){
-                        success = false;
-                        System.out.println("Exception " + e.getMessage());
-                        //Past cleaner here
-                        //Throw exception
+                        rsp = rsp.trim();
+                        String [] strValues = rsp.split(",");
+                        //System.out.println("Found" + strValues.length);
+                        answerValues = new AnswerValues(10);
+                        for (int i = 0; i < strValues.length; i++) {
+                            double value = 0.0;
+                            strValues[i] = strValues[i].replace(",", "");
+                            strValues[i] = strValues[i].trim();
+                            strValues[i] = strValues[i].replaceAll("[^0-9.,-]", ""); // удалится все кроме цифр и указанных знаков
+                            //System.out.println("Parse " + strValues[i]);
+                            boolean success = false;
+                            try{
+                                success = true;
+                                value = Double.parseDouble(strValues[i]);
+                            }catch (NumberFormatException e){
+                                success = false;
+                                System.out.println("Exception " + e.getMessage());
+                                //Past cleaner here
+                                //Throw exception
 
 
+                            }
+                            if(success){
+                                answerValues.addValue(value, " °C");
+                            }else{
+                                //throw new ParseException("Exception message", "Exception message");
+                                answerValues = null;
+                            }
+                        }
+                    }else {
+                        System.out.println("Wrong answer length " + response.length);
+                        for (byte b : response) {
+                            System.out.print(b + " ");
+                        }
+                        System.out.println();
                     }
-                    if(success){
-                        answerValues.addValue(value, " °C");
-                    }else{
-                        //throw new ParseException("Exception message", "Exception message");
-                        answerValues = null;
-                    }
-                }
-                //System.out.println("Answer response " + Arrays.toString(response));
-
-
-
-            }else {
-                System.out.println("Wrong answer length " + response.length);
-                for (byte b : response) {
-                    System.out.print(b + " ");
-                }
-                System.out.println();
-            }
-            return answerValues;
-        });
-        private final String name;
-        private final Function<byte [], AnswerValues> parseFunction;
-        private static final List<String> VALUES;
-
-        static {
-            VALUES = new ArrayList<>();
-            for (ECT_TC290.CommandList someEnum : ECT_TC290.CommandList.values()) {
-                VALUES.add(someEnum.name);
-            }
-        }
-
-        CommandList(String name, Function<byte [], AnswerValues> parseFunction) {
-            this.name = name;
-            this.parseFunction = parseFunction;
-        }
-
-        public String getValue() {
-            return name;
-        }
-
-        public static List<String> getValues() {
-            return Collections.unmodifiableList(VALUES);
-        }
-
-        public static String getLikeArray(int number) {
-            List<String> values = ECT_TC290.CommandList.getValues();
-            return values.get(number);
-        }
-
-        public AnswerValues parseAnswer(byte [] response) {
-            return parseFunction.apply(response);
-        }
-
-        public static ECT_TC290.CommandList getCommandByName(String name) {
-            answerValues = null;
-            if(name.length() > 5){
-                //System.out.println("Length " + name.length());
-                name = name.substring(0, 6);
-                //System.out.println("Command " + name);
-            }else{
-                name = name.trim();
-                //System.out.println("ERR: Length " + name.length());
-            }
-            for (ECT_TC290.CommandList command : ECT_TC290.CommandList.values()) {
-                //System.out.println("Compare command [" + command.name + "] and [" + name + "] ");
-                if (command.name.equals(name)) {
-                    //System.out.println("Found command " + command.name);
-                    return command;
-                }
-
-            }
-            System.out.println("Command not found");
-            return null;
-        }
+                    return answerValues;
+                })
+        );
     }
+
 }

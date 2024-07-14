@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.Objects;
 
 import static org.example.Main.comPorts;
+import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 
 public class PoolService implements Runnable{
     private boolean threadLive = true;
@@ -171,20 +172,7 @@ public class PoolService implements Runnable{
         }
     }
 
-    private void setProtocol( ProtocolsList protocol){
-        switch (protocol) {
-            case IGM10ASCII -> device = new IGM_10(comPort);
-            case ARD_BAD_VOLTMETER -> device = new ARD_BAD_VLT(comPort);
-            case ARD_FEE_BRD_METER -> device = new ARD_FEE_BRD_METER(comPort);
-            case ERSTEVAK_MTP4D -> device = new ERSTEVAK_MTP4D(comPort);
-            case EDWARDS_D397_00_000 -> device = new EDWARDS_D397_00_000(comPort);
-            case ECT_TC290 -> device = new ECT_TC290(comPort);
-            case IGM10LORA_P2P -> device = new IGM_10LORA_P2P(comPort);
-            case DEMO_PROTOCOL -> device = new DEMO_PROTOCOL(comPort);
-            case GPS_Test -> device = new GPS_Test(comPort);
-            default -> device = new DEMO_PROTOCOL(comPort);
-        }
-    }
+
     public void sendOnce (String arg, int i, boolean internal){
         //comBusy = comBusy;
 
@@ -211,7 +199,7 @@ public class PoolService implements Runnable{
         }
 
         if(device == null){
-            setProtocol(protocol);
+            device = createDeviceByProtocol(protocol, comPort);
             log.info("Выполнено определение протокола");
         }
 
@@ -270,7 +258,7 @@ public class PoolService implements Runnable{
         //System.out.println("Receive by event " + msg);
         tabN =  findSubDevByTabNumber(tabN);
         if(device == null){
-            setProtocol(protocol);
+            device = createDeviceByProtocol(protocol, comPort);
         }
 
         byte [] received = new byte[msg.length()];

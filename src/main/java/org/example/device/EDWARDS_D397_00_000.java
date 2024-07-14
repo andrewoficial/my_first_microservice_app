@@ -12,14 +12,15 @@ import com.fazecast.jSerialComm.SerialPort;
 import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.services.AnswerValues;
-
+import org.example.utilites.CommandListClass;
+import org.example.utilites.SingleCommand;
 
 
 public class EDWARDS_D397_00_000  implements SomeDevice  {
     private volatile boolean bisy = false;
     private static final Logger log = Logger.getLogger(IGM_10.class);
     private final SerialPort comPort;
-    private byte [ ] lastAnswerBytes;
+    private byte [ ] lastAnswerBytes = new byte[1];
     private StringBuilder lastAnswer = new StringBuilder();
     private StringBuilder emulatedAnswer = new StringBuilder();
     private final boolean knownCommand = false;
@@ -46,9 +47,14 @@ public class EDWARDS_D397_00_000  implements SomeDevice  {
         this.enable();
     }
 
+    public EDWARDS_D397_00_000(){
+        System.out.println("Создан объект протокола EDWARDS_D397_00_000 эмуляция");
+        this.comPort = null;
+    }
+
     @Override
     public void setCmdToSend(String str) {
-        str = cmdToSend;
+        cmdToSend = str;
     }
 
     @Override
@@ -91,6 +97,16 @@ public class EDWARDS_D397_00_000  implements SomeDevice  {
     }
 
     @Override
+    public int getRepetCounterLimit() {
+        return repetCounterLimit;
+    }
+
+    public void setReceived(String answer){
+        lastAnswerBytes = answer.getBytes();
+        this.received = lastAnswerBytes.length;
+        //this.parseData();
+    }
+    @Override
     public long getMillisPrev() {
         return millisPrev;
     }
@@ -106,9 +122,8 @@ public class EDWARDS_D397_00_000  implements SomeDevice  {
     }
 
     @Override
-    public void setLastAnswer(byte[] ans) {
-        //this.lastAnswer = sb;
-        lastAnswerBytes = ans;
+    public void setLastAnswer(byte[] sb) {
+        lastAnswerBytes = sb;
     }
 
     @Override
@@ -130,6 +145,14 @@ public class EDWARDS_D397_00_000  implements SomeDevice  {
     public void setHasAnswer(boolean hasAnswer) {
         this.hasAnswer = hasAnswer;
     }
+
+    private CommandListClass commands = new CommandListClass();
+
+    @Override
+    public CommandListClass getCommandListClass(){
+        return this.commands;
+    }
+
     public void enable() {
         comPort.openPort();
         comPort.flushDataListener();
@@ -141,54 +164,42 @@ public class EDWARDS_D397_00_000  implements SomeDevice  {
     }
 
     @Override
-    public int getRepetCounterLimit() {
-        return 0;
-    }
-
-
-    @Override
     public void parseData() {
-        if(received > 0) {
-            log.info("Начинаю разбор посылки длиною " + received);
-            byte[] buffer = new byte[comPort.bytesAvailable()];
-            comPort.readBytes(buffer, comPort.bytesAvailable());
+        System.out.println("EDWARDS_D397_00_000 run parse");
+        if(lastAnswerBytes.length > 0) {
 
-            lastAnswer = new StringBuilder(new String(buffer));
-            hasAnswer = true;
-            if(knownCommand && lastAnswer.length() > 11) {
-                if (hasAnswer) {
-                    EDWARDS_D397_00_000.CommandList cmd = EDWARDS_D397_00_000.CommandList.getCommandByName(cmdToSend);
-                    if (cmd != null) {
-                        Double[] answer = cmd.parseAnswer(lastAnswer.toString());
-                        if (answer.length > 0) {
-                            answerValues = new AnswerValues(answer.length);
-                            for (int i = 0; i < answer.length; i++) {
-                                answerValues.addValue(answer[i], " unit");
-                                System.out.println(answerValues.getValues()[i]);
-                            }
-                        }
-                    }
+            lastAnswer.setLength(0);
+            if (commands.isKnownCommand(cmdToSend)) {
+                answerValues = commands.getCommand(cmdToSend).getResult(lastAnswerBytes);
+                hasAnswer = true;
+                for (int i = 0; i < answerValues.getValues().length; i++) {
+                    lastAnswer.append(answerValues.getValues()[i]);
+                    lastAnswer.append(" ");
+                    lastAnswer.append(answerValues.getUnits()[i]);
+                    lastAnswer.append("  ");
                 }
+                System.out.println("EDWARDS_D397_00_000 done correct...[" + lastAnswer.toString() + "]...");
+            }else {
+                for (int i = 0; i < lastAnswerBytes.length; i++) {
+                    lastAnswer.append( (char) lastAnswerBytes[i]);
+                }
+                System.out.println("EDWARDS_D397_00_000 Cant create answers obj");
             }
+
+
+        }else{
+            System.out.println("EDWARDS_D397_00_000 empty received");
         }
     }
 
 
     public String getAnswer(){
-        if(! hasValue){
-            lastAnswer.setLength(0);
-            for (int i = 0; i < lastAnswerBytes.length; i++) {
-                lastAnswer.append( (char) lastAnswerBytes[i]);
-            }
-
-            lastAnswer.append("\n");
-            lastAnswer.append(Arrays.toString(lastAnswerBytes));
+        if(hasAnswer) {
+            hasAnswer = false;
+            return lastAnswer.toString();
+        }else {
+            return null;
         }
-
-        String forReturn = new String(lastAnswer);
-        lastAnswer = null;
-        hasAnswer = false;
-        return forReturn;
     }
 
     public boolean hasAnswer(){
@@ -204,64 +215,42 @@ public class EDWARDS_D397_00_000  implements SomeDevice  {
         return this.answerValues;
     }
 
-        private enum CommandList{
+    {
+        commands.addCommand(
+                new SingleCommand(
+                        "?V00913", "?V00913 - Запрос давления",
+                        (response) -> {
+                            answerValues = null;
+                            if (response.length > 11 && response[1] == 'V') {  // Проверка длины и наличия буквы 'V' на позиции 1
+                                String responseStr = new String(response);
 
-            SRAL("SRAL?", (response) -> {
-                // Ваш алгоритм проверки для SRAL?
-                Double [] anAr = new Double[0];
-                if(response.length() == 7 && response.contains("\n")){
-                    try{
-                        Double answer = Double.parseDouble(response);
-                        anAr = new Double[1];
-                        anAr [0] = answer;
-                    }catch (NumberFormatException e){
-                        anAr = new Double[0];
-                    }
-                    return anAr;
-                }
-                return anAr;
-            });
-
-            private final String name;
-            private final Function<String, Double[]> parseFunction;
-            private static final List<String> VALUES;
-
-            static {
-                VALUES = new ArrayList<>();
-                for (EDWARDS_D397_00_000.CommandList someEnum : EDWARDS_D397_00_000.CommandList.values()) {
-                    VALUES.add(someEnum.name);
-                }
-            }
-
-            CommandList(String name, Function<String, Double[]> parseFunction) {
-                this.name = name;
-                this.parseFunction = parseFunction;
-            }
-
-            public String getValue() {
-                return name;
-            }
-
-            public static List<String> getValues() {
-                return Collections.unmodifiableList(VALUES);
-            }
-
-            public static String getLikeArray(int number) {
-                List<String> values = EDWARDS_D397_00_000.CommandList.getValues();
-                return values.get(number);
-            }
-
-            public Double[] parseAnswer(String response) {
-                return parseFunction.apply(response);
-            }
-
-            public static EDWARDS_D397_00_000.CommandList getCommandByName(String name) {
-                for (EDWARDS_D397_00_000.CommandList command : EDWARDS_D397_00_000.CommandList.values()) {
-                    if (command.name.equals(name)) {
-                        return command;
-                    }
-                }
-                return null;
-            }
-        }
+                                int firstPart = responseStr.indexOf("V913 ") + 5;
+                                if (firstPart > 4) {  // Проверка, что "V913 " найдено в строке
+                                    int endPart = responseStr.indexOf(";", firstPart);
+                                    if (endPart > firstPart) {  // Проверка, что найдена первая точка с запятой после числа
+                                        try {
+                                            double value = Double.parseDouble(responseStr.substring(firstPart, endPart));
+                                            System.out.println("Parser result " + value);
+                                            answerValues = new AnswerValues(1);
+                                            answerValues.addValue(value, " unit");
+                                            return answerValues;
+                                        } catch (NumberFormatException e) {
+                                            System.out.println("Can't parse");
+                                            return null;
+                                        }
+                                    } else {
+                                        System.out.println("End part not found");
+                                        return null;
+                                    }
+                                } else {
+                                    System.out.println("Pattern 'V913 ' not found");
+                                    return null;
+                                }
+                            } else {
+                                System.out.println("Wrong Length or Missing 'V' at position 1, Length: " + response.length + ", Content: " + Arrays.toString(response));
+                                return null;
+                            }
+                        })
+        );
+    }
 }

@@ -4,6 +4,7 @@
 package org.example.utilites;
 
 import com.fazecast.jSerialComm.SerialPort;
+import org.example.device.*;
 import org.example.services.ComPort;
 
 import java.time.LocalDate;
@@ -55,6 +56,39 @@ public class MyUtilities {
         return crcCalculated == crcReceived;
     }
 
+    public static SomeDevice createDeviceByProtocol(ProtocolsList protocol, SerialPort comPort){
+        SomeDevice device = null;
+        switch (protocol) {
+            case IGM10ASCII -> device = new IGM_10(comPort);
+            case ARD_BAD_VOLTMETER -> device = new ARD_BAD_VLT(comPort);
+            case ARD_FEE_BRD_METER -> device = new ARD_FEE_BRD_METER(comPort);
+            case ERSTEVAK_MTP4D -> device = new ERSTEVAK_MTP4D(comPort);
+            case EDWARDS_D397_00_000 -> device = new EDWARDS_D397_00_000(comPort);
+            case ECT_TC290 -> device = new ECT_TC290(comPort);
+            case IGM10LORA_P2P -> device = new IGM_10LORA_P2P(comPort);
+            case DEMO_PROTOCOL -> device = new DEMO_PROTOCOL(comPort);
+            case GPS_Test -> device = new GPS_Test(comPort);
+            default -> device = new DEMO_PROTOCOL(comPort);
+        }
+        return device;
+    }
+
+    public static SomeDevice createDeviceByProtocol(ProtocolsList protocol){
+        SomeDevice device = null;
+        switch (protocol) {
+            case IGM10ASCII -> device = new IGM_10();
+            case ARD_BAD_VOLTMETER -> device = new ARD_BAD_VLT();
+            case ARD_FEE_BRD_METER -> device = new ARD_FEE_BRD_METER();
+            case ERSTEVAK_MTP4D -> device = new ERSTEVAK_MTP4D();
+            case EDWARDS_D397_00_000 -> device = new EDWARDS_D397_00_000();
+            case ECT_TC290 -> device = new ECT_TC290();
+            case IGM10LORA_P2P -> device = new IGM_10LORA_P2P();
+            case DEMO_PROTOCOL -> device = new DEMO_PROTOCOL();
+            case GPS_Test -> device = new GPS_Test();
+            default -> device = new DEMO_PROTOCOL();
+        }
+        return device;
+    }
     public static int calculateCRC16(byte[] data) {
         int crc = 0xFFFF;
         for (byte b : data) {

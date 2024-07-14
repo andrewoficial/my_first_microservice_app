@@ -8,6 +8,7 @@ import com.fazecast.jSerialComm.SerialPort;
 import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.services.AnswerValues;
+import org.example.utilites.CommandListClass;
 
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
@@ -42,6 +43,11 @@ public class IGM_10 implements SomeDevice {
         System.out.println("Создан объект протокола ИГМ-10");
         this.comPort = port;
         this.enable();
+    }
+
+    public IGM_10(){
+        System.out.println("Создан объект протокола ИГМ-10 эмуляция");
+        this.comPort = null;
     }
     @Override
     public void setCmdToSend(String str) {
@@ -119,6 +125,7 @@ public class IGM_10 implements SomeDevice {
         this.hasAnswer = hasAnswer;
     }
 
+    private CommandListClass commands = new CommandListClass();
     public void enable() {
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 65, 65);
         System.out.println("Порт открыт, задержки выставлены");

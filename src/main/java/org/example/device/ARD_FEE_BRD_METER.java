@@ -12,6 +12,8 @@ import com.fazecast.jSerialComm.SerialPortEvent;
 import org.example.services.AnswerValues;
 import lombok.Setter;
 import org.apache.log4j.Logger;
+import org.example.utilites.CommandListClass;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -58,9 +60,9 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
         this.enable();
     }
 
-    public ARD_FEE_BRD_METER(String inpString){
-        log.info("Создан объект протокола ECT_TC290 (виртуализация)");
-        comPort = null;
+    public ARD_FEE_BRD_METER(){
+        System.out.println("Создан объект протокола ARD_FEE_BRD_METER эмуляция");
+        this.comPort = null;
     }
 
 
@@ -152,6 +154,8 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
     public void setHasAnswer(boolean hasAnswer) {
 
     }
+
+    private CommandListClass commands = new CommandListClass();
 
     public void enable() {
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 15, 10);

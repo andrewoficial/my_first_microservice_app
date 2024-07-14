@@ -5,6 +5,7 @@ import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
+import org.example.utilites.CommandListClass;
 import org.example.utilites.MyUtilities;
 
 import java.nio.ByteBuffer;
@@ -47,7 +48,10 @@ public class GPS_Test implements SomeDevice {
         this.comPort = port;
         this.enable();
     }
-
+    public GPS_Test(){
+        System.out.println("Создан объект протокола GPS_Test эмуляция");
+        this.comPort = null;
+    }
     @Override
     public Integer getTabForAnswer(){
         return TabForAnswer;
@@ -122,6 +126,8 @@ public class GPS_Test implements SomeDevice {
     public void setHasAnswer(boolean hasAnswer) {
         this.hasAnswer = hasAnswer;
     }
+
+    private CommandListClass commands = new CommandListClass();
 
     public void enable() {
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 1, 1);
