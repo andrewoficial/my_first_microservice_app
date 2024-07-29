@@ -61,6 +61,7 @@ public class ComPort {
         System.out.println("All OK");
         //System.out.println(SerialPort.getVersion());
          */
+
         Arrays.fill(ports, null);
         ports = SerialPort.getCommPorts();
     }
