@@ -31,7 +31,7 @@ public class CommandListClass {
     }
 
     public boolean isKnownCommand(String name){
-        System.out.println(name);
+        //System.out.println(name);
         if(name == null){
             System.out.println("Пустая команда");
             return false;
@@ -46,7 +46,7 @@ public class CommandListClass {
         if(name.length() == 5 && name.contains("M^")){
             name = name.substring(3);
         }
-        System.out.println(name);
+        //System.out.println(name);
         return commandPool.containsKey(name);
     }
 
