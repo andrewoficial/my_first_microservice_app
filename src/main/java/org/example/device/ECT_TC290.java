@@ -159,6 +159,8 @@ public class ECT_TC290 implements SomeDevice  {
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 15, 10);
         if(comPort.isOpen()){
             log.info("Порт открыт, задержки выставлены");
+        }else {
+            throw new RuntimeException("Cant open COM-Port");
         }
     }
 
@@ -197,6 +199,7 @@ public class ECT_TC290 implements SomeDevice  {
                 }
                 //System.out.println("ECT_TC290 done correct...[" + lastAnswer.toString() + "]...");
             }else {
+                hasAnswer = true;
                 for (int i = 0; i < lastAnswerBytes.length; i++) {
                     lastAnswer.append( (char) lastAnswerBytes[i]);
                 }

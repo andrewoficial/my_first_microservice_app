@@ -163,8 +163,8 @@ public class DEMO_PROTOCOL implements SomeDevice {
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 85, 95);
         if(comPort.isOpen()){
             log.info("Порт открыт, задержки выставлены");
-        }else{
-            log.info("Ошибка открытия порта");
+        }else {
+            throw new RuntimeException("Cant open COM-Port");
         }
         millisDela = 0L;
     }

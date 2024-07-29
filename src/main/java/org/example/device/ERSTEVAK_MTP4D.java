@@ -150,6 +150,8 @@ public class ERSTEVAK_MTP4D implements SomeDevice {
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 15, 10);
         if(comPort.isOpen()){
             log.info("Порт открыт, задержки выставлены");
+        }else {
+            throw new RuntimeException("Cant open COM-Port");
         }
     }
 
@@ -171,7 +173,7 @@ public class ERSTEVAK_MTP4D implements SomeDevice {
 
     @Override
     public void parseData() {
-        System.out.println("ERSTEVAK_MTP4D run parse");
+        //System.out.println("ERSTEVAK_MTP4D run parse");
         if(lastAnswerBytes.length > 0) {
 
                 lastAnswer.setLength(0);
@@ -184,17 +186,18 @@ public class ERSTEVAK_MTP4D implements SomeDevice {
                         lastAnswer.append(answerValues.getUnits()[i]);
                         lastAnswer.append("  ");
                     }
-                    System.out.println("ERSTEVAK_MTP4D done correct...[" + lastAnswer.toString() + "]...");
+                    //System.out.println("ERSTEVAK_MTP4D done correct...[" + lastAnswer.toString() + "]...");
                 }else {
+                    hasAnswer = true;
                     for (int i = 0; i < lastAnswerBytes.length; i++) {
                         lastAnswer.append( (char) lastAnswerBytes[i]);
                     }
-                    System.out.println("ERSTEVAK_MTP4D Cant create answers obj");
+                    //System.out.println("ERSTEVAK_MTP4D Cant create answers obj");
                 }
 
 
         }else{
-            System.out.println("ERSTEVAK_MTP4D empty received");
+            //System.out.println("ERSTEVAK_MTP4D empty received");
         }
     }
 
@@ -228,7 +231,7 @@ public class ERSTEVAK_MTP4D implements SomeDevice {
                         "M^", "M^ - запрос давления у датчика. 001M^ - запрос температуры у первого прибора в линии",
                         (response) -> {
                             answerValues = null;
-                            System.out.println("Proceed M^");
+                            //System.out.println("Proceed M^");
                             String example = "001M960022Q\n";
                             if (response.length == example.length()) {
                                 if (response[3] == 'M') {
@@ -238,7 +241,7 @@ public class ERSTEVAK_MTP4D implements SomeDevice {
                                         sb.append((char) b);
                                     }
                                     String rsp = sb.toString();
-                                    System.out.println("Asw value " + rsp);
+                                    //System.out.println("Asw value " + rsp);
                                     //log.debug("Parse " + rsp);
                                     try {
                                         int firstPart = rsp.indexOf("M") + 1;
@@ -252,16 +255,16 @@ public class ERSTEVAK_MTP4D implements SomeDevice {
 
                                     value = (value * (double) Math.pow(10, degree));
                                     value /= 10000.0;
-                                    System.out.println("Parser result " + value);
+                                    //System.out.println("Parser result " + value);
                                     answerValues = new AnswerValues(1);
                                     answerValues.addValue(value, " unit");
                                     return answerValues;
                                 } else {
-                                    System.out.println("Wrong M position  " + Arrays.toString(response));
+                                    //System.out.println("Wrong M position  " + Arrays.toString(response));
                                     return null;
                                 }
                             } else {
-                                System.out.println("Wrong answer length " + response.length);
+                                //System.out.println("Wrong answer length " + response.length);
                             }
                             return answerValues;
                         })

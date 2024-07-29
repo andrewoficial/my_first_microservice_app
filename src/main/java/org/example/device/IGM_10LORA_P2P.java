@@ -32,14 +32,15 @@ public class IGM_10LORA_P2P implements SomeDevice {
     @Setter
     private byte [] strEndian = {13, 10};//CR, LF
     private int received = 0;
-    private final long millisLimit = 500000;
+    private final long millisLimit = 600;
     private final long repeatGetAnswerTimeDelay = 1;
-    private final int buffClearTimeLimit = 5;
-    private final int repetCounterLimit = 200;
+    private final int buffClearTimeLimit = 1;
+    private final int repetCounterLimit = 5;
     private final long millisPrev = System.currentTimeMillis();
     private final static Charset charset = Charset.forName("Cp1251");
     private static final CharsetDecoder decoder = charset.newDecoder();
     private AnswerValues answerValues = new AnswerValues(0);
+    private boolean needRemoveDataListener = true;
     String cmdToSend;
     Integer TabForAnswer;
 
@@ -129,8 +130,13 @@ public class IGM_10LORA_P2P implements SomeDevice {
 
     private CommandListClass commands = new CommandListClass();
     public void enable() {
-        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 65, 65);
-        System.out.println("Порт открыт, задержки выставлены IGM_10LORA_P2P");
+        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 1, 1);
+        if(comPort.isOpen()){
+            log.info("Порт открыт, задержки выставлены");
+        }else {
+            throw new RuntimeException("Cant open COM-Port");
+        }
+        setReceiveMode();
     }
 
     @Override
@@ -145,44 +151,27 @@ public class IGM_10LORA_P2P implements SomeDevice {
 
     @Override
     public void parseData() {
-        System.out.println("Start parse... IGM10 LoRa P2P");
+        //System.out.println("Start parse... IGM10 LoRa P2P");
             if(lastAnswerBytes.length > 0) {
-                //System.out.println("Run Parser: ");
-                    CommandList cmd = CommandList.getCommandByName(cmdToSend);
-                    //System.out.println("    cmdToSend: " + cmdToSend);
-                    //lastAnswer = new StringBuilder(lastAnswer.toString().replaceAll("\\p{C}", "?"));
-                    if (cmd != null) {
-                        answerValues = cmd.parseAnswer(lastAnswerBytes);
-
-                    }
-
-                    if (answerValues == null || cmd == null){
-                        //System.out.println("    answerValues == null || cmd == null ");
-                        //System.out.println("    answerValues: " + answerValues);
-                        //for (byte lastAnswerByte : lastAnswerBytes) {
-                            //System.out.print(lastAnswerByte);  System.out.print(" ");
-                        //}
-                        //System.out.println();
-
                         String inputString = new String(lastAnswerBytes);
                         inputString = inputString.replace("\r", "");
                         inputString = inputString.replace("\n", "");
                         inputString = inputString.replace("+", "");
                         String[] lines = inputString.split("EV");
-//                        System.out.println("    Array Size = " + lines.length);
-//                        for (String line : lines) {
-//                            System.out.println(line);
-//                        }
+                        if(inputString.contains("EVT:RXP2P") || inputString.contains("CEIVE TIME")) {
+                            setReceiveMode();
+                        }
+
+
                         int rssi = 0;
                         int snr = 0;
                         answerValues = null;
                         for (String line : lines) {
-                            //System.out.println("Run iter");
                             if (line.startsWith("T:RXP2P")) {
-                                //System.out.println("    Found T:RXP2P");
                                 String[] parts = line.split(",");
                                 if (parts.length < 3) {
-                                    //System.out.println("        Invalid format RXP2P not found");
+                                    showReceived();
+                                    System.out.println("        Invalid format RXP2P not found");
                                     return;
                                 }
 
@@ -190,20 +179,22 @@ public class IGM_10LORA_P2P implements SomeDevice {
                                 String snrPart = parts[2].trim();
 
                                 if (!rssiPart.startsWith("RSSI") || !snrPart.startsWith("SNR")) {
+                                    showReceived();
                                     System.out.println("        Invalid format RSSI or SNR not found");
                                     return;
                                 }
-                                //System.out.println("        rssiPart: " + rssiPart.split(" ")[1]);
-                                //System.out.println("        snrPart: " + snrPart.split(" ")[1]);
+
                                 try {
                                     rssi = Integer.parseInt(rssiPart.split(" ")[1]);
                                 }catch (NumberFormatException e){
+                                    showReceived();
                                     System.out.println("         Exception:" + e.getMessage());
                                 }
 
                                 try {
                                     snr = Integer.parseInt(snrPart.split(" ")[1]);
                                 }catch (NumberFormatException e){
+                                    showReceived();
                                     System.out.println("         Exception:" + e.getMessage());
                                 }
 
@@ -214,6 +205,7 @@ public class IGM_10LORA_P2P implements SomeDevice {
                                 String payload = line.substring(line.indexOf("T:")+2);
                                 if (payload.length() < 30) {
                                     System.out.println("        Payload length is incorrect wrong Length payload");
+                                    showReceived();
                                     return;
                                 }
 
@@ -225,7 +217,6 @@ public class IGM_10LORA_P2P implements SomeDevice {
                                 answerValues.addValue(rssi, "RSSI");
                                 answerValues.addValue(snr, "SNR");
                                 if (MyUtilities.checkCRC16(dataPart, crcPart)) {
-                                    //System.out.println("        CRC OK");
                                     String ident = parsePayload(dataPart, answerValues);
                                     TabForAnswer = AnswerStorage.getTabByIdent(ident);
                                     //System.out.println("        Will be out in " + TabForAnswer + " serial is " + ident);
@@ -234,7 +225,6 @@ public class IGM_10LORA_P2P implements SomeDevice {
                                 }
                             }
                         }
-                    }
 
                 lastAnswer.setLength(0);
                 if(answerValues != null){
@@ -248,25 +238,45 @@ public class IGM_10LORA_P2P implements SomeDevice {
                     //System.out.println("done correct...");
 
                 }else{
-                    for (byte lastAnswerByte : lastAnswerBytes) {
-                        System.out.print(lastAnswerByte);
-                        System.out.print(" ");
-                        lastAnswer.append((char) lastAnswerByte);
-                    }
-                    System.out.println("done unknown...");
+                    showReceived();
                     hasAnswer = true;
                 }
             }else {
-                for (byte lastAnswerByte : lastAnswerBytes) {
-                    System.out.print(lastAnswerByte);
-                    System.out.print(" ");
-                    lastAnswer.append((char) lastAnswerByte);
-                }
-                System.out.println("done empty...");
+                showReceived();
+                //System.out.println("done empty...");
                 hasAnswer = false;
             }
 
 
+    }
+
+    private void setReceiveMode(){
+        //System.out.println("Send AT+PRECV=65535");
+        boolean flipFlopBusy  = this.isBisy();
+        byte [] tmpLastAnswer = lastAnswerBytes;
+
+        needRemoveDataListener = false;
+        this.setBisy(false);
+        this.sendData("AT+PRECV=65535", strEndian, this.comPort, true, 5, this);
+        this.receiveData(this);
+        this.setBisy(flipFlopBusy);
+        needRemoveDataListener = true;
+
+        //StringBuilder sb = new StringBuilder();
+        //for (int i = 0; i < lastAnswerBytes.length; i++) {
+        //    sb.append( (char) lastAnswerBytes[i]);
+        //}
+        //System.out.println("Answer:" + sb.toString());
+
+        lastAnswerBytes = tmpLastAnswer;
+    }
+    private void showReceived(){
+        lastAnswer.setLength(0);
+        hasAnswer = true;
+        hasValue = false;
+        for (int i = 0; i < lastAnswerBytes.length; i++) {
+            lastAnswer.append( (char) lastAnswerBytes[i]);
+        }
     }
 
     private static String parsePayload(String dataPart, AnswerValues ans) {
@@ -341,6 +351,48 @@ public class IGM_10LORA_P2P implements SomeDevice {
         System.out.println("  Power Error: " + powerError);
         System.out.println("  Magnet: " + magnet);
         System.out.println("  Relay 1 Error: " + relay1Error);
+    }
+
+    @Override
+    public void sendData(String data, byte [] strEndian, SerialPort comPort, boolean knownCommand, int buffClearTimeLimit, SomeDevice device){
+        if(device.isBisy()){
+            log.warn("Попытка записи при активном соединении (sendData)");
+            //device.setBisy(false);
+            return;
+        }else {
+            device.setBisy(true);
+        }
+        setCmdToSend(data);
+        comPort.flushDataListener();
+        //log.info("  Выполнено flushDataListener ");
+
+        if(needRemoveDataListener) {
+            comPort.removeDataListener();
+        }
+        //log.info("  Выполнено removeDataListener ");
+        setCmdToSend(data);
+        byte[] buffer = new byte[data.length() + strEndian.length];
+        for (int i = 0; i < data.length(); i++) {
+            buffer[i] = (byte) data.charAt(i);
+        }
+        //buffer [data.length()] = 13;//CR
+        System.arraycopy(strEndian, 0, buffer, data.length() , strEndian.length);
+
+        if(log.isInfoEnabled()){
+            //System.out.println("Логирование ответа в файл...");
+            StringBuilder sb = new StringBuilder();
+            for (byte b : buffer) {
+                sb.append((char)b);
+            }
+            log.info("Parse request ASCII [" + sb.toString().trim() + "] ");
+            log.info("Parse request HEX [" + buffer.toString() + "] ");
+            sb = null;
+        }
+        comPort.flushIOBuffers();
+        log.info("  Выполнено flushIOBuffers и теперь bytesAvailable " + comPort.bytesAvailable());
+        comPort.writeBytes(buffer, buffer.length);
+        log.info("  Завершена отправка данных");
+        device.setBisy(false);
     }
 
     @Override

@@ -131,7 +131,11 @@ public class GPS_Test implements SomeDevice {
 
     public void enable() {
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 1, 1);
-        System.out.println("Порт открыт, задержки выставлены GPS_Test");
+        if(comPort.isOpen()){
+            log.info("Порт открыт, задержки выставлены");
+        }else {
+            throw new RuntimeException("Cant open COM-Port");
+        }
     }
 
     @Override
@@ -156,7 +160,7 @@ public class GPS_Test implements SomeDevice {
                 inputString = inputString.replace("+", "");
                 inputString = inputString.trim();
 
-                if(inputString.length() > 20 && inputString.length() < 89){
+                if(inputString.length() > 20 && inputString.length() < 150){
                     if(inputString.contains("EVT:RXP2P") || inputString.contains("CEIVE TIME")){
                         parseRak(inputString);
                     } else if (inputString.contains("BYTE:")) {
@@ -164,10 +168,6 @@ public class GPS_Test implements SomeDevice {
                     } else{
                         parseUnknown(inputString);
                     }
-
-
-
-
             }
 
             lastAnswer.setLength(0);
@@ -179,24 +179,19 @@ public class GPS_Test implements SomeDevice {
                     lastAnswer.append(answerValues.getUnits()[i]);
                     lastAnswer.append("  ");
                 }
-                System.out.println("done correct...");
+                System.out.println("ok..");
 
             }else{
                 for (byte lastAnswerByte : lastAnswerBytes) {
-                    System.out.print(lastAnswerByte);
-                    System.out.print(" ");
+                    //System.out.print(lastAnswerByte);
+                    //System.out.print(" ");
                     lastAnswer.append((char) lastAnswerByte);
                 }
-                System.out.println("done unknown...");
+                System.out.println("unkn..");
                 hasAnswer = true;
             }
         }else {
-            for (byte lastAnswerByte : lastAnswerBytes) {
-                System.out.print(lastAnswerByte);
-                System.out.print(" ");
-                lastAnswer.append((char) lastAnswerByte);
-            }
-            System.out.println("done empty...");
+            System.out.println("empty..");
             hasAnswer = false;
         }
 
@@ -204,14 +199,19 @@ public class GPS_Test implements SomeDevice {
     }
 
     private void parseRak(String inputString){
-        System.out.println("Send AT+PRECV=65535");
-        boolean flipFlopBisy  = this.isBisy();
-        needRemoveDataListener = false;
-        this.setBisy(false);
-        this.sendData("AT+PRECV=65535", strEndian, this.comPort, true, 5, this);
-        this.setBisy(flipFlopBisy);
-        this.receiveData(this);
-        needRemoveDataListener = true;
+        if(! inputString.contains("RAK:")){
+            System.out.println("Send AT+PRECV=65535");
+            boolean flipFlopBusy  = this.isBisy();
+            needRemoveDataListener = false;
+            this.setBisy(false);
+            this.sendData("AT+PRECV=65535", strEndian, this.comPort, true, 5, this);
+            this.setBisy(flipFlopBusy);
+            byte [] tmpLastAnswer = lastAnswerBytes;
+            this.receiveData(this);
+            needRemoveDataListener = true;
+            lastAnswerBytes = tmpLastAnswer;
+        }
+
         //comPort.addDataListener(serialPortDataListener);
 
         String[] lines = inputString.split("EV");
@@ -223,12 +223,17 @@ public class GPS_Test implements SomeDevice {
         int snr = 0;
         answerValues = null;
         for (String line : lines) {
-            //System.out.println("Run iter");
-            if (line.startsWith("T:RXP2P")) {
-                //System.out.println("    Found T:RXP2P");
+            System.out.println("Run iter");
+            if(line == null || line.isEmpty()){
+                System.out.println("    Scip empty str");
+                continue;
+            }
+            if (line.contains("T:RXP2P")) {
+                System.out.println("    Found T:RXP2P");
                 String[] parts = line.split(",");
                 if (parts.length < 3) {
                     System.out.println("        Invalid format RXP2P not found");
+                    showReceived();
                     return;
                 }
 
@@ -237,29 +242,33 @@ public class GPS_Test implements SomeDevice {
 
                 if (!rssiPart.startsWith("RSSI") || !snrPart.startsWith("SNR")) {
                     System.out.println("        Invalid format RSSI or SNR not found");
+                    showReceived();
                     return;
                 }
-                //System.out.println("        rssiPart: " + rssiPart.split(" ")[1]);
-                //System.out.println("        snrPart: " + snrPart.split(" ")[1]);
+                System.out.println("        rssiPart: " + rssiPart.split(" ")[1]);
+                System.out.println("        snrPart: " + snrPart.split(" ")[1]);
                 try {
                     rssi = Integer.parseInt(rssiPart.split(" ")[1]);
                 }catch (NumberFormatException e){
                     System.out.println("         Exception:" + e.getMessage());
+                    showReceived();
                 }
 
                 try {
                     snr = Integer.parseInt(snrPart.split(" ")[1]);
                 }catch (NumberFormatException e){
                     System.out.println("         Exception:" + e.getMessage());
+                    showReceived();
                 }
 
                 //System.out.println("        RSSI: " + rssi);
                 //System.out.println("        SNR: " + snr);
             } else if (line.startsWith("T:")) {
-                //System.out.println("    Found T:");
+                System.out.println("    Found T:");
                 String payload = line.substring(line.indexOf("T:")+2);
                 if (payload.length() < 34) {
                     System.out.println("        Payload length is incorrect wrong Length payload");
+                    showReceived();
                     return;
                 }
 
@@ -274,7 +283,7 @@ public class GPS_Test implements SomeDevice {
 
                 System.out.println("      CRC: " + crcPart);
                 if (MyUtilities.checkCRC16(dataPart, crcPart)) {
-                    //System.out.println("        CRC OK");
+                    System.out.println("        CRC OK");
                     answerValues = new AnswerValues(11);
                     System.out.println("Run proceed " + inputString + " length " + inputString.length());
 
@@ -289,12 +298,32 @@ public class GPS_Test implements SomeDevice {
                 } else {
                     System.out.print("        CRC check failed for RAK");
                     System.out.print("calculate: " + MyUtilities.calculateCRC16_GPS(dataPart.getBytes()));
-                    System.out.println(" receive: " + Integer.parseInt(crcPart, 16));
+                    int crcReceived = 0;
+                    try{
+                        crcReceived = Integer.parseInt(crcPart, 16);
+                    }catch (NumberFormatException e){
+                        System.out.println(e.getMessage());
+                    }
+
+                    System.out.println(" receive: " + crcReceived);
+                    showReceived();
                 }
+            }else{
+                System.out.println("        Scip unknown str");
+                //showReceived();
+                //return;
             }
         }
     }
 
+    private void showReceived(){
+        lastAnswer.setLength(0);
+        hasAnswer = true;
+        hasValue = false;
+        for (int i = 0; i < lastAnswerBytes.length; i++) {
+            lastAnswer.append( (char) lastAnswerBytes[i]);
+        }
+    }
     private void parseEbyte(String inputString){
         String payload = inputString.replace("EBYTE:", "");
         payload = payload.trim();

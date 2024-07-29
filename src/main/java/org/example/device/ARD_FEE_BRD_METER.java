@@ -161,6 +161,8 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 15, 10);
         if(comPort.isOpen()){
             log.info("Порт открыт, задержки выставлены");
+        }else {
+            throw new RuntimeException("Cant open COM-Port");
         }
     }
 

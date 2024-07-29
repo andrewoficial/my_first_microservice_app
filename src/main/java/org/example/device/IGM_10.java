@@ -128,7 +128,11 @@ public class IGM_10 implements SomeDevice {
     private CommandListClass commands = new CommandListClass();
     public void enable() {
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 65, 65);
-        System.out.println("Порт открыт, задержки выставлены");
+        if(comPort.isOpen()){
+            log.info("Порт открыт, задержки выставлены");
+        }else {
+            throw new RuntimeException("Cant open COM-Port");
+        }
     }
 
     @Override
@@ -167,13 +171,13 @@ public class IGM_10 implements SomeDevice {
                     System.out.println("done correct...");
 
                 }else{
+                    hasAnswer = true;
                     for (byte lastAnswerByte : lastAnswerBytes) {
                         System.out.print(lastAnswerByte);
                         System.out.print(" ");
                         lastAnswer.append((char) lastAnswerByte);
                     }
                     System.out.println("done unknown...");
-                    hasAnswer = true;
                 }
             }else {
                 for (byte lastAnswerByte : lastAnswerBytes) {

@@ -150,6 +150,11 @@ public class ARD_BAD_VLT implements SomeDevice{
         //System.out.println("open port and add listener");
         int timeout = 600;
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, timeout, timeout);
+        if(comPort.isOpen()){
+            log.info("Порт открыт, задержки выставлены");
+        }else {
+            throw new RuntimeException("Cant open COM-Port");
+        }
     }
 
     @Override
