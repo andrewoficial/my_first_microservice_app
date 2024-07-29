@@ -146,9 +146,17 @@ public class MainWindow extends JFrame implements Rendeble {
         for (int i = 0; i < poolComConnections.get(0).getAllPorts().size(); i++) {
             SerialPort currentPort = poolComConnections.get(0).getAllPorts().get(i);
             CB_ComPorts.addItem(currentPort.getSystemPortName() + " (" + MyUtilities.removeComWord(currentPort.getPortDescription()) + ")");
+            //System.out.println(currentPort.getSystemPortName());
+            //System.out.println(prop.getLastComPort());
+            //System.out.println();
+            if (currentPort.getSystemPortName().equals(prop.getLastComPort())) {
+                CB_ComPorts.setSelectedIndex(i);
+            }
+            /*
             if (i == poolComConnections.get(0).getComNumber()) {
                 CB_ComPorts.setSelectedIndex(i);
             }
+             */
         }
 
         ProtocolsList[] protocolsLists = ProtocolsList.values();
@@ -166,21 +174,9 @@ public class MainWindow extends JFrame implements Rendeble {
                 log.info("Нажата кнопка обновления списка ком-портов" + tab);
                 comPorts.updatePorts();
                 CB_ComPorts.removeAllItems();
-                ComPort comPort = new ComPort();
-                comPort.updatePorts();
-                comPort.getAllPorts();
-                ArrayList <SerialPort> arrayCom = comPort.getAllPorts();
-                for (SerialPort serialPort : arrayCom) {
+                for (SerialPort serialPort : comPorts.getAllPorts()) {
                     CB_ComPorts.addItem(serialPort.getSystemPortName() + " (" + MyUtilities.removeComWord(serialPort.getPortDescription()) + ")");
                 }
-
-                /*
-                for (SerialPort port : poolComConnections.get(tab).getAllPorts()) {
-                    CB_ComPorts.addItem(port.getSystemPortName() + " (" + MyUtilities.removeComWord(port.getPortDescription()) + ")");
-                }
-                 */
-
-
             }
         });
 

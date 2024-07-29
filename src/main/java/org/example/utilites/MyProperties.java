@@ -167,6 +167,14 @@ public class MyProperties {
             this.lastProtocol = props.getProperty("lastProtocol");
             log.info("Last Protocol: " + lastProtocol);
         }
+
+        if(lastComPort != null){
+            log.info("Last ComPort: " + lastComPort);
+            this.lastComPort = props.getProperty("lastComPort");
+        }else{
+            log.info("configAccess.properties contain incorrect value of ComPort");
+            this.lastComPort = "dunno";
+        }
     }
 
     public void setLastComPort(String comPort){
