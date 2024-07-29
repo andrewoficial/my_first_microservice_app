@@ -82,9 +82,10 @@ public class PoolService implements Runnable{
             @Override
             public void serialEvent(SerialPortEvent event) {
                 StringBuilder builder = new StringBuilder();
+                int size = comPort.bytesAvailable();
+                byte[] buffer = new byte[size];
                 while (comPort.bytesAvailable() > 0) {
-                    int size = comPort.bytesAvailable();
-                    byte[] buffer = new byte[size];
+
                     comPort.readBytes(buffer, size);
                     for (int i = 0; i < size; i++) {
                         builder.append((char) buffer[i]);
@@ -96,12 +97,18 @@ public class PoolService implements Runnable{
                         //throw new RuntimeException(ex);
                     }
                 }
+                if(log.isInfoEnabled()){
+                    log.info("Parse external Event ASCII [" + builder.toString().trim() + "] ");
+                    log.info("Parse external Event HEX " + buffer.toString() + " ");
+                }
                 receiveByEvent(builder.toString(), tabNumber);
                 //System.out.println(builder.toString());
             }
         };
+        if(comPort != null){
+            comPort.addDataListener(serialPortDataListener);
+        }
 
-        comPort.addDataListener(serialPortDataListener);
 
     }
 
@@ -194,8 +201,9 @@ public class PoolService implements Runnable{
             }
             return;
         }else{
-            log.info("Инициирована отправка команды прибору " + arg + " внутренний вызов? " + true + ". Будет выполнена. Флаг comBusy учтен, его статус " + comBusy);
+
             comBusy = true;
+            log.info("Инициирована отправка команды прибору " + arg + " внутренний вызов? " + internal + ". Будет выполнена. Флаг comBusy установлен в " + comBusy);
         }
 
         if(device == null){
@@ -270,12 +278,12 @@ public class PoolService implements Runnable{
         device.setLastAnswer(received);
         device.parseData();
 
-        System.out.println("Event from tab " + tabN + " and inner number " + getInnerNumberByTabNumber(tabN));
+        //System.out.println("Event from tab " + tabN + " and inner number " + getInnerNumberByTabNumber(tabN));
         int tabDirection = getTabNumberByInnerNumber(tabN);
-        System.out.println("    Direction storage set to: " + tabDirection);
+        //System.out.println("    Direction storage set to: " + tabDirection);
         if(device.getTabForAnswer() != null) {
             tabDirection = device.getTabForAnswer();
-            System.out.println("    Direction storage changed to: " + tabDirection);
+            //System.out.println("    Direction storage changed to: " + tabDirection);
         }
 
         DeviceAnswer answer = new DeviceAnswer(LocalDateTime.now(),"",tabDirection);
@@ -293,8 +301,14 @@ public class PoolService implements Runnable{
 
     public void setNeedPool (int tabNum, boolean bool){
         needPool.put(tabNum, bool);
+        if(! bool){
+            if(comPort != null){ //Если закрытие вкладки, которая использует один и тот же ком-порт с другой вкладкой
+                comPort.addDataListener(serialPortDataListener);
+            }
+
+        }
         if((!bool) && (! isRootTab(tabNum)) ){
-            this.threadLive = false;
+            //this.threadLive = false;
         }
         if (threadForEvent){
             threadLive = true;
@@ -348,7 +362,7 @@ public class PoolService implements Runnable{
 //            System.out.println(this.device != null);
         }
         if(loggersSet.containsKey(answer.getTabNumber())){
-            System.out.println("Run write GPS LOG" + answer);
+            //System.out.println("Run write GPS LOG" + answer);
             loggersSet.get(answer.getTabNumber()).writeLine(answer);
         }
 
@@ -432,13 +446,13 @@ public class PoolService implements Runnable{
         return false;
     }
 
-    public void addDeviceToService(int tabNumber, String command, boolean needLog) {
+    public void addDeviceToService(int tabNumber, String command, boolean needLog, boolean needPoolFlag) {
         currentTab.add(tabNumber);
         textToSend.add(command);
         needLogArrayList.add(needLog);
         deviceLoggerArrayList.add(new DeviceLogger(String.valueOf(tabNumber)));
         answersCollection.add(new StringBuffer());
-        needPool.put(tabNumber, true);
+        needPool.put(tabNumber, needPoolFlag);
     }
 
     public void removeDeviceToService(int tabNumber){ //Когда вкладка закрывается
