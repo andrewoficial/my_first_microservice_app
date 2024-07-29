@@ -8,7 +8,7 @@ import java.util.*;
 public class AnswerStorage {
     private static final Logger log = Logger.getLogger(AnswerStorage.class);
     static StringBuilder sbAnswer = new StringBuilder();
-    static DateTimeFormatter dtfAnswer = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+    public static DateTimeFormatter dtfAnswer = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
     public static HashMap<Integer, ArrayList<DeviceAnswer>> answersByTab = new HashMap<>();
     public static HashMap<String, Integer> deviceTabPairs = new HashMap<>();
 

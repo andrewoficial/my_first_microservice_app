@@ -24,6 +24,7 @@ import javax.swing.event.DocumentListener;
 import javax.swing.text.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
@@ -200,16 +201,20 @@ public class MainWindow extends JFrame implements Rendeble {
                 log.info("Нажата кнопка открытия ком-порта" + tab);
 
                 poolComConnections.get(tab).setPort(CB_ComPorts.getSelectedIndex());
-                poolComConnections.get(tab).activePort.setComPortParameters(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()), 8, 1, SerialPort.NO_PARITY, false);
-                poolComConnections.get(tab).activePort.setBaudRate(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()));
-                poolComConnections.get(tab).activePort.setNumDataBits(DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
-                poolComConnections.get(tab).activePort.setParity(ParityList.values()[CB_Parity.getSelectedIndex()].getValue()); //Работает за счет совпадения индексов с библиотечными
-                poolComConnections.get(tab).activePort.setNumStopBits(StopBitsList.getLikeArray(CB_StopBit.getSelectedIndex()));
-                poolComConnections.get(tab).activePort.removeDataListener();
-                createPoolService(tab, false, false, 1200);
+                if (poolComConnections.get(tab).activePort.isOpen()) {
+                    poolComConnections.get(tab).activePort.setComPortParameters(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()), 8, 1, SerialPort.NO_PARITY, false);
+                    poolComConnections.get(tab).activePort.setBaudRate(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()));
+                    poolComConnections.get(tab).activePort.setNumDataBits(DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
+                    poolComConnections.get(tab).activePort.setParity(ParityList.values()[CB_Parity.getSelectedIndex()].getValue()); //Работает за счет совпадения индексов с библиотечными
+                    poolComConnections.get(tab).activePort.setNumStopBits(StopBitsList.getLikeArray(CB_StopBit.getSelectedIndex()));
+                    poolComConnections.get(tab).activePort.removeDataListener();
+                    createPoolService(tab, false, false, 1200);
+                    saveParameters(null);
+                    addCustomMessage("Порт открыт успешно!");
+                } else {
+                    addCustomMessage("Ошибка открытия порта!");
+                }
 
-
-                saveParameters(null);
             }
         });
 
@@ -623,6 +628,17 @@ public class MainWindow extends JFrame implements Rendeble {
         return false;
     }
 
+
+    public void addCustomMessage(String str) {
+        Document doc = logDataTransferJtextPanel.get(tab).getDocument();
+        str = AnswerStorage.dtfAnswer.format(LocalDateTime.now()) + " " + str + "\n";
+        try {
+            doc.insertString(doc.getLength(), str, null);
+        } catch (BadLocationException ex) {
+            //throw new RuntimeException(ex);
+        }
+        logDataTransferJtextPanel.get(tab).setCaretPosition(doc.getLength());
+    }
 
     public void renderData() {
         Document doc = logDataTransferJtextPanel.get(tab).getDocument();
