@@ -207,7 +207,15 @@ public class PoolService implements Runnable{
         }
 
         if(device == null){
-            device = createDeviceByProtocol(protocol, comPort);
+            try {
+                device = createDeviceByProtocol(protocol, comPort);
+            }catch (RuntimeException e){
+                System.out.println(e.getMessage());
+            }
+            if(device == null){
+                System.out.println("device obj still null");
+                return;
+            }
             log.info("Выполнено определение протокола");
         }
 

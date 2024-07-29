@@ -1,6 +1,5 @@
 package org.example.device;
 
-import java.util.zip.CRC32;
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Setter;
 import org.apache.log4j.Logger;
@@ -129,7 +128,7 @@ public class IGM_10LORA_P2P implements SomeDevice {
     }
 
     private CommandListClass commands = new CommandListClass();
-    public void enable() {
+    public boolean enable() {
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 1, 1);
         if(comPort.isOpen()){
             log.info("Порт открыт, задержки выставлены");
@@ -137,6 +136,7 @@ public class IGM_10LORA_P2P implements SomeDevice {
             throw new RuntimeException("Cant open COM-Port");
         }
         setReceiveMode();
+        return false;
     }
 
     @Override

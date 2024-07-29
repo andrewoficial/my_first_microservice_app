@@ -44,9 +44,11 @@ public class ComPort {
     public void setPort(int portIndex) {
         activePort = ports[portIndex];
         comNumber = portIndex;
+            if (activePort.openPort())
+                System.out.println(activePort.getPortDescription() + " порт открыт");
+            else
+                System.out.println("Cant open");
 
-        if (activePort.openPort())
-            System.out.println(activePort.getPortDescription() + " порт открыт");
 
     }
 

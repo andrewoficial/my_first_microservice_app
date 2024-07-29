@@ -129,13 +129,14 @@ public class GPS_Test implements SomeDevice {
 
     private CommandListClass commands = new CommandListClass();
 
-    public void enable() {
+    public boolean enable() {
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 1, 1);
         if(comPort.isOpen()){
             log.info("Порт открыт, задержки выставлены");
         }else {
             throw new RuntimeException("Cant open COM-Port");
         }
+        return false;
     }
 
     @Override

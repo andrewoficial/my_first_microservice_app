@@ -5,24 +5,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 import com.fazecast.jSerialComm.SerialPort;
-import com.fazecast.jSerialComm.SerialPortDataListener;
-import com.fazecast.jSerialComm.SerialPortEvent;
-import lombok.Getter;
 import lombok.Setter;
 import org.apache.log4j.Logger;
-import org.example.gui.ChartWindow;
 import org.example.services.AnswerValues;
 import org.example.utilites.CommandListClass;
 
-import java.io.UnsupportedEncodingException;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.function.Function;
-import java.util.stream.Stream;
 
 public class DEMO_PROTOCOL implements SomeDevice {
     private volatile boolean bisy = false;
@@ -158,7 +146,7 @@ public class DEMO_PROTOCOL implements SomeDevice {
 
     private CommandListClass commands = new CommandListClass();
 
-    public void enable() {
+    public boolean enable() {
         comPort.openPort();
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 85, 95);
         if(comPort.isOpen()){
@@ -167,6 +155,7 @@ public class DEMO_PROTOCOL implements SomeDevice {
             throw new RuntimeException("Cant open COM-Port");
         }
         millisDela = 0L;
+        return false;
     }
 
     @Override

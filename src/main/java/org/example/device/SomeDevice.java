@@ -33,7 +33,7 @@ public interface SomeDevice {
     void setEmulatedAnswer (StringBuilder sb);
     int getBuffClearTimeLimit();
     void setHasAnswer(boolean hasAnswer);
-    void enable();
+    boolean enable();
     int getRepetCounterLimit();
     boolean isBisy();
     String cmdToSend = "";

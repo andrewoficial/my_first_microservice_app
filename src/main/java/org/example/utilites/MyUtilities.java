@@ -65,6 +65,7 @@ public class MyUtilities {
 
     public static SomeDevice createDeviceByProtocol(ProtocolsList protocol, SerialPort comPort){
         SomeDevice device = null;
+
         switch (protocol) {
             case IGM10ASCII -> device = new IGM_10(comPort);
             case ARD_BAD_VOLTMETER -> device = new ARD_BAD_VLT(comPort);

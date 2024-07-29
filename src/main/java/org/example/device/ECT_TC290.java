@@ -1,26 +1,17 @@
 package org.example.device;
 
 import java.util.*;
-import java.util.function.Function;
+
 import com.fazecast.jSerialComm.SerialPort;
-import com.fazecast.jSerialComm.SerialPortDataListener;
-import com.fazecast.jSerialComm.SerialPortEvent;
 import lombok.Setter;
 import org.apache.log4j.Logger;
-import org.example.gui.ChartWindow;
 import org.example.services.AnswerValues;
 import org.example.utilites.CommandListClass;
-import org.example.utilites.ParseException;
 import org.example.utilites.SingleCommand;
 
-import java.io.UnsupportedEncodingException;
-import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CoderResult;
-import java.nio.charset.StandardCharsets;
-import java.util.stream.Stream;
 
 public class ECT_TC290 implements SomeDevice  {
     public CommandListClass commandListClass = new CommandListClass();
@@ -155,13 +146,14 @@ public class ECT_TC290 implements SomeDevice  {
     public CommandListClass getCommandListClass(){
         return this.commands;
     }
-    public void enable() {
+    public boolean enable() {
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 15, 10);
         if(comPort.isOpen()){
             log.info("Порт открыт, задержки выставлены");
         }else {
             throw new RuntimeException("Cant open COM-Port");
         }
+        return false;
     }
 
     @Override

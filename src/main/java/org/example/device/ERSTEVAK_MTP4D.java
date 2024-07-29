@@ -2,11 +2,7 @@ package org.example.device;
 
 import java.nio.CharBuffer;
 import java.nio.charset.CharsetDecoder;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.function.Function;
+
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Setter;
 import org.apache.log4j.Logger;
@@ -143,7 +139,7 @@ public class ERSTEVAK_MTP4D implements SomeDevice {
     public CommandListClass getCommandListClass(){
         return this.commands;
     }
-    public void enable() {
+    public boolean enable() {
         comPort.openPort();
         comPort.flushDataListener();
         comPort.removeDataListener();
@@ -153,6 +149,7 @@ public class ERSTEVAK_MTP4D implements SomeDevice {
         }else {
             throw new RuntimeException("Cant open COM-Port");
         }
+        return false;
     }
 
     @Override
