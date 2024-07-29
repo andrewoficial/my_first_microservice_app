@@ -166,9 +166,21 @@ public class MainWindow extends JFrame implements Rendeble {
                 log.info("Нажата кнопка обновления списка ком-портов" + tab);
                 comPorts.updatePorts();
                 CB_ComPorts.removeAllItems();
+                ComPort comPort = new ComPort();
+                comPort.updatePorts();
+                comPort.getAllPorts();
+                ArrayList <SerialPort> arrayCom = comPort.getAllPorts();
+                for (SerialPort serialPort : arrayCom) {
+                    CB_ComPorts.addItem(serialPort.getSystemPortName() + " (" + MyUtilities.removeComWord(serialPort.getPortDescription()) + ")");
+                }
+
+                /*
                 for (SerialPort port : poolComConnections.get(tab).getAllPorts()) {
                     CB_ComPorts.addItem(port.getSystemPortName() + " (" + MyUtilities.removeComWord(port.getPortDescription()) + ")");
                 }
+                 */
+
+
             }
         });
 
@@ -492,12 +504,24 @@ public class MainWindow extends JFrame implements Rendeble {
                         log.info("Текущий поток является корневым для других");
                     } else {
                         log.info("Вкладка одинока. Поток будет завершен");
-                        poolServices.remove(tab);
+                        if (poolServices.size() > tab) {
+                            poolServices.remove(tab);
+                        } else {
+                            log.warn("Попытка завершения потока со владки по номеру большей, чем количество потоков");
+                        }
+
                     }
                 }
             } else {
-                log.info("Для текущей вкладки устройство не существует в потоке опроса");
-                ps.addDeviceToService(tab, textToSendValue.get(tab), false);
+
+                if (isBtn) {
+                    log.info("Для текущей вкладки устройство не существует в потоке опроса (по чек-боксу)");
+                    ps.addDeviceToService(tab, textToSendValue.get(tab), false, true);
+                } else {
+                    log.info("Для текущей вкладки устройство не существует в потоке опроса (по кнопке)");
+                    ps.addDeviceToService(tab, textToSendValue.get(tab), false, false);
+                }
+
             }
         } else {
             log.info("Порт не используется, создание нового потока");
@@ -530,20 +554,10 @@ public class MainWindow extends JFrame implements Rendeble {
                 poolServices.get(poolServices.size() - 1).setNeedPool(tab, true);
                 thPool.submit(poolServices.get(poolServices.size() - 1));
                 log.info("Поток создан и запущен");
-                try {
-                    Thread.sleep(60);
-                } catch (InterruptedException e) {
-                    //throw new RuntimeException(e);
-                }
             } else {
                 poolServices.get(poolServices.size() - 1).setNeedPool(tab, false);
                 thPool.submit(poolServices.get(poolServices.size() - 1));
                 log.info("Поток создан и запущен для Event");
-                try {
-                    Thread.sleep(60);
-                } catch (InterruptedException e) {
-                    //throw new RuntimeException(e);
-                }
             }
         }
     }
