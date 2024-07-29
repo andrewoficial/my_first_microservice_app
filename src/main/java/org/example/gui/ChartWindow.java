@@ -77,11 +77,11 @@ public class ChartWindow extends JFrame implements Rendeble {
                 int newHeight = getHeight();
 
                 if (Math.abs(currHeight - newHeight) < HEIGHT_THRESHOLD) {
-                    System.out.println("skip Height");
+                    //System.out.println("skip Height");
                     return;
                 }
                 if (Math.abs(currWidth - newWidth) < WIDTH_THRESHOLD) {
-                    System.out.println("skip Width");
+                    //System.out.println("skip Width");
                     return;
                 }
                 currWidth = newWidth;
@@ -151,6 +151,7 @@ public class ChartWindow extends JFrame implements Rendeble {
         plot.setBackgroundPaint(Color.white);
         plot.setRangeGridlinesVisible(true);
         plot.setDomainGridlinesVisible(true);
+        /*
         plot.setRangeGridlinePaint(Color.ORANGE);
         plot.setDomainGridlinePaint(Color.ORANGE);
         renderer.setSeriesPaint(0, Color.RED);
@@ -165,6 +166,8 @@ public class ChartWindow extends JFrame implements Rendeble {
         renderer.setDefaultItemLabelGenerator(generator);//ItemLabelsVisible(true);
         renderer.setDefaultItemLabelsVisible(false);
         chart.getLegend().setFrame(BlockBorder.NONE);
+
+         */
         return chart;
     }
 
@@ -256,16 +259,26 @@ public class ChartWindow extends JFrame implements Rendeble {
 
         for (int tab : tabs) {
             List<DeviceAnswer> recentAnswers = AnswerStorage.getRecentAnswersForGraph(tab, range);
-
+            if (tabsFieldCapacity.size() <= tab) {
+                continue;
+            }
             for (int j = 0; j < tabsFieldCapacity.get(tab); j++) {
-                int pointer = tab + j;
+                int pointer = (tab) + j;
+                /*
+                if (pointer < 0)
+                    pointer = 0;
+                 */
 
                 while (collection.getSeriesCount() <= pointer || collection.getSeries(pointer) == null) {
                     collection.addSeries(new TimeSeries("graph " + pointer));
+                    //System.out.println("addSeries " + pointer);
                 }
+
+
                 collection.getSeries(pointer).clear();
 
                 if (cbStates.get(pointer)) {
+                    //System.out.println("pointer " + pointer + " will be showed");
                     for (DeviceAnswer answer : recentAnswers) {
                         if (answer != null && answer.getAnswerReceivedValues() != null &&
                                 answer.getAnswerReceivedValues().getValues().length == tabsFieldCapacity.get(tab)) {
@@ -278,6 +291,7 @@ public class ChartWindow extends JFrame implements Rendeble {
                         }
                     }
                 } else {
+                    //System.out.println("pointer " + pointer + " will be removed");
                     collection.getSeries(pointer).clear();
                 }
             }

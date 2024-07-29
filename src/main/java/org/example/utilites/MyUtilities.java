@@ -52,7 +52,14 @@ public class MyUtilities {
 
     public static boolean checkCRC16(String dataPart, String crcPart) {
         int crcCalculated = calculateCRC16(dataPart.getBytes());
-        int crcReceived = Integer.parseInt(crcPart, 16);
+
+        int crcReceived = 0;
+        try{
+            crcReceived = Integer.parseInt(crcPart, 16);
+        }catch (NumberFormatException e){
+            System.out.println(e.getMessage());
+        }
+
         return crcCalculated == crcReceived;
     }
 
