@@ -13,7 +13,7 @@
 
     <groupId>org.example</groupId>
     <artifactId>Elephant-Monitor</artifactId>
-    <version>1.7.2-Beta</version>
+    <version>1.7.3-Beta</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>

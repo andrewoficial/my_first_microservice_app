@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>WebUI Elephant Monitor</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
+          integrity="sha256-kLaT2GOSpHechhsozzB+flnD+zUyjE2LlfWPgU04xyI=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"
+            integrity="sha256-WBkoXOwTeyKclOHuWtc+i2uENFpDZ9YPdf5Hf+D7ewM=" crossorigin=""></script>
+    <style>
+        #map { width: 800px; height: 600px; }
+        body { font: 16px/1.4 "Helvetica Neue", Arial, sans-serif; }
+        .ghbtns { position: relative; top: 4px; margin-left: 5px; }
+        a { color: #0077ff; }
+        .leaflet-bottom{
+            display: none;
+            background-color: black;
+        }
+    </style>
+</head>
+<body>
+<div th:replace="fragments/header :: header"></div>
+
+<main>
+    <p>Добро пожаловать на страницу отображения сигналов</p>
+    <p>
+        <iframe class="ghbtns" src="http://ghbtns.com/github-btn.html?user=Leaflet&amp;repo=Leaflet.heat&amp;type=watch&amp;count=true"
+                allowtransparency="true" frameborder="0" scrolling="0" width="90" height="20"></iframe>
+    </p>
+
+    <div id="map"></div>
+    <fieldset>
+        <legend>Select a maintenance drone:</legend>
+
+        <div>
+            <input type="radio" id="radioButton1" name="drone" checked onclick="myFunction()">
+            <label for="radioButton1">RAK 868</label>
+        </div>
+
+        <div>
+            <input type="radio" id="radioButton2" name="drone" onclick="myFunction()">
+            <label for="radioButton2">EBYTE 433</label>
+        </div>
+    </fieldset>
+    <br>
+    <br>
+    <br>
+    <br>
+</main>
+
+<div th:replace="fragments/footer :: footer"></div>
+
+<!--
+<script src="GPS_66_RAK.js"></script>
+<script src="GPS_66_EBYTE.js"></script>
+-->
+
+<script th:utext="${fileContentRak}"></script>
+<script th:utext="${fileContentEbyte}"></script>
+
+<script th:src="@{/js/HeatLayer.js}"></script>
+
+<!--
+    <script th:src="@{/js/simpleheat.js}"></script>
+-->
+
+<script th:src="@{/js/leaflet-heat.js}"></script>
+
+
+<script>
+    addressPoints = data_66_EBYTE;
+    //render();
+
+    function myFunction() {
+        // Получаем текущее состояние радио-кнопок
+        var radioButton1 = document.getElementById("radioButton1");
+        var radioButton2 = document.getElementById("radioButton2");
+
+        if(radioButton1.checked){
+            addressPoints = data_66_RAK;
+            console.log("show RAK 868");
+        }else if(radioButton2.checked){
+            console.log("show EBYTE 433");
+            addressPoints = data_66_EBYTE;
+        }else{
+
+        }
+        // Выводим сообщение в консоль
+        render();
+        //heat.remove();
+        //heat.redraw().remove();
+        //render();
+    }
+
+    map = L.map("map").setView([60.00851, 30.32834], 15);
+    function render(){
+        var radioButton1 = document.getElementById("radioButton1");
+        var radioButton2 = document.getElementById("radioButton2");
+
+        if(radioButton1.checked){
+            addressPoints = data_66_RAK;
+            console.log("show RAK 868");
+        }else if(radioButton2.checked){
+            console.log("show EBYTE 433");
+            addressPoints = data_66_EBYTE;
+        }else{
+
+        }
+
+        tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
+        }).addTo(map);
+        if (typeof(heat) != "undefined") {
+            map.removeLayer(heat);
+        }
+
+        addressPoints = addressPoints.map(function (p) { return [p[0], p[1]]; });
+
+        heat = L.heatLayer(addressPoints).addTo(map);
+
+    }
+    render();
+    /*
+    setTimeout(() => {
+       window.location.reload(1);
+    }, 5000);
+    */
+</script>
+</body>
+</html>
