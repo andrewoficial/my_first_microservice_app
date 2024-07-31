@@ -27,10 +27,10 @@ import java.util.Properties;
 public class MyProperties {
     private static Logger log = null;
     public static String driver = "org.postgresql.Driver";
-    public static String url = "jdbc:postgresql://floppy.db.elephantsql.com:5432/zhsiszsk";
-    public static String pwd = "EcrvEk0pw2UaY6jdKY16R3RGiBrefui1";
+    public static String url = "jdbc:postgresql://ep-holy-limit-a5rglv4l.us-east-2.aws.neon.tech:5432/zhsiszsk";
+    public static String pwd = "LkZzliAx8MP9";
 
-    public static String usr = "zhsiszsk";
+    public static String usr = "zhsiszsk_owner";
     public static String prt = "8080";
     @Getter
     private String lastComPort;

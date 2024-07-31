@@ -3,6 +3,7 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -12,16 +13,14 @@
 
     <groupId>org.example</groupId>
     <artifactId>Elephant-Monitor</artifactId>
-    <version>1.7.1-Beta</version>
+    <version>1.7.2-Beta</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <ignite.version>2.16.0</ignite.version>
+        <ignite.version>2.13.0</ignite.version>
     </properties>
-
-
 
     <build>
         <plugins>
@@ -56,29 +55,23 @@
         </plugins>
     </build>
 
-
-
     <dependencies>
-        <!-- https://mvnrepository.com/artifact/com.intellij/forms_rt -->
+        <!-- IntelliJ Forms Runtime -->
         <dependency>
             <groupId>com.intellij</groupId>
             <artifactId>forms_rt</artifactId>
             <version>6.0.5</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.thymeleaf/thymeleaf -->
+        <!-- Thymeleaf -->
         <dependency>
             <groupId>org.thymeleaf</groupId>
             <artifactId>thymeleaf</artifactId>
             <version>3.1.2.RELEASE</version>
         </dependency>
-        <dependency>
-            <groupId>org.thymeleaf</groupId>
-            <artifactId>thymeleaf-spring5</artifactId>
-            <version>3.1.2.RELEASE</version>
-        </dependency>
 
 
+        <!-- jSerialComm -->
         <dependency>
             <groupId>com.fazecast</groupId>
             <artifactId>jSerialComm</artifactId>
@@ -86,7 +79,8 @@
             <!--<version>2.11.1</version>-->
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.apache.ignite/ignite-core -->
+        <!-- Apache Ignite -->
+        <!--
         <dependency>
             <groupId>org.apache.ignite</groupId>
             <artifactId>ignite-core</artifactId>
@@ -94,40 +88,33 @@
         </dependency>
         <dependency>
             <groupId>org.apache.ignite</groupId>
-            <artifactId>ignite-spring</artifactId>
+            <artifactId>ignite-indexing</artifactId>
             <version>${ignite.version}</version>
         </dependency>
+        -->
 
-
-        <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-dbcp2 -->
+        <!-- Apache Commons DBCP2 -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-dbcp2</artifactId>
             <version>2.12.0</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/jfree/jfreechart -->
+        <!-- JFreeChart -->
         <dependency>
             <groupId>org.jfree</groupId>
             <artifactId>jfreechart</artifactId>
             <version>1.5.3</version>
         </dependency>
 
+        <!-- Spring Boot Starters -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-thymeleaf</artifactId>
         </dependency>
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-devtools</artifactId>
-            <scope>runtime</scope>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -135,46 +122,47 @@
             <version>3.2.2</version>
         </dependency>
         <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <version>42.7.2</version>
-        </dependency>
-        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
             <version>3.2.2</version>
+            <!-- Here -->
         </dependency>
-        <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-oauth2-jose</artifactId>
-            <version>6.2.2</version>
-        </dependency>
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
 
+        <!-- PostgreSQL -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.2</version>
+        </dependency>
+
+        <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
         </dependency>
 
+        <!-- Spring Security OAuth2 -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-oauth2-jose</artifactId>
+            <version>6.2.2</version>
+        </dependency>
 
-        <!-- https://mvnrepository.com/artifact/log4j/log4j -->
+        <!-- Logging -->
         <dependency>
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
             <version>1.2.17</version>
         </dependency>
-
-        <!-- https://mvnrepository.com/artifact/log4j/apache-log4j-extras -->
         <dependency>
             <groupId>log4j</groupId>
             <artifactId>apache-log4j-extras</artifactId>
@@ -185,22 +173,14 @@
             <artifactId>log4j-slf4j-impl</artifactId>
             <version>2.11.1</version>
         </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-1.2-api</artifactId>
-            <version>2.11.1</version>
-        </dependency>
 
-        <!-- https://mvnrepository.com/artifact/com.h2database/h2 -->
+
+        <!-- H2 Database (Test) -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <version>2.2.224</version>
             <scope>test</scope>
         </dependency>
-
-
-
     </dependencies>
-
 </project>
