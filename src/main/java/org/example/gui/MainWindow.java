@@ -4,8 +4,6 @@
 package org.example.gui;
 
 import com.fazecast.jSerialComm.SerialPort;
-import com.fazecast.jSerialComm.SerialPortDataListener;
-import com.fazecast.jSerialComm.SerialPortEvent;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
@@ -26,7 +24,6 @@ import java.awt.*;
 import java.awt.event.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -44,6 +41,7 @@ public class MainWindow extends JFrame implements Rendeble {
 
     private final MyProperties prop = new MyProperties();
     private final ArrayList<String> textToSendValue = new ArrayList<>();
+    private final ArrayList<String> prefToSendValue = new ArrayList<>();
     private final ArrayList<JScrollPane> logDataTransferJscrollPanel = new ArrayList<>();
     private ArrayList<JTextPane> logDataTransferJtextPanel = new ArrayList<>();
     private ArrayList<PoolService> poolServices = new ArrayList<>();
@@ -75,6 +73,7 @@ public class MainWindow extends JFrame implements Rendeble {
     private JPanel addRemove;
     private JPanel portSetup;
     private JPanel Terminal;
+    private JTextField prefOneToSend;
     private ProtocolsList protocol = ProtocolsList.IGM10ASCII;
 
     /**
@@ -272,7 +271,8 @@ public class MainWindow extends JFrame implements Rendeble {
             @Override
             public void actionPerformed(ActionEvent e) {
                 log.info("Нажата кнопка добавить устройство");
-                textToSendValue.add("001M^");
+                textToSendValue.add("M^");
+                prefToSendValue.add("001");
                 lastGotedValueFromStorage.add(0);
                 JPanel panel = new JPanel();
                 panel.setLayout(new BorderLayout());
@@ -302,6 +302,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 tab = tabbedPane1.getSelectedIndex();
                 log.info("Нажата кнопка удалить устройство на вкладке " + tab);
                 textToSendValue.remove(tab);
+                prefToSendValue.remove(tab);
                 lastGotedValueFromStorage.remove(tab);
                 PoolService ps = findPoolServiceByOpenedPort();
                 if (ps != null) {
@@ -321,10 +322,11 @@ public class MainWindow extends JFrame implements Rendeble {
         textToSend.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (textToSendValue.size() > tab) {
+                if (textToSendValue.size() > tab || prefToSendValue.size() > tab) {
                     textToSendValue.set(tab, textToSend.getText());
+                    prefToSendValue.set(tab, prefOneToSend.getText());
                     if (poolServices.size() > tab) {
-                        poolServices.get(tab).setTextToSendString(textToSend.getText(), tab);
+                        poolServices.get(tab).setTextToSendString(prefOneToSend.getText() + textToSend.getText(), tab);
                     }
                 } else {
                     log.warn("Ошибка при обновлении пула команд для опроса");
@@ -355,17 +357,41 @@ public class MainWindow extends JFrame implements Rendeble {
             public void stateChanged(ChangeEvent e) {
                 tab = tabbedPane1.getSelectedIndex();
                 log.info("Фокус установлен на вкладку " + tab);
-                textToSend.setText(textToSendValue.get(tab));
+                //textToSend.setText(textToSendValue.get(tab));
                 CB_Pool.setSelected(isPooled());
                 CB_Log.setSelected(isLogged());
-                textToSend.setText(getPoolText());
+                textToSend.setText(textToSendValue.get(tab));
+                prefOneToSend.setText(prefToSendValue.get(tab));
             }
         });
 
+        prefToSendValue.add(prefOneToSend.getText());
         textToSendValue.add(textToSend.getText());
         lastGotedValueFromStorage.add(0);
         BT_AddDev.doClick();
         uiThPool.submit(new RenderThread(this));
+
+        prefOneToSend.getDocument().addDocumentListener(new DocumentListener() {
+            public void changedUpdate(DocumentEvent e) {
+                update();
+            }
+
+            public void removeUpdate(DocumentEvent e) {
+                update();
+            }
+
+            public void insertUpdate(DocumentEvent e) {
+                update();
+            }
+
+            public void update() {
+                if (tab < prefToSendValue.size()) {
+                    PoolService ps = findPoolServiceByTabNumber();
+                    if (ps != null)
+                        ps.setTextToSendString(prefOneToSend.getText() + textToSend.getText(), tab);
+                }
+            }
+        });
 
         textToSend.getDocument().addDocumentListener(new DocumentListener() {
             public void changedUpdate(DocumentEvent e) {
@@ -384,7 +410,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 if (tab < textToSendValue.size()) {
                     PoolService ps = findPoolServiceByTabNumber();
                     if (ps != null)
-                        ps.setTextToSendString(textToSend.getText(), tab);
+                        ps.setTextToSendString(prefOneToSend.getText() + textToSend.getText(), tab);
                 }
             }
         });
@@ -447,6 +473,7 @@ public class MainWindow extends JFrame implements Rendeble {
         }
         log.info("Статус опроса на владке " + tab + " " + CB_Pool.isSelected());
         protocol = ProtocolsList.getLikeArrayEnum(CB_Protocol.getSelectedIndex());
+        prefToSendValue.set(tab, prefOneToSend.getText());
         textToSendValue.set(tab, textToSend.getText());
         boolean pool = CB_Pool.isSelected();
         int poolDelay = 1000;
@@ -476,7 +503,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 if (pool || isBtn) {
                     if (isBtn) {
                         log.info("Разовая отправка");
-                        ps.sendOnce(textToSendValue.get(tab), tab, false);
+                        ps.sendOnce(prefToSendValue.get(tab) + textToSendValue.get(tab), tab, false);
 
                     } else {
                         log.info("Команда к запуску");
@@ -517,10 +544,10 @@ public class MainWindow extends JFrame implements Rendeble {
 
                 if (isBtn) {
                     log.info("Для текущей вкладки устройство не существует в потоке опроса (по чек-боксу)");
-                    ps.addDeviceToService(tab, textToSendValue.get(tab), false, true);
+                    ps.addDeviceToService(tab, prefToSendValue.get(tab) + textToSendValue.get(tab), false, true);
                 } else {
                     log.info("Для текущей вкладки устройство не существует в потоке опроса (по кнопке)");
-                    ps.addDeviceToService(tab, textToSendValue.get(tab), false, false);
+                    ps.addDeviceToService(tab, prefToSendValue.get(tab) + textToSendValue.get(tab), false, false);
                 }
 
             }
@@ -534,7 +561,7 @@ public class MainWindow extends JFrame implements Rendeble {
             }
             poolServices.add(new PoolService(
                     ProtocolsList.getLikeArrayEnum(CB_Protocol.getSelectedIndex()),
-                    textToSendValue.get(tab),
+                    prefToSendValue.get(tab) + textToSendValue.get(tab),
                     poolComConnections.get(tab).activePort,
                     poolDelay,
                     false,
@@ -543,7 +570,7 @@ public class MainWindow extends JFrame implements Rendeble {
 
             if (isBtn) {
                 poolServices.get(poolServices.size() - 1).setNeedPool(tab, false);
-                poolServices.get(poolServices.size() - 1).sendOnce(textToSendValue.get(tab), tab, false);
+                poolServices.get(poolServices.size() - 1).sendOnce(prefToSendValue.get(tab) + textToSendValue.get(tab), tab, false);
                 thPool.submit(poolServices.get(poolServices.size() - 1));
                 log.info("Поток создан и запущен один раз");
                 try {
@@ -756,15 +783,18 @@ public class MainWindow extends JFrame implements Rendeble {
         panel2.setForeground(new Color(-16777216));
         Terminal.add(panel2, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, 1, 1, new Dimension(-1, 10), new Dimension(-1, 10), new Dimension(-1, 10), 0, false));
         final JPanel panel3 = new JPanel();
-        panel3.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
+        panel3.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
         Terminal.add(panel3, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         textToSend = new JTextField();
         textToSend.setForeground(new Color(-10328984));
-        textToSend.setText("001M^");
-        panel3.add(textToSend, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(-1, 40), new Dimension(-1, 25), new Dimension(-1, 25), 0, false));
+        textToSend.setText("M^");
+        panel3.add(textToSend, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(100, 40), new Dimension(150, 25), new Dimension(-1, 25), 0, false));
         BT_Send = new JButton();
         BT_Send.setText("Отправить");
-        panel3.add(BT_Send, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel3.add(BT_Send, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        prefOneToSend = new JTextField();
+        prefOneToSend.setText("001");
+        panel3.add(prefOneToSend, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(50, 40), new Dimension(60, 25), new Dimension(70, 25), 0, false));
         final JPanel panel4 = new JPanel();
         panel4.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
         panel1.add(panel4, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, 1, 1, new Dimension(250, 390), new Dimension(250, 390), new Dimension(250, 390), 0, false));
