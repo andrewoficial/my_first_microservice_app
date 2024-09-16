@@ -7,10 +7,15 @@ import org.apache.log4j.Logger;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.concurrent.ExecutorService;
 
+import org.example.services.AnswerStorage;
 import org.example.utilites.MyProperties;
+
+import static org.example.gui.ChartWindow.getFieldsCountForTab;
 
 public class JmenuFile {
     private static final Logger logger = Logger.getLogger(JmenuFile.class);
@@ -194,11 +199,13 @@ public class JmenuFile {
         // меню-флажки
         JMenuItem graph  = new JMenuItem("График");
         JMenuItem scheme  = new JMenuItem("Схема");
+        JMenuItem graphMany  = new JMenuItem("График (окна)");
 
 
 
         // добавим все в меню
         viewMenu.add(graph);
+        viewMenu.add(graphMany);
         viewMenu.add(scheme);
 
 
@@ -219,6 +226,42 @@ public class JmenuFile {
             }
         });
 
+        graphMany.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                System.out.println("Graph");
+
+                HashSet<Integer> tabs = new HashSet<>();
+                ArrayList<Integer> tabsFieldCapacity = new ArrayList<>();
+
+                // Get the list of all tab numbers
+                tabs.addAll(AnswerStorage.answersByTab.keySet());
+
+                // Обновление списка чек-боксов
+                for (Integer tab : tabs) {
+                    int fieldsCounter = getFieldsCountForTab(tab);
+                    tabsFieldCapacity.add(fieldsCounter);
+                }
+
+                for (int i = 0; i < tabsFieldCapacity.size(); i++) {
+                    ChartWindow chartWindow = new ChartWindow(i);
+                    chartWindow.setName("График");
+                    chartWindow.setTitle("График");
+                    chartWindow.pack();
+                    chartWindow.setVisible(true);
+                    chartWindow.renderData();
+                    System.out.println(chartWindow.isShowing() + " " + i);
+                    //chartWindow.isEnabled();
+                    thPool.submit(new RenderThread(chartWindow));
+                }
+                for (Integer i : tabsFieldCapacity) {
+
+                }
+
+            }
+        });
+
         return viewMenu;
     }
 
@@ -232,12 +275,14 @@ public class JmenuFile {
         // меню-флажки
         JMenuItem grabber  = new JMenuItem("Перехват трафика");
         JMenuItem commandList  = new JMenuItem("Список команд");
+        JMenuItem tabMarkersSetting  = new JMenuItem("Переадресация вкладок");
 
 
 
         // добавим все в меню
         utilitiesMenu.add(grabber);
         utilitiesMenu.add(commandList);
+        utilitiesMenu.add(tabMarkersSetting);
 
 
         grabber.addActionListener(new ActionListener()
@@ -264,6 +309,22 @@ public class JmenuFile {
                 CommandsWindow commandsWindow = new CommandsWindow();
                 commandsWindow.setName("Command List Window");
                 commandsWindow.setTitle("Command List Window");
+                commandsWindow.pack();
+                commandsWindow.setVisible(true);
+                //commandsWindow.renderData();
+                System.out.println(commandsWindow.isShowing());
+                //chartWindow.isEnabled();
+                //thPool.submit(new RenderThread(commandsWindow));
+            }
+        });
+        tabMarkersSetting.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                System.out.println("Tab Marker Setting");
+                CommandsWindow commandsWindow = new CommandsWindow();
+                commandsWindow.setName("Tab Marker Setting");
+                commandsWindow.setTitle("Tab Marker Setting");
                 commandsWindow.pack();
                 commandsWindow.setVisible(true);
                 //commandsWindow.renderData();

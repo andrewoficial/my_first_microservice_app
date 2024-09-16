@@ -92,6 +92,32 @@ public class ChartWindow extends JFrame implements Rendeble {
         initUI();
     }
 
+    public ChartWindow(int num) {
+        super();
+        this.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent componentEvent) {
+                int newWidth = getWidth();
+                int newHeight = getHeight();
+
+                if (Math.abs(currHeight - newHeight) < HEIGHT_THRESHOLD) {
+                    //System.out.println("skip Height");
+                    return;
+                }
+                if (Math.abs(currWidth - newWidth) < WIDTH_THRESHOLD) {
+                    //System.out.println("skip Width");
+                    return;
+                }
+                currWidth = newWidth;
+                currHeight = newHeight;
+                dimension.setSize(controlPanel.getWidth(), currHeight - controlPanel.getHeight() - CONTROL_PANEL_MARGIN);
+            }
+        });
+        initUI();
+        cbStates.set(num, true);
+        seriesBox.get(num).setSelected(true);
+    }
+
     private void initUI() {
         slider.setMaximum(1000);
         slider.setMinimum(10);
@@ -190,7 +216,7 @@ public class ChartWindow extends JFrame implements Rendeble {
         updateControlPanel();
     }
 
-    private int getFieldsCountForTab(Integer tab) {
+    public static int getFieldsCountForTab(Integer tab) {
 
         if (Objects.equals(AnswerStorage.getAnswersForGraph(tab).get(0).getTabNumber(), tab))
             return AnswerStorage.getAnswersForGraph(tab).get(0).getFieldCount();
