@@ -39,7 +39,7 @@ public class CommandsWindow extends JDialog {
 
                     for (ProtocolsList protocolsList : protocolsLists) {
                         if (protocolsList.getValue().equals(CB_Protocol.getSelectedItem().toString())) {
-                            System.out.println("Found pro" + protocolsList.getValue());
+                            System.out.println("Found protocol" + protocolsList.getValue());
 
                             SomeDevice someDevice = createDeviceByProtocol(protocolsList);
                             CommandListClass commandListClass = someDevice.getCommandListClass();

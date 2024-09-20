@@ -255,10 +255,6 @@ public class JmenuFile {
                     //chartWindow.isEnabled();
                     thPool.submit(new RenderThread(chartWindow));
                 }
-                for (Integer i : tabsFieldCapacity) {
-
-                }
-
             }
         });
 
@@ -322,13 +318,13 @@ public class JmenuFile {
             @Override
             public void actionPerformed(ActionEvent arg0) {
                 System.out.println("Tab Marker Setting");
-                CommandsWindow commandsWindow = new CommandsWindow();
-                commandsWindow.setName("Tab Marker Setting");
-                commandsWindow.setTitle("Tab Marker Setting");
-                commandsWindow.pack();
-                commandsWindow.setVisible(true);
+                TabMarkersSettings tabMarkersSettings = new TabMarkersSettings();
+                tabMarkersSettings.setName("Tab Marker Setting");
+                tabMarkersSettings.setTitle("Tab Marker Setting");
+                tabMarkersSettings.pack();
+                tabMarkersSettings.setVisible(true);
                 //commandsWindow.renderData();
-                System.out.println(commandsWindow.isShowing());
+                System.out.println(tabMarkersSettings.isShowing());
                 //chartWindow.isEnabled();
                 //thPool.submit(new RenderThread(commandsWindow));
             }

@@ -32,7 +32,7 @@ import static org.example.Main.comPorts;
 
 public class MainWindow extends JFrame implements Rendeble {
     private JPanel contentPane;
-
+    private static int currTabCount = 0;
     private static Logger log = Logger.getLogger(MainWindow.class);
     private int countRender = 0;
 
@@ -276,7 +276,9 @@ public class MainWindow extends JFrame implements Rendeble {
                 lastGotedValueFromStorage.add(0);
                 JPanel panel = new JPanel();
                 panel.setLayout(new BorderLayout());
+
                 logDataTransferJscrollPanel.add(new JScrollPane());
+
                 logDataTransferJtextPanel.add(new JTextPane());
                 logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1).setEditable(false);
                 logDataTransferJtextPanel.get(logDataTransferJtextPanel.size() - 1).setDoubleBuffered(true);
@@ -288,6 +290,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 panel.add(logDataTransferJscrollPanel.get(logDataTransferJscrollPanel.size() - 1), BorderLayout.CENTER);
                 panel.setEnabled(false);
                 tabbedPane1.addTab("dev" + (tabbedPane1.getTabCount() + 1), panel);
+                currTabCount = tabbedPane1.getTabCount();
                 checkIsUsedPort();
                 if (tabbedPane1.getTabCount() > 0) {
                     BT_RemoveDev.setEnabled(true);
@@ -314,6 +317,7 @@ public class MainWindow extends JFrame implements Rendeble {
                     }
                 }
                 tabbedPane1.removeTabAt(tab);
+                currTabCount = tabbedPane1.getTabCount();
                 if (tabbedPane1.getTabCount() == 0) {
                     BT_RemoveDev.setEnabled(false);
                 }
@@ -362,6 +366,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 CB_Log.setSelected(isLogged());
                 textToSend.setText(textToSendValue.get(tab));
                 prefOneToSend.setText(prefToSendValue.get(tab));
+                currTabCount = tabbedPane1.getTabCount();//На всякий случай
             }
         });
 
@@ -690,6 +695,10 @@ public class MainWindow extends JFrame implements Rendeble {
     public boolean isEnable() {
         //return this.isShowing();
         return true;
+    }
+
+    public static int getCurrTabCount() {
+        return currTabCount;
     }
 
     /* --- Метод обновления настроек ---

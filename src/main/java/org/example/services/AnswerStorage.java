@@ -18,6 +18,9 @@ public class AnswerStorage {
         System.out.println("Now contain:" + AnswerStorage.deviceTabPairs.size());
     }
 
+    public static HashMap<String, Integer> getDeviceTabPair() {
+        return AnswerStorage.deviceTabPairs;
+    }
 
 
     public static Integer getTabByIdent(String ident) {
