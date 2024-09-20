@@ -8,6 +8,7 @@ import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
 import org.example.services.DeviceAnswer;
 import org.jfree.chart.*;
+import org.jfree.chart.axis.LogarithmicAxis;
 import org.jfree.chart.block.BlockBorder;
 import org.jfree.chart.entity.ChartEntity;
 import org.jfree.chart.entity.XYItemEntity;
@@ -169,14 +170,22 @@ public class ChartWindow extends JFrame implements Rendeble {
                 "Graph", "Time", "Value", dataset, true, true, false);
         chart.setBackgroundPaint(Color.WHITE);
         XYPlot plot = chart.getXYPlot();
-        //LogarithmicAxis yAxis = new LogarithmicAxis("Y"); // Отключил из-за неподдержки отрицательных значений
-        //yAxis.setExpTickLabelsFlag(true);// Отключил из-за неподдержки отрицательных значений
-        //yAxis.setAutoRangeNextLogFlag(true);// Отключил из-за неподдержки отрицательных значений
-        var renderer = new XYLineAndShapeRenderer();
+
+        LogarithmicAxis yAxis = new LogarithmicAxis("Y");
+
+        // Настройка логарифмической оси для предотвращения ошибок с отрицательными значениями.
+        yAxis.setAllowNegativesFlag(true);  // Позволяет использовать отрицательные значения (экспериментально).
+        yAxis.setExpTickLabelsFlag(true);
+        yAxis.setAutoRangeNextLogFlag(true);
+        plot.setRangeAxis(yAxis);
+
+        XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
+
         plot.setRenderer(renderer);
         plot.setBackgroundPaint(Color.white);
         plot.setRangeGridlinesVisible(true);
         plot.setDomainGridlinesVisible(true);
+
         /*
         plot.setRangeGridlinePaint(Color.ORANGE);
         plot.setDomainGridlinePaint(Color.ORANGE);
@@ -192,7 +201,6 @@ public class ChartWindow extends JFrame implements Rendeble {
         renderer.setDefaultItemLabelGenerator(generator);//ItemLabelsVisible(true);
         renderer.setDefaultItemLabelsVisible(false);
         chart.getLegend().setFrame(BlockBorder.NONE);
-
          */
         return chart;
     }
