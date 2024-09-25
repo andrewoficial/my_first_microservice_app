@@ -146,17 +146,22 @@ public class MainWindow extends JFrame implements Rendeble {
         for (int i = 0; i < poolComConnections.get(0).getAllPorts().size(); i++) {
             SerialPort currentPort = poolComConnections.get(0).getAllPorts().get(i);
             CB_ComPorts.addItem(currentPort.getSystemPortName() + " (" + MyUtilities.removeComWord(currentPort.getPortDescription()) + ")");
-            //System.out.println(currentPort.getSystemPortName());
-            //System.out.println(prop.getLastComPort());
-            //System.out.println();
-            if (currentPort.getSystemPortName().equals(prop.getLastComPort())) {
+            if (currentPort.getSystemPortName().equals(prop.getPorts()[0])) {
                 CB_ComPorts.setSelectedIndex(i);
             }
-            /*
-            if (i == poolComConnections.get(0).getComNumber()) {
-                CB_ComPorts.setSelectedIndex(i);
+        }
+
+        //Восстановление выбранных ранее (до закрытия программы) портов
+        poolComConnections.clear();
+        for (int i = 0; i < prop.getPorts().length; i++) { //Перебор по вкладкам из файла с настройками
+            ComPort availablePorts = new ComPort();
+            for (SerialPort somePort : availablePorts.getAllPorts()) { //Перебор по доступным портам
+                if (prop.getPorts()[i] != null)
+                    if (prop.getPorts()[i].equals(somePort.getSystemPortName()))
+                        poolComConnections.add(availablePorts);
             }
-             */
+
+
         }
 
         ProtocolsList[] protocolsLists = ProtocolsList.values();
@@ -183,6 +188,7 @@ public class MainWindow extends JFrame implements Rendeble {
         this.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosed(WindowEvent windowEvent) {
+                saveParameters();
                 log.info("Выход из программы" + tab);
                 if (SpringLoader.ctx != null && SpringLoader.ctx.isRunning()) {
                     SpringLoader.ctx.close();
@@ -208,7 +214,7 @@ public class MainWindow extends JFrame implements Rendeble {
                     poolComConnections.get(tab).activePort.setNumStopBits(StopBitsList.getLikeArray(CB_StopBit.getSelectedIndex()));
                     poolComConnections.get(tab).activePort.removeDataListener();
                     createPoolService(tab, false, false, 1200);
-                    saveParameters(null);
+                    saveParameters();
                     addCustomMessage("Порт открыт успешно!");
                 } else {
                     addCustomMessage("Ошибка открытия порта!");
@@ -216,7 +222,6 @@ public class MainWindow extends JFrame implements Rendeble {
 
             }
         });
-
 
         BT_Close.addActionListener(new ActionListener() {
             @Override
@@ -232,6 +237,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 System.out.println("Статус открытия " + poolComConnections.get(tab).activePort.isOpen());
             }
         });
+
         CB_Pool.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -271,8 +277,10 @@ public class MainWindow extends JFrame implements Rendeble {
             @Override
             public void actionPerformed(ActionEvent e) {
                 log.info("Нажата кнопка добавить устройство");
-                textToSendValue.add("M^");
-                prefToSendValue.add("001");
+                textToSendValue.add("M^"); //Холодная инициализация
+                prefToSendValue.add("001");//Холодная инициализация
+
+
                 lastGotedValueFromStorage.add(0);
                 JPanel panel = new JPanel();
                 panel.setLayout(new BorderLayout());
@@ -329,6 +337,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 if (textToSendValue.size() > tab || prefToSendValue.size() > tab) {
                     textToSendValue.set(tab, textToSend.getText());
                     prefToSendValue.set(tab, prefOneToSend.getText());
+                    saveParameters();
                     if (poolServices.size() > tab) {
                         poolServices.get(tab).setTextToSendString(prefOneToSend.getText() + textToSend.getText(), tab);
                     }
@@ -337,7 +346,21 @@ public class MainWindow extends JFrame implements Rendeble {
                 }
             }
         });
-
+        prefOneToSend.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (textToSendValue.size() > tab || prefToSendValue.size() > tab) {
+                    textToSendValue.set(tab, textToSend.getText());
+                    prefToSendValue.set(tab, prefOneToSend.getText());
+                    saveParameters();
+                    if (poolServices.size() > tab) {
+                        poolServices.get(tab).setTextToSendString(prefOneToSend.getText() + textToSend.getText(), tab);
+                    }
+                } else {
+                    log.warn("Ошибка при обновлении пула префиксов для опроса");
+                }
+            }
+        });
         CB_ComPorts.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -360,20 +383,71 @@ public class MainWindow extends JFrame implements Rendeble {
         tabbedPane1.addChangeListener(new ChangeListener() {
             public void stateChanged(ChangeEvent e) {
                 tab = tabbedPane1.getSelectedIndex();
-                log.info("Фокус установлен на вкладку " + tab);
+                log.info("Фокус установлен на вкладку " + tab); //активна вкладка, выбрана вкладка
                 //textToSend.setText(textToSendValue.get(tab));
                 CB_Pool.setSelected(isPooled());
                 CB_Log.setSelected(isLogged());
+
+                //CB_ComPorts.setSelectedIndex();
+
+                if (poolComConnections.get(tab) == null || poolComConnections.get(tab).getComNumber() == 0) {
+                    System.out.println("Соединение по ком порту не найдено");
+                    if (prop.getPorts().length > tab) {
+                        System.out.println("Начинаю перебор");
+                        ArrayList<SerialPort> portsListForUpdateState = poolComConnections.get(0).getAllPorts();
+                        for (int i = 0; i < portsListForUpdateState.size(); i++) {
+                            System.out.println("  Сравниваю имена");
+                            if (portsListForUpdateState.get(i).getSystemPortName().equals(prop.getPorts()[tab])) {
+                                CB_ComPorts.setSelectedIndex(i);
+
+                            }
+                        }
+                    }
+                } else {
+                    CB_ComPorts.setSelectedIndex(poolComConnections.get(tab).getComNumber()); //работает но не при первом запуске
+                }
+
+                /*
+                for (int i = 0; i < poolComConnections.get(0).getAllPorts().size(); i++) {
+                    CB_ComPorts.
+                        if (poolComConnections.get(tab).activePort.getSystemPortName().equals(prop.getPorts()[0])) {
+                            CB_ComPorts.setSelectedIndex(i);
+                        }
+                }
+
+                 */
                 textToSend.setText(textToSendValue.get(tab));
                 prefOneToSend.setText(prefToSendValue.get(tab));
-                currTabCount = tabbedPane1.getTabCount();//На всякий случай
             }
         });
 
         prefToSendValue.add(prefOneToSend.getText());
         textToSendValue.add(textToSend.getText());
         lastGotedValueFromStorage.add(0);
-        BT_AddDev.doClick();
+        int tabCount = Math.max(1, prop.getTabCounter());
+        for (int i = 0; i < tabCount; i++) {
+            BT_AddDev.doClick(); //Добавление новой вкладки (клик)
+        }
+
+        if (prop.getCommands() != null && prop.getCommands().length > 0) {
+            textToSendValue.clear();
+            for (int i = 0; i < prop.getCommands().length; i++) {
+                textToSendValue.add(prop.getCommands()[i]);
+                if (tab == i) {
+                    textToSend.setText(prop.getCommands()[i]);
+                }
+            }
+        }
+        if (prop.getPrefixes() != null && prop.getPrefixes().length > 0) {
+            prefToSendValue.clear();
+            for (int i = 0; i < prop.getPrefixes().length; i++) {
+                prefToSendValue.add(prop.getPrefixes()[i]);
+                if (tab == i) {
+                    prefOneToSend.setText(prop.getPrefixes()[i]);
+                }
+            }
+        }
+
         uiThPool.submit(new RenderThread(this));
 
         prefOneToSend.getDocument().addDocumentListener(new DocumentListener() {
@@ -480,6 +554,7 @@ public class MainWindow extends JFrame implements Rendeble {
         protocol = ProtocolsList.getLikeArrayEnum(CB_Protocol.getSelectedIndex());
         prefToSendValue.set(tab, prefOneToSend.getText());
         textToSendValue.set(tab, textToSend.getText());
+        saveParameters();
         boolean pool = CB_Pool.isSelected();
         int poolDelay = 1000;
         try {
@@ -708,44 +783,22 @@ public class MainWindow extends JFrame implements Rendeble {
         перечисленное в массиве (по названию
         параметров)
      */
-    private void saveParameters(String[] parametersArray) {
+    private void saveParameters() {
         log.info("Обновление файла настроек со вкладки" + tab);
-        if (parametersArray == null) {
-            prop.setLastComPort(poolComConnections.get(tab).getCurrentComName());
-            prop.setLastComSpeed(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()));
-            prop.setLastDataBits(DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
-            prop.setLastParity(ParityList.values()[CB_Parity.getSelectedIndex()].getName());
-            prop.setLastStopBits(StopBitsList.getLikeArray(CB_StopBit.getSelectedIndex()));
-            prop.setLastProtocol(ProtocolsList.getLikeArray(CB_Protocol.getSelectedIndex()));
-            Logger root = Logger.getRootLogger();
-            prop.setLogLevel(root.getLevel());
-        } else {
-            for (String s : parametersArray) {
-                switch (s) {
-                    case "LastComPort":
-                        prop.setLastComPort(poolComConnections.get(tab).getCurrentComName());
-                        break;
-                    case "LastComSpeed":
-                        prop.setLastComSpeed(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()));
-                        break;
-                    case "LastDataBits":
-                        prop.setLastDataBits(DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
-                        break;
-                    case "LastParity":
-                        prop.setLastParity(ParityList.values()[CB_Parity.getSelectedIndex()].getName());
-                        break;
-                    case "LastStopBit":
-                        prop.setLastStopBits(StopBitsList.getLikeArray(CB_StopBit.getSelectedIndex()));
-                        break;
-                    case "LastProtocol":
-                        prop.setLastProtocol(ProtocolsList.getLikeArray(CB_Protocol.getSelectedIndex()));
-                        break;
-                    default:
-                        log.warn("Попытка сохранения неизвестного параметра " + s);
 
-                }
-            }
+        if (poolComConnections.get(tab).activePort != null) {
+            prop.setLastPorts(poolComConnections);
         }
+        prop.setLastComSpeed(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()));
+        prop.setLastDataBits(DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
+        prop.setLastParity(ParityList.values()[CB_Parity.getSelectedIndex()].getName());
+        prop.setLastStopBits(StopBitsList.getLikeArray(CB_StopBit.getSelectedIndex()));
+        prop.setLastProtocol(ProtocolsList.getLikeArray(CB_Protocol.getSelectedIndex()));
+        Logger root = Logger.getRootLogger();
+        prop.setLogLevel(root.getLevel());
+        prop.setTabCounter(currTabCount);
+        prop.setLastCommands(textToSendValue);
+        prop.setLastPrefixes(prefToSendValue);
 
     }
 
