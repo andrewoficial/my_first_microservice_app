@@ -15,7 +15,7 @@ public class RenderThread implements Runnable{
     private boolean threadLive = true;
 
     @Getter
-    private long renderDelay = 1600L;
+    private long renderDelay = 800L;
     public RenderThread(Rendeble mainWindow){
         super();
         renderedWindow = mainWindow;

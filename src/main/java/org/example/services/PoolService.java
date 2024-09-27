@@ -251,6 +251,7 @@ public class PoolService implements Runnable{
         }
 
         //log.info("Адрес ответа: " + answer.getTabNumber());
+        System.out.println("Адрес ответа: " + answer.getTabNumber());
         AnswerStorage.addAnswer(answer);
 
         logSome(answer, i);

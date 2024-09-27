@@ -256,31 +256,42 @@ public class MyProperties {
         log.info("Обновлено значение последних префиксов: " + sb.toString());
     }
 
-    public void setLastPorts(ArrayList<ComPort> portsInp){
+    public void setLastPorts(ArrayList<ComPort> portsInp, int tabCounter){
         //getCurrentComName()
+
         System.out.println("Сохр порты");
-        int i = 0;
         StringBuilder sb = new StringBuilder();
-        this.ports = new String[portsInp.size()];
-        for (ComPort port : portsInp) {
+        String[] portsBack = new String[ports.length];
+        System.arraycopy(this.ports, 0, portsBack, 0, ports.length);
+
+        this.ports = new String[tabCounter];
+
+        for (int i = 0; i < tabCounter; i++) {
+            ComPort port = portsInp.get(i);
             if(port.activePort != null){
                 this.ports [i] = port.getCurrentComName();
                 sb.append(port.getCurrentComName());
                 sb.append(", ");
             }else{
-                //ToDO додлеать, не успеваю
-                if(ports.length > i){
-                    this.ports [i] = ports[i];
-                    sb.append(ports[i]);
-                    sb.append(ports[i]);
-                }else{
+                if(ports.length > i && portsBack.length > i){
+                    if(portsBack[i] != null && portsBack[i].length()>1){
+                        this.ports [i] = portsBack[i];
+                        sb.append(portsBack[i]);
+                        sb.append(", ");
+                    }else{
+                        this.ports [i] = "notOpen";
+                        sb.append("notOpen");
+                        sb.append(", ");
+                    }
+                }
+                else{
                     this.ports [i] = "DUNNO";
                     sb.append("DUNNO");
                     sb.append(", ");
                 }
             }
-            i++;
         }
+
         properties.setProperty("ports", sb.toString());
         this.updateFile();
         log.info("Обновлено значение последних префиксов: " + sb.toString());
