@@ -8,6 +8,7 @@ import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import org.apache.log4j.Logger;
+import org.apache.tomcat.util.digester.ArrayStack;
 import org.example.services.AnswerStorage;
 import org.example.services.ComPort;
 import org.example.services.TabAnswerPart;
@@ -45,7 +46,14 @@ public class MainWindow extends JFrame implements Rendeble {
     private final ArrayList<String> prefToSendValue = new ArrayList<>();
     private ArrayList<JTextPane> logDataTransferJtextPanel = new ArrayList<>();
     private ArrayList<PoolService> poolServices = new ArrayList<>();
+    //ToDo хорошо бы каждую вкладку в объект превратить и этот кошмар в поля спрятать
     private ArrayList<ComPort> poolComConnections = new ArrayList<>();
+    private ArrayList<Object> dataBitsLists = new ArrayStack<>();
+    private ArrayList<ParityList> parityLists = new ArrayList<>();
+    private ArrayList<StopBitsList> stopBitsLists = new ArrayList<>();
+    private ArrayList<BaudRatesList> baudRatesLists = new ArrayList<>();
+    private ArrayList<ProtocolsList> protocolsLists = new ArrayList<>();
+
 
     private ArrayList<Integer> lastGotedValueFromStorage = new ArrayList<>();//Очередь кэша
 
@@ -158,9 +166,14 @@ public class MainWindow extends JFrame implements Rendeble {
                     if (prop.getPorts()[i].equals(somePort.getSystemPortName()))
                         poolComConnections.add(availablePorts);
             }
-
-
         }
+        /*
+            private ArrayList<DataBitsList> dataBitsLists = new ArrayStack<>();
+            private ArrayList<ParityList> parityLists = new ArrayList<>();
+            private ArrayList <StopBitsList> stopBitsLists = new ArrayList<>();
+            private ArrayList <BaudRatesList> baudRatesLists = new ArrayList<>();
+            private ArrayList <ProtocolsList> protocolsLists = new ArrayList<>();
+         */
 
         ProtocolsList[] protocolsLists = ProtocolsList.values();
         for (int i = 0; i < protocolsLists.length; i++) {
@@ -274,6 +287,13 @@ public class MainWindow extends JFrame implements Rendeble {
             }
         });
 
+        CB_DataBits.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                dataBitsLists.set(tab, DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
+            }
+        });
+
         BT_AddDev.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -282,7 +302,11 @@ public class MainWindow extends JFrame implements Rendeble {
                 textToSendValue.add("M^"); //Холодная инициализация
                 prefToSendValue.add("001");//Холодная инициализация
                 tab = tabbedPane1.getTabCount();
-
+                dataBitsLists.add(DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
+                //parityLists
+                //stopBitsLists
+                //baudRatesLists
+                //protocolsLists
                 lastGotedValueFromStorage.add(tab, 0);//инициализация очереди
 
                 JTextPane logDataTransferJtextPanelForAdd = new JTextPane();
@@ -356,6 +380,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 prefToSendValue.remove(tab);
                 lastGotedValueFromStorage.remove(tab);
                 logDataTransferJtextPanel.remove(tab);
+                dataBitsLists.remove(tab);
 
 
                 PoolService ps = findPoolServiceByOpenedPort();
@@ -418,6 +443,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 if (textToSendValue.size() > tab || prefToSendValue.size() > tab) {
                     textToSendValue.set(tab, textToSend.getText());
                     prefToSendValue.set(tab, prefOneToSend.getText());
+                    dataBitsLists.set(tab, DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
                     saveParameters();
                     if (poolServices.size() > tab) {
                         poolServices.get(tab).setTextToSendString(prefOneToSend.getText() + textToSend.getText(), tab);
@@ -433,6 +459,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 if (textToSendValue.size() > tab || prefToSendValue.size() > tab) {
                     textToSendValue.set(tab, textToSend.getText());
                     prefToSendValue.set(tab, prefOneToSend.getText());
+                    dataBitsLists.set(tab, DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
                     saveParameters();
                     if (poolServices.size() > tab) {
                         poolServices.get(tab).setTextToSendString(prefOneToSend.getText() + textToSend.getText(), tab);
@@ -468,6 +495,19 @@ public class MainWindow extends JFrame implements Rendeble {
                 //textToSend.setText(textToSendValue.get(tab));
                 CB_Pool.setSelected(isPooled());
                 CB_Log.setSelected(isLogged());
+                //dataBitsLists.add(tab, DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
+                for (int i = 0; i < dataBits.length; i++) {
+                    if (dataBits[i].getValue() == (Integer) dataBitsLists.get(tab)) {
+                        CB_DataBits.setSelectedIndex(i);
+                        System.out.println("Set databit" + i + " from " + dataBits[i]);
+                    } else {
+                        System.out.println("Do no set dataBits " + dataBits[i] +
+                                " and " + dataBitsLists.get(tab) +
+                                " for tab " + tab + " not equals");
+                    }
+
+                }
+
 
                 //CB_ComPorts.setSelectedIndex();
 
@@ -499,12 +539,17 @@ public class MainWindow extends JFrame implements Rendeble {
                  */
                 textToSend.setText(textToSendValue.get(tab));
                 prefOneToSend.setText(prefToSendValue.get(tab));
+                //CB_DataBits.setSelectedIndex((int) dataBitsLists.get(tab));
+                System.out.println("Try set " + dataBitsLists.get(tab));
+                //dataBitsLists.set(tab, DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
+
             }
         });
 
         prefToSendValue.add(prefOneToSend.getText());
         textToSendValue.add(textToSend.getText());
         lastGotedValueFromStorage.add(tab, 0);
+        dataBitsLists.add(tab, DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
         int tabCount = Math.max(1, prop.getTabCounter());
         for (int i = 0; i < tabCount; i++) {
             BT_AddDev.doClick(); //Добавление новой вкладки (клик)
@@ -635,6 +680,7 @@ public class MainWindow extends JFrame implements Rendeble {
         protocol = ProtocolsList.getLikeArrayEnum(CB_Protocol.getSelectedIndex());
         prefToSendValue.set(tab, prefOneToSend.getText());
         textToSendValue.set(tab, textToSend.getText());
+        dataBitsLists.set(tab, DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
         saveParameters();
         boolean pool = CB_Pool.isSelected();
         int poolDelay = 1000;
@@ -831,9 +877,9 @@ public class MainWindow extends JFrame implements Rendeble {
     public void renderData() {
         tab = tabbedPane1.getSelectedIndex();
         Document doc = logDataTransferJtextPanel.get(tab).getDocument();
-        System.out.println("Tab num:  " + logDataTransferJtextPanel.get(tab).getName());
-        System.out.println("Jtext name:  " + logDataTransferJtextPanel.get(tab).getName());
-        System.out.println();
+        //System.out.println("Tab num:  " + logDataTransferJtextPanel.get(tab).getName());
+        //System.out.println("Jtext name:  " + logDataTransferJtextPanel.get(tab).getName());
+        //System.out.println();
 
         try {
             an = AnswerStorage.getAnswersQueForTab(lastGotedValueFromStorage.get(tab), tab, true);

@@ -33,4 +33,6 @@ public enum DataBitsList {
         List<Integer> values = DataBitsList.getValues();
         return values.get(number);
     }
+
+
 }
