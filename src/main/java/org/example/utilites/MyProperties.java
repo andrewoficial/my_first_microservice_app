@@ -7,14 +7,15 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.example.gui.MainLeftPanelState;
 import org.example.gui.MainLeftPanelStateCollection;
+import org.example.services.AnswerStorage;
 import org.example.services.ComPort;
 
+import javax.swing.text.Style;
 import java.io.*;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Enumeration;
+import java.util.*;
 
 /**
  * The class responsible for getting the settings from the file
@@ -34,10 +35,12 @@ public class MyProperties {
     public static String usr = "zhsiszsk_owner";
     public static String prt = "8080";
 
+    private static String tabNumbersIdents = new String();
+    private static String idents = new String();
+
     @Getter
     private String [] ports = new String[2];
 
-    @Getter
     private String logLevel;
 
     @Getter
@@ -54,7 +57,9 @@ public class MyProperties {
 
     private final File settingFile;
 
-    private java.util.Properties properties;
+    private final java.util.Properties properties;
+
+    private final java.util.Properties propertiesIdentAssociation;
 
     public MyProperties() {
         //Thread.currentThread().setName("MyProperties");
@@ -69,13 +74,12 @@ public class MyProperties {
                 new File("config").mkdirs();
             }
         } catch (Exception e) {
-            //throw new RuntimeException(e);
+            System.out.println(e.getMessage());
         }
         File someFile = null;
         try {
             someFile = new File("config/" + "configAccess.properties");
             if (someFile.createNewFile()) {
-                //System.out.println("File created: " + myObj.getName());
                 log.warn("Создан новый файл с настройками" + someFile.getAbsolutePath());
             } else {
                 log.info("Файл с настройками найден" + someFile.getAbsolutePath());
@@ -87,16 +91,26 @@ public class MyProperties {
 
 
         java.util.Properties props = new java.util.Properties();
+        propertiesIdentAssociation = new java.util.Properties();
         FileInputStream in = null;
         try {
             in = new FileInputStream(this.settingFile.getAbsolutePath());
         } catch (FileNotFoundException e) {
-            //throw new RuntimeException(e);
+            System.out.println(e.getMessage());
         }
+
+        /*
+            try {
+                propertiesIdentAssociation.load(in);
+            }catch (IOException e) {
+                System.out.println(e.getMessage());
+            }
+         */
         try {
             props.load(in);
+
         } catch (IOException e) {
-            //throw new RuntimeException(e);
+            System.out.println(e.getMessage());
         } finally {
             try {
                 assert in != null;
@@ -132,7 +146,7 @@ public class MyProperties {
                 this.commands = props.getProperty("commands").split(", ");
             }
         } catch (NumberFormatException exception) {
-
+            log.info("configAccess.properties contain incorrect value of commands");
         }
 
         try {
@@ -141,11 +155,41 @@ public class MyProperties {
             } else {
                 this.prefixes = props.getProperty("prefixes").split(", ");
             }
-            log.info("Last prefixes: " + prefixes);
+            log.info("Last prefixes: " + Arrays.toString(prefixes));
         } catch (NumberFormatException exception) {
             log.info("configAccess.properties contain incorrect value of lastPrefixes");
         }
 
+
+        this.idents = properties.getProperty("idents");
+        this.tabNumbersIdents = properties.getProperty("tabNumbersIdents");
+        if(strSeemsLikeArray(idents) && strSeemsLikeArray(tabNumbersIdents)){
+            String [] identsArr = idents.split(", ");
+            String [] tabNumbersIdentsArr = tabNumbersIdents.split(", ");
+            if(tabNumbersIdentsArr != null && identsArr != null){
+                if(identsArr.length != tabNumbersIdentsArr.length){
+                    log.warn("Разное количество аргументов identsArr и tabNumbersIdentsArr");
+                }else{
+                    boolean allOk = true;
+                    for (String s : tabNumbersIdentsArr) {
+                        try {
+                            Integer.parseInt(s);
+                        }catch (NumberFormatException e){
+                            System.out.println(e.getMessage());
+                            log.warn(e.getMessage());
+                            allOk = false;
+                        }
+                    }
+                    if(allOk){
+                        for (int i = 0; i < identsArr.length; i++) {
+                            AnswerStorage.registerDeviceTabPair(identsArr[i],
+                                    Integer.parseInt(tabNumbersIdentsArr[i]));
+                        }
+                    }
+
+                }
+            }
+        }
 
 
         try {
@@ -158,27 +202,27 @@ public class MyProperties {
 
 
 
-        String baudRateCodeArray[] = new String[1];
+        String[] baudRateCodeArray = new String[1];
         if (props.getProperty("baudRateCode") != null) {
             baudRateCodeArray = props.getProperty("baudRateCode").split(", ");
         }
 
-        String stopBitsCodeArray[] = new String[1];
+        String[] stopBitsCodeArray = new String[1];
         if (props.getProperty("stopBitsCode") != null) {
             stopBitsCodeArray = props.getProperty("stopBitsCode").split(", ");
         }
 
-        String protocolCodeArray[] = new String[1];
+        String[] protocolCodeArray = new String[1];
         if (props.getProperty("protocolCode") != null) {
             protocolCodeArray = props.getProperty("protocolCode").split(", ");
         }
 
-        String dataBitsCodeArray[] = new String[1];
+        String[] dataBitsCodeArray = new String[1];
         if (props.getProperty("dataBitsCode") != null) {
             dataBitsCodeArray = props.getProperty("dataBitsCode").split(", ");
         }
 
-        String parityBitCodeArray[] = new String[1];
+        String[] parityBitCodeArray = new String[1];
         if (props.getProperty("parityBitCode") != null) {
             parityBitCodeArray = props.getProperty("parityBitCode").split(", ");
         }
@@ -193,7 +237,7 @@ public class MyProperties {
             this.leftPanelStateCollection.addEntry();
         }
             for (int i = 0; i < needElementCount; i++) {
-                if (baudRateCodeArray.length > i && baudRateCodeArray[i] != null && baudRateCodeArray[i].length() > 0) {
+                if (baudRateCodeArray.length > i && baudRateCodeArray[i] != null && !baudRateCodeArray[i].isEmpty()) {
                     try {
                         leftPanelStateCollection.setBaudRate(i, Integer.parseInt(baudRateCodeArray[i]));
                     } catch (NumberFormatException exception) {
@@ -203,7 +247,7 @@ public class MyProperties {
             }
 
             for (int i = 0; i < needElementCount; i++) {
-                if (stopBitsCodeArray.length > i && stopBitsCodeArray[i] != null && stopBitsCodeArray[i].length() > 0) {
+                if (stopBitsCodeArray.length > i && stopBitsCodeArray[i] != null && !stopBitsCodeArray[i].isEmpty()) {
                     try {
                         leftPanelStateCollection.setStopBits(i, Integer.parseInt(stopBitsCodeArray[i]));
                     } catch (NumberFormatException exception) {
@@ -213,7 +257,7 @@ public class MyProperties {
             }
 
             for (int i = 0; i < needElementCount; i++) {
-                if (protocolCodeArray.length > i && protocolCodeArray[i] != null && protocolCodeArray[i].length() > 0) {
+                if (protocolCodeArray.length > i && protocolCodeArray[i] != null && !protocolCodeArray[i].isEmpty()) {
                     try {
                         leftPanelStateCollection.setProtocol(i, Integer.parseInt(protocolCodeArray[i]));
                     } catch (NumberFormatException exception) {
@@ -223,7 +267,7 @@ public class MyProperties {
             }
 
             for (int i = 0; i < needElementCount; i++) {
-                if (dataBitsCodeArray.length > i && dataBitsCodeArray[i] != null && dataBitsCodeArray[i].length() > 0) {
+                if (dataBitsCodeArray.length > i && dataBitsCodeArray[i] != null && !dataBitsCodeArray[i].isEmpty()) {
                     try {
                         leftPanelStateCollection.setDataBits(i, Integer.parseInt(dataBitsCodeArray[i]));
                     } catch (NumberFormatException exception) {
@@ -233,7 +277,7 @@ public class MyProperties {
             }
 
             for (int i = 0; i < needElementCount; i++) {
-                if (parityBitCodeArray.length > i && parityBitCodeArray[i] != null && parityBitCodeArray[i].length() > 0) {
+                if (parityBitCodeArray.length > i && parityBitCodeArray[i] != null && !parityBitCodeArray[i].isEmpty()) {
                     try {
                         leftPanelStateCollection.setParityBits(i, Integer.parseInt(parityBitCodeArray[i]));
                     } catch (NumberFormatException exception) {
@@ -245,7 +289,7 @@ public class MyProperties {
 
 
         if(ports != null){
-            log.info("Last ComPorts: " + ports);
+            log.info("Last ComPorts: " + Arrays.toString(ports));
             if(props.getProperty("ports") == null){
                 this.ports [0] = "dunno";
             }else{
@@ -270,7 +314,7 @@ public class MyProperties {
         }
         properties.setProperty("commands", sb.toString());
         this.updateFile();
-        log.info("Обновлено значение последних команд: " + sb.toString());
+        log.info("Обновлено значение последних команд: " + sb);
     }
 
     public void setLastPrefixes(ArrayList <String> prefixesInp){
@@ -285,9 +329,21 @@ public class MyProperties {
         }
         properties.setProperty("prefixes", sb.toString());
         this.updateFile();
-        log.info("Обновлено значение последних префиксов: " + sb.toString());
+        log.info("Обновлено значение последних префиксов: " + sb);
     }
 
+    public void setIdentAndTabBounding(HashMap<String, Integer> pairs){
+        StringBuilder sbTabs = new StringBuilder();
+        StringBuilder sbIdents = new StringBuilder();
+        for (Map.Entry<String, Integer> stringIntegerEntry : pairs.entrySet()) {
+            sbTabs.append(stringIntegerEntry.getValue()).append(", ");
+            sbIdents.append(stringIntegerEntry.getKey()).append(", ");
+        }
+        properties.setProperty("tabNumbersIdents", sbTabs.toString());
+        properties.setProperty("idents", sbIdents.toString());
+        this.updateFile();
+        log.info("Обновлено значение ассоциаций идентификаторов и вкладок... ");
+    }
     public void setLastLeftPanel(MainLeftPanelStateCollection leftPanStateInp){
         if(leftPanStateInp == null){
             throw new IllegalArgumentException("Переданный объект состояния левой панели не может быть null");
@@ -387,32 +443,48 @@ public class MyProperties {
 
         properties.setProperty("ports", sb.toString());
         this.updateFile();
-        log.info("Обновлено значение последних префиксов: " + sb.toString());
+        log.info("Обновлено значение последних префиксов: " + sb);
     }
 
     public void setLogLevel(org.apache.log4j.Level level){
         this.logLevel = String.valueOf(level);
         properties.setProperty("logLevel", String.valueOf(level));
         this.updateFile();
-        log.info("Обновлено значение последнего logLevel: " + String.valueOf(logLevel));
+        log.info("Обновлено значение последнего logLevel: " + logLevel);
     }
 
     public void setTabCounter(int counter){
         this.tabCounter = counter;
         properties.setProperty("tabCounter", String.valueOf(counter));
         this.updateFile();
-        log.info("Обновлено значение последнего tabCounter: " + String.valueOf(logLevel));
+        log.info("Обновлено значение последнего tabCounter: " + logLevel);
     }
+
 
     public org.apache.log4j.Level getLogLevel(){
         log.error("Возвращено значение уровня логирования  " + logLevel);
         return Level.toLevel(this.logLevel);
     }
 
+    private boolean strSeemsLikeArray(String str){
+        if(str == null)
+            return false;
+
+        if(str.isEmpty())
+            return false;
+
+        if(!str.contains(", "))
+            return false;
+
+        return true;
+    }
     private void updateFile(){
         try (OutputStream file = new FileOutputStream(this.settingFile.getAbsoluteFile())){
             //ToDo разбить на несколько файлов, тогда появятся разделы
-            this.properties.store(file, null);
+            //properties.remove("idents");
+            //properties.remove("tabCounter");
+            this.properties.store(file, "General Settings");
+            //this.propertiesIdentAssociation.store(file, "Association of identification signs and tabs (for redirection)");
         } catch (IOException e) {
             //throw new RuntimeException(e);
             log.error("Ошибка обновления файла настроек " + e.getMessage());

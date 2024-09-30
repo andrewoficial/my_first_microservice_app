@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.example.services.AnswerStorage;
+import org.example.utilites.MyProperties;
 
 import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 
@@ -24,14 +25,16 @@ public class TabMarkersSettings extends JDialog {
     private JTextPane currList;
     private JTextPane textPane2;
     private JPanel mainPanel;
+    private MyProperties properties;
     private StringBuilder sb = new StringBuilder();
 
-    public TabMarkersSettings() {
+    public TabMarkersSettings(MyProperties prop) {
         setModal(false);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setContentPane(mainPanel);
         updateList();
         updateTabList();
+        properties = prop;
         BT_addPair.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -42,6 +45,7 @@ public class TabMarkersSettings extends JDialog {
 
                 updateList();
                 updateTabList();
+                prop.setIdentAndTabBounding(AnswerStorage.getDeviceTabPair());
             }
         });
     }

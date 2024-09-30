@@ -318,7 +318,7 @@ public class JmenuFile {
             @Override
             public void actionPerformed(ActionEvent arg0) {
                 System.out.println("Tab Marker Setting");
-                TabMarkersSettings tabMarkersSettings = new TabMarkersSettings();
+                TabMarkersSettings tabMarkersSettings = new TabMarkersSettings(prop);
                 tabMarkersSettings.setName("Tab Marker Setting");
                 tabMarkersSettings.setTitle("Tab Marker Setting");
                 tabMarkersSettings.pack();

@@ -1,28 +1,18 @@
 package org.example;
 
-
-
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.example.gui.MainWindow;
 import org.example.services.ComPort;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-
 import javax.swing.*;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 
 @SpringBootApplication
 public class Main {
     public static ComPort comPorts = new ComPort();
-    private static Logger log = null;
+
     public static void main(String[] args) {
 
 //        IgniteConfiguration cfg = new IgniteConfiguration();
@@ -52,7 +42,7 @@ public class Main {
         //System.exit(0);
 
         Thread.currentThread().setName("Elephant Monitor");
-        log = Logger.getLogger(Main.class);
+        Logger log = Logger.getLogger(Main.class);
         log.info("Запуск программы...");
         log.info(Thread.currentThread().getName());
 

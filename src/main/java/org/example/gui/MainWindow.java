@@ -13,7 +13,6 @@ import org.example.services.ComPort;
 import org.example.services.TabAnswerPart;
 import org.example.utilites.*;
 import org.example.services.PoolService;
-import org.w3c.dom.ls.LSOutput;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
@@ -34,7 +33,7 @@ import static org.example.Main.comPorts;
 public class MainWindow extends JFrame implements Rendeble {
     private JPanel contentPane;
     private static int currTabCount = 0;
-    private static Logger log = Logger.getLogger(MainWindow.class);
+    private final static Logger log = Logger.getLogger(MainWindow.class);
     private int countRender = 0;
 
     private final ExecutorService thPool = Executors.newCachedThreadPool();
@@ -43,13 +42,13 @@ public class MainWindow extends JFrame implements Rendeble {
     private final MyProperties prop = new MyProperties();
     private final ArrayList<String> textToSendValue = new ArrayList<>();
     private final ArrayList<String> prefToSendValue = new ArrayList<>();
-    private ArrayList<JTextPane> logDataTransferJtextPanel = new ArrayList<>();
-    private ArrayList<PoolService> poolServices = new ArrayList<>();
+    private final ArrayList<JTextPane> logDataTransferJtextPanel = new ArrayList<>();
+    private final ArrayList<PoolService> poolServices = new ArrayList<>();
 
     private MainLeftPanelStateCollection leftPanState = new MainLeftPanelStateCollection();
-    private ArrayList<ComPort> poolComConnections = new ArrayList<>();
+    private final ArrayList<ComPort> poolComConnections = new ArrayList<>();
 
-    private ArrayList<Integer> lastGotedValueFromStorage = new ArrayList<>();//Очередь кэша
+    private final ArrayList<Integer> lastGotedValueFromStorage = new ArrayList<>();//Очередь кэша
 
     private TabAnswerPart an = new TabAnswerPart(null, -1);
 
@@ -939,6 +938,10 @@ public class MainWindow extends JFrame implements Rendeble {
         prop.setTabCounter(currTabCount);
         prop.setLastCommands(textToSendValue);
         prop.setLastPrefixes(prefToSendValue);
+
+        prop.setIdentAndTabBounding(AnswerStorage.getDeviceTabPair());
+
+
     }
 
 
