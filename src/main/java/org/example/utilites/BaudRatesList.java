@@ -42,7 +42,7 @@ public enum BaudRatesList {
                 return Collections.unmodifiableList(VALUES);
         }
 
-        public static  Integer getLikeArray (int number){
+        public static  Integer getNameLikeArray(int number){
                 List<Integer> values = BaudRatesList.getValues();
                 return values.get(number);
         }

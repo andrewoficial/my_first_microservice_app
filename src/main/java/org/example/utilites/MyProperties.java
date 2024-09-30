@@ -5,6 +5,8 @@ import lombok.Getter;
 import org.apache.log4j.Category;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.example.gui.MainLeftPanelState;
+import org.example.gui.MainLeftPanelStateCollection;
 import org.example.services.ComPort;
 
 import java.io.*;
@@ -13,8 +15,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Enumeration;
-
-import static org.apache.naming.SelectorContext.prefix;
 
 /**
  * The class responsible for getting the settings from the file
@@ -41,21 +41,6 @@ public class MyProperties {
     private String logLevel;
 
     @Getter
-    private int lastComSpeed;
-
-    @Getter
-    private int lastDataBits;
-
-    @Getter
-    private int lastStopBits;
-
-    @Getter
-    private String lastParity;
-
-    @Getter
-    private String lastProtocol;
-
-    @Getter
     private int tabCounter;
 
     @Getter
@@ -64,20 +49,23 @@ public class MyProperties {
     @Getter
     private String [] prefixes = new String[2];
 
+    @Getter
+    MainLeftPanelStateCollection leftPanelStateCollection = new MainLeftPanelStateCollection();
+
     private final File settingFile;
 
     private java.util.Properties properties;
 
-    public MyProperties(){
+    public MyProperties() {
         //Thread.currentThread().setName("MyProperties");
         log = Logger.getLogger(MyProperties.class);
         log.info("Start load configAccess.properties");
         log.info(Thread.currentThread().getName());
-        try{
-            File f = new File("config"+"configAccess.properties");
-            if(f.exists() && !f.isDirectory()) {
+        try {
+            File f = new File("config" + "configAccess.properties");
+            if (f.exists() && !f.isDirectory()) {
                 // do something
-            }else {
+            } else {
                 new File("config").mkdirs();
             }
         } catch (Exception e) {
@@ -85,7 +73,7 @@ public class MyProperties {
         }
         File someFile = null;
         try {
-            someFile = new File("config/"+"configAccess.properties");
+            someFile = new File("config/" + "configAccess.properties");
             if (someFile.createNewFile()) {
                 //System.out.println("File created: " + myObj.getName());
                 log.warn("Создан новый файл с настройками" + someFile.getAbsolutePath());
@@ -122,7 +110,7 @@ public class MyProperties {
 
         // Получение значений из файла
         this.logLevel = props.getProperty("logLevel");
-        if(this.logLevel == null){
+        if (this.logLevel == null) {
             log.info("Уровень логирования сброшен на значение по умолчанию");
             this.logLevel = "WARN";
             this.updateFile();
@@ -130,86 +118,130 @@ public class MyProperties {
         Logger root = Logger.getRootLogger();
         Enumeration allLoggers = root.getLoggerRepository().getCurrentCategories();
         root.setLevel(Level.toLevel(this.logLevel));
-        while (allLoggers.hasMoreElements()){
+        while (allLoggers.hasMoreElements()) {
             Category tmpLogger = (Category) allLoggers.nextElement();
-            tmpLogger .setLevel(Level.toLevel(this.logLevel));
+            tmpLogger.setLevel(Level.toLevel(this.logLevel));
         }
 
-        try{
-            this.lastComSpeed = Integer.parseInt(props.getProperty("lastComSpeed"));
-            log.info("Last ComSpeed: " + lastComSpeed);
-        }catch (NumberFormatException exception){
-            this.lastComSpeed = 0;
-            log.info("configAccess.properties contain incorrect value of lastComSpeed");
-        }
 
-        try{
-            if(props.getProperty("commands") == null){
-                this.commands [0] = "";
-            }else{
+
+        try {
+            if (props.getProperty("commands") == null) {
+                this.commands[0] = "";
+            } else {
                 this.commands = props.getProperty("commands").split(", ");
             }
+        } catch (NumberFormatException exception) {
 
-            log.info("Last commands: " + lastComSpeed);
-        }catch (NumberFormatException exception){
-            this.lastComSpeed = 0;
-            log.info("configAccess.properties contain incorrect value of lastCommands");
         }
 
-        try{
-            if(props.getProperty("prefixes") == null){
-                this.prefixes [0] = "";
-            }else{
+        try {
+            if (props.getProperty("prefixes") == null) {
+                this.prefixes[0] = "";
+            } else {
                 this.prefixes = props.getProperty("prefixes").split(", ");
             }
-
             log.info("Last prefixes: " + prefixes);
-        }catch (NumberFormatException exception){
-            this.lastComSpeed = 0;
+        } catch (NumberFormatException exception) {
             log.info("configAccess.properties contain incorrect value of lastPrefixes");
         }
 
-        try{
-            this.lastDataBits = Integer.parseInt(props.getProperty("lastDataBits"));
-            log.info("Last DataBits: " + lastDataBits);
-        }catch (NumberFormatException exception){
-            this.lastDataBits = 0;
-            log.info("configAccess.properties contain incorrect value of lastDataBits");
-        }
 
-        try{
+
+        try {
             this.tabCounter = Integer.parseInt(props.getProperty("tabCounter"));
             log.info("Last TabCounter: " + tabCounter);
-        }catch (NumberFormatException exception){
+        } catch (NumberFormatException exception) {
             this.tabCounter = 1;
             log.info("configAccess.properties contain incorrect value of tabCounter");
         }
 
-        try{
-            this.lastStopBits = Integer.parseInt(props.getProperty("lastStopBits"));
-            log.info("Last StopBits: " + lastStopBits);
-        }catch (NumberFormatException exception){
-            this.lastStopBits = 0;
-            log.info("configAccess.properties contain incorrect value of lastStopBits");
+
+
+        String baudRateCodeArray[] = new String[1];
+        if (props.getProperty("baudRateCode") != null) {
+            baudRateCodeArray = props.getProperty("baudRateCode").split(", ");
         }
 
-        lastParity = props.getProperty("lastParity");
-        if(lastParity == null){
-            this.lastParity = "dunno";
-            log.info("configAccess.properties contain incorrect value of lastParity");
-        }else{
-            this.lastParity = props.getProperty("lastParity");
-            log.info("Last Parity: " + lastParity);
+        String stopBitsCodeArray[] = new String[1];
+        if (props.getProperty("stopBitsCode") != null) {
+            stopBitsCodeArray = props.getProperty("stopBitsCode").split(", ");
         }
 
-        lastProtocol = props.getProperty("lastProtocol");
-        if(lastProtocol == null){
-            this.lastProtocol = "dunno";
-            log.info("configAccess.properties contain incorrect value of lastProtocol");
-        }else{
-            this.lastProtocol = props.getProperty("lastProtocol");
-            log.info("Last Protocol: " + lastProtocol);
+        String protocolCodeArray[] = new String[1];
+        if (props.getProperty("protocolCode") != null) {
+            protocolCodeArray = props.getProperty("protocolCode").split(", ");
         }
+
+        String dataBitsCodeArray[] = new String[1];
+        if (props.getProperty("dataBitsCode") != null) {
+            dataBitsCodeArray = props.getProperty("dataBitsCode").split(", ");
+        }
+
+        String parityBitCodeArray[] = new String[1];
+        if (props.getProperty("parityBitCode") != null) {
+            parityBitCodeArray = props.getProperty("parityBitCode").split(", ");
+        }
+
+        int maxElementCoutn = Math.max(baudRateCodeArray.length, stopBitsCodeArray.length);
+        maxElementCoutn = Math.max(maxElementCoutn, protocolCodeArray.length);
+        maxElementCoutn = Math.max(maxElementCoutn, dataBitsCodeArray.length);
+        maxElementCoutn = Math.max(maxElementCoutn, parityBitCodeArray.length);
+        int needElementCount = Math.min(maxElementCoutn, tabCounter);
+        leftPanelStateCollection.getAllAsList().clear();
+        while (leftPanelStateCollection.getAllAsList().size() < needElementCount){
+            this.leftPanelStateCollection.addEntry();
+        }
+            for (int i = 0; i < needElementCount; i++) {
+                if (baudRateCodeArray.length > i && baudRateCodeArray[i] != null && baudRateCodeArray[i].length() > 0) {
+                    try {
+                        leftPanelStateCollection.setBaudRate(i, Integer.parseInt(baudRateCodeArray[i]));
+                    } catch (NumberFormatException exception) {
+                        log.warn("Один из параметров BaudRate не был конвертирован корректно");
+                    }
+                }
+            }
+
+            for (int i = 0; i < needElementCount; i++) {
+                if (stopBitsCodeArray.length > i && stopBitsCodeArray[i] != null && stopBitsCodeArray[i].length() > 0) {
+                    try {
+                        leftPanelStateCollection.setStopBits(i, Integer.parseInt(stopBitsCodeArray[i]));
+                    } catch (NumberFormatException exception) {
+                        log.warn("Один из параметров stopBitsCode не был конвертирован корректно");
+                    }
+                }
+            }
+
+            for (int i = 0; i < needElementCount; i++) {
+                if (protocolCodeArray.length > i && protocolCodeArray[i] != null && protocolCodeArray[i].length() > 0) {
+                    try {
+                        leftPanelStateCollection.setProtocol(i, Integer.parseInt(protocolCodeArray[i]));
+                    } catch (NumberFormatException exception) {
+                        log.warn("Один из параметров protocolCodeArray не был конвертирован корректно");
+                    }
+                }
+            }
+
+            for (int i = 0; i < needElementCount; i++) {
+                if (dataBitsCodeArray.length > i && dataBitsCodeArray[i] != null && dataBitsCodeArray[i].length() > 0) {
+                    try {
+                        leftPanelStateCollection.setDataBits(i, Integer.parseInt(dataBitsCodeArray[i]));
+                    } catch (NumberFormatException exception) {
+                        log.warn("Один из параметров dataBitsCodeArray не был конвертирован корректно");
+                    }
+                }
+            }
+
+            for (int i = 0; i < needElementCount; i++) {
+                if (parityBitCodeArray.length > i && parityBitCodeArray[i] != null && parityBitCodeArray[i].length() > 0) {
+                    try {
+                        leftPanelStateCollection.setParityBits(i, Integer.parseInt(parityBitCodeArray[i]));
+                    } catch (NumberFormatException exception) {
+                        log.warn("Один из параметров parityBitCodeArray не был конвертирован корректно");
+                    }
+                }
+            }
+
 
 
         if(ports != null){
@@ -256,6 +288,67 @@ public class MyProperties {
         log.info("Обновлено значение последних префиксов: " + sb.toString());
     }
 
+    public void setLastLeftPanel(MainLeftPanelStateCollection leftPanStateInp){
+        if(leftPanStateInp == null){
+            throw new IllegalArgumentException("Переданный объект состояния левой панели не может быть null");
+        }
+
+        if(leftPanStateInp.getAllAsList().isEmpty()){
+            throw new IllegalArgumentException("Переданный объект состояния левой панели должен содержать описание хотя бы одной вкладки");
+        }
+
+        this.leftPanelStateCollection = leftPanStateInp;
+        //Что бы было удобно читать файл с настройками
+        StringBuilder sbProtocol = new StringBuilder();
+        StringBuilder sbProtocolCode = new StringBuilder();
+        StringBuilder sbBaudRate = new StringBuilder();
+        StringBuilder sbBaudRateCode = new StringBuilder();
+        StringBuilder sbStopBits = new StringBuilder();
+        StringBuilder sbStopBitsCode = new StringBuilder();
+        StringBuilder sbDataBits = new StringBuilder();
+        StringBuilder sbDataBitsCode = new StringBuilder();
+        StringBuilder sbParityBit = new StringBuilder();
+        StringBuilder sbParityBitCode = new StringBuilder();
+        for (MainLeftPanelState mainLeftPanelState : leftPanStateInp.getAllAsList()) {
+            sbProtocolCode.append(mainLeftPanelState.getProtocol());
+            sbProtocolCode.append(", ");
+            sbProtocol.append(ProtocolsList.getLikeArray(mainLeftPanelState.getProtocol()));
+            sbProtocol.append(", ");
+
+            sbBaudRateCode.append(mainLeftPanelState.getBaudRate());
+            sbBaudRateCode.append(", ");
+            sbBaudRate.append(BaudRatesList.getNameLikeArray(mainLeftPanelState.getBaudRate()));
+            sbBaudRate.append(", ");
+
+            sbStopBitsCode.append(mainLeftPanelState.getStopBits());
+            sbStopBitsCode.append(", ");
+            sbStopBits.append(StopBitsList.getNameLikeArray(mainLeftPanelState.getStopBits()));
+            sbStopBits.append(", ");
+
+            sbDataBitsCode.append(mainLeftPanelState.getDataBits());
+            sbDataBitsCode.append(", ");
+            sbDataBits.append(DataBitsList.getNameLikeArray(mainLeftPanelState.getDataBits()));
+            sbDataBits.append(", ");
+
+            sbParityBitCode.append(mainLeftPanelState.getParityBit());
+            sbParityBitCode.append(", ");
+            sbParityBit.append(ParityList.getNameLikeArray(mainLeftPanelState.getParityBit()));
+            sbParityBit.append(", ");
+        }
+        properties.setProperty("protocol", sbProtocol.toString());
+        properties.setProperty("protocolCode", sbProtocolCode.toString());
+        properties.setProperty("baudRate", sbBaudRate.toString());
+        properties.setProperty("baudRateCode", sbBaudRateCode.toString());
+        properties.setProperty("stopBits", sbStopBits.toString());
+        properties.setProperty("stopBitsCode", sbStopBitsCode.toString());
+        properties.setProperty("dataBits", sbDataBits.toString());
+        properties.setProperty("dataBitsCode", sbDataBitsCode.toString());
+        properties.setProperty("parityBit", sbParityBit.toString());
+        properties.setProperty("parityBitCode", sbParityBitCode.toString());
+        this.updateFile();
+        log.info("Обновлено значение класса левой вклдаки... ");
+    }
+
     public void setLastPorts(ArrayList<ComPort> portsInp, int tabCounter){
         //getCurrentComName()
 
@@ -296,42 +389,6 @@ public class MyProperties {
         this.updateFile();
         log.info("Обновлено значение последних префиксов: " + sb.toString());
     }
-    public void setLastDataBits(int dataBits){
-        //System.out.println("Will save data bits" + dataBits);
-        this.lastDataBits = dataBits;
-        properties.setProperty("lastDataBits", String.valueOf(dataBits));
-        this.updateFile();
-        log.info("Обновлено значение последнего dataBits: " + String.valueOf(dataBits));
-    }
-
-    public void setLastStopBits(int lastStopBits){
-        this.lastStopBits = lastStopBits;
-        properties.setProperty("lastStopBits", String.valueOf(lastStopBits));
-        this.updateFile();
-        log.info("Обновлено значение последнего StopBits: " + String.valueOf(lastStopBits));
-    }
-    public void setLastComSpeed(int lastComSpeed){
-        this.lastComSpeed = lastComSpeed;
-        properties.setProperty("lastComSpeed", String.valueOf(lastComSpeed));
-        this.updateFile();
-        log.info("Обновлено значение последнего ComSpeed: " + String.valueOf(lastComSpeed));
-    }
-
-    public void setLastParity(String lastParity){
-        this.lastParity = lastParity;
-        properties.setProperty("lastParity", lastParity);
-        this.updateFile();
-        log.info("Обновлено значение последнего Parity: " + String.valueOf(lastParity));
-
-    }
-
-    public void setLastProtocol(String lastProtocol){
-        this.lastProtocol = lastProtocol;
-        properties.setProperty("lastProtocol", lastProtocol);
-        this.updateFile();
-        log.info("Обновлено значение последнего Protocol: " + String.valueOf(lastProtocol));
-
-    }
 
     public void setLogLevel(org.apache.log4j.Level level){
         this.logLevel = String.valueOf(level);
@@ -354,6 +411,7 @@ public class MyProperties {
 
     private void updateFile(){
         try (OutputStream file = new FileOutputStream(this.settingFile.getAbsoluteFile())){
+            //ToDo разбить на несколько файлов, тогда появятся разделы
             this.properties.store(file, null);
         } catch (IOException e) {
             //throw new RuntimeException(e);

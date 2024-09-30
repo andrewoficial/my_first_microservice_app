@@ -41,13 +41,14 @@ public enum ParityList {
     public String[] getTypes(){
         return ParityTypes;
     }
+
     public static List<Integer> getValues() {
         return Collections.unmodifiableList(VALUES);
     }
 
-    public static  BaudRatesList getLikeArray (int number){
-        BaudRatesList[] baudRatesLists = BaudRatesList.values();
-        return baudRatesLists[number];
+    public static  String getNameLikeArray(int number){
+        ParityList[] parityLists = ParityList.values();
+        return parityLists[number].name;
     }
 
 

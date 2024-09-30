@@ -8,7 +8,6 @@ import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import org.apache.log4j.Logger;
-import org.apache.tomcat.util.digester.ArrayStack;
 import org.example.services.AnswerStorage;
 import org.example.services.ComPort;
 import org.example.services.TabAnswerPart;
@@ -108,12 +107,11 @@ public class MainWindow extends JFrame implements Rendeble {
         setContentPane(contentPane);
         log.info("Инициализация панели и меню завершена");
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-
-
+        MainLeftPanelStateCollection restoredFromFile = prop.getLeftPanelStateCollection();
         BaudRatesList[] baudRate = BaudRatesList.values();
         for (int i = 0; i < baudRate.length; i++) {
             CB_BaudRate.addItem(baudRate[i].getValue() + "");
-            if (prop.getLastComSpeed() == baudRate[i].getValue()) {
+            if (restoredFromFile.getBaudRate(0) == baudRate[i].getValue()) {
                 CB_BaudRate.setSelectedIndex(i);
             }
         }
@@ -121,7 +119,7 @@ public class MainWindow extends JFrame implements Rendeble {
         DataBitsList[] dataBits = DataBitsList.values();
         for (int i = 0; i < dataBits.length; i++) {
             CB_DataBits.addItem(dataBits[i].getValue());
-            if (prop.getLastDataBits() == dataBits[i].getValue()) {
+            if (restoredFromFile.getDataBits(0) == dataBits[i].getValue()) {
                 CB_DataBits.setSelectedIndex(i);
             }
         }
@@ -129,7 +127,7 @@ public class MainWindow extends JFrame implements Rendeble {
         ParityList[] parityLists = ParityList.values();
         for (int i = 0; i < parityLists.length; i++) {
             CB_Parity.addItem(parityLists[i].getName());
-            if (prop.getLastParity().equalsIgnoreCase(parityLists[i].getName())) {
+            if (restoredFromFile.getParityBits(0) == i) {
                 CB_Parity.setSelectedIndex(i);
             }
         }
@@ -137,7 +135,7 @@ public class MainWindow extends JFrame implements Rendeble {
         StopBitsList[] stopBitsLists = StopBitsList.values();
         for (int i = 0; i < stopBitsLists.length; i++) {
             CB_StopBit.addItem(stopBitsLists[i].getValue());
-            if (prop.getLastStopBits() == stopBitsLists[i].getValue()) {
+            if (restoredFromFile.getStopBits(0) == i) {
                 CB_StopBit.setSelectedIndex(i);
             }
         }
@@ -166,7 +164,7 @@ public class MainWindow extends JFrame implements Rendeble {
         ProtocolsList[] protocolsLists = ProtocolsList.values();
         for (int i = 0; i < protocolsLists.length; i++) {
             CB_Protocol.addItem(protocolsLists[i].getValue());
-            if (prop.getLastProtocol().equalsIgnoreCase(protocolsLists[i].getValue())) {
+            if (restoredFromFile.getProtocol(0) == i) {
                 CB_Protocol.setSelectedIndex(i);
             }
         }
@@ -206,11 +204,11 @@ public class MainWindow extends JFrame implements Rendeble {
 
                 poolComConnections.get(tab).setPort(CB_ComPorts.getSelectedIndex());
                 if (poolComConnections.get(tab).activePort.isOpen()) {
-                    poolComConnections.get(tab).activePort.setComPortParameters(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()), 8, 1, SerialPort.NO_PARITY, false);
-                    poolComConnections.get(tab).activePort.setBaudRate(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()));
-                    poolComConnections.get(tab).activePort.setNumDataBits(DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
+                    poolComConnections.get(tab).activePort.setComPortParameters(BaudRatesList.getNameLikeArray(CB_BaudRate.getSelectedIndex()), 8, 1, SerialPort.NO_PARITY, false);
+                    poolComConnections.get(tab).activePort.setBaudRate(BaudRatesList.getNameLikeArray(CB_BaudRate.getSelectedIndex()));
+                    poolComConnections.get(tab).activePort.setNumDataBits(DataBitsList.getNameLikeArray(CB_DataBits.getSelectedIndex()));
                     poolComConnections.get(tab).activePort.setParity(ParityList.values()[CB_Parity.getSelectedIndex()].getValue()); //Работает за счет совпадения индексов с библиотечными
-                    poolComConnections.get(tab).activePort.setNumStopBits(StopBitsList.getLikeArray(CB_StopBit.getSelectedIndex()));
+                    poolComConnections.get(tab).activePort.setNumStopBits(StopBitsList.getNameLikeArray(CB_StopBit.getSelectedIndex()));
                     poolComConnections.get(tab).activePort.removeDataListener();
                     createPoolService(tab, false, false, 1200);
                     saveParameters();
@@ -311,15 +309,11 @@ public class MainWindow extends JFrame implements Rendeble {
             public void actionPerformed(ActionEvent e) {
                 log.info("Нажата кнопка добавить устройство");
 
-                textToSendValue.add("M^"); //Холодная инициализация
-                prefToSendValue.add("001");//Холодная инициализация
                 tab = tabbedPane1.getTabCount();
                 leftPanState.addEntry();
-                leftPanState.setParityBits(tab, CB_Parity.getSelectedIndex());
-                leftPanState.setDataBits(tab, CB_DataBits.getSelectedIndex());
-                leftPanState.setStopBits(tab, CB_StopBit.getSelectedIndex());
-                leftPanState.setBaudRate(tab, CB_BaudRate.getSelectedIndex());
-                leftPanState.setProtocol(tab, CB_Protocol.getSelectedIndex());
+                textToSendValue.add(textToSend.getText());
+                prefToSendValue.add(prefOneToSend.getText());
+                updateLeftPaneStateClassFromUI();
 
                 lastGotedValueFromStorage.add(tab, 0);//инициализация очереди
 
@@ -358,19 +352,19 @@ public class MainWindow extends JFrame implements Rendeble {
                     }
                 }
                 if (needRename) {
-//                    //ToDo при удалении вкладки из середины очереди пул ответов не подхватывается
-//                    for (int i = 0; i < tabbedPane1.getTabCount(); i++) {
-//                        tabbedPane1.setSelectedIndex(i);
-//                        tab = i;
-//                        try {
-//                            Thread.sleep(200);
-//                        } catch (InterruptedException ex) {
-//                            //throw new RuntimeException(ex);
-//                        }
-//                        System.out.println("Изменена нумерация вкладки с " + tabbedPane1.getTitleAt(i) + " на dev" + (i + 1));
-//                        addCustomMessage("Изменена нумерация вкладки с " + tabbedPane1.getTitleAt(i) + " на dev" + (i + 1));
-//                        tabbedPane1.setTitleAt(i, "dev" + (i + 1));
-//                    }
+
+                    for (int i = 0; i < tabbedPane1.getTabCount(); i++) {
+                        tabbedPane1.setSelectedIndex(i);
+                        tab = i;
+                        try {
+                            Thread.sleep(200);
+                        } catch (InterruptedException ex) {
+                            //throw new RuntimeException(ex);
+                        }
+                        System.out.println("Изменена нумерация вкладки с " + tabbedPane1.getTitleAt(i) + " на dev" + (i + 1));
+                        addCustomMessage("Изменена нумерация вкладки с " + tabbedPane1.getTitleAt(i) + " на dev" + (i + 1));
+                        tabbedPane1.setTitleAt(i, "dev" + (i + 1));
+                    }
                 }
                 tabbedPane1.addTab(sb.toString(), panelForAdd);
 
@@ -458,11 +452,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 if (textToSendValue.size() > tab || prefToSendValue.size() > tab) {
                     textToSendValue.set(tab, textToSend.getText());
                     prefToSendValue.set(tab, prefOneToSend.getText());
-                    leftPanState.setDataBits(tab, CB_DataBits.getSelectedIndex());
-                    leftPanState.setParityBits(tab, CB_Parity.getSelectedIndex());
-                    leftPanState.setStopBits(tab, CB_StopBit.getSelectedIndex());
-                    leftPanState.setBaudRate(tab, CB_BaudRate.getSelectedIndex());
-                    leftPanState.setProtocol(tab, CB_Protocol.getSelectedIndex());
+                    updateLeftPaneStateClassFromUI();
                     saveParameters();
                     if (poolServices.size() > tab) {
                         poolServices.get(tab).setTextToSendString(prefOneToSend.getText() + textToSend.getText(), tab);
@@ -478,11 +468,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 if (textToSendValue.size() > tab || prefToSendValue.size() > tab) {
                     textToSendValue.set(tab, textToSend.getText());
                     prefToSendValue.set(tab, prefOneToSend.getText());
-                    leftPanState.setParityBits(tab, CB_Parity.getSelectedIndex());
-                    leftPanState.setDataBits(tab, CB_DataBits.getSelectedIndex());
-                    leftPanState.setStopBits(tab, CB_StopBit.getSelectedIndex());
-                    leftPanState.setBaudRate(tab, CB_BaudRate.getSelectedIndex());
-                    leftPanState.setProtocol(tab, CB_Protocol.getSelectedIndex());
+
                     saveParameters();
                     if (poolServices.size() > tab) {
                         poolServices.get(tab).setTextToSendString(prefOneToSend.getText() + textToSend.getText(), tab);
@@ -518,21 +504,23 @@ public class MainWindow extends JFrame implements Rendeble {
                 //textToSend.setText(textToSendValue.get(tab));
                 CB_Pool.setSelected(isPooled());
                 CB_Log.setSelected(isLogged());
-                CB_DataBits.setSelectedIndex(leftPanState.getDataBits(tab));
-                CB_Parity.setSelectedIndex(leftPanState.getParityBits(tab));
-                CB_StopBit.setSelectedIndex(leftPanState.getStopBits(tab));
-                CB_BaudRate.setSelectedIndex(leftPanState.getBaudRate(tab));
-                CB_Protocol.setSelectedIndex(leftPanState.getProtocol(tab));
+                textToSend.setText(textToSendValue.get(tab));
+                prefOneToSend.setText(prefToSendValue.get(tab));
+                updateLeftPaneFromClass();
 
 
+                while (poolComConnections.size() < 1) {
+                    poolComConnections.add(comPorts);
+                }
+                while (poolComConnections.size() < tab) {
+                    poolComConnections.add(new ComPort());
+                }
 
-                if (poolComConnections.get(tab) == null || poolComConnections.get(tab).getComNumber() == 0) {
+                if (poolComConnections.get(tab) == null || poolComConnections.get(tab).activePort == null) {
                     System.out.println("Соединение по ком порту не найдено");
-                    if (prop.getPorts().length > tab) {
-                        System.out.println("Начинаю перебор");
+                    if (prop.getPorts() != null && prop.getPorts().length != 0 && prop.getPorts().length > tab) {
                         ArrayList<SerialPort> portsListForUpdateState = poolComConnections.get(0).getAllPorts();
                         for (int i = 0; i < portsListForUpdateState.size(); i++) {
-                            //System.out.println("  Сравниваю имена");
                             if (portsListForUpdateState.get(i).getSystemPortName().equals(prop.getPorts()[tab])) {
                                 CB_ComPorts.setSelectedIndex(i);
                             }
@@ -558,16 +546,12 @@ public class MainWindow extends JFrame implements Rendeble {
         textToSendValue.add(textToSend.getText());
         lastGotedValueFromStorage.add(tab, 0);
 
-        leftPanState.addEntry();
-        leftPanState.setParityBits(tab, CB_Parity.getSelectedIndex());
-        leftPanState.setDataBits(tab, CB_DataBits.getSelectedIndex());
-        leftPanState.setStopBits(tab, CB_StopBit.getSelectedIndex());
-        leftPanState.setBaudRate(tab, CB_BaudRate.getSelectedIndex());
-        leftPanState.setProtocol(tab, CB_Protocol.getSelectedIndex());
-        int tabCount = Math.max(1, prop.getTabCounter());
+
+        int tabCount = Math.max(0, prop.getTabCounter());
         for (int i = 0; i < tabCount; i++) {
             BT_AddDev.doClick(); //Добавление новой вкладки (клик)
         }
+
 
         if (prop.getCommands() != null && prop.getCommands().length > 0) {
             textToSendValue.clear();
@@ -587,6 +571,15 @@ public class MainWindow extends JFrame implements Rendeble {
                 }
             }
         }
+
+
+        leftPanState = prop.getLeftPanelStateCollection();
+
+        tab = 0;
+        textToSend.setText(textToSendValue.get(tab));
+        prefOneToSend.setText(prefToSendValue.get(tab));
+        updateLeftPaneFromClass();
+        this.renderData();
 
         uiThPool.submit(new RenderThread(this));
 
@@ -694,11 +687,7 @@ public class MainWindow extends JFrame implements Rendeble {
         prefToSendValue.set(tab, prefOneToSend.getText());
         textToSendValue.set(tab, textToSend.getText());
 
-        leftPanState.setParityBits(tab, CB_Parity.getSelectedIndex());
-        leftPanState.setDataBits(tab, CB_DataBits.getSelectedIndex());
-        leftPanState.setStopBits(tab, CB_StopBit.getSelectedIndex());
-        leftPanState.setBaudRate(tab, CB_BaudRate.getSelectedIndex());
-        leftPanState.setProtocol(tab, CB_Protocol.getSelectedIndex());
+
         saveParameters();
         boolean pool = CB_Pool.isSelected();
         int poolDelay = 1000;
@@ -710,6 +699,22 @@ public class MainWindow extends JFrame implements Rendeble {
 
         createPoolService(tab, pool, isBtn, poolDelay);
 
+    }
+
+    private void updateLeftPaneFromClass() {
+        CB_DataBits.setSelectedIndex(leftPanState.getDataBits(tab));
+        CB_Parity.setSelectedIndex(leftPanState.getParityBits(tab));
+        CB_StopBit.setSelectedIndex(leftPanState.getStopBits(tab));
+        CB_BaudRate.setSelectedIndex(leftPanState.getBaudRate(tab));
+        CB_Protocol.setSelectedIndex(leftPanState.getProtocol(tab));
+    }
+
+    private void updateLeftPaneStateClassFromUI() {
+        leftPanState.setParityBits(tab, CB_Parity.getSelectedIndex());
+        leftPanState.setDataBits(tab, CB_DataBits.getSelectedIndex());
+        leftPanState.setStopBits(tab, CB_StopBit.getSelectedIndex());
+        leftPanState.setBaudRate(tab, CB_BaudRate.getSelectedIndex());
+        leftPanState.setProtocol(tab, CB_Protocol.getSelectedIndex());
     }
 
     private void createPoolService(int tab, boolean pool, boolean isBtn, int poolDelay) {
@@ -895,9 +900,6 @@ public class MainWindow extends JFrame implements Rendeble {
     public void renderData() {
         tab = tabbedPane1.getSelectedIndex();
         Document doc = logDataTransferJtextPanel.get(tab).getDocument();
-        //System.out.println("Tab num:  " + logDataTransferJtextPanel.get(tab).getName());
-        //System.out.println("Jtext name:  " + logDataTransferJtextPanel.get(tab).getName());
-        //System.out.println();
 
         try {
             an = AnswerStorage.getAnswersQueForTab(lastGotedValueFromStorage.get(tab), tab, true);
@@ -912,8 +914,6 @@ public class MainWindow extends JFrame implements Rendeble {
         if (countRender > 40) {
             System.gc(); //Runtime.getRuntime().gc();
         }
-        //log.trace("Обновление данных для вкладки " + tab + " в потоке " + Thread.currentThread().getName());
-        //System.out.println("Обновление данных для вкладки " + tab + " в потоке " + Thread.currentThread().getName());
 
     }
 
@@ -927,30 +927,18 @@ public class MainWindow extends JFrame implements Rendeble {
         return currTabCount;
     }
 
-    /* --- Метод обновления настроек ---
-        Если вызван с параметром NULL, то
-        обновляет все.
-        Если массив строк, то обновляет
-        перечисленное в массиве (по названию
-        параметров)
-     */
+
     private void saveParameters() {
         log.info("Обновление файла настроек со вкладки" + tab);
-
         if (poolComConnections.get(tab).activePort != null) {
             prop.setLastPorts(poolComConnections, currTabCount);
         }
-        prop.setLastComSpeed(BaudRatesList.getLikeArray(CB_BaudRate.getSelectedIndex()));
-        prop.setLastDataBits(DataBitsList.getLikeArray(CB_DataBits.getSelectedIndex()));
-        prop.setLastParity(ParityList.values()[CB_Parity.getSelectedIndex()].getName());
-        prop.setLastStopBits(StopBitsList.getLikeArray(CB_StopBit.getSelectedIndex()));
-        prop.setLastProtocol(ProtocolsList.getLikeArray(CB_Protocol.getSelectedIndex()));
+        prop.setLastLeftPanel(leftPanState);
         Logger root = Logger.getRootLogger();
         prop.setLogLevel(root.getLevel());
         prop.setTabCounter(currTabCount);
         prop.setLastCommands(textToSendValue);
         prop.setLastPrefixes(prefToSendValue);
-
     }
 
 
