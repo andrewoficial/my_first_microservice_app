@@ -99,4 +99,8 @@ public class AnswerStorage {
         }
         return new ArrayList<>(tabAnswers.subList(size - range, size));
     }
+
+    public static void removeAnswersForTab(int tabNum){
+        answersByTab.remove(tabNum);
+    }
 }

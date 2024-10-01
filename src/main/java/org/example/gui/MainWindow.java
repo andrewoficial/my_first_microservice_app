@@ -13,7 +13,10 @@ import org.example.services.ComPort;
 import org.example.services.TabAnswerPart;
 import org.example.utilites.*;
 import org.example.services.PoolService;
+import org.jfree.data.json.JSONUtils;
+import org.w3c.dom.ls.LSOutput;
 
+import javax.lang.model.element.Name;
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -46,7 +49,7 @@ public class MainWindow extends JFrame implements Rendeble {
     private final ArrayList<PoolService> poolServices = new ArrayList<>();
 
     private MainLeftPanelStateCollection leftPanState = new MainLeftPanelStateCollection();
-    private final ArrayList<ComPort> poolComConnections = new ArrayList<>();
+
 
     private final ArrayList<Integer> lastGotedValueFromStorage = new ArrayList<>();//Очередь кэша
 
@@ -88,7 +91,8 @@ public class MainWindow extends JFrame implements Rendeble {
         log.info(Thread.currentThread().getName());
         contentPane.getName();
         log.info("Получено имя окна " + contentPane.getName());
-        poolComConnections.add(new ComPort());
+        //poolComConnections.add(new ComPort());
+        ComPort tmpComPorts = new ComPort();
         log.info("Объект ком-портов добавлен в пул");
         JmenuFile jmenu = new JmenuFile(prop);
         log.info("В менюю программы переданы восстановленные параметры");
@@ -140,8 +144,8 @@ public class MainWindow extends JFrame implements Rendeble {
         }
 
 
-        for (int i = 0; i < poolComConnections.get(0).getAllPorts().size(); i++) {
-            SerialPort currentPort = poolComConnections.get(0).getAllPorts().get(i);
+        for (int i = 0; i < tmpComPorts.getAllPorts().size(); i++) {
+            SerialPort currentPort = tmpComPorts.getAllPorts().get(i);
             CB_ComPorts.addItem(currentPort.getSystemPortName() + " (" + MyUtilities.removeComWord(currentPort.getPortDescription()) + ")");
             if (currentPort.getSystemPortName().equals(prop.getPorts()[0])) {
                 CB_ComPorts.setSelectedIndex(i);
@@ -149,13 +153,14 @@ public class MainWindow extends JFrame implements Rendeble {
         }
 
         //Восстановление выбранных ранее (до закрытия программы) портов
-        poolComConnections.clear();
+        //poolComConnections.clear();
         for (int i = 0; i < prop.getPorts().length; i++) { //Перебор по вкладкам из файла с настройками
-            ComPort availablePorts = new ComPort();
-            for (SerialPort somePort : availablePorts.getAllPorts()) { //Перебор по доступным портам
+            for (SerialPort somePort : tmpComPorts.getAllPorts()) { //Перебор по доступным портам
                 if (prop.getPorts()[i] != null)
-                    if (prop.getPorts()[i].equals(somePort.getSystemPortName()))
-                        poolComConnections.add(availablePorts);
+                    if (prop.getPorts()[i].equals(somePort.getSystemPortName())) {
+                        //что-то надо делать
+                    }
+                //poolComConnections.add(tmpComPorts);
             }
         }
 
@@ -200,22 +205,68 @@ public class MainWindow extends JFrame implements Rendeble {
             @Override
             public void actionPerformed(ActionEvent e) {
                 log.info("Нажата кнопка открытия ком-порта" + tab);
-
-                poolComConnections.get(tab).setPort(CB_ComPorts.getSelectedIndex());
-                if (poolComConnections.get(tab).activePort.isOpen()) {
-                    poolComConnections.get(tab).activePort.setComPortParameters(BaudRatesList.getNameLikeArray(CB_BaudRate.getSelectedIndex()), 8, 1, SerialPort.NO_PARITY, false);
-                    poolComConnections.get(tab).activePort.setBaudRate(BaudRatesList.getNameLikeArray(CB_BaudRate.getSelectedIndex()));
-                    poolComConnections.get(tab).activePort.setNumDataBits(DataBitsList.getNameLikeArray(CB_DataBits.getSelectedIndex()));
-                    poolComConnections.get(tab).activePort.setParity(ParityList.values()[CB_Parity.getSelectedIndex()].getValue()); //Работает за счет совпадения индексов с библиотечными
-                    poolComConnections.get(tab).activePort.setNumStopBits(StopBitsList.getNameLikeArray(CB_StopBit.getSelectedIndex()));
-                    poolComConnections.get(tab).activePort.removeDataListener();
+                boolean needCreatePoolServ = true;
+                SerialPort editedPort = null;
+                PoolService ps = null;
+                for (PoolService poolService : poolServices) {
+                    if (poolService.containTabDev(tab)) {
+                        needCreatePoolServ = false;
+                        editedPort = poolService.getComPort();
+                        ps = poolService;
+                        System.out.println("Для вкладки " + tab + " найден сервис опроса");
+                    }
+                }
+                if (needCreatePoolServ) {
                     createPoolService(tab, false, false, 1200);
-                    saveParameters();
-                    addCustomMessage("Порт открыт успешно!");
-                } else {
-                    addCustomMessage("Ошибка открытия порта!");
+                    for (PoolService poolService : poolServices) {
+                        if (poolService.containTabDev(tab)) {
+                            needCreatePoolServ = false;
+                            editedPort = poolService.getComPort();
+                            ps = poolService;
+                        }
+                    }
+                }
+                if (editedPort == null && ps != null) {
+                    //ps.setupComConnection(selectedCom.activePort);
                 }
 
+
+                if (editedPort != null) {
+                    if (editedPort.isOpen()) {
+                        editedPort.closePort();
+                        editedPort.setComPortParameters(BaudRatesList.getNameLikeArray(CB_BaudRate.getSelectedIndex()), 8, 1, SerialPort.NO_PARITY, false);
+                        editedPort.setBaudRate(BaudRatesList.getNameLikeArray(CB_BaudRate.getSelectedIndex()));
+                        editedPort.setNumDataBits(DataBitsList.getNameLikeArray(CB_DataBits.getSelectedIndex()));
+                        editedPort.setParity(ParityList.values()[CB_Parity.getSelectedIndex()].getValue()); //Работает за счет совпадения индексов с библиотечными
+                        editedPort.setNumStopBits(StopBitsList.getNameLikeArray(CB_StopBit.getSelectedIndex()));
+                        //poolComConnections.get(tab).activePort.removeDataListener();
+                        editedPort.removeDataListener();
+                        saveParameters();
+                        editedPort.openPort();
+                        addCustomMessage("Порт переоткрыт.");
+                    } else {
+                        editedPort.setComPortParameters(BaudRatesList.getNameLikeArray(CB_BaudRate.getSelectedIndex()), 8, 1, SerialPort.NO_PARITY, false);
+                        editedPort.setBaudRate(BaudRatesList.getNameLikeArray(CB_BaudRate.getSelectedIndex()));
+                        editedPort.setNumDataBits(DataBitsList.getNameLikeArray(CB_DataBits.getSelectedIndex()));
+                        editedPort.setParity(ParityList.values()[CB_Parity.getSelectedIndex()].getValue()); //Работает за счет совпадения индексов с библиотечными
+                        editedPort.setNumStopBits(StopBitsList.getNameLikeArray(CB_StopBit.getSelectedIndex()));
+                        //poolComConnections.get(tab).activePort.removeDataListener();
+                        editedPort.removeDataListener();
+                        saveParameters();
+                        editedPort.openPort();
+                        addCustomMessage("Порт сконфигурирован и открыт");
+                    }
+                    if (editedPort.isOpen()) {
+                        addCustomMessage("Порт " + editedPort.getSystemPortName() + " открыт успешно! ");
+                    } else {
+                        addCustomMessage("Ошибка открытия порта " + editedPort.getSystemPortName() + "! Код ошибки: " + editedPort.getLastErrorCode());
+                    }
+
+                } else {
+                    System.out.println("Для вкладки " + tab + " найден сервис опроса даже после принудительного создания сервиса опроса");
+                }
+
+                checkIsUsedPort();
             }
         });
 
@@ -223,17 +274,38 @@ public class MainWindow extends JFrame implements Rendeble {
             @Override
             public void actionPerformed(ActionEvent e) {
                 log.info("Нажата кнопка закрытия ком-порта" + tab);
+                PoolService ps = null;
+                for (PoolService poolService : poolServices) {
+                    if (poolService.containTabDev(tab)) {
+                        ps = poolService;
+                        System.out.println("Для вкладки " + tab + " найден сервис опроса");
+                    }
+                }
+/*
                 if (poolServices.size() > tab) {
                     poolServices.get(tab).setThreadForEvent(false);  //ToDo Блокировка кнопки закрытия, если есть др вкладки использующие ком порт
                 }
+*/
+                if (ps == null) {
+                    addCustomMessage("Попытка закрыть ком-порт у несуществующего потока опроса");
+                    return;
+                }
+                ps.getComPort().flushDataListener();
+                ps.getComPort().removeDataListener();
+                ps.getComPort().flushIOBuffers();
+                ps.getComPort().closePort();
 
-                poolComConnections.get(tab).activePort.flushDataListener();
-                poolComConnections.get(tab).activePort.removeDataListener();
-                poolComConnections.get(tab).activePort.flushIOBuffers();
-                poolComConnections.get(tab).activePort.closePort();
+
                 System.out.println("На вкладке " + tab + " попытка закрыть ком порт");
-                System.out.println("Порт " + poolComConnections.get(tab).activePort.getSystemPortName());
-                System.out.println("Статус открытия " + poolComConnections.get(tab).activePort.isOpen());
+                System.out.println("Порт " + ps.getComPort().getSystemPortName());
+
+                if (!ps.getComPort().isOpen()) {
+                    addCustomMessage("Порт " + poolServices.get(tab).getComPort().getSystemPortName() + " закрыт");
+                } else {
+                    addCustomMessage("Ошибка обращения к порту");
+                }
+
+                poolServices.remove(tab);
             }
         });
 
@@ -367,7 +439,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 }
                 tabbedPane1.addTab(sb.toString(), panelForAdd);
 
-                poolComConnections.add(new ComPort());
+                //poolComConnections.add(new ComPort());
 
                 currTabCount = tabbedPane1.getTabCount();
                 checkIsUsedPort();
@@ -400,41 +472,27 @@ public class MainWindow extends JFrame implements Rendeble {
                         log.info("Выбранная вкладка не найдена в потоке");
                     }
                 }
-                if (poolComConnections.size() > tab) {
-                    if (poolComConnections.get(tab).activePort != null) {
-                        System.out.print(poolComConnections.get(tab).activePort.getSystemPortName());
-                        poolComConnections.get(tab).activePort.closePort();
+                if (poolServices.size() > tab) {
+                    SerialPort currentConnection = poolServices.get(tab).getComPort();
+                    if (currentConnection != null) {
+                        System.out.print(currentConnection.getSystemPortName());
+                        currentConnection.closePort();
                         System.out.println("Will close");
-                        poolComConnections.remove(tab);
+                        poolServices.get(tab).setNeedPool(tab, false);
+                        poolServices.remove(tab);
+                        //poolComConnections.remove(tab);
                         System.out.println("Now com collection");
-                        for (ComPort poolComConnection : poolComConnections) {
-                            if (poolComConnection.activePort != null) {
-                                System.out.println(poolComConnection.activePort.getSystemPortName());
-                            } else {
-                                System.out.println("Closed");
-                            }
-                        }
+
                     } else {
                         System.out.println("Already closed");
-                        poolComConnections.remove(tab);
-                        for (ComPort poolComConnection : poolComConnections) {
-                            if (poolComConnection.activePort == null) {
-                                System.out.println("No open port on this tab");
-                            } else {
-                                System.out.println(poolComConnection.activePort.getSystemPortName());
-                            }
+                        poolServices.remove(tab);
+                        //poolComConnections.remove(tab);
 
-                        }
                     }
                 }
-                for (int i = tab; i < tabbedPane1.getTabCount() - 1; i++) {
-                    int from = i;
-                    int to = i + 1;
-                    //System.out.println("From " + from + " to " + to);
 
-                    //tabbedPane1.setTabComponentAt(to, tabbedPane1.getTabComponentAt(from));
-                }
                 tabbedPane1.removeTabAt(tab);
+                AnswerStorage.removeAnswersForTab(tab);
 
 
                 currTabCount = tabbedPane1.getTabCount();
@@ -507,37 +565,37 @@ public class MainWindow extends JFrame implements Rendeble {
                 prefOneToSend.setText(prefToSendValue.get(tab));
                 updateLeftPaneFromClass();
 
+                PoolService ps = null;
 
-                while (poolComConnections.size() < 1) {
-                    poolComConnections.add(comPorts);
+                for (PoolService poolService : poolServices) {
+                    if (poolService.containTabDev(tab)) {
+                        ps = poolService;
+                        break;
+                    }
                 }
-                while (poolComConnections.size() < tab) {
-                    poolComConnections.add(new ComPort());
-                }
-
-                if (poolComConnections.get(tab) == null || poolComConnections.get(tab).activePort == null) {
-                    System.out.println("Соединение по ком порту не найдено");
-                    if (prop.getPorts() != null && prop.getPorts().length != 0 && prop.getPorts().length > tab) {
-                        ArrayList<SerialPort> portsListForUpdateState = poolComConnections.get(0).getAllPorts();
+                if (ps == null) {
+                    System.out.println("Для выбранной вкладки нет сервиса опроса");
+                } else {
+                    SerialPort serial = ps.getComPort();
+                    if (serial == null) {
+                        System.out.println("Для выбранной вкладки сервис опроса не содержит активного соединения");
+                    } else {
+                        ArrayList<SerialPort> portsListForUpdateState = comPorts.getAllPorts();
                         for (int i = 0; i < portsListForUpdateState.size(); i++) {
-                            if (portsListForUpdateState.get(i).getSystemPortName().equals(prop.getPorts()[tab])) {
-                                CB_ComPorts.setSelectedIndex(i);
+                            if (prop.getPorts().length <= tab) {
+                                System.out.println("Ошибка...");
+                            } else {
+                                if (portsListForUpdateState.get(i).getSystemPortName().equals(prop.getPorts()[tab])) {
+                                    CB_ComPorts.setSelectedIndex(i);
+                                }
                             }
+
                         }
                     }
-                } else {
-                    CB_ComPorts.setSelectedIndex(poolComConnections.get(tab).getComNumber()); //работает но не при первом запуске
                 }
+                checkIsUsedPort();
 
-                /*
-                for (int i = 0; i < poolComConnections.get(0).getAllPorts().size(); i++) {
-                    CB_ComPorts.
-                        if (poolComConnections.get(tab).activePort.getSystemPortName().equals(prop.getPorts()[0])) {
-                            CB_ComPorts.setSelectedIndex(i);
-                        }
-                }
 
-                 */
             }
         });
 
@@ -762,6 +820,7 @@ public class MainWindow extends JFrame implements Rendeble {
                     } else {
                         log.info("Вкладка одинока. Поток будет завершен");
                         if (poolServices.size() > tab) {
+                            poolServices.get(tab).getComPort().closePort();
                             poolServices.remove(tab);
                         } else {
                             log.warn("Попытка завершения потока со владки по номеру большей, чем количество потоков");
@@ -788,10 +847,13 @@ public class MainWindow extends JFrame implements Rendeble {
             } else {
                 forEvent = !pool;
             }
+            ComPort avaComPorts = new ComPort();
+            avaComPorts.setPort(CB_ComPorts.getSelectedIndex());
             poolServices.add(new PoolService(
                     ProtocolsList.getLikeArrayEnum(CB_Protocol.getSelectedIndex()),
                     prefToSendValue.get(tab) + textToSendValue.get(tab),
-                    poolComConnections.get(tab).activePort,
+                    //poolComConnections.get(tab).activePort,
+                    avaComPorts.activePort,
                     poolDelay,
                     false,
                     forEvent,
@@ -820,17 +882,78 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
     private void checkIsUsedPort() {
-        //poolComConnections.get(tab).setPort(CB_ComPorts.getSelectedIndex());
-        for (PoolService poolService : poolServices) {
-            if (CB_ComPorts.getSelectedIndex() == poolService.getComPortForJCombo()) {
-                BT_Open.setEnabled(false);
-                CB_Protocol.setEnabled(false);
-                CB_Protocol.setSelectedIndex(poolService.getProtocolForJCombo());
-                return;
+        currTabCount = tabbedPane1.getTabCount();
+        closeUnusedPorts();
+
+        int targetComNum = CB_ComPorts.getSelectedIndex();
+        int mainTabForCom = 0;
+
+        //Проверка, что порт уже открыт (блокировка кнопки ОТКРЫТЬ)
+        boolean alreadyOpen = false;
+        for (int j = 0; j < poolServices.size(); j++) {
+            if (poolServices.get(j) != null &&
+                    poolServices.get(j).getComPort() != null &&
+                    poolServices.get(j).getComPort().isOpen() &&
+                    poolServices.get(j).getComPortForJCombo() == targetComNum) {
+                alreadyOpen = true;
             }
         }
-        BT_Open.setEnabled(true);
-        CB_Protocol.setEnabled(true);
+
+        if (alreadyOpen) {
+            BT_Open.setEnabled(false);
+            CB_Protocol.setEnabled(false);
+            //addCustomMessage("Соединение с выбранным портом уже установлено");
+        } else {
+            BT_Open.setEnabled(true);
+            CB_Protocol.setEnabled(true);
+        }
+
+
+        int rootTab = -1;
+        for (int i = 0; i < currTabCount; i++) {
+            for (int j = 0; j < poolServices.size(); j++) {
+                if (poolServices.get(j).getComPort() != null) {//Не виртуальный опрос
+                    if (poolServices.get(j).getComPortForJCombo() == targetComNum) {//Выбранный порт был выбран ранее
+                        if (poolServices.get(j).isRootTab(i)) {//Просматриваемая вкладка корневая для опроса
+                            //rootTab = i;
+                            //System.out.println("Нашел корневую");
+                            //rootTab = i;
+                        } else if (poolServices.get(j).containTabDev(i)) {//просматриваемая вкладка виртуальная, но содержится
+                            System.out.println("Нашел виртуальную");
+                            rootTab = i;
+                        }
+                    }
+                }
+            }
+        }
+        if (rootTab > -1) {
+            if (rootTab != tab) {
+                System.out.println("Корневая вкладка для ком-порта " + rootTab);
+                addCustomMessage("Управление выбранным ком-портом возможно на вкладке " + (rootTab + 1));
+                BT_Close.setEnabled(false);
+                BT_Open.setEnabled(false);
+                CB_Protocol.setEnabled(false);
+
+            } else {
+                System.out.println("Это и есть корневая вкладка для ком-порта " + rootTab);
+                BT_Close.setEnabled(true);
+                BT_Open.setEnabled(true);
+                CB_Protocol.setEnabled(true);
+            }
+        }
+
+
+    }
+
+    private void closeUnusedPorts() {
+        int coutTabs = getCurrTabCount();
+        for (int i = 0; i < poolServices.size(); i++) {
+            if (!(i < coutTabs)) {
+                poolServices.get(i).getComPort().closePort();
+                AnswerStorage.removeAnswersForTab(i);
+                poolServices.remove(i);
+            }
+        }
     }
 
     private PoolService findPoolServiceByOpenedPort() {
@@ -929,9 +1052,11 @@ public class MainWindow extends JFrame implements Rendeble {
 
     private void saveParameters() {
         log.info("Обновление файла настроек со вкладки" + tab);
-        if (poolComConnections.get(tab).activePort != null) {
+
+        /*if (poolComConnections.get(tab).activePort != null) {
             prop.setLastPorts(poolComConnections, currTabCount);
         }
+         */
         prop.setLastLeftPanel(leftPanState);
         Logger root = Logger.getRootLogger();
         prop.setLogLevel(root.getLevel());
