@@ -19,6 +19,7 @@ public enum ProtocolsList {
     DEMO_PROTOCOL("DEMO_PROTOCOL"),
     GPS_Test("GPS_Test"),
     ECT_TC290("ECT_TC290"),//East Changing Technologies
+    OWON_SPE3051("OWON_SPE3051"),
     EDWARDS_D397_00_000("EDWARDS_D397_00_000");
 
 

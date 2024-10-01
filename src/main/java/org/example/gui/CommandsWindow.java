@@ -43,7 +43,7 @@ public class CommandsWindow extends JDialog {
 
                             SomeDevice someDevice = createDeviceByProtocol(protocolsList);
                             CommandListClass commandListClass = someDevice.getCommandListClass();
-                            if (commandListClass == null) {
+                            if (someDevice.getCommandListClass() == null) {
                                 TP_Field.setText("Класс с командами не определен для протокола " + protocolsList.getValue());
                                 return;
                             }

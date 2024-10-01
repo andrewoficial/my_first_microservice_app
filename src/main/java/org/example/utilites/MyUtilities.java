@@ -76,6 +76,7 @@ public class MyUtilities {
             case IGM10LORA_P2P -> device = new IGM_10LORA_P2P(comPort);
             case DEMO_PROTOCOL -> device = new DEMO_PROTOCOL(comPort);
             case GPS_Test -> device = new GPS_Test(comPort);
+            case OWON_SPE3051 -> device = new OWON_SPE3051(comPort);
             default -> device = new DEMO_PROTOCOL(comPort);
         }
         return device;
@@ -92,6 +93,7 @@ public class MyUtilities {
             case ECT_TC290 -> device = new ECT_TC290();
             case IGM10LORA_P2P -> device = new IGM_10LORA_P2P();
             case DEMO_PROTOCOL -> device = new DEMO_PROTOCOL();
+            case OWON_SPE3051 -> device = new OWON_SPE3051();
             case GPS_Test -> device = new GPS_Test();
             default -> device = new DEMO_PROTOCOL();
         }
