@@ -8,6 +8,7 @@ import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.services.AnswerValues;
 import org.example.utilites.CommandListClass;
+import org.example.utilites.MyUtilities;
 import org.example.utilites.SingleCommand;
 
 import java.nio.charset.Charset;
@@ -173,6 +174,8 @@ public class OWON_SPE3051 implements SomeDevice {
     @Override
     public void parseData() {
         //System.out.println("OWON_SPE3051 run parse");
+        //ToDo сделать в остальных
+        lastAnswerBytes = MyUtilities.clearAsciiString(lastAnswerBytes);
         if(lastAnswerBytes.length > 0) {
 
             lastAnswer.setLength(0);

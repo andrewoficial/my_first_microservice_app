@@ -170,5 +170,21 @@ public class MyUtilities {
         return java.sql.Date.valueOf(dateToConvert);
     }
 
+    public static  byte[] clearAsciiString ( byte[] lastAnswerBytes){
+        int sizeFutureArray = 0;
+        for (int i = 0; i < lastAnswerBytes.length; i++) {
+            if(lastAnswerBytes[i] > 9 && lastAnswerBytes[i] < 126)
+                sizeFutureArray++;
+        }
+        byte[] forReturn = new byte[sizeFutureArray];
+        sizeFutureArray = 0;
+        for (byte lastAnswerByte : lastAnswerBytes) {
+            if(lastAnswerByte > 9 && lastAnswerByte < 126){
+                forReturn[sizeFutureArray] = lastAnswerByte;
+                sizeFutureArray++;
+            }
+        }
+        return forReturn;
+    }
 
 }
