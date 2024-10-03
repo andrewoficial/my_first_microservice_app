@@ -70,6 +70,7 @@ public class MyUtilities {
             case IGM10ASCII -> device = new IGM_10(comPort);
             case ARD_BAD_VOLTMETER -> device = new ARD_BAD_VLT(comPort);
             case ARD_FEE_BRD_METER -> device = new ARD_FEE_BRD_METER(comPort);
+            case ARD_TERM -> device = new ARD_TERM(comPort);
             case ERSTEVAK_MTP4D -> device = new ERSTEVAK_MTP4D(comPort);
             case EDWARDS_D397_00_000 -> device = new EDWARDS_D397_00_000(comPort);
             case ECT_TC290 -> device = new ECT_TC290(comPort);
@@ -88,6 +89,7 @@ public class MyUtilities {
             case IGM10ASCII -> device = new IGM_10();
             case ARD_BAD_VOLTMETER -> device = new ARD_BAD_VLT();
             case ARD_FEE_BRD_METER -> device = new ARD_FEE_BRD_METER();
+            case ARD_TERM -> device = new ARD_TERM();
             case ERSTEVAK_MTP4D -> device = new ERSTEVAK_MTP4D();
             case EDWARDS_D397_00_000 -> device = new EDWARDS_D397_00_000();
             case ECT_TC290 -> device = new ECT_TC290();
@@ -173,13 +175,13 @@ public class MyUtilities {
     public static  byte[] clearAsciiString ( byte[] lastAnswerBytes){
         int sizeFutureArray = 0;
         for (int i = 0; i < lastAnswerBytes.length; i++) {
-            if(lastAnswerBytes[i] > 9 && lastAnswerBytes[i] < 126)
+            if(lastAnswerBytes[i] > 7 && lastAnswerBytes[i] < 126)
                 sizeFutureArray++;
         }
         byte[] forReturn = new byte[sizeFutureArray];
         sizeFutureArray = 0;
         for (byte lastAnswerByte : lastAnswerBytes) {
-            if(lastAnswerByte > 9 && lastAnswerByte < 126){
+            if(lastAnswerByte > 7 && lastAnswerByte < 126){
                 forReturn[sizeFutureArray] = lastAnswerByte;
                 sizeFutureArray++;
             }
