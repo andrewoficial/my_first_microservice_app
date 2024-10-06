@@ -8,9 +8,36 @@
     <div class="header-container">
         <h1 class="project-title">WebUI Elephant Monitor</h1>
         <nav>
-            <a href="/health">Health Check</a>
-            <a href="/signalMap">Signal Map</a>
-            <button class="logout-button" onclick="location.href='/logout'">Выход</button>
+            <ul class="menu">
+                <li><a href="#">Система</a>
+                    <ul class="submenu">
+                        <li><a href="/resources">Ресурсы</a></li>
+                        <li><a href="/info">Информация</a></li>
+                    </ul>
+                </li>
+                <li><a href="#">Представления</a>
+                    <ul class="submenu">
+                        <li><a href="/terminal">Терминал</a></li>
+                        <li><a href="/graphs">Графики</a></li>
+                        <li><a href="/scheme">Схема</a></li>
+                    </ul>
+                </li>
+                <li><a href="#">Утилиты</a>
+                    <ul class="submenu">
+                        <li><a href="/connectionCheck">Проверка соединения</a></li>
+                        <li><a href="/signalMap">Карта сигнала</a></li>
+                    </ul>
+                </li>
+                <li><a href="#">Поддерживаемые устройства</a>
+                    <ul class="submenu">
+                        <li><a href="/igm10-ascii">IGM-10 (ASCII)</a></li>
+                        <li><a href="/igm10-modbus">IGM-10 (MODBUS)</a></li>
+                        <li><a href="/ard-term-ascii">ARD_TERM (ASCII)</a></li>
+                        <li><a href="/ect-tc290">ECT_TC290</a></li>
+                    </ul>
+                </li>
+                <li><button class="logout-button" onclick="location.href='/logout'">Выход</button></li>
+            </ul>
         </nav>
     </div>
 </header>

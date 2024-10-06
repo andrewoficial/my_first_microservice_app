@@ -8,6 +8,7 @@ import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import org.apache.log4j.Logger;
+import org.example.Main;
 import org.example.services.AnswerStorage;
 import org.example.services.ComPort;
 import org.example.services.TabAnswerPart;
@@ -717,7 +718,20 @@ public class MainWindow extends JFrame implements Rendeble {
 
     }
 
-    private void startSend(boolean isBtn) {
+    public static void webSend(int tabSend, String command) {
+        Main.mainWindow.setCurrentTab(tabSend);
+        Main.mainWindow.addCustomMessage("Команда из web-интерфейса не была отправлена. Метод не реализован. Текст команды." + command);
+        //Main.mainWindow.startSend(true); потом переделаю
+    }
+
+    public void setCurrentTab(int tabInp) {
+        if (tabbedPane1.getTabCount() > tabInp) {
+            this.tab = tabInp;
+            tabbedPane1.setSelectedIndex(tabInp);
+        }
+    }
+
+    public void startSend(boolean isBtn) {
         //isBtn - вызов по кнопке / pool - вызов про чекбоксу
         if (isBtn) {
             log.info("Инициализация отправки по нажатию кнопки ОТПРАВИТЬ");

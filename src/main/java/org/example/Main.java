@@ -13,6 +13,8 @@ import java.util.jar.Manifest;
 public class Main {
     public static ComPort comPorts = new ComPort();
 
+    public static MainWindow mainWindow;
+
     public static void main(String[] args) {
 
 //        IgniteConfiguration cfg = new IgniteConfiguration();
@@ -64,16 +66,16 @@ public class Main {
         }
 
         URL resource = Main.class.getClassLoader().getResource("GUI_Images/Pic.png");
-        MainWindow dialog = new MainWindow();
-        dialog.setName(ver);
-        dialog.setTitle(ver);
+        mainWindow = new MainWindow();
+        mainWindow.setName(ver);
+        mainWindow.setTitle(ver);
         if(resource != null){
             ImageIcon pic = new ImageIcon(resource);
-            dialog.setIconImage(pic.getImage());
+            mainWindow.setIconImage(pic.getImage());
             log.info("Установка картинки");
         }
-        dialog.pack();
-        dialog.setVisible(true);
+        mainWindow.pack();
+        mainWindow.setVisible(true);
     }
 
 

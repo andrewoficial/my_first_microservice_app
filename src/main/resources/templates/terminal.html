@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Terminal</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <div th:replace="fragments/header :: header"></div>
+
+    <style>
+        /* Стили для вкладок */
+        .tab-buttons {
+            display: flex;
+            justify-content: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .tab-button {
+            padding: 10px 20px;
+            background-color: #f1f1f1;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            margin-right: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .tab-button.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        /* Стили для контента вкладок */
+        .tab-content {
+            display: none; /* По умолчанию скрыт */
+            padding: 20px;
+            border: 1px solid #ccc;
+            background-color: #fff;
+        }
+
+        .tab-content.active {
+            display: block; /* Показать активный контент */
+        }
+
+        /* Стили для поля ввода и кнопки */
+        .input-area {
+            margin-top: 10px;
+        }
+
+        .input-area input[type="text"] {
+            width: 80%;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+
+        .input-area button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .input-area button:hover {
+            background-color: #45a049;
+        }
+    </style>
+
+    <script>
+        $(document).ready(function() {
+            // Инициализация - показываем первый блок по умолчанию
+            $('.tab-button').first().addClass('active');
+            $('.tab-content').first().addClass('active');
+
+            // Логика переключения вкладок
+            $('.tab-button').click(function() {
+                // Убираем активность с всех кнопок и контента
+                $('.tab-button').removeClass('active');
+                $('.tab-content').removeClass('active');
+
+                // Активируем выбранную вкладку и соответствующий контент
+                $(this).addClass('active');
+                var tabIndex = $(this).attr('data-tab');
+                $('#tab-' + tabIndex).addClass('active');
+            });
+
+            // AJAX запросы для активной вкладки
+            var lastGotedValueFromStorage = {};
+            for (let i = 0; i < [[${tabCount}]]; i++) {
+                lastGotedValueFromStorage[i] = 0;
+            }
+
+            setInterval(function() {
+                $('.tab-button.active').each(function() {
+                    var tabIndex = $(this).attr('data-tab');
+                    $.ajax({
+                        url: "/api/v1/apps/state/pool/" + tabIndex + "?lastPosition=" + lastGotedValueFromStorage[tabIndex],
+                        type: "GET",
+                        success: function(data) {
+                            if (data.answerPart) {
+                                const formattedAnswer = data.answerPart.replace(/\n/g, "<br>");
+                                $('#tab-' + tabIndex).append(formattedAnswer + '<br>'); // Добавляем <br> для новой строки
+                                lastGotedValueFromStorage[tabIndex] = data.newLastPosition;
+                            }
+                        },
+                        error: function() {
+                            console.log("Ошибка при получении данных для вкладки " + tabIndex);
+                        }
+                    });
+                });
+            }, 100);
+
+            // Обработка отправки команды
+            $('.send-button').click(function() {
+                var tabIndex = $(this).attr('data-tab');
+                var command = $('#input-' + tabIndex).val();
+
+                if (command.trim() !== "") {
+                    $.ajax({
+                        url: "/api/v1/apps/state/send/" + tabIndex + "/" + encodeURIComponent(command),
+                        type: "POST",
+                        success: function() {
+                            console.log("Команда отправлена на вкладку " + tabIndex + ": " + command);
+                        },
+                        error: function() {
+                            console.log("Ошибка при отправке команды для вкладки " + tabIndex);
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+</head>
+<body>
+<div>
+    <h1>Terminal</h1>
+
+    <!-- Вкладки в виде прямоугольников -->
+    <div class="tab-buttons">
+        <div th:each="i : ${#numbers.sequence(0, tabCount - 1)}"
+             th:text="'Tab ' + ${i}"
+             th:attr="data-tab=${i}"
+             class="tab-button">
+        </div>
+    </div>
+
+    <!-- Содержимое вкладок -->
+    <div th:each="i : ${#numbers.sequence(0, tabCount - 1)}"
+         th:id="'tab-' + ${i}"
+         class="tab-content">
+        <!-- Контент каждой вкладки будет обновляться через AJAX -->
+
+        <!-- Поле ввода команды и кнопка отправки -->
+        <div class="input-area">
+            <input type="text" th:id="'input-' + ${i}" placeholder="Введите команду для отправки">
+            <button type="button" th:attr="data-tab=${i}" class="send-button">Отправить</button>
+        </div>
+    </div>
+</div>
+
+<div th:replace="fragments/footer :: footer"></div>
+</body>
+</html>

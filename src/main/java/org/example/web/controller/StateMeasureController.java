@@ -9,11 +9,18 @@
 package org.example.web.controller;
 
 
+import org.example.Main;
+import org.example.gui.MainWindow;
+import org.example.services.AnswerStorage;
+import org.example.services.TabAnswerPart;
 import org.example.web.entity.MyUser;
 import org.example.web.service.StateMeasureService;
 import org.example.web.service.UserService;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Validated // в классе будет использоваться валидация по аннотациям
 @RestController
@@ -43,5 +50,23 @@ public class StateMeasureController {
         return user.getName()+" is saved";
     }
 
+    @GetMapping("/state/pool/{tabNumber}")
+    public Map<String, Object> getCurrentData(@PathVariable Integer tabNumber, @RequestParam Integer lastPosition) {
+        // Получаем данные начиная с позиции lastPosition
+        TabAnswerPart tabAnswerPart = AnswerStorage.getAnswersQueForTab(lastPosition, tabNumber, true);
 
+        Map<String, Object> response = new HashMap<>();
+        response.put("answerPart", tabAnswerPart.getAnswerPart());
+        response.put("newLastPosition", tabAnswerPart.getPosition()); // Передаем обновленную последнюю позицию
+
+        return response;
+    }
+
+    @PostMapping("/state/send/{tabNumber}/{command}")
+    public String sendCommand(@PathVariable Integer tabNumber, @PathVariable String command) {
+        System.out.println("Try send " + command);
+        // Выполняем отправку команды
+        MainWindow.webSend(tabNumber, command);
+        return "OK";
+    }
 }

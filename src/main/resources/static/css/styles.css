@@ -8,10 +8,11 @@ body {
 
 .header-container {
     background-color: #b3e5fc;
-    padding: 20px;
+    //padding: 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 0;
 }
 
 .header-container h1 {
@@ -33,6 +34,65 @@ body {
 
 .logout-button:hover {
     background-color: #01579b;
+}
+
+/* Main menu */
+.menu {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+}
+
+.menu > li {
+    position: relative;
+    margin-right: 20px;
+}
+
+.menu > li > a {
+    text-decoration: none;
+    color: #0277bd;
+    padding: 10px 20px;
+    display: block;
+    background-color: #b3e5fc;
+    border-radius: 4px;
+}
+
+.menu > li > a:hover {
+    background-color: #81d4fa;
+}
+
+.submenu {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    display: none;
+    background-color: #b3e5fc;
+    border-radius: 4px;
+}
+
+.submenu li {
+    margin: 0;
+}
+
+.submenu li a {
+    text-decoration: none;
+    color: #0277bd;
+    padding: 10px 20px;
+    display: block;
+    white-space: nowrap;
+}
+
+.submenu li a:hover {
+    background-color: #81d4fa;
+}
+
+/* Show submenu on hover */
+.menu > li:hover .submenu {
+    display: block;
 }
 
 .footer-container {
