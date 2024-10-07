@@ -720,8 +720,29 @@ public class MainWindow extends JFrame implements Rendeble {
 
     public static void webSend(int tabSend, String command) {
         Main.mainWindow.setCurrentTab(tabSend);
-        Main.mainWindow.addCustomMessage("Команда из web-интерфейса не была отправлена. Метод не реализован. Текст команды." + command);
-        //Main.mainWindow.startSend(true); потом переделаю
+        //Main.mainWindow.addCustomMessage("Команда из web-интерфейса не была отправлена. Метод не реализован. Текст команды." + command);
+        String prevCommand = Main.mainWindow.getTextToSendValue(tabSend);
+        Main.mainWindow.setTextToSendValue(tabSend, command);
+        Main.mainWindow.startSend(true);
+        Main.mainWindow.setTextToSendValue(tabSend, prevCommand);
+    }
+
+    public void setTextToSendValue(int tabInp, String text) {
+        if (tabbedPane1.getTabCount() > tabInp && tab == tabInp) {
+            if (text != null && text.length() > 2) {
+                textToSend.setText(text);
+                textToSendValue.set(tabInp, text);
+            }
+        }
+    }
+
+    public String getTextToSendValue(int tabInp) {
+        if (tabbedPane1.getTabCount() > tabInp && tab == tabInp) {
+            return textToSendValue.get(tabInp);
+        } else {
+            return null;
+        }
+
     }
 
     public void setCurrentTab(int tabInp) {
@@ -731,10 +752,12 @@ public class MainWindow extends JFrame implements Rendeble {
         }
     }
 
+
     public void startSend(boolean isBtn) {
         //isBtn - вызов по кнопке / pool - вызов про чекбоксу
         if (isBtn) {
             log.info("Инициализация отправки по нажатию кнопки ОТПРАВИТЬ");
+            System.out.println("Инициализация отправки по нажатию кнопки ОТПРАВИТЬ");
             //*SERVICE:SETPAIR:xxx:END
             if (textToSend.getText().contains("*SERVICE:SETPAIR:") && textToSend.getText().contains(":END")) {
                 String tmp = textToSend.getText();
@@ -755,6 +778,7 @@ public class MainWindow extends JFrame implements Rendeble {
             log.info("Инициализация отправки по по таймеру в цикле");
         }
         log.info("Статус опроса на владке " + tab + " " + CB_Pool.isSelected());
+        System.out.println("Статус опроса на владке " + tab + " " + CB_Pool.isSelected());
         prefToSendValue.set(tab, prefOneToSend.getText());
         textToSendValue.set(tab, textToSend.getText());
 
@@ -844,7 +868,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 }
             } else {
 
-                if (isBtn) {
+                if (!isBtn) {
                     log.info("Для текущей вкладки устройство не существует в потоке опроса (по чек-боксу)");
                     ps.addDeviceToService(tab, prefToSendValue.get(tab) + textToSendValue.get(tab), false, true);
                 } else {
