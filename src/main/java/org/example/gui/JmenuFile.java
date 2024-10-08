@@ -272,6 +272,7 @@ public class JmenuFile {
         JMenuItem grabber  = new JMenuItem("Перехват трафика");
         JMenuItem commandList  = new JMenuItem("Список команд");
         JMenuItem tabMarkersSetting  = new JMenuItem("Переадресация вкладок");
+        JMenuItem webSocket  = new JMenuItem("webSocket");
 
 
 
@@ -279,6 +280,7 @@ public class JmenuFile {
         utilitiesMenu.add(grabber);
         utilitiesMenu.add(commandList);
         utilitiesMenu.add(tabMarkersSetting);
+        utilitiesMenu.add(webSocket);
 
 
         grabber.addActionListener(new ActionListener()
@@ -295,6 +297,22 @@ public class JmenuFile {
                 System.out.println(grabberWindow.isShowing());
                 //chartWindow.isEnabled();
                 thPool.submit(new RenderThread(grabberWindow));
+            }
+        });
+        webSocket.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                System.out.println("webSocketWindow Window");
+                WebSocketWindow webSocketWindow = new WebSocketWindow();
+                webSocketWindow.setName("webSocketWindow Window");
+                webSocketWindow.setTitle("webSocketWindow Window");
+                webSocketWindow.pack();
+                webSocketWindow.setVisible(true);
+                webSocketWindow.renderData();
+                System.out.println(webSocketWindow.isShowing());
+                //chartWindow.isEnabled();
+                thPool.submit(new RenderThread(webSocketWindow));
             }
         });
         commandList.addActionListener(new ActionListener()

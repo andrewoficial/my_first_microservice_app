@@ -13,7 +13,7 @@
 
     <groupId>org.example</groupId>
     <artifactId>Elephant-Monitor</artifactId>
-    <version>1.7.3-Beta</version>
+    <version>1.7.5-Beta</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -136,7 +136,16 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-websocket</artifactId>
+            <version>6.0.13</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-messaging</artifactId>
+            <version>6.0.13</version>
+        </dependency>
         <!-- PostgreSQL -->
         <dependency>
             <groupId>org.postgresql</groupId>
