@@ -7,12 +7,13 @@ import org.example.utilites.MyProperties;
 import org.example.utilites.SpringLoader;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.Environment;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -33,9 +34,8 @@ public class ServerSettingsWindow extends JDialog {
     private JTextField textField3;
     private JTextField IN_Login;
     private JTextField IN_Url;
+    private JCheckBox offlineMode;
 
-    private final ConfigurableApplicationContext ctx;
-    private final SpringApplication app;
 
     private String springPort;
 
@@ -43,11 +43,11 @@ public class ServerSettingsWindow extends JDialog {
     private String dbUrl;
     private String username;
     private String password;
+    private boolean offlineModeFlag = false;
 
 
     public ServerSettingsWindow() {
-        this.app = SpringLoader.app;
-        this.ctx = SpringLoader.ctx;
+
         setModal(true);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setContentPane(serverParametersPanel);
@@ -86,20 +86,61 @@ public class ServerSettingsWindow extends JDialog {
                 dbUrl = IN_Url.getText();
 
                 checkParameters();
-
                 Map<String, Object> parameters = new HashMap<>();
+                if (offlineModeFlag) {
+                    System.out.println("Run in OFFLINE MODE");
+                    parameters.put("spring.datasource.url", "");
+                    parameters.put("spring.datasource.username", "");
+                    parameters.put("spring.datasource.password", "");
+                    parameters.put("spring.datasource.driver-class-name", ""); // Отключаем драйвер базы данных
+                    parameters.put("spring.jpa.hibernate.ddl-auto", "none");
+                    parameters.put("spring.jpa.generate-ddl", "false"); // Отключаем генерацию DDL
+                    parameters.put("spring.jpa.open-in-view", "false"); // Отключаем кеширование сессий
+                    parameters.put("spring.datasource.initialization-mode", "never");
+                    parameters.put("spring.jpa.show-sql", "false"); // Не показывать SQL-запросы в режиме офлайн
+                    parameters.put("spring.profiles.active", "offline");
+                    parameters.put("spring.datasource.hikari.enabled", "false");
+
+                    parameters.put("spring.sql.init.enabled", "false");
+                    parameters.put("spring.jpa.hibernate.ddl", "none");
+
+                } else {
+                    System.out.println("Run in online mode");
+                    parameters.put("spring.profiles.active", "production");
+                    parameters.put("spring.datasource.hikari.enabled", "true");
+
+                }
+                //parameters.put("logging.level.org.springframework", "DEBUG");
+
+                offlineMode.setSelected(offlineModeFlag);
                 parameters.put("server.port", springPort);
-                app.setDefaultProperties(parameters);
-                SpringLoader.ctx = app.run();
+                SpringLoader.app.setDefaultProperties(parameters);
+
+
+                SpringLoader.RunApp(); //Контекст присваевается тут
+
+                Environment env = SpringLoader.ctx.getEnvironment();
+                String[] activeProfiles = env.getActiveProfiles();
+
+                System.out.println("Active profiles: " + String.join(", ", activeProfiles));
 
             }
         });
+
 
         BT_StopServer.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.out.println("Pressed BT_StopServer");
                 SpringLoader.ctx.close();
+            }
+        });
+
+        offlineMode.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                offlineModeFlag = !offlineModeFlag;
+                offlineMode.setSelected(offlineModeFlag);
             }
         });
     }
@@ -188,7 +229,7 @@ public class ServerSettingsWindow extends JDialog {
      */
     private void $$$setupUI$$$() {
         serverParametersPanel = new JPanel();
-        serverParametersPanel.setLayout(new GridLayoutManager(11, 4, new Insets(0, 0, 0, 0), -1, -1));
+        serverParametersPanel.setLayout(new GridLayoutManager(12, 4, new Insets(0, 0, 0, 0), -1, -1));
         serverParametersPanel.setMaximumSize(new Dimension(600, 600));
         serverParametersPanel.setMinimumSize(new Dimension(450, 450));
         serverParametersPanel.setPreferredSize(new Dimension(500, 500));
@@ -202,7 +243,7 @@ public class ServerSettingsWindow extends JDialog {
         IN_DbDriver.setText("org.postgresql.Driver");
         panel1.add(IN_DbDriver, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         final Spacer spacer1 = new Spacer();
-        serverParametersPanel.add(spacer1, new GridConstraints(10, 1, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        serverParametersPanel.add(spacer1, new GridConstraints(11, 1, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         final JLabel label2 = new JLabel();
         label2.setText("url");
         serverParametersPanel.add(label2, new GridConstraints(1, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -223,10 +264,10 @@ public class ServerSettingsWindow extends JDialog {
         serverParametersPanel.add(IN_Pwd, new GridConstraints(3, 2, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         saveButton = new JButton();
         saveButton.setText("Save");
-        serverParametersPanel.add(saveButton, new GridConstraints(5, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        serverParametersPanel.add(saveButton, new GridConstraints(6, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JPanel panel2 = new JPanel();
         panel2.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
-        serverParametersPanel.add(panel2, new GridConstraints(6, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        serverParametersPanel.add(panel2, new GridConstraints(7, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         BT_StartServer = new JButton();
         BT_StartServer.setText("start");
         panel2.add(BT_StartServer, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -235,19 +276,19 @@ public class ServerSettingsWindow extends JDialog {
         panel2.add(BT_StopServer, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label5 = new JLabel();
         label5.setText("port");
-        serverParametersPanel.add(label5, new GridConstraints(4, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        serverParametersPanel.add(label5, new GridConstraints(5, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         IN_ServerPort = new JTextField();
         IN_ServerPort.setText("8080");
-        serverParametersPanel.add(IN_ServerPort, new GridConstraints(4, 2, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        serverParametersPanel.add(IN_ServerPort, new GridConstraints(5, 2, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         final JScrollPane scrollPane1 = new JScrollPane();
-        serverParametersPanel.add(scrollPane1, new GridConstraints(10, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        serverParametersPanel.add(scrollPane1, new GridConstraints(11, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         textArea1 = new JTextArea();
         textArea1.setEditable(false);
         textArea1.setText("");
         scrollPane1.setViewportView(textArea1);
         final JPanel panel3 = new JPanel();
         panel3.setLayout(new GridLayoutManager(1, 4, new Insets(0, 0, 0, 0), -1, -1));
-        serverParametersPanel.add(panel3, new GridConstraints(7, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        serverParametersPanel.add(panel3, new GridConstraints(8, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         final JLabel label6 = new JLabel();
         label6.setText("userName");
         panel3.add(label6, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -260,12 +301,20 @@ public class ServerSettingsWindow extends JDialog {
         panel3.add(textField2, new GridConstraints(0, 3, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         addUserButton = new JButton();
         addUserButton.setText("addUser");
-        serverParametersPanel.add(addUserButton, new GridConstraints(9, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        serverParametersPanel.add(addUserButton, new GridConstraints(10, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label8 = new JLabel();
         label8.setText("UserRole");
-        serverParametersPanel.add(label8, new GridConstraints(8, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        serverParametersPanel.add(label8, new GridConstraints(9, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         textField3 = new JTextField();
-        serverParametersPanel.add(textField3, new GridConstraints(8, 2, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        serverParametersPanel.add(textField3, new GridConstraints(9, 2, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        final JPanel panel4 = new JPanel();
+        panel4.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
+        serverParametersPanel.add(panel4, new GridConstraints(4, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        offlineMode = new JCheckBox();
+        offlineMode.setText("offlineMode");
+        panel4.add(offlineMode, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final Spacer spacer2 = new Spacer();
+        panel4.add(spacer2, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
     }
 
     /**

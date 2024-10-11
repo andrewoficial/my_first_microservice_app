@@ -1,31 +1,40 @@
 package org.example.web.config;
 
-import org.example.web.controller.MyUserDetailService;
-import org.hibernate.event.internal.DefaultSaveOrUpdateEventListener;
+
+import com.zaxxer.hikari.HikariDataSource;
+import org.example.web.service.myUserDetailService.MyUserDetailServiceOffline;
+import org.example.web.service.myUserDetailService.MyUserDetailServiceProduction;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractAuthenticationFilterConfigurer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+
+import javax.sql.DataSource;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-
+    @Profile("offline")
     @Bean
-    public UserDetailsService userDetailsService (){
-        return new MyUserDetailService();
+    public UserDetailsService userDetailsServiceOffline (){
+        System.out.println("Try find MyUserDetailService in userDetailsServiceOffline");
+        return new MyUserDetailServiceOffline();
+    }
+
+    @Profile("production")
+    @Bean
+    public UserDetailsService userDetailsServiceProduction (){
+        System.out.println("Try find MyUserDetailService in userDetailsServiceProduction");
+        return new MyUserDetailServiceProduction();
     }
 
     @Bean
@@ -41,10 +50,20 @@ public class SecurityConfig {
     }
 
 
+    @Profile("offline")
     @Bean
-    public AuthenticationProvider authenticationProvider(){
+    public AuthenticationProvider authenticationProviderOffline(){
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService());
+        provider.setUserDetailsService(userDetailsServiceOffline());
+        provider.setPasswordEncoder(passwordEncoder());
+        return provider;
+    }
+
+    @Profile("production")
+    @Bean
+    public AuthenticationProvider authenticationProviderProduction(){
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsServiceProduction());
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }
@@ -53,4 +72,7 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder(){
         return new BCryptPasswordEncoder();
     }
+
+
+
 }

@@ -13,7 +13,7 @@
 
     <groupId>org.example</groupId>
     <artifactId>Elephant-Monitor</artifactId>
-    <version>1.7.5-Beta</version>
+    <version>1.7.6-Beta</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -183,13 +183,12 @@
             <version>2.11.1</version>
         </dependency>
 
-
-        <!-- H2 Database (Test) -->
+        <!-- https://mvnrepository.com/artifact/com.h2database/h2 -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <version>2.2.224</version>
-            <scope>test</scope>
+            <version>2.3.232</version>
         </dependency>
+
     </dependencies>
 </project>

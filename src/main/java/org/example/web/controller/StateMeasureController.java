@@ -9,13 +9,11 @@
 package org.example.web.controller;
 
 
-import org.example.Main;
 import org.example.gui.MainWindow;
 import org.example.services.AnswerStorage;
 import org.example.services.TabAnswerPart;
 import org.example.web.entity.MyUser;
-import org.example.web.service.StateMeasureService;
-import org.example.web.service.UserService;
+import org.example.web.service.userServ.UserService;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,11 +24,10 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/apps") // обработка запросов, начинающихся с ./genre
 public class StateMeasureController {
-    private final StateMeasureService stateMeasureService;
+
     private final UserService userService;
 
-    public StateMeasureController(StateMeasureService StateMeasureService, UserService userService) {
-        this.stateMeasureService = StateMeasureService;
+    public StateMeasureController( UserService userService) {
         this.userService = userService;
     }
 
@@ -46,7 +43,7 @@ public class StateMeasureController {
 
     @PostMapping("/new-user")
     public String addUser(@RequestBody MyUser user){
-        userService.AddUser(user);
+        userService.addUser(user);
         return user.getName()+" is saved";
     }
 
