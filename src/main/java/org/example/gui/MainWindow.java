@@ -43,7 +43,7 @@ public class MainWindow extends JFrame implements Rendeble {
     private final ExecutorService thPool = Executors.newCachedThreadPool();
     private final ExecutorService uiThPool = Executors.newCachedThreadPool();
 
-    private final MyProperties prop = new MyProperties();
+    MyProperties prop = Main.prop;
     private final ArrayList<String> textToSendValue = new ArrayList<>();
     private final ArrayList<String> prefToSendValue = new ArrayList<>();
     private final ArrayList<JTextPane> logDataTransferJtextPanel = new ArrayList<>();
@@ -282,11 +282,7 @@ public class MainWindow extends JFrame implements Rendeble {
                         System.out.println("Для вкладки " + tab + " найден сервис опроса");
                     }
                 }
-/*
-                if (poolServices.size() > tab) {
-                    poolServices.get(tab).setThreadForEvent(false);  //ToDo Блокировка кнопки закрытия, если есть др вкладки использующие ком порт
-                }
-*/
+
                 if (ps == null) {
                     addCustomMessage("Попытка закрыть ком-порт у несуществующего потока опроса");
                     return;

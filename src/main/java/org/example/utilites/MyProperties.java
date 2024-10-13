@@ -2,6 +2,7 @@ package org.example.utilites;
 
 
 import lombok.Getter;
+import lombok.Setter;
 import org.apache.log4j.Category;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -10,7 +11,6 @@ import org.example.gui.MainLeftPanelStateCollection;
 import org.example.services.AnswerStorage;
 import org.example.services.ComPort;
 
-import javax.swing.text.Style;
 import java.io.*;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -28,12 +28,26 @@ import java.util.*;
 
 public class MyProperties {
     private static Logger log = null;
-    public static String driver = "org.postgresql.Driver";
-    public static String url = "jdbc:postgresql://ep-holy-limit-a5rglv4l.us-east-2.aws.neon.tech:5432/zhsiszsk";
-    public static String pwd = "LkZzliAx8MP9";
 
-    public static String usr = "zhsiszsk_owner";
-    public static String prt = "8080";
+    @Setter
+    @Getter
+    private String drv = "";
+
+    @Setter
+    @Getter
+    private String url = "";
+
+    @Setter
+    @Getter
+    private String pwd = "";
+
+    @Setter
+    @Getter
+    private String usr = "";
+
+    @Setter
+    @Getter
+    private String prt = "";
 
     private static String tabNumbersIdents = new String();
     private static String idents = new String();
@@ -138,6 +152,57 @@ public class MyProperties {
         }
 
 
+        try {
+            if (props.getProperty("usr") == null) {
+                this.usr = "";
+                System.out.println("USR IS NULL");
+            } else {
+                this.usr = props.getProperty("usr");
+                System.out.println("USR IS " + usr);
+            }
+        } catch (NumberFormatException exception) {
+            log.info("configAccess.properties contain incorrect value of usr");
+        }
+
+        try {
+            if (props.getProperty("pwd") == null) {
+                this.pwd = "";
+            } else {
+                this.pwd = props.getProperty("pwd");
+            }
+        } catch (NumberFormatException exception) {
+            log.info("configAccess.properties contain incorrect value of pwd");
+        }
+
+        try {
+            if (props.getProperty("prt") == null) {
+                this.prt = "";
+            } else {
+                this.prt = props.getProperty("prt");
+            }
+        } catch (NumberFormatException exception) {
+            log.info("configAccess.properties contain incorrect value of prt");
+        }
+
+        try {
+            if (props.getProperty("url") == null) {
+                this.url = "";
+            } else {
+                this.url = props.getProperty("url");
+            }
+        } catch (NumberFormatException exception) {
+            log.info("configAccess.properties contain incorrect value of url");
+        }
+
+        try {
+            if (props.getProperty("drv") == null) {
+                this.drv = "";
+            } else {
+                this.drv = props.getProperty("drv");
+            }
+        } catch (NumberFormatException exception) {
+            log.info("configAccess.properties contain incorrect value of drv");
+        }
 
         try {
             if (props.getProperty("commands") == null) {
@@ -302,6 +367,13 @@ public class MyProperties {
         }
     }
 
+    public void updateServerConf(){
+        properties.setProperty("usr", usr);
+        properties.setProperty("pwd", pwd);
+        properties.setProperty("prt", prt);
+        properties.setProperty("url", url);
+        properties.setProperty("drv", drv);
+    }
     public void setLastCommands(ArrayList <String> commands){
         int i = 0;
         StringBuilder sb = new StringBuilder();
@@ -478,9 +550,11 @@ public class MyProperties {
 
         return true;
     }
-    private void updateFile(){
+
+
+    public void updateFile(){
         try (OutputStream file = new FileOutputStream(this.settingFile.getAbsoluteFile())){
-            //ToDo разбить на несколько файлов, тогда появятся разделы
+            //разбить на несколько файлов, тогда появятся разделы
             //properties.remove("idents");
             //properties.remove("tabCounter");
             this.properties.store(file, "General Settings");

@@ -3,6 +3,7 @@ package org.example;
 import org.apache.log4j.Logger;
 import org.example.gui.MainWindow;
 import org.example.services.ComPort;
+import org.example.utilites.MyProperties;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import javax.swing.*;
 import java.io.IOException;
@@ -11,6 +12,7 @@ import java.util.jar.Manifest;
 
 @SpringBootApplication
 public class Main {
+    public static final MyProperties prop = new MyProperties();
     public static ComPort comPorts = new ComPort();
 
     public static MainWindow mainWindow;

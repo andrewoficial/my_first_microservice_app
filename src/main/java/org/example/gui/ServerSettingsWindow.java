@@ -3,11 +3,9 @@ package org.example.gui;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
+import org.example.Main;
 import org.example.utilites.MyProperties;
 import org.example.utilites.SpringLoader;
-import org.springframework.boot.SpringApplication;
-import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 
 import javax.swing.*;
@@ -19,6 +17,7 @@ import java.util.Map;
 
 
 public class ServerSettingsWindow extends JDialog {
+
     private String driver;
     private JPanel serverParametersPanel;
     private JTextField IN_DbDriver;
@@ -41,8 +40,9 @@ public class ServerSettingsWindow extends JDialog {
 
 
     private String dbUrl;
-    private String username;
-    private String password;
+    private String dbUsername;
+    private String dbPassword;
+    private String dbDriver;
     private boolean offlineModeFlag = false;
 
 
@@ -51,6 +51,12 @@ public class ServerSettingsWindow extends JDialog {
         setModal(true);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setContentPane(serverParametersPanel);
+        System.out.println("USR GET " + Main.prop.getUsr());
+        IN_Login.setText(Main.prop.getUsr());
+        IN_Pwd.setText(Main.prop.getPwd());
+        IN_ServerPort.setText(Main.prop.getPrt());
+        IN_Url.setText(Main.prop.getUrl());
+        IN_DbDriver.setText(Main.prop.getDrv());
 
         saveButton.addActionListener(
                 new ActionListener() {
@@ -59,12 +65,12 @@ public class ServerSettingsWindow extends JDialog {
                         System.out.println("Pressed BT_StartServer");
                         springPort = IN_ServerPort.getText();
                         driver = IN_DbDriver.getText();
-                        username = IN_Login.getText();
+                        dbUsername = IN_Login.getText();
                         StringBuilder pwdInput = new StringBuilder();
                         for (char c : IN_Pwd.getPassword()) {
                             pwdInput.append(c);
                         }
-                        password = pwdInput.toString();
+                        dbPassword = pwdInput.toString();
                         dbUrl = IN_Url.getText();
 
                         checkParameters();
@@ -77,12 +83,12 @@ public class ServerSettingsWindow extends JDialog {
                 System.out.println("Pressed BT_StartServer");
                 springPort = IN_ServerPort.getText();
                 driver = IN_DbDriver.getText();
-                username = IN_Login.getText();
+                dbUsername = IN_Login.getText();
                 StringBuilder pwdInput = new StringBuilder();
                 for (char c : IN_Pwd.getPassword()) {
                     pwdInput.append(c);
                 }
-                password = pwdInput.toString();
+                dbPassword = pwdInput.toString();
                 dbUrl = IN_Url.getText();
 
                 checkParameters();
@@ -152,6 +158,7 @@ public class ServerSettingsWindow extends JDialog {
             springPort = "8080";
         } else if (springPort.length() > 5 || springPort.length() < 2) {
             springPort = "8080";
+            Main.prop.setPrt(springPort);
         }
 
         if (driver == null) {
@@ -160,43 +167,41 @@ public class ServerSettingsWindow extends JDialog {
             driver = "org.postgresql.DriverLength";
         } else {
             driver = driver.trim();
+            Main.prop.setDrv(driver);
         }
 
         if (dbUrl == null) {
-            //dbUrl = "jdbc:postgresql://floppy.db.elephantsql.com:5432/zhsiszsk";
             dbUrl = "jdbc:postgresql://somesite.com:5432/someDataBaseNull";
         } else if (dbUrl.length() < 2 || dbUrl.length() > 500) {
             dbUrl = "jdbc:postgresql://somesite.com:5432/someDataBaseLength";
         } else {
             dbUrl = dbUrl.trim();
+            Main.prop.setUrl(dbUrl);
         }
 
-        if (password == null) {
-            password = "some_passwordNull";
-        } else if (password.length() < 2 || password.length() > 300) {
-            password = "some_passwordLength";
+        if (dbPassword == null) {
+            dbPassword = "some_passwordNull";
+        } else if (dbPassword.length() < 2 || dbPassword.length() > 300) {
+            dbPassword = "some_passwordLength";
         } else {
-            password = password.trim();
+            dbPassword = dbPassword.trim();
+            Main.prop.setPwd(dbPassword);
         }
 
-        if (username == null) {
-            username = "some_usernameNull";
-        } else if (username.length() < 2 || username.length() > 55) {
-            username = "some_usernameLength";
+        if (dbUsername == null) {
+            dbUsername = "some_usernameNull";
+        } else if (dbUsername.length() < 2 || dbUsername.length() > 55) {
+            dbUsername = "some_usernameLength";
         } else {
-            username = username.trim();
+            dbUsername = dbUsername.trim();
+            Main.prop.setUsr(dbUsername);
         }
-
-
-        MyProperties.driver = this.driver;
-        MyProperties.usr = this.username;
-        MyProperties.pwd = this.password;
-        MyProperties.url = this.dbUrl;
-        MyProperties.prt = this.springPort;
+        Main.prop.updateServerConf();
+        Main.prop.updateFile();
 
         System.out.println(this.driver);
-        System.out.println(this.username);
-        System.out.println(this.password);
+        System.out.println(this.dbUsername);
+        System.out.println(this.dbPassword);
         System.out.println(this.dbUrl);
         System.out.println(this.springPort);
     }
@@ -248,19 +253,19 @@ public class ServerSettingsWindow extends JDialog {
         label2.setText("url");
         serverParametersPanel.add(label2, new GridConstraints(1, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         IN_Url = new JTextField();
-        IN_Url.setText("jdbc:postgresql://floppy.db.elephantsql.com:5432/zhsiszsk");
+        IN_Url.setText("jdbc:postgresql://");
         serverParametersPanel.add(IN_Url, new GridConstraints(1, 2, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         final JLabel label3 = new JLabel();
         label3.setText("username");
         serverParametersPanel.add(label3, new GridConstraints(2, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         IN_Login = new JTextField();
-        IN_Login.setText("zhsiszsk");
+        IN_Login.setText("");
         serverParametersPanel.add(IN_Login, new GridConstraints(2, 2, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         final JLabel label4 = new JLabel();
         label4.setText("password");
         serverParametersPanel.add(label4, new GridConstraints(3, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         IN_Pwd = new JPasswordField();
-        IN_Pwd.setText("EcrvEk0pw2UaY6jdKY16R3RGiBrefui1");
+        IN_Pwd.setText("");
         serverParametersPanel.add(IN_Pwd, new GridConstraints(3, 2, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         saveButton = new JButton();
         saveButton.setText("Save");

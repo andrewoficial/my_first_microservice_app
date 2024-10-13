@@ -174,7 +174,6 @@ public class OWON_SPE3051 implements SomeDevice {
     @Override
     public void parseData() {
         //System.out.println("OWON_SPE3051 run parse");
-        //ToDo сделать в остальных
         lastAnswerBytes = MyUtilities.clearAsciiString(lastAnswerBytes);
         if(lastAnswerBytes.length > 0) {
 

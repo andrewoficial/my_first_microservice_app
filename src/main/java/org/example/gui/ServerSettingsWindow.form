@@ -60,7 +60,7 @@
           </grid>
         </constraints>
         <properties>
-          <text value="jdbc:postgresql://floppy.db.elephantsql.com:5432/zhsiszsk"/>
+          <text value="jdbc:postgresql://"/>
         </properties>
       </component>
       <component id="27a81" class="javax.swing.JLabel">
@@ -78,7 +78,7 @@
           </grid>
         </constraints>
         <properties>
-          <text value="zhsiszsk"/>
+          <text value=""/>
         </properties>
       </component>
       <component id="5dbf2" class="javax.swing.JLabel">
@@ -96,7 +96,7 @@
           </grid>
         </constraints>
         <properties>
-          <text value="EcrvEk0pw2UaY6jdKY16R3RGiBrefui1"/>
+          <text value=""/>
         </properties>
       </component>
       <component id="b46c5" class="javax.swing.JButton" binding="saveButton" default-binding="true">

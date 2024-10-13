@@ -189,4 +189,24 @@ public class MyUtilities {
         return forReturn;
     }
 
+    public static boolean isCorrectNumber(byte[] stringArray){
+        //-1.5566 or 13.7788 example. Check the POINT symbol, and another symbols
+        boolean isOk = false;
+        for (byte b : stringArray) {
+            if(b == '.'){
+                isOk = true;
+                break;
+            }
+        }
+
+        if(isOk){
+            for (byte b : stringArray) {
+                if(b == 0){
+                    System.out.println("Error in isCorrectNumber. Found 00");
+                    isOk = false;
+                }
+            }
+        }
+        return isOk;
+    }
 }

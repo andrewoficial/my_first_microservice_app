@@ -289,8 +289,9 @@ public class GPS_Test implements SomeDevice {
                     System.out.println("Run proceed " + inputString + " length " + inputString.length());
 
 
-                                /*ToDo
-                                    Идентефикаор канала
+                                /*
+                                    ToDo
+                                        Идентефикаор канала
                                  */
                     String ident = parsePayload(dataPart, answerValues);
                     ident = ident + "_RAK";
@@ -341,8 +342,9 @@ public class GPS_Test implements SomeDevice {
             System.out.println("Run proceed " + inputString + " length " + inputString.length());
 
 
-                                /*ToDo
-                                    Идентефикаор канала
+                                /*
+                                    ToDo
+                                        Идентефикаор канала
                                  */
             String ident = parsePayload(dataPart, answerValues);
             ident = ident + "_EBYTE";

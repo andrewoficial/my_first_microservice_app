@@ -13,6 +13,8 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 
+import static org.example.utilites.MyUtilities.isCorrectNumber;
+
 public class ECT_TC290 implements SomeDevice  {
     public CommandListClass commandListClass = new CommandListClass();
     private volatile boolean bisy = false;
@@ -249,9 +251,8 @@ public class ECT_TC290 implements SomeDevice  {
                     //System.out.println("Proceed CRDG direct");
                     String example = "29.1899";
                     if(response.length >= 7 ){
-                        //response[2] == '.' || (response[0] == '-' && response[3] == '.') || (response[0] == '-' && response[4] == '.')
-                        //toDo set filters
-                        if(true) {
+
+                        if(isCorrectNumber(response)) {
                             Double value;
                             StringBuilder sb = new StringBuilder();
                             for (byte b : response) {
