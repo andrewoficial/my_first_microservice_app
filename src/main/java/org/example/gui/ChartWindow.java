@@ -213,6 +213,7 @@ public class ChartWindow extends JFrame implements Rendeble {
         // Обновление списка чек-боксов
         for (Integer tab : tabs) {
             int fieldsCounter = getFieldsCountForTab(tab);
+            System.out.printf("Найдено полей для вкладки %d: %d\n", tab, fieldsCounter);
             tabsFieldCapacity.add(fieldsCounter);
             addCheckBoxesForTab(tab, fieldsCounter);
         }
@@ -226,8 +227,13 @@ public class ChartWindow extends JFrame implements Rendeble {
 
     public static int getFieldsCountForTab(Integer tab) {
 
-        if (Objects.equals(AnswerStorage.getAnswersForGraph(tab).get(0).getTabNumber(), tab))
-            return AnswerStorage.getAnswersForGraph(tab).get(0).getFieldCount();
+        if (Objects.equals(AnswerStorage.getAnswersForGraph(tab).get(0).getTabNumber(), tab)) {
+            int size = AnswerStorage.getAnswersForGraph(tab).size();
+            if (tab == 0) {
+                return AnswerStorage.getAnswersForGraph(tab).get(size - 1).getFieldCount() + 1;
+            }
+            return AnswerStorage.getAnswersForGraph(tab).get(size - 1).getFieldCount();
+        }
 
         return 1; // Возвращаем 1, если данные для вкладки не найдены
     }

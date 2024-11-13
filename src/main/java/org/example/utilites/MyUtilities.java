@@ -5,7 +5,6 @@ package org.example.utilites;
 
 import com.fazecast.jSerialComm.SerialPort;
 import org.example.device.*;
-import org.example.services.ComPort;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -119,6 +118,15 @@ public class MyUtilities {
 
         return crc;
     }
+
+    public static byte calculateCRCforF(byte[] responseArray) {
+        byte crcVar = responseArray[1];
+        if(responseArray.length < 70) return 0;
+        for (int i = 2; i < 70; i++) {
+            crcVar ^= responseArray[i];
+        }
+        return crcVar;
+    }
     public static String removeComWord(String arg){
         if(arg == null || arg.length() < 1){
             return " ";
@@ -202,8 +210,24 @@ public class MyUtilities {
         if(isOk){
             for (byte b : stringArray) {
                 if(b == 0){
-                    System.out.println("Error in isCorrectNumber. Found 00");
+                    System.out.println("Error in isCorrectNumber. Found 0x00");
                     isOk = false;
+                }
+            }
+        }
+        return isOk;
+    }
+
+    public static boolean isCorrectNumberF(byte[] stringArray){
+        //00512 or 998877 example. Check the wrong ascii symbols
+        boolean isOk = true;
+
+        if(isOk){
+            for (byte b : stringArray) {
+                if(b < 47 || b > 57){
+                    System.out.println("Error in isCorrectNumberF. b < 47 || b > 57");
+                    isOk = false;
+                    break;
                 }
             }
         }
