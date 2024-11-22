@@ -16,10 +16,12 @@ import com.nimbusds.jose.shaded.gson.JsonParser;
 import org.example.Main;
 import org.json.JSONObject;
 
+import static org.springframework.messaging.simp.stomp.StompHeaderAccessor.getContentLength;
+
 public class ProgramUpdater {
 
     private static final String API_URL = "https://api.github.com/repos/andrewoficial/my_first_microservice_app/releases/latest";
-    private static final URI UPDATE_FILE_PATH = URI.create(new File(".").getAbsolutePath());
+    private static final String UPDATE_FILE_PATH = new File("◘").getAbsolutePath().replaceAll("◘", "");
 
     public String getLatestVersion() {
         try {
@@ -171,11 +173,38 @@ public class ProgramUpdater {
 
         // Загрузка файла
         try (InputStream is = new URL(downloadUrl).openStream()) {
-            Files.copy(is, Paths.get(filePath), StandardCopyOption.REPLACE_EXISTING);
+            long totalBytes = getContentLength(downloadUrl);
+            long downloadedBytes = 0;
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            long lastReportTime = System.currentTimeMillis();
+            try (var fos = Files.newOutputStream(Paths.get(filePath))) {
+                while ((bytesRead = is.read(buffer)) != -1) {
+                    fos.write(buffer, 0, bytesRead);
+                    downloadedBytes += bytesRead;
+
+                    long currentTime = System.currentTimeMillis();
+                    if (currentTime - lastReportTime >= 300) { // Каждые 300 мс
+                        System.out.printf("Загружено: %.2f МБ / %.2f МБ%n",
+                                downloadedBytes / 1_048_576.0, totalBytes / 1_048_576.0);
+                        lastReportTime = currentTime;
+                    }
+                }
+            }
+
             System.out.println("Файл успешно загружен: " + filePath);
         } catch (IOException e) {
             System.out.println("Ошибка при загрузке файла: " + e.getMessage());
         }
+    }
+
+    private long getContentLength(String downloadUrl) throws IOException {
+        URL url = new URL(downloadUrl);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("HEAD");
+        long contentLength = connection.getContentLengthLong();
+        connection.disconnect();
+        return contentLength;
     }
 
 

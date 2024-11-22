@@ -15,7 +15,7 @@ import java.util.jar.Manifest;
 public class Main {
     public static final MyProperties prop = new MyProperties();
     public static ComPort comPorts = new ComPort();
-    public static String currentVersion = "1.7.8-Beta";
+    public static String currentVersion = "1.7.6-Beta";
     public static String programName = "Elephant-Monitor";
     public static String programTitle = programName + " v" + currentVersion;
     public static MainWindow mainWindow;
