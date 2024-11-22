@@ -13,7 +13,13 @@
 
     <groupId>org.example</groupId>
     <artifactId>Elephant-Monitor</artifactId>
-    <version>1.7.6-Beta</version>
+    <version>1.7.8-Beta</version>
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <url>https://maven.pkg.github.com/andrewoficial/my_first_microservice_app</url>
+        </repository>
+    </distributionManagement>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -22,8 +28,60 @@
         <ignite.version>2.13.0</ignite.version>
     </properties>
 
+    <scm>
+        <connection>scm:git:https://github.com/andrewoficial/my_first_microservice_app.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/andrewoficial/my_first_microservice_app.git</developerConnection>
+        <url>https://github.com/andrewoficial/my_first_microservice_app</url>
+    </scm>
+
+
     <build>
         <plugins>
+            <!-- Генерация файла метаданных -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>generate-metadata</id>
+                        <phase>package</phase>
+                        <configuration>
+                            <target>
+                                <echo file="${project.build.directory}/metaData.info">
+                                    Version: ${project.version}
+                                    Build-Time: ${maven.build.timestamp}
+                                    Artifact-Id: ${project.artifactId}
+                                    Group-Id: ${project.groupId}
+                                </echo>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Плагин для добавления временной метки -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>buildnumber-maven-plugin</artifactId>
+                <version>1.4</version>
+                <executions>
+                    <execution>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>create</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <timestampFormat>yyyy-MM-dd HH:mm:ss</timestampFormat>
+                </configuration>
+            </plugin>
+
+            <!-- JAR-плагин -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -40,10 +98,37 @@
                     </archive>
                 </configuration>
             </plugin>
+
+            <!-- Плагин для размещения на гитхабе -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>cmd.exe</executable>
+                            <arguments>
+                                <argument>/c</argument>
+                                <argument>${project.basedir}\release.bat</argument>
+                                <argument>${project.version}</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Spring Boot -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+
+            <!-- Maven Release Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -52,10 +137,35 @@
                     <target>17</target>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>3.0.0-M1</version>
+                <configuration>
+                     <tagNameFormat>v@{project.version}</tagNameFormat>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>3.0.0-M1</version>
+                <configuration>
+                    <repositoryId>github</repositoryId>
+                    <url>https://maven.pkg.github.com/andrewoficial/my_first_microservice_app</url>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
     <dependencies>
+        <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-deploy-plugin -->
+        <dependency>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-deploy-plugin</artifactId>
+            <version>3.0.0-M1</version>
+        </dependency>
+
         <!-- IntelliJ Forms Runtime -->
         <dependency>
             <groupId>com.intellij</groupId>
