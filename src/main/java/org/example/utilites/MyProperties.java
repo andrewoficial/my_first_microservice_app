@@ -15,6 +15,9 @@ import java.io.*;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 /**
@@ -67,9 +70,9 @@ public class MyProperties {
     private String [] prefixes = new String[2];
 
     @Getter
-    MainLeftPanelStateCollection leftPanelStateCollection = new MainLeftPanelStateCollection();
+    private MainLeftPanelStateCollection leftPanelStateCollection = new MainLeftPanelStateCollection();
 
-    private final File settingFile;
+    private File settingFile = null;
 
     private final java.util.Properties properties;
 
@@ -81,27 +84,25 @@ public class MyProperties {
         log.info("Start load configAccess.properties");
         log.info(Thread.currentThread().getName());
         try {
-            File f = new File("config" + "configAccess.properties");
-            if (f.exists() && !f.isDirectory()) {
-                // do something
+            Path configDir = Paths.get("config");
+            Files.createDirectories(configDir);
+            Path configFile = configDir.resolve("configAccess.properties");
+            if (Files.exists(configFile)) {
+                log.info("Файл с настройками найден" + configFile.toAbsolutePath());
             } else {
-                new File("config").mkdirs();
+                Files.createFile(configFile);
+                log.warn("Создан новый файл с настройками" + configFile.toAbsolutePath());
             }
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-        }
-        File someFile = null;
-        try {
-            someFile = new File("config/" + "configAccess.properties");
-            if (someFile.createNewFile()) {
-                log.warn("Создан новый файл с настройками" + someFile.getAbsolutePath());
-            } else {
-                log.info("Файл с настройками найден" + someFile.getAbsolutePath());
-            }
+            this.settingFile = configFile.toFile();
         } catch (IOException e) {
             log.warn("Ошибка при работе с файлом настроек " + e.getMessage());
         }
-        this.settingFile = someFile;
+        if(settingFile == null){
+            //нужно прекратить выполнение программы если файл не был создан
+            log.error("Ошибка при работе с файлом настроек ");
+            System.err.println("Ошибка при создании файла настроек. Программа будет остановлена.");
+            System.exit(1);
+        }
 
 
         java.util.Properties props = new java.util.Properties();

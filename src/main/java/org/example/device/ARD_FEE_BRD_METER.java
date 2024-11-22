@@ -736,6 +736,7 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
 
 
 
+
                                 return answerValues;
                             } else {
                                 System.out.println("Wrong answer length " + response.length);
