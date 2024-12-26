@@ -9,11 +9,14 @@ import org.example.device.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 
 public class MyUtilities {
 
+    public static final DateTimeFormatter CUSTOM_FORMATTER = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm:ss.SSS");
+    public static final DateTimeFormatter CUSTOM_FORMATTER_FILES = DateTimeFormatter.ofPattern("yyyy.MM.dd HH.mm.ss.SSS");
     public static final int[] CRC16_TABLE = {
             0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50A5, 0x60C6, 0x70E7,
             0x8108, 0x9129, 0xA14A, 0xB16B, 0xC18C, 0xD1AD, 0xE1CE, 0xF1EF,
@@ -73,6 +76,7 @@ public class MyUtilities {
             case ERSTEVAK_MTP4D -> device = new ERSTEVAK_MTP4D(comPort);
             case EDWARDS_D397_00_000 -> device = new EDWARDS_D397_00_000(comPort);
             case ECT_TC290 -> device = new ECT_TC290(comPort);
+            case DVK_4RD -> device = new DVK_4RD(comPort);
             case IGM10LORA_P2P -> device = new IGM_10LORA_P2P(comPort);
             case DEMO_PROTOCOL -> device = new DEMO_PROTOCOL(comPort);
             case GPS_Test -> device = new GPS_Test(comPort);
@@ -226,6 +230,31 @@ public class MyUtilities {
             for (byte b : stringArray) {
                 if(b < 47 || b > 57){
                     System.out.println("Error in isCorrectNumberF. b < 47 || b > 57");
+                    isOk = false;
+                    break;
+                }
+            }
+        }
+        return isOk;
+    }
+
+    // Преобразование байтов в HEX
+    public static String bytesToHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02X ", b));
+        }
+        return sb.toString().trim();
+    }
+
+    public static boolean isCorrectNumberFExceptMinus(byte[] stringArray){
+        //00512 or 998877 example. Check the wrong ascii symbols
+        boolean isOk = true;
+
+        if(isOk){
+            for (byte b : stringArray) {
+                if(!(b >= '0' && b <= '9') && b != '-'){
+                    System.out.println("Error in isCorrectNumberFExceptMinus. b < 47 || b > 57");
                     isOk = false;
                     break;
                 }

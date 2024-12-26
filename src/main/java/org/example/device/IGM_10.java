@@ -17,7 +17,7 @@ import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CoderResult;
 
 public class IGM_10 implements SomeDevice {
-    private volatile boolean bisy = false;
+    private volatile boolean busy = false;
     private static final Logger log = Logger.getLogger(IGM_10.class);
     private final SerialPort comPort;
     private byte [ ] lastAnswerBytes;
@@ -29,10 +29,8 @@ public class IGM_10 implements SomeDevice {
     @Setter
     private byte [] strEndian = {13};//CR
     private int received = 0;
-    private final long millisLimit = 500000;
-    private final long repeatGetAnswerTimeDelay = 1;
-    private final int buffClearTimeLimit = 10;
-    private final int repetCounterLimit = 700;
+    private final long millisLimit = 750;
+    private final long repeatWaitTime = 200;
     private final long millisPrev = System.currentTimeMillis();
     private final static Charset charset = Charset.forName("Cp1251");
     private static final CharsetDecoder decoder = charset.newDecoder();
@@ -98,9 +96,10 @@ public class IGM_10 implements SomeDevice {
     }
 
     @Override
-    public long getRepeatGetAnswerTimeDelay() {
-        return repeatGetAnswerTimeDelay;
+    public long getRepeatWaitTime() {
+        return repeatWaitTime;
     }
+
 
     @Override
     public void setLastAnswer(byte [] ans) {
@@ -118,10 +117,6 @@ public class IGM_10 implements SomeDevice {
         emulatedAnswer.append(sb);
     }
 
-    @Override
-    public int getBuffClearTimeLimit() {
-        return this.buffClearTimeLimit;
-    }
 
     @Override
     public void setHasAnswer(boolean hasAnswer) {
@@ -141,10 +136,6 @@ public class IGM_10 implements SomeDevice {
 
     }
 
-    @Override
-    public int getRepetCounterLimit() {
-        return repetCounterLimit;
-    }
 
     public void setReceived(String answer){
         this.received = answer.length();
@@ -199,13 +190,13 @@ public class IGM_10 implements SomeDevice {
     }
 
     @Override
-    public boolean isBisy(){
-        return bisy;
+    public boolean isBusy(){
+        return busy;
     }
 
     @Override
-    public void setBisy(boolean bisy){
-        this.bisy = bisy;
+    public void setBusy(boolean busy){
+        this.busy = busy;
     }
     public String getAnswer(){
         if(hasAnswer) {

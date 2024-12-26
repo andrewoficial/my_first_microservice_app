@@ -12,7 +12,6 @@ import org.example.utilites.MyUtilities;
 import org.example.utilites.SingleCommand;
 
 import java.nio.charset.Charset;
-import java.util.Arrays;
 
 public class ARD_TERM implements SomeDevice {
     private volatile boolean bisy = false;
@@ -27,10 +26,8 @@ public class ARD_TERM implements SomeDevice {
     @Setter
     private byte [] strEndian = {13};//CR
     private int received = 0;
-    private final long millisLimit = 500000;
-    private final long repeatGetAnswerTimeDelay = 3;
-    private final int buffClearTimeLimit = 4;
-    private final int repetCounterLimit = 170;
+    private final long millisLimit = 170;
+    private final long repeatWaitTime = 100;
     private final long millisPrev = System.currentTimeMillis();
     private final Charset charset = Charset.forName("Cp1251");
     private final CharsetDecoder decoder = charset.newDecoder();
@@ -62,13 +59,13 @@ public class ARD_TERM implements SomeDevice {
 
 
     @Override
-    public boolean isBisy(){
+    public boolean isBusy(){
         return bisy;
     }
 
     @Override
-    public void setBisy(boolean bisy){
-        this.bisy = bisy;
+    public void setBusy(boolean busy){
+        this.bisy = busy;
     }
 
     @Override
@@ -107,9 +104,10 @@ public class ARD_TERM implements SomeDevice {
     }
 
     @Override
-    public long getRepeatGetAnswerTimeDelay() {
-        return repeatGetAnswerTimeDelay;
+    public long getRepeatWaitTime() {
+        return repeatWaitTime;
     }
+
 
     @Override
     public void setLastAnswer(byte[] sb) {
@@ -126,10 +124,6 @@ public class ARD_TERM implements SomeDevice {
         this.emulatedAnswer = sb;
     }
 
-    @Override
-    public int getBuffClearTimeLimit() {
-        return buffClearTimeLimit;
-    }
 
     @Override
     public void setHasAnswer(boolean hasAnswer) {
@@ -153,11 +147,6 @@ public class ARD_TERM implements SomeDevice {
             throw new RuntimeException("Cant open COM-Port");
         }
         return false;
-    }
-
-    @Override
-    public int getRepetCounterLimit() {
-        return repetCounterLimit;
     }
 
 
@@ -316,7 +305,7 @@ public class ARD_TERM implements SomeDevice {
                                 //System.out.println("Wrong answer length " + response.length);
                             }
                             return answerValues;
-                        })
+                        }, 72)
         );
     }
 

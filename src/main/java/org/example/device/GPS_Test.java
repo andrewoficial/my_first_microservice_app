@@ -31,10 +31,8 @@ public class GPS_Test implements SomeDevice {
     @Setter
     private byte [] strEndian = {13, 10};//CR, LF
     private int received = 0;
-    private final long millisLimit = 3000;
-    private final long repeatGetAnswerTimeDelay = 1;
-    private final int buffClearTimeLimit = 1;
-    private final int repetCounterLimit = 100;
+    private final long millisLimit = 110;
+    private final long repeatWaitTime = 50;
     private final long millisPrev = System.currentTimeMillis();
     private final static Charset charset = Charset.forName("Cp1251");
     private static final CharsetDecoder decoder = charset.newDecoder();
@@ -97,9 +95,10 @@ public class GPS_Test implements SomeDevice {
     }
 
     @Override
-    public long getRepeatGetAnswerTimeDelay() {
-        return repeatGetAnswerTimeDelay;
+    public long getRepeatWaitTime() {
+        return repeatWaitTime;
     }
+
 
     @Override
     public void setLastAnswer(byte [] ans) {
@@ -118,11 +117,6 @@ public class GPS_Test implements SomeDevice {
     }
 
     @Override
-    public int getBuffClearTimeLimit() {
-        return this.buffClearTimeLimit;
-    }
-
-    @Override
     public void setHasAnswer(boolean hasAnswer) {
         this.hasAnswer = hasAnswer;
     }
@@ -137,11 +131,6 @@ public class GPS_Test implements SomeDevice {
             throw new RuntimeException("Cant open COM-Port");
         }
         return false;
-    }
-
-    @Override
-    public int getRepetCounterLimit() {
-        return repetCounterLimit;
     }
 
     public void setReceived(String answer){
@@ -202,11 +191,11 @@ public class GPS_Test implements SomeDevice {
     private void parseRak(String inputString){
         if(! inputString.contains("RAK:")){
             System.out.println("Send AT+PRECV=65535");
-            boolean flipFlopBusy  = this.isBisy();
+            boolean flipFlopBusy  = this.isBusy();
             needRemoveDataListener = false;
-            this.setBisy(false);
+            this.setBusy(false);
             this.sendData("AT+PRECV=65535", strEndian, this.comPort, true, 5, this);
-            this.setBisy(flipFlopBusy);
+            this.setBusy(flipFlopBusy);
             byte [] tmpLastAnswer = lastAnswerBytes;
             this.receiveData(this);
             needRemoveDataListener = true;
@@ -362,11 +351,11 @@ public class GPS_Test implements SomeDevice {
     }
     @Override
     public void sendData(String data, byte [] strEndian, SerialPort comPort, boolean knownCommand, int buffClearTimeLimit, SomeDevice device){
-        if(device.isBisy()){
+        if(device.isBusy()){
             log.warn("Попытка записи при активном соединении");
             return;
         }else {
-            device.setBisy(true);
+            device.setBusy(true);
         }
         setCmdToSend(data);
         comPort.flushDataListener();
@@ -398,7 +387,7 @@ public class GPS_Test implements SomeDevice {
         log.info("  Выполнено flushIOBuffers и теперь bytesAvailable " + comPort.bytesAvailable());
         comPort.writeBytes(buffer, buffer.length);
         log.info("  Завершена отправка данных");
-        device.setBisy(false);
+        device.setBusy(false);
     }
 
     private static String parsePayload(String dataPart, AnswerValues ans) {
@@ -521,13 +510,13 @@ public class GPS_Test implements SomeDevice {
     }
 
     @Override
-    public boolean isBisy(){
+    public boolean isBusy(){
         return bisy;
     }
 
     @Override
-    public void setBisy(boolean bisy){
-        this.bisy = bisy;
+    public void setBusy(boolean busy){
+        this.bisy = busy;
     }
     public String getAnswer(){
         if(hasAnswer) {

@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.function.Function;
 
 public class IGM_10LORA_P2P implements SomeDevice {
-    private volatile boolean bisy = false;
+    private volatile boolean busy = false;
     private static final Logger log = Logger.getLogger(IGM_10LORA_P2P.class);
     private final SerialPort comPort;
     private byte [ ] lastAnswerBytes;
@@ -27,14 +27,12 @@ public class IGM_10LORA_P2P implements SomeDevice {
     private final StringBuilder emulatedAnswer = new StringBuilder();
     private final boolean knownCommand = false;
     private volatile boolean hasAnswer = false;
-    private  volatile boolean hasValue = false;
+
     @Setter
     private byte [] strEndian = {13, 10};//CR, LF
     private int received = 0;
-    private final long millisLimit = 600;
-    private final long repeatGetAnswerTimeDelay = 1;
-    private final int buffClearTimeLimit = 1;
-    private final int repetCounterLimit = 5;
+    private final long millisLimit = 30;
+    private final long repeatWaitTime = 10;
     private final long millisPrev = System.currentTimeMillis();
     private final static Charset charset = Charset.forName("Cp1251");
     private static final CharsetDecoder decoder = charset.newDecoder();
@@ -97,9 +95,10 @@ public class IGM_10LORA_P2P implements SomeDevice {
     }
 
     @Override
-    public long getRepeatGetAnswerTimeDelay() {
-        return repeatGetAnswerTimeDelay;
+    public long getRepeatWaitTime() {
+        return repeatWaitTime;
     }
+
 
     @Override
     public void setLastAnswer(byte [] ans) {
@@ -117,10 +116,6 @@ public class IGM_10LORA_P2P implements SomeDevice {
         emulatedAnswer.append(sb);
     }
 
-    @Override
-    public int getBuffClearTimeLimit() {
-        return this.buffClearTimeLimit;
-    }
 
     @Override
     public void setHasAnswer(boolean hasAnswer) {
@@ -139,10 +134,6 @@ public class IGM_10LORA_P2P implements SomeDevice {
         return false;
     }
 
-    @Override
-    public int getRepetCounterLimit() {
-        return repetCounterLimit;
-    }
 
     public void setReceived(String answer){
         this.received = answer.length();
@@ -252,14 +243,14 @@ public class IGM_10LORA_P2P implements SomeDevice {
 
     private void setReceiveMode(){
         //System.out.println("Send AT+PRECV=65535");
-        boolean flipFlopBusy  = this.isBisy();
+        boolean flipFlopBusy  = this.isBusy();
         byte [] tmpLastAnswer = lastAnswerBytes;
 
         needRemoveDataListener = false;
-        this.setBisy(false);
+        this.setBusy(false);
         this.sendData("AT+PRECV=65535", strEndian, this.comPort, true, 5, this);
         this.receiveData(this);
-        this.setBisy(flipFlopBusy);
+        this.setBusy(flipFlopBusy);
         needRemoveDataListener = true;
 
         //StringBuilder sb = new StringBuilder();
@@ -273,7 +264,6 @@ public class IGM_10LORA_P2P implements SomeDevice {
     private void showReceived(){
         lastAnswer.setLength(0);
         hasAnswer = true;
-        hasValue = false;
         for (int i = 0; i < lastAnswerBytes.length; i++) {
             lastAnswer.append( (char) lastAnswerBytes[i]);
         }
@@ -355,12 +345,12 @@ public class IGM_10LORA_P2P implements SomeDevice {
 
     @Override
     public void sendData(String data, byte [] strEndian, SerialPort comPort, boolean knownCommand, int buffClearTimeLimit, SomeDevice device){
-        if(device.isBisy()){
+        if(device.isBusy()){
             log.warn("Попытка записи при активном соединении (sendData)");
             //device.setBisy(false);
             return;
         }else {
-            device.setBisy(true);
+            device.setBusy(true);
         }
         setCmdToSend(data);
         comPort.flushDataListener();
@@ -392,17 +382,17 @@ public class IGM_10LORA_P2P implements SomeDevice {
         log.info("  Выполнено flushIOBuffers и теперь bytesAvailable " + comPort.bytesAvailable());
         comPort.writeBytes(buffer, buffer.length);
         log.info("  Завершена отправка данных");
-        device.setBisy(false);
+        device.setBusy(false);
     }
 
     @Override
-    public boolean isBisy(){
-        return bisy;
+    public boolean isBusy(){
+        return busy;
     }
 
     @Override
-    public void setBisy(boolean bisy){
-        this.bisy = bisy;
+    public void setBusy(boolean busy){
+        this.busy = busy;
     }
     public String getAnswer(){
         if(hasAnswer) {

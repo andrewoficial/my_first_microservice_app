@@ -13,7 +13,7 @@ import org.example.utilites.SingleCommand;
 import java.nio.charset.Charset;
 
 public class ERSTEVAK_MTP4D implements SomeDevice {
-    private volatile boolean bisy = false;
+    private volatile boolean busy = false;
     private static final Logger log = Logger.getLogger(IGM_10.class);
     private final SerialPort comPort;
     private byte [ ] lastAnswerBytes = new byte[1];
@@ -25,10 +25,8 @@ public class ERSTEVAK_MTP4D implements SomeDevice {
     @Setter
     private byte [] strEndian = {13};//CR
     private int received = 0;
-    private final long millisLimit = 500000;
-    private final long repeatGetAnswerTimeDelay = 2;
-    private final int buffClearTimeLimit = 2;
-    private final int repetCounterLimit = 150;
+    private final long millisLimit = 155;
+    private final long repeatWaitTime = 100;
     private final long millisPrev = System.currentTimeMillis();
     private final Charset charset = Charset.forName("Cp1251");
     private final CharsetDecoder decoder = charset.newDecoder();
@@ -60,13 +58,13 @@ public class ERSTEVAK_MTP4D implements SomeDevice {
 
 
     @Override
-    public boolean isBisy(){
-        return bisy;
+    public boolean isBusy(){
+        return busy;
     }
 
     @Override
-    public void setBisy(boolean bisy){
-        this.bisy = bisy;
+    public void setBusy(boolean busy){
+        this.busy = busy;
     }
 
     @Override
@@ -105,8 +103,8 @@ public class ERSTEVAK_MTP4D implements SomeDevice {
     }
 
     @Override
-    public long getRepeatGetAnswerTimeDelay() {
-        return repeatGetAnswerTimeDelay;
+    public long getRepeatWaitTime() {
+        return repeatWaitTime;
     }
 
     @Override
@@ -122,11 +120,6 @@ public class ERSTEVAK_MTP4D implements SomeDevice {
     @Override
     public void setEmulatedAnswer(StringBuilder sb) {
         this.emulatedAnswer = sb;
-    }
-
-    @Override
-    public int getBuffClearTimeLimit() {
-        return buffClearTimeLimit;
     }
 
     @Override
@@ -150,11 +143,6 @@ public class ERSTEVAK_MTP4D implements SomeDevice {
             throw new RuntimeException("Cant open COM-Port");
         }
         return false;
-    }
-
-    @Override
-    public int getRepetCounterLimit() {
-        return repetCounterLimit;
     }
 
 

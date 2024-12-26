@@ -81,14 +81,13 @@ public class MyProperties {
     public MyProperties() {
         //Thread.currentThread().setName("MyProperties");
         log = Logger.getLogger(MyProperties.class);
-        log.info("Start load configAccess.properties");
-        log.info(Thread.currentThread().getName());
+        log.debug("Загружаю файл configAccess.properties");
         try {
             Path configDir = Paths.get("config");
             Files.createDirectories(configDir);
             Path configFile = configDir.resolve("configAccess.properties");
             if (Files.exists(configFile)) {
-                log.info("Файл с настройками найден" + configFile.toAbsolutePath());
+                log.debug("Файл с настройками найден" + configFile.toAbsolutePath());
             } else {
                 Files.createFile(configFile);
                 log.warn("Создан новый файл с настройками" + configFile.toAbsolutePath());
@@ -156,13 +155,14 @@ public class MyProperties {
         try {
             if (props.getProperty("usr") == null) {
                 this.usr = "";
-                System.out.println("USR IS NULL");
+                log.warn("USR IS NULL");
             } else {
                 this.usr = props.getProperty("usr");
-                System.out.println("USR IS " + usr);
+                log.debug("USR найден успешно");
+
             }
         } catch (NumberFormatException exception) {
-            log.info("configAccess.properties contain incorrect value of usr");
+            log.debug("configAccess.properties содержит недопустимое значение параметра usr");
         }
 
         try {
@@ -172,7 +172,7 @@ public class MyProperties {
                 this.pwd = props.getProperty("pwd");
             }
         } catch (NumberFormatException exception) {
-            log.info("configAccess.properties contain incorrect value of pwd");
+            log.info("configAccess.properties содержит недопустимое значение параметра pwd");
         }
 
         try {
@@ -182,7 +182,7 @@ public class MyProperties {
                 this.prt = props.getProperty("prt");
             }
         } catch (NumberFormatException exception) {
-            log.info("configAccess.properties contain incorrect value of prt");
+            log.info("configAccess.properties содержит недопустимое значение параметра prt");
         }
 
         try {
@@ -192,7 +192,7 @@ public class MyProperties {
                 this.url = props.getProperty("url");
             }
         } catch (NumberFormatException exception) {
-            log.info("configAccess.properties contain incorrect value of url");
+            log.info("configAccess.properties содержит недопустимое значение параметра url");
         }
 
         try {
@@ -202,7 +202,7 @@ public class MyProperties {
                 this.drv = props.getProperty("drv");
             }
         } catch (NumberFormatException exception) {
-            log.info("configAccess.properties contain incorrect value of drv");
+            log.info("configAccess.properties содержит недопустимое значение параметра drv");
         }
 
         try {
@@ -212,7 +212,7 @@ public class MyProperties {
                 this.commands = props.getProperty("commands").split(", ");
             }
         } catch (NumberFormatException exception) {
-            log.info("configAccess.properties contain incorrect value of commands");
+            log.info("configAccess.properties содержит недопустимое значение параметра commands");
         }
 
         try {
@@ -221,9 +221,9 @@ public class MyProperties {
             } else {
                 this.prefixes = props.getProperty("prefixes").split(", ");
             }
-            log.info("Last prefixes: " + Arrays.toString(prefixes));
+            log.debug("Last prefixes: " + Arrays.toString(prefixes));
         } catch (NumberFormatException exception) {
-            log.info("configAccess.properties contain incorrect value of lastPrefixes");
+            log.info("configAccess.properties содержит недопустимое значение параметра lastPrefixes");
         }
 
 
@@ -260,10 +260,10 @@ public class MyProperties {
 
         try {
             this.tabCounter = Integer.parseInt(props.getProperty("tabCounter"));
-            log.info("Last TabCounter: " + tabCounter);
+            log.debug("Last TabCounter: " + tabCounter);
         } catch (NumberFormatException exception) {
             this.tabCounter = 1;
-            log.info("configAccess.properties contain incorrect value of tabCounter");
+            log.info("configAccess.properties содержит недопустимое значение параметра tabCounter");
         }
 
 
@@ -355,7 +355,7 @@ public class MyProperties {
 
 
         if(ports != null){
-            log.info("Last ComPorts: " + Arrays.toString(ports));
+            log.debug("Last ComPorts: " + Arrays.toString(ports));
             if(props.getProperty("ports") == null){
                 this.ports [0] = "dunno";
             }else{
@@ -415,7 +415,7 @@ public class MyProperties {
         properties.setProperty("tabNumbersIdents", sbTabs.toString());
         properties.setProperty("idents", sbIdents.toString());
         this.updateFile();
-        log.info("Обновлено значение ассоциаций идентификаторов и вкладок... ");
+        log.debug("Обновлено значение ассоциаций идентификаторов и вкладок... ");
     }
     public void setLastLeftPanel(MainLeftPanelStateCollection leftPanStateInp){
         if(leftPanStateInp == null){
@@ -475,13 +475,12 @@ public class MyProperties {
         properties.setProperty("parityBit", sbParityBit.toString());
         properties.setProperty("parityBitCode", sbParityBitCode.toString());
         this.updateFile();
-        log.info("Обновлено значение класса левой вклдаки... ");
+        log.debug("Обновлено значение класса левой вклдаки... ");
     }
 
     public void setLastPorts(ArrayList<ComPort> portsInp, int tabCounter){
         //getCurrentComName()
 
-        System.out.println("Сохр порты");
         StringBuilder sb = new StringBuilder();
         String[] portsBack = new String[ports.length];
         System.arraycopy(this.ports, 0, portsBack, 0, ports.length);
@@ -516,21 +515,21 @@ public class MyProperties {
 
         properties.setProperty("ports", sb.toString());
         this.updateFile();
-        log.info("Обновлено значение последних префиксов: " + sb);
+        log.debug("Обновлено значение последних префиксов: " + sb);
     }
 
     public void setLogLevel(org.apache.log4j.Level level){
         this.logLevel = String.valueOf(level);
         properties.setProperty("logLevel", String.valueOf(level));
         this.updateFile();
-        log.info("Обновлено значение последнего logLevel: " + logLevel);
+        log.debug("Обновлено значение последнего logLevel: " + logLevel);
     }
 
     public void setTabCounter(int counter){
         this.tabCounter = counter;
         properties.setProperty("tabCounter", String.valueOf(counter));
         this.updateFile();
-        log.info("Обновлено значение последнего tabCounter: " + logLevel);
+        log.debug("Обновлено значение последнего tabCounter: " + logLevel);
     }
 
 

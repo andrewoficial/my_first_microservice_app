@@ -4,6 +4,8 @@
  */
 package org.example.services;
 
+import org.example.utilites.MyUtilities;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -65,10 +67,7 @@ public class PoolLogger {
     }
 
     public static void writeLine(DeviceAnswer answer){
-
-        DateTimeFormatter CUSTOM_FORMATTER = DateTimeFormatter.ofPattern("yyyy.MM.dd HH-mm-ss");
-
-        StringBuilder line = new StringBuilder(answer.getAnswerReceivedTime().format(CUSTOM_FORMATTER));
+        StringBuilder line = new StringBuilder(answer.getAnswerReceivedTime().format(MyUtilities.CUSTOM_FORMATTER));
         line.append("\t");
         line.append(answer.getDeviceType().getClass().toString().replace("class org.example.device.", ""));
         line.append("\t");

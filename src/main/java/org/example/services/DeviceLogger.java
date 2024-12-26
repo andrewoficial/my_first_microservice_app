@@ -1,5 +1,7 @@
 package org.example.services;
 
+import org.example.utilites.MyUtilities;
+
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -10,7 +12,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 
 public class DeviceLogger {
-    private String fileName = (new SimpleDateFormat("yyyy.MM.dd HH-mm-ss").format(Calendar.getInstance().getTime()));
+    private String fileName = (java.time.LocalDateTime.now().format(MyUtilities.CUSTOM_FORMATTER_FILES));
     private File logFile;
     private Long dateTimeLastWrite = System.currentTimeMillis();
     private final ArrayList<String> stringsBuffer = new ArrayList<>();
@@ -47,12 +49,12 @@ public class DeviceLogger {
 
     public void writeLine (DeviceAnswer answer){
         StringBuilder line = new StringBuilder();
-        DateTimeFormatter CUSTOM_FORMATTER = DateTimeFormatter.ofPattern("yyyy.MM.dd HH-mm-ss");
-        line.append(answer.getRequestSendTime().format(CUSTOM_FORMATTER));
+
+        line.append(answer.getRequestSendTime().format(MyUtilities.CUSTOM_FORMATTER));
         line.append("\t");
         line.append(answer.getRequestSendString());
         line.append("\n");
-        line.append(answer.getAnswerReceivedTime().format(CUSTOM_FORMATTER));
+        line.append(answer.getAnswerReceivedTime().format(MyUtilities.CUSTOM_FORMATTER));
         line.append("\t");
         line.append(answer.getAnswerReceivedString());
         line.append("\n");
@@ -61,6 +63,7 @@ public class DeviceLogger {
             stringsBuffer.add(line.toString());
             //System.out.println("Log buffered");
         }else {
+            //ToDo Do in another thread
             dateTimeLastWrite = System.currentTimeMillis();
             stringsBuffer.add(line.toString());
             StringBuilder stringBuilder = new StringBuilder();

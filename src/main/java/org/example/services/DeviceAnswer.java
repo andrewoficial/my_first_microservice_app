@@ -3,6 +3,7 @@ package org.example.services;
 import lombok.Getter;
 import lombok.Setter;
 import org.example.device.SomeDevice;
+import org.example.utilites.MyUtilities;
 
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
@@ -38,15 +39,13 @@ public class DeviceAnswer {
     }
     public Integer getFieldCount (){
         if(answerReceivedValues != null){
-            return answerReceivedValues.getCounter();
+            return answerReceivedValues.getCounter() + 1; //ToDo recheck it
         }
         return 0;
     }
     @Override
     public String toString(){
-        //String className = deviceType.getClass().toString().replace("class org.example.device.", "");
-        DateTimeFormatter CUSTOM_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        String formattedString = answerReceivedTime.format(CUSTOM_FORMATTER);
+        String formattedString = answerReceivedTime.format(MyUtilities.CUSTOM_FORMATTER);
         return formattedString + "\t" + "className" + "\t" + answerReceivedString + "\n";
     }
 }

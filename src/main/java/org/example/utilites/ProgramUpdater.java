@@ -13,7 +13,9 @@ import java.nio.file.StandardCopyOption;
 
 import com.nimbusds.jose.shaded.gson.JsonObject;
 import com.nimbusds.jose.shaded.gson.JsonParser;
+import org.apache.log4j.Logger;
 import org.example.Main;
+import org.example.services.AnswerStorage;
 import org.json.JSONObject;
 
 import static org.springframework.messaging.simp.stomp.StompHeaderAccessor.getContentLength;
@@ -22,7 +24,7 @@ public class ProgramUpdater {
 
     private static final String API_URL = "https://api.github.com/repos/andrewoficial/my_first_microservice_app/releases/latest";
     private static final String UPDATE_FILE_PATH = new File("◘").getAbsolutePath().replaceAll("◘", "");
-
+    private static final Logger log = Logger.getLogger(ProgramUpdater.class);
     public String getLatestVersion() {
         try {
             // Создаем URL и открываем соединение
@@ -37,7 +39,7 @@ public class ProgramUpdater {
             // Проверяем HTTP-статус
             int status = con.getResponseCode();
             if (status != 200) {
-                System.out.println("GitHub API returned status: " + status);
+                log.warn("GitHub API returned status: " + status);
                 return "0.0.0";
             }
 
@@ -54,20 +56,20 @@ public class ProgramUpdater {
             JSONObject jsonResponse = new JSONObject(response.toString());
             return jsonResponse.getString("tag_name"); // Метка версии в поле "tag_name"
         } catch (Exception e) {
-            System.err.println("Error while fetching version: " + e.getMessage());
+            log.warn("Error while fetching version: " + e.getMessage());
             return "0.0.0";
         }
     }
 
     public boolean isAvailableNewVersion(String foundVersion, String currentVersion) {
         // Отладочное сообщение
-        System.out.println("Проверка доступности новой версии.");
-        System.out.println("Текущая версия: " + currentVersion);
-        System.out.println("Найденная версия: " + foundVersion);
+        log.info("Проверка доступности новой версии.");
+        log.debug("Текущая версия: " + currentVersion);
+        log.debug("Найденная версия: " + foundVersion);
 
         // Проверка на null
         if (currentVersion == null || foundVersion == null) {
-            System.out.println("Отладка: Одна из строк версии null.");
+            log.debug("Одна из строк версии null.");
             return false;
         }
 
@@ -82,7 +84,7 @@ public class ProgramUpdater {
         // Проверка на формат (наличие двух точек)
         if (!currentVersion.matches("\\d+\\.\\d+\\.\\d+(-\\w+)?") ||
                 !foundVersion.matches("\\d+\\.\\d+\\.\\d+(-\\w+)?")) {
-            System.out.println("Отладка: Формат версии неверный.");
+            log.debug("Формат версии неверный.");
             return false;
         }
 
@@ -91,8 +93,8 @@ public class ProgramUpdater {
         String[] foundParts = foundVersion.split("[-.]");
 
         // Отладочное сообщение
-        System.out.println("Разделенная текущая версия: " + String.join(", ", currentParts));
-        System.out.println("Разделенная найденная версия: " + String.join(", ", foundParts));
+        log.debug("Разделенная текущая версия: " + String.join(", ", currentParts));
+        log.debug("Разделенная найденная версия: " + String.join(", ", foundParts));
 
         // Сравнение по числовым частям версии
         for (int i = 0; i < 3; i++) {
@@ -100,10 +102,10 @@ public class ProgramUpdater {
             int foundNum = Integer.parseInt(foundParts[i]);
 
             if (foundNum > currentNum) {
-                System.out.println("Найдена новая версия.");
+                log.info("Найдена новая версия.");
                 return true;
             } else if (foundNum < currentNum) {
-                System.out.println("Новая версия недоступна, текущая версия новее.");
+                log.info("Новая версия недоступна, текущая версия новее.");
                 return false;
             }
         }
@@ -114,24 +116,24 @@ public class ProgramUpdater {
             String foundSuffix = (foundParts.length > 3) ? foundParts[3] : "";
 
             // Отладочное сообщение
-            System.out.println("Суффиксы: текущий - " + currentSuffix + ", найденный - " + foundSuffix);
+            log.info("Суффиксы: текущий - " + currentSuffix + ", найденный - " + foundSuffix);
 
             if (!currentSuffix.isEmpty() && foundSuffix.isEmpty()) {
-                System.out.println("Найдена стабильная версия.");
+                log.info("Найдена стабильная версия.");
                 return true;
             } else if (foundSuffix.compareTo(currentSuffix) < 0) {
-                System.out.println("Найдена новая версия без суффикса.");
+                log.info("Найдена новая версия без суффикса.");
                 return true;
             }
         }
 
-        System.out.println("Версии совпадают.");
+        log.info("Версии совпадают.");
         return false;
     }
 
     public void downloadUpdate() throws IOException, InterruptedException {
         // Отладочное сообщение
-        System.out.println("Загрузка новой версии.");
+        log.info("Загрузка новой версии.");
 
         // Создание HTTP-клиента
         HttpClient client = HttpClient.newHttpClient();
@@ -149,12 +151,12 @@ public class ProgramUpdater {
 
         // Проверка статуса ответа
         if (response.statusCode() != 200) {
-            System.out.println("Отладка: Ошибка при загрузке новой версии.");
+            log.warn("Ошибка при загрузке новой версии.");
             return;
         }
 
         // Отладочное сообщение
-        System.out.println("Ответ от сервера: " + response.body());
+        //System.out.println("Ответ от сервера: " + response.body());
 
         // Парсинг JSON-ответа
         JsonObject jsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
@@ -162,8 +164,8 @@ public class ProgramUpdater {
         String fileName = jsonObject.get("assets").getAsJsonArray().get(0).getAsJsonObject().get("name").getAsString();
 
         // Отладочное сообщение
-        System.out.println("Ссылка на загрузку: " + downloadUrl);
-        System.out.println("Имя файла: " + fileName);
+        //System.out.println("Ссылка на загрузку: " + downloadUrl);
+        //System.out.println("Имя файла: " + fileName);
 
         // Создание директории для сохранения файла
         Files.createDirectories(Paths.get(UPDATE_FILE_PATH));
@@ -192,9 +194,9 @@ public class ProgramUpdater {
                 }
             }
 
-            System.out.println("Файл успешно загружен: " + filePath);
+            log.info("Файл успешно загружен: " + filePath);
         } catch (IOException e) {
-            System.out.println("Ошибка при загрузке файла: " + e.getMessage());
+            log.info("Ошибка при загрузке файла: " + e.getMessage());
         }
     }
 

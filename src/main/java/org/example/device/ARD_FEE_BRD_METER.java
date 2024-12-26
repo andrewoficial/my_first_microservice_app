@@ -2,11 +2,7 @@ package org.example.device;
 
 import java.nio.CharBuffer;
 import java.nio.charset.CharsetDecoder;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.function.Function;
 
 import com.fazecast.jSerialComm.SerialPort;
 import org.example.services.AnswerStorage;
@@ -33,18 +29,14 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
     @Setter
     private byte[] strEndian = {13};//CR
     private int received = 0;
-    private final long millisLimit = 500000;
-    private final long repeatGetAnswerTimeDelay = 1;
-    private final int buffClearTimeLimit = 2;
-    private final int repetCounterLimit = 150;
+    private final long millisLimit = 450;
+    private final long repeatWaitTime = 100;
     private final long millisPrev = System.currentTimeMillis();
     private final Charset charset = Charset.forName("Cp1251");
-    private final CharsetDecoder decoder = charset.newDecoder();
-    private final CharBuffer charBuffer = CharBuffer.allocate(512);  // Предполагаемый максимальный размер
     private static AnswerValues answerValues = new AnswerValues(0);
-    String cmdToSend;
-    Integer TabForAnswer;
-    String devIdent = "ARD_FEE_BRD_METER";
+    private String cmdToSend;
+    private Integer TabForAnswer;
+    private String devIdent = "ARD_FEE_BRD_METER";
 
     public ARD_FEE_BRD_METER(SerialPort port) {
         log.info("Создан объект протокола ARD_FEE_BRD_METER");
@@ -69,13 +61,13 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
     }
 
     @Override
-    public boolean isBisy() {
+    public boolean isBusy() {
         return bisy;
     }
 
     @Override
-    public void setBisy(boolean bisy) {
-        this.bisy = bisy;
+    public void setBusy(boolean busy) {
+        this.bisy = busy;
     }
 
     @Override
@@ -114,8 +106,8 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
     }
 
     @Override
-    public long getRepeatGetAnswerTimeDelay() {
-        return repeatGetAnswerTimeDelay;
+    public long getRepeatWaitTime() {
+        return repeatWaitTime;
     }
 
     @Override
@@ -134,11 +126,6 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
     @Override
     public void setEmulatedAnswer(StringBuilder sb) {
         emulatedAnswer = sb;
-    }
-
-    @Override
-    public int getBuffClearTimeLimit() {
-        return buffClearTimeLimit;
     }
 
     @Override
@@ -163,12 +150,6 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
         return false;
     }
 
-    @Override
-    public int getRepetCounterLimit() {
-        return repetCounterLimit;
-    }
-
-
     public String getForSend() {
         return cmdToSend;
     }
@@ -184,6 +165,9 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
         if (lastAnswerBytes.length > 0) {
             lastAnswer.setLength(0);
             if (commands.isKnownCommand(cmdToSend)) {
+                
+                String str = new String(lastAnswerBytes, charset);
+                
                 answerValues = commands.getCommand(cmdToSend).getResult(lastAnswerBytes);
                 hasAnswer = true;
                 if (answerValues == null) {
@@ -746,61 +730,9 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
                                 System.out.println();
                             }
                             return null;
-                        })
+                        }, 72)
         );
 
-        commands.addCommand(
-                new SingleCommand("CRDG?", "CRDG? - без аргументов. Опрос у всех сенсоров ", (response) -> {
-                    answerValues = null;
-                    //System.out.println("Proceed CRDG direct");
-                    String example = "29.1899";
-                    if (response.length >= 99) {
-                        StringBuilder sb = new StringBuilder();
-                        for (byte b : response) {
-                            sb.append((char) b);
-                        }
-                        String rsp = sb.toString();
-                        //System.out.println("Parse answer [" + rsp + "] ");
-
-                        rsp = rsp.trim();
-                        String[] strValues = rsp.split(",");
-                        //System.out.println("Found" + strValues.length);
-                        answerValues = new AnswerValues(10);
-                        for (int i = 0; i < strValues.length; i++) {
-                            double value = 0.0;
-                            strValues[i] = strValues[i].replace(",", "");
-                            strValues[i] = strValues[i].trim();
-                            strValues[i] = strValues[i].replaceAll("[^0-9.,-]", ""); // удалится все кроме цифр и указанных знаков
-                            //System.out.println("Parse " + strValues[i]);
-                            boolean success = false;
-                            try {
-                                success = true;
-                                value = Double.parseDouble(strValues[i]);
-                            } catch (NumberFormatException e) {
-                                success = false;
-                                System.out.println("Exception " + e.getMessage());
-                                //Past cleaner here
-                                //Throw exception
-
-
-                            }
-                            if (success) {
-                                answerValues.addValue(value, " °C");
-                            } else {
-                                //throw new ParseException("Exception message", "Exception message");
-                                answerValues = null;
-                            }
-                        }
-                    } else {
-                        System.out.println("Wrong answer length " + response.length);
-                        for (byte b : response) {
-                            System.out.print(b + " ");
-                        }
-                        System.out.println();
-                    }
-                    return answerValues;
-                })
-        );
     }
 
 }

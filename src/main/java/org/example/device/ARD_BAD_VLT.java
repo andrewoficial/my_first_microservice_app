@@ -11,34 +11,21 @@ import org.apache.log4j.Logger;
 import org.example.utilites.CommandListClass;
 
 public class ARD_BAD_VLT implements SomeDevice{
-    private volatile boolean bisy = false;
+    private volatile boolean busy = false;
     private static final Logger log = Logger.getLogger(DEMO_PROTOCOL.class);
     private final SerialPort comPort;
     private volatile boolean hasAnswer = false;
     private volatile StringBuilder lastAnswer;
     private AnswerValues answerValues = new AnswerValues(0);
-    private volatile String lastValue;
     @Setter
     private byte [] strEndian = {13, 10};//CR + LF
     private boolean knownCommand = false;
     private StringBuilder emulatedAnswer;
-    private  volatile boolean hasValue;
     private int received = 0;
-    private long millisLimit = 5000L;
-    private long repeatGetAnswerTimeDelay = 200;
-    private long millisDela = 0L;
-    private long millisPrev = System.currentTimeMillis();
-    private double value = 0;
-    private long degree = 0;
-    private double val;
-    private int buffClearTimeLimit = 250;
-    //For JUnits
-    private StringBuilder strToSend;
-    private String deviceAnswer;
-    String cmdToSend;
+    private final long millisLimit = 450;
+    private final long repeatWaitTime = 100;
 
     public ARD_BAD_VLT(SerialPort port){
-        //System.out.println("Create obj");
         this.comPort = port;
         this.enable();
     }
@@ -57,13 +44,13 @@ public class ARD_BAD_VLT implements SomeDevice{
     }
 
     @Override
-    public boolean isBisy(){
-        return bisy;
+    public boolean isBusy(){
+        return busy;
     }
 
     @Override
-    public void setBisy(boolean bisy){
-        this.bisy = bisy;
+    public void setBusy(boolean busy){
+        this.busy = busy;
     }
 
     @Override
@@ -93,7 +80,7 @@ public class ARD_BAD_VLT implements SomeDevice{
 
     @Override
     public long getMillisPrev() {
-        return millisPrev;
+        return 100L;
     }
 
     @Override
@@ -102,9 +89,10 @@ public class ARD_BAD_VLT implements SomeDevice{
     }
 
     @Override
-    public long getRepeatGetAnswerTimeDelay() {
-        return repeatGetAnswerTimeDelay;
+    public long getRepeatWaitTime() {
+        return repeatWaitTime;
     }
+
 
     @Override
     public void setLastAnswer(byte[] sb) {
@@ -119,11 +107,6 @@ public class ARD_BAD_VLT implements SomeDevice{
     @Override
     public void setEmulatedAnswer(StringBuilder sb) {
         this.emulatedAnswer = sb;
-    }
-
-    @Override
-    public int getBuffClearTimeLimit() {
-        return this.buffClearTimeLimit;
     }
 
     @Override
@@ -145,11 +128,6 @@ public class ARD_BAD_VLT implements SomeDevice{
             throw new RuntimeException("Cant open COM-Port");
         }
         return false;
-    }
-
-    @Override
-    public int getRepetCounterLimit() {
-        return 0;
     }
 
 

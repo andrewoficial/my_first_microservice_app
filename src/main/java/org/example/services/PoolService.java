@@ -1,6 +1,5 @@
 package org.example.services;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreType;
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
@@ -10,17 +9,13 @@ import org.apache.log4j.Logger;
 import org.example.utilites.ProtocolsList;
 import org.example.device.*;
 
-import javax.swing.*;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.Document;
-import javax.swing.text.PlainDocument;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Objects;
 
 import static org.example.Main.comPorts;
+import static org.example.utilites.MyUtilities.bytesToHex;
 import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 
 public class PoolService implements Runnable{
@@ -40,7 +35,7 @@ public class PoolService implements Runnable{
     @Getter
     private SerialPort comPort;
     @Getter
-    private long poolDelay;
+    private long poolDelay = 2000;
 
     @Setter
     private SerialPortDataListener serialPortDataListener;
@@ -77,34 +72,37 @@ public class PoolService implements Runnable{
             @Override
             public void serialEvent(SerialPortEvent event) {
                 StringBuilder builder = new StringBuilder();
-                int size = comPort.bytesAvailable();
-                byte[] buffer = new byte[size];
                 while (comPort.bytesAvailable() > 0) {
-
-                    comPort.readBytes(buffer, size);
-                    for (int i = 0; i < size; i++) {
+                    int size = comPort.bytesAvailable();
+                    byte[] buffer = new byte[size];
+                    int bytesRead = comPort.readBytes(buffer, size);
+                    for (int i = 0; i < bytesRead; i++) {
                         builder.append((char) buffer[i]);
                     }
 
                     try {
-                        Thread.sleep(300);
+                        Thread.sleep(80);
                     } catch (InterruptedException ex) {
-                        //throw new RuntimeException(ex);
+                        log.error("Ошибка при обработке данных слушателя: ", ex);
                     }
                 }
-                if(log.isInfoEnabled()){
-                    log.info("Parse external Event ASCII [" + builder.toString().trim() + "] ");
-                    log.info("Parse external Event HEX " + buffer.toString() + " ");
-                }
+
+                log.info("Parse external Event ASCII [" + builder.toString().trim() + "]");
+                log.info("Parse external Event HEX [" + bytesToHex(builder.toString().getBytes()) + "]");
                 receiveByEvent(builder.toString(), tabNumber);
-                //System.out.println(builder.toString());
             }
         };
-        if(comPort != null){
-            comPort.addDataListener(serialPortDataListener);
+
+        if(device == null){
+            try {
+                device = createDeviceByProtocol(protocol, comPort);
+            }catch (RuntimeException e){
+                System.out.println(e.getMessage());
+            }
+            if(device == null){
+                System.out.println("device obj still null");
+            }
         }
-
-
     }
 
     public void setupComConnection(SerialPort comPort){
@@ -127,150 +125,102 @@ public class PoolService implements Runnable{
 
     @Override
     public void run() {
-        Thread.currentThread().setName("Thread Pool Tab "+currentTab.get(0));
+        Thread.currentThread().setName("Thread Pool Tab " + currentTab.get(0));
         deviceLoggerArrayList.add(new DeviceLogger(currentTab.get(0).toString()));
         answersCollection.add(new StringBuffer());
+
         while ((!Thread.currentThread().isInterrupted()) && threadLive) {
+            comPort.addDataListener(serialPortDataListener);
             if (System.currentTimeMillis() - millisPrev > poolDelay) {
                 millisPrev = System.currentTimeMillis();
-                //System.out.println("Millis timer");
-                assert device != null;
-                //comPort.removeDataListener();
-                //System.out.println("Run pool...");
-
                 for (int i = 0; i < textToSend.size(); i++) {
-                    boolean wasWaited = false;
-                    //Если для внутренней очереди нет номера вкладки ИЛИ флаг опроса FALSE
-                    if(getTabNumberByInnerNumber(i) < 0 || (!needPool.get(getTabNumberByInnerNumber(i)))){
-                        //System.out.println(needPool.get(getTabNumberByInnerNumber(i)));
+                    if (shouldSkipCommand(i)) {
                         continue;
-                    }else{
-                        while (comBusy){
-                            wasWaited = true;
-                            try {
-                                //log.info("Флаг comBusy: " + comBusy + " из цикла опроса НЕ вызываю sendOnce с командой " + textToSend.get(i) + " внутренняя очередь i: " + i);
-                                Thread.sleep(20);
-                                //System.out.println("Sleep " + (Math.min((millisLimit / 3), 300L)) + " time limit is " + millisLimit);
-                            } catch (InterruptedException e) {
-                                //throw new RuntimeException(e);
-                            }
-                        }
-                        if(wasWaited){
-                            log.info("Завершено ожидание снятия флага comBusy из цикла опроса при вызове sendOnce с командой " + textToSend.get(i) + " внутренняя очередь i: " + i);
-                        }
-                        log.info("Флаг comBusy: " + comBusy + " из цикла опроса вызываю sendOnce с командой " + textToSend.get(i) + " внутренняя очередь i: " + i);
-
-                        sendOnce(textToSend.get(i), i, true);
                     }
-
-
+                    waitForComBusy();
+                    log.info("Отправка команды: " + textToSend.get(i));
+                    sendOnce(textToSend.get(i), i, true);
                 }
-                //comPort.addDataListener(serialPortDataListener);
-            }else {
-                try {
-                    Thread.sleep(Math.min((poolDelay / 5), 100L));
-                    //System.out.println("Sleep " + (Math.min((millisLimit / 3), 300L)) + " time limit is " + millisLimit);
-                } catch (InterruptedException e) {
-                    //throw new RuntimeException(e);
-                }
+            } else {
+                sleepSafely(Math.min((poolDelay / 5), 100L));
             }
+        }
+
+    }
+
+    private boolean shouldSkipCommand(int i) {
+        return getTabNumberByInnerNumber(i) < 0 || !needPool.get(getTabNumberByInnerNumber(i));
+    }
+
+    private void waitForComBusy() {
+        while (comBusy) {
+            try {
+                Thread.sleep(20);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    private void sleepSafely(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 
 
     public void sendOnce (String arg, int i, boolean internal){
-        //comBusy = comBusy;
-
         if(!internal){
             log.info("Инициирована отправка команды прибору " + arg + " внутренний вызов? " + false + ". Будет выполнена.  Флаг comBusy проигнорирован, его статус " + comBusy);
-            //comBusy =  false;
-            log.info("Изменен номер вкладки с внутренней очереди на какую-то иную. ");
             log.info("Старый аргумент указателя "  + i + " соответствует вкладке " + findSubDevByTabNumber(i));
             i = findSubDevByTabNumber(i);
             log.info("Новый аргумент указателя "  + i + " соответствует вкладке " + findSubDevByTabNumber(i));
         }
+        //Проверка, если команда уже выполняется (занят ком-порт)
         if (comBusy) {
-            log.info("Инициирована отправка команды прибору " + arg + " внутренний вызов? " + internal + ". Будет отвергнута. Флаг comBusy учтен, его статус " + comBusy);
-            try {
-                Thread.sleep(5);
-                //System.out.println("Sleep " + (Math.min((millisLimit / 3), 300L)) + " time limit is " + millisLimit);
-            } catch (InterruptedException e) {
-                //throw new RuntimeException(e);
-            }
             return;
         }else{
-
             comBusy = true;
-            log.info("Инициирована отправка команды прибору " + arg + " внутренний вызов? " + internal + ". Будет выполнена. Флаг comBusy установлен в " + comBusy);
         }
 
-        if(device == null){
-            try {
-                device = createDeviceByProtocol(protocol, comPort);
-            }catch (RuntimeException e){
-                System.out.println(e.getMessage());
-            }
-            if(device == null){
-                System.out.println("device obj still null");
-                return;
-            }
-            log.info("Выполнено определение протокола");
+        //Првоерка, что команда уже выполняется (занят прибором)
+        if(device.isBusy()){
+            log.info("ОТМЕНЕНА ОТПРАВКА ЗАНЯТОМУ УСТРОЙСТВУ");
+            return;
         }
 
         int tabDirection = getTabNumberByInnerNumber(i);
         log.info("Параметр i = " + i + " tabDirection будет задан " + tabDirection);
 
+        LocalDateTime startSend = LocalDateTime.now();
+        comPort.flushDataListener();
+        comPort.removeDataListener();
+        sleepSafely(50);
 
-        DeviceAnswer answer = new DeviceAnswer(LocalDateTime.now(),textToSend.get(i),tabDirection);
-
-        if(device.isBisy()){
-            log.info("ОТМЕНЕНА ОТПРАВКА ЗАНЯТОМУ УСТРОЙСТВУ");
-            return;
-        }
-        device.sendData(arg, device.getStrEndian(), comPort, device.isKnownCommand(), 300, device);
-        log.info("Инициирован приём ответа ");
+        device.sendData(arg, device.getStrEndian(), comPort, device.isKnownCommand(), 150, device);
         device.receiveData(device);
 
-        //log.info("Инициирована обработка ответа");
+        comPort.addDataListener(serialPortDataListener);
+
         device.parseData();
+        DeviceAnswer answer = new DeviceAnswer(startSend,textToSend.get(i),tabDirection);
         answer.setDeviceType(device);
         answer.setAnswerReceivedTime(LocalDateTime.now());
-        if (device.hasAnswer()) {
+        if (device.getValues() != null) {
             answer.setAnswerReceivedString(device.getAnswer());
             answer.setAnswerReceivedValues(device.getValues());
         }else{
             answer.setAnswerReceivedString(device.getAnswer());
             answer.setAnswerReceivedValues(null);
         }
-
-        if(device.getTabForAnswer() != null) {
-            tabDirection = device.getTabForAnswer();
-            log.info("Direction storage changed to: " + tabDirection);
-        }
-
-        //log.info("Адрес ответа: " + answer.getTabNumber());
-        //System.out.println("Адрес ответа: " + answer.getTabNumber());
         AnswerStorage.addAnswer(answer);
-
         logSome(answer, i);
-        //receiveMsg(i, internal, arg);
-        if(!internal){
-            comPort.addDataListener(serialPortDataListener);
-            log.info("Добавлен слушатель (разовая отправка)");
-        }
-
-
-        try {
-            Thread.sleep(20);
-            //System.out.println("Sleep " + (Math.min((millisLimit / 3), 300L)) + " time limit is " + millisLimit);
-        } catch (InterruptedException e) {
-            //throw new RuntimeException(e);
-        }
         comBusy = false;
     }
 
     public void receiveByEvent (String msg, int tabN){
-        //System.out.println("Receive by event " + msg);
         tabN =  findSubDevByTabNumber(tabN);
         if(device == null){
             device = createDeviceByProtocol(protocol, comPort);
@@ -285,12 +235,9 @@ public class PoolService implements Runnable{
         device.setLastAnswer(received);
         device.parseData();
 
-        //System.out.println("Event from tab " + tabN + " and inner number " + getInnerNumberByTabNumber(tabN));
         int tabDirection = getTabNumberByInnerNumber(tabN);
-        //System.out.println("    Direction storage set to: " + tabDirection);
         if(device.getTabForAnswer() != null) {
             tabDirection = device.getTabForAnswer();
-            //System.out.println("    Direction storage changed to: " + tabDirection);
         }
 
         DeviceAnswer answer = new DeviceAnswer(LocalDateTime.now(),"",tabDirection);
@@ -302,15 +249,13 @@ public class PoolService implements Runnable{
 
         AnswerStorage.addAnswer(answer);
         logSome(answer, tabN);
-        //System.out.println(tabN);
-
     }
 
     public void setNeedPool (int tabNum, boolean bool){
         needPool.put(tabNum, bool);
         if(! bool){
             if(comPort != null){ //Если закрытие вкладки, которая использует один и тот же ком-порт с другой вкладкой
-                comPort.addDataListener(serialPortDataListener);
+                //comPort.addDataListener(serialPortDataListener);
             }
 
         }
@@ -431,7 +376,7 @@ public class PoolService implements Runnable{
             //}
             return needPool.get(tabNum);
         }
-        System.out.println("Подустройство не найдено для вкладки номер " + tabNum);
+        log.error("Подустройство не найдено для вкладки номер " + tabNum);
         return false;
     }
 
@@ -493,7 +438,6 @@ public class PoolService implements Runnable{
                 return true;
             }
         }
-        //System.out.println("Попытка закрыть поток опроса, у которого есть дочерние вкладки");
         return false;
     }
 }

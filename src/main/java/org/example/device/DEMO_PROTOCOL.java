@@ -30,7 +30,8 @@ public class DEMO_PROTOCOL implements SomeDevice {
     private StringBuilder emulatedAnswer;
     private  volatile boolean hasValue;
     private int received = 0;
-    private long millisLimit = 5000L;
+    private final long millisLimit = 450;
+    private final long repeatWaitTime = 100;
 
     private long repeatGetAnswerTimeDelay = 200;
     private long millisDela = 0L;
@@ -67,13 +68,13 @@ public class DEMO_PROTOCOL implements SomeDevice {
     }
 
     @Override
-    public boolean isBisy(){
+    public boolean isBusy(){
         return bisy;
     }
 
     @Override
-    public void setBisy(boolean bisy){
-        this.bisy = bisy;
+    public void setBusy(boolean busy){
+        this.bisy = busy;
     }
 
     @Override
@@ -84,11 +85,6 @@ public class DEMO_PROTOCOL implements SomeDevice {
     @Override
     public void setEmulatedAnswer(StringBuilder sb){
         this.emulatedAnswer = sb;
-    }
-
-    @Override
-    public int getBuffClearTimeLimit() {
-        return this.buffClearTimeLimit;
     }
 
     @Override
@@ -128,9 +124,10 @@ public class DEMO_PROTOCOL implements SomeDevice {
     }
 
     @Override
-    public long getRepeatGetAnswerTimeDelay() {
-        return this.repeatGetAnswerTimeDelay;
+    public long getRepeatWaitTime() {
+        return this.repeatWaitTime;
     }
+
 
     @Override
     public void setLastAnswer(byte [] ans) {
@@ -158,10 +155,7 @@ public class DEMO_PROTOCOL implements SomeDevice {
         return false;
     }
 
-    @Override
-    public int getRepetCounterLimit() {
-        return 0;
-    }
+
 
     public StringBuilder getForSend(){
         return strToSend;

@@ -6,7 +6,10 @@ import org.apache.log4j.Logger;
 import org.example.services.AnswerValues;
 import org.example.utilites.CommandListClass;
 
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
+
+import static org.example.utilites.MyUtilities.bytesToHex;
 
 public interface SomeDevice {
 
@@ -20,19 +23,18 @@ public interface SomeDevice {
     void setReceivedCounter(int cnt);
     long getMillisPrev();
     long getMillisLimit();
-    long getRepeatGetAnswerTimeDelay();
+    long getRepeatWaitTime();
 
     void setLastAnswer(byte [] ans);
 
     StringBuilder getEmulatedAnswer();
     void setEmulatedAnswer (StringBuilder sb);
-    int getBuffClearTimeLimit();
+
     void setHasAnswer(boolean hasAnswer);
     boolean enable();
-    int getRepetCounterLimit();
-    boolean isBisy();
+    boolean isBusy();
     String cmdToSend = "";
-    void setBisy(boolean bisy);
+    void setBusy(boolean busy);
     void setCmdToSend(String str);
     Integer getTabForAnswer();
     CommandListClass commands = null;
@@ -41,19 +43,18 @@ public interface SomeDevice {
     }
     static final Logger log = Logger.getLogger(SomeDevice.class);
     default void sendData(String data, byte [] strEndian, SerialPort comPort, boolean knownCommand, int buffClearTimeLimit, SomeDevice device){
-        if(device.isBisy()){
+        if(device.isBusy()){
             log.warn("Попытка записи при активном соединении");
             return;
         }else {
-            device.setBisy(true);
+            device.setBusy(true);
         }
         setCmdToSend(data);
-        comPort.flushDataListener();
+        //comPort.flushDataListener();
         //log.info("  Выполнено flushDataListener ");
 
-        comPort.removeDataListener();
+        //comPort.removeDataListener();
         //log.info("  Выполнено removeDataListener ");
-        setCmdToSend(data);
         byte[] buffer = new byte[data.length() + strEndian.length];
         for (int i = 0; i < data.length(); i++) {
             buffer[i] = (byte) data.charAt(i);
@@ -75,99 +76,72 @@ public interface SomeDevice {
         log.info("  Выполнено flushIOBuffers и теперь bytesAvailable " + comPort.bytesAvailable());
         comPort.writeBytes(buffer, buffer.length);
         log.info("  Завершена отправка данных");
-        device.setBisy(false);
+        device.setBusy(false);
     }
 
     default void receiveData(SomeDevice device) {
-        if(device.isBisy()){
+        if (device.isBusy()) {
             log.warn("Попытка чтения при активном соединении");
             return;
-        }else {
-            device.setBisy(true);
         }
+        device.setBusy(true);
+        log.info("  Начинаю receiveData ");
+
         SerialPort comPort = device.getComPort();
-        int received = 0;
-        long millisPrev = 0;
-        long millisDela = 0;
-        long millisLimit = device.getMillisLimit();
-        long repeatGetAnswerTimeDelay = device.getRepeatGetAnswerTimeDelay();
-        ArrayList<Byte> receivedList = new ArrayList<>();
+        long startTime = System.currentTimeMillis();
+        long timeout = device.getMillisLimit();
+        int expectedBytes = device.getExpectedBytes();
+        ByteArrayOutputStream receivedData = new ByteArrayOutputStream();
+
         if (comPort != null) {
-            millisPrev = System.currentTimeMillis();
-            boolean firstIteration = true;
-            int lastReceived = received;
-
-            int repeatLimit = device.getRepetCounterLimit();
-            int repeat = 0;
-            while (millisDela < millisLimit) {
-                try {
-                    Thread.sleep(repeatGetAnswerTimeDelay);//300
-                } catch (InterruptedException e) {
-                    //throw new RuntimeException(e);
-                }
-                millisDela = System.currentTimeMillis() - millisPrev;
-                received = comPort.bytesAvailable();
-
-                if (firstIteration && received > 0) {
-                    firstIteration = false;
-                    lastReceived = received;
-                    //System.out.println("lastReceived " + lastReceived);
-                } else if (lastReceived == received) {
-                    repeat++;
-                    //System.out.println("received " + received);
-                    //System.out.println("repeat " + repeat);
-                    if (repeat > repeatLimit) {
-                        break;
-                    }
-                } else {
-                    repeat = 0;
-                    //System.out.println("repeat " + repeat);
-                    lastReceived = received;
-                }
-                if (received > 0) {
-                    byte[] buffer = new byte[comPort.bytesAvailable()];
-                    comPort.readBytes(buffer, received);
-                    for (int i = 0; i < buffer.length; i++) {
-                        receivedList.add( buffer[i]);
+            comPort.flushDataListener();
+            comPort.removeDataListener();
+            try {
+                log.info("Собираю данные. Время ожидания ответа: " + timeout + "мс, ожидаемые байты: " + expectedBytes);
+                while ((System.currentTimeMillis() - startTime) < timeout && receivedData.size() < expectedBytes) {
+                    int available = comPort.bytesAvailable();
+                    if (available > 0) {
+                        byte[] buffer = new byte[available];
+                        int readBytes = comPort.readBytes(buffer, buffer.length);
+                        if (readBytes > 0) {
+                            receivedData.write(buffer, 0, readBytes);
+                            log.info("Добавлено {"+  readBytes +"} байт. Всего: {"+  receivedData.size()+"} Ожидается {"+expectedBytes+"}");
+                            // Сброс таймера при поступлении данных
+                            startTime = System.currentTimeMillis();
+                        }
+                    } else {
+                        Thread.sleep(device.getRepeatWaitTime());
                     }
                 }
-
+            } catch (InterruptedException e) {
+                log.error("Ошибка при чтении данных: ", e);
+            } finally {
+                log.info("Освобождение буфера");
+                comPort.flushIOBuffers();
             }
-            comPort.flushIOBuffers();
-
-            log.info("Завершено получение данных");
-
-            if(log.isInfoEnabled()){
-                //System.out.println("Логирование ответа в файл...");
-                StringBuilder sb = new StringBuilder();
-                for (byte b : receivedList) {
-                    sb.append((char)b);
-                }
-                log.info("Parse answer ASCII [" + sb.toString().trim() + "] ");
-                log.info("Parse answer HEX " + receivedList.toString() + " ");
-                sb = null;
-            }
-
-
         }
-        int bufSize = receivedList.size();
-        if (bufSize > 0) {
-            //System.out.println(bufSize);
-            byte[] buffer = new byte[bufSize];
-            for (int i = 0; i < bufSize; i++) {
-                buffer[i] = (byte) receivedList.get(i);
-            }
-            device.setLastAnswer(buffer);
-            device.setReceivedCounter(bufSize);
+
+        byte[] responseBytes = receivedData.toByteArray();
+        if (responseBytes.length > 0) {
+            device.setLastAnswer(responseBytes);
+            device.setReceivedCounter(responseBytes.length);
             device.setHasAnswer(true);
         } else {
-            byte[] buffer = new byte[0];
-            device.setLastAnswer(buffer);
+            device.setLastAnswer(new byte[0]);
             device.setHasAnswer(false);
         }
-        log.trace("Завершена сборка ответа. Развемер: " + bufSize + " флаг hasAnswer " + device.hasAnswer());
-        device.setBisy(false);
+
+        if (log.isInfoEnabled()) {
+            String asciiResponse = new String(responseBytes).trim();
+            String hexResponse = bytesToHex(responseBytes);
+            log.info("Parse answer ASCII [{ " + asciiResponse + " }]");
+            log.info("Parse answer HEX [{ " + hexResponse + " }]");
+        }
+
+        device.setBusy(false);
     }
+
+
 
     void parseData();
 
@@ -176,4 +150,9 @@ public interface SomeDevice {
 
     boolean hasValue();
     AnswerValues getValues();
+
+    default int getExpectedBytes() {
+        // Возвращает ожидаемое количество байт. Например:
+        return 50; // Или любое значение, зависящее от устройства.
+    }
 }

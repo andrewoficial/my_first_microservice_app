@@ -226,13 +226,16 @@ public class ChartWindow extends JFrame implements Rendeble {
     }
 
     public static int getFieldsCountForTab(Integer tab) {
-
-        if (Objects.equals(AnswerStorage.getAnswersForGraph(tab).get(0).getTabNumber(), tab)) {
+        int index = AnswerStorage.getAnswersForGraph(tab).size() - 1;
+        index = Math.max(0, index);
+        if (Objects.equals(AnswerStorage.getAnswersForGraph(tab).get(index).getTabNumber(), tab)) {
             int size = AnswerStorage.getAnswersForGraph(tab).size();
             if (tab == 0) {
-                return AnswerStorage.getAnswersForGraph(tab).get(size - 1).getFieldCount() + 1;
+                int dunnoFix = AnswerStorage.getAnswersForGraph(tab).get(index).getFieldCount();
+                dunnoFix = Math.max(1, dunnoFix);
+                return dunnoFix;
             }
-            return AnswerStorage.getAnswersForGraph(tab).get(size - 1).getFieldCount();
+            return AnswerStorage.getAnswersForGraph(tab).get(index).getFieldCount();
         }
 
         return 1; // Возвращаем 1, если данные для вкладки не найдены
@@ -320,8 +323,7 @@ public class ChartWindow extends JFrame implements Rendeble {
                 if (cbStates.get(pointer)) {
                     //System.out.println("pointer " + pointer + " will be showed");
                     for (DeviceAnswer answer : recentAnswers) {
-                        if (answer != null && answer.getAnswerReceivedValues() != null &&
-                                answer.getAnswerReceivedValues().getValues().length == tabsFieldCapacity.get(tab)) {
+                        if (isCorrectAnswerValue(answer, tab)) {
 
                             AnswerValues currentAnswers = answer.getAnswerReceivedValues();
                             double currentValues = currentAnswers.getValues()[j];
@@ -338,6 +340,29 @@ public class ChartWindow extends JFrame implements Rendeble {
         }
     }
 
+    private boolean isCorrectAnswerValue(DeviceAnswer answer, int tab) {
+        if (answer == null) {
+            System.out.println("Answer is null");
+            return false;
+        }
+
+        if (answer.getAnswerReceivedValues() == null) {
+            System.out.println("AnswerReceivedValues is null");
+            return false;
+        }
+
+        if (answer.getAnswerReceivedValues().getValues() == null) {
+            System.out.println("AnswerReceivedValues array of values is null");
+            return false;
+        }
+
+        if (answer.getAnswerReceivedValues().getValues().length != tabsFieldCapacity.get(tab)) {
+            System.out.println("array of values not equal to tabsFieldCapacity. " + answer.getAnswerReceivedValues().getValues().length + " != " + tabsFieldCapacity.get(tab));
+            return false;
+        }
+        return true;
+    }
+
     @Override
     public void renderData() {
         if (isGraphBusy) {
@@ -352,9 +377,9 @@ public class ChartWindow extends JFrame implements Rendeble {
             public void run() {
                 getLastData();
                 repaint();
-                isGraphBusy = false;
             }
         });
+        isGraphBusy = false;
 
     }
 

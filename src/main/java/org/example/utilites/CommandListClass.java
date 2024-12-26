@@ -13,9 +13,11 @@ public class CommandListClass {
     }
 
     public SingleCommand getCommand(String name){
+
         if(name == null){
             return null;
         }
+
 
         if(name.length() > 5 && name.contains("CRDG")){
             name = name.substring(0, 6);
@@ -26,28 +28,33 @@ public class CommandListClass {
 
         if(name.length() == 5 && name.contains("M^")){
             name = name.substring(3);
+        }
+
+        if(name.length() == 13 && name.contains("V0091")){
+            name = name.substring(6);
+            //System.out.println("Remove prefix and got " + name);
         }
         return commandPool.get(name);
     }
 
     public boolean isKnownCommand(String name){
-        //System.out.println(name);
+
         if(name == null){
-            System.out.println("Пустая команда");
+            return false;
+        }
+        if(getCommand(name) == null){
             return false;
         }
 
-        if(name.length() > 5 && name.contains("CRDG")){
-            name = name.substring(0, 6);
-        }else{
-            name = name.trim();
-        }
+        return true;
+    }
 
-        if(name.length() == 5 && name.contains("M^")){
-            name = name.substring(3);
+    public int getExpectedBytes(String name){
+
+        if(getCommand(name) == null){
+            return 500000;
         }
-        //System.out.println(name);
-        return commandPool.containsKey(name);
+        return getCommand(name).getExpectedBytes();
     }
 
     public HashMap  <String, SingleCommand> getCommandPool(){

@@ -1,6 +1,7 @@
 package org.example.services;
 
 import org.apache.log4j.Logger;
+import org.example.utilites.MyUtilities;
 
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -8,14 +9,12 @@ import java.util.*;
 public class AnswerStorage {
     private static final Logger log = Logger.getLogger(AnswerStorage.class);
     static StringBuilder sbAnswer = new StringBuilder();
-    public static DateTimeFormatter dtfAnswer = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
     public static HashMap<Integer, ArrayList<DeviceAnswer>> answersByTab = new HashMap<>();
     public static HashMap<String, Integer> deviceTabPairs = new HashMap<>();
 
     public static void registerDeviceTabPair(String ident, Integer tabN) {
         AnswerStorage.deviceTabPairs.put(ident, tabN);
-        System.out.println("IDN:" + ident + " bounded with tab num: " + tabN);
-        System.out.println("Now contain:" + AnswerStorage.deviceTabPairs.size());
+        log.info("Регестрирую связку устройства с вкладкой. Device id: " + ident + " and tab num: " + tabN);
     }
 
     public static HashMap<String, Integer> getDeviceTabPair() {
@@ -33,7 +32,7 @@ public class AnswerStorage {
                 return entry.getKey();
             }
         }
-        System.out.println("Попытка получить несуществующую связку Вкладка/Прибор по признаку вкладки");
+        log.warn("Попытка получить несуществующую связку Вкладка/Прибор по признаку вкладки");
         return null;
     }
 
@@ -73,12 +72,13 @@ public class AnswerStorage {
 
     private static void appendAnswer(DeviceAnswer answer, boolean showCommands) {
         if (showCommands) {
-            sbAnswer.append(dtfAnswer.format(answer.getRequestSendTime()));
-            sbAnswer.append(":\t");
+            //
+            sbAnswer.append(MyUtilities.CUSTOM_FORMATTER.format(answer.getRequestSendTime()));
+            sbAnswer.append(" :\t");
             sbAnswer.append(answer.getRequestSendString());
             sbAnswer.append("\n");
         }
-        sbAnswer.append(dtfAnswer.format(answer.getAnswerReceivedTime()));
+        sbAnswer.append(MyUtilities.CUSTOM_FORMATTER.format(answer.getAnswerReceivedTime()));
         if (answer.getAnswerReceivedString() != null) {
             sbAnswer.append(":\t");
             sbAnswer.append(answer.getAnswerReceivedString());

@@ -22,18 +22,13 @@ public class EDWARDS_D397_00_000  implements SomeDevice  {
     private StringBuilder emulatedAnswer = new StringBuilder();
     private final boolean knownCommand = false;
     private volatile boolean hasAnswer = false;
-    private  volatile boolean hasValue = false;
+
     @Setter
     private byte [] strEndian = {13};//CR
     private int received = 0;
-    private final long millisLimit = 500000;
-    private final long repeatGetAnswerTimeDelay = 2;
-    private final int buffClearTimeLimit = 5;
-    private final int repetCounterLimit = 300;
+    private final long millisLimit = 300;
+    private final long repeatWaitTime = 100;
     private final long millisPrev = System.currentTimeMillis();
-    private final Charset charset = Charset.forName("Cp1251");
-    private final CharsetDecoder decoder = charset.newDecoder();
-    private final CharBuffer charBuffer = CharBuffer.allocate(512);  // Предполагаемый максимальный размер
     private AnswerValues answerValues = new AnswerValues(0);
     String cmdToSend;
 
@@ -60,13 +55,13 @@ public class EDWARDS_D397_00_000  implements SomeDevice  {
     }
 
     @Override
-    public boolean isBisy(){
+    public boolean isBusy(){
         return bisy;
     }
 
     @Override
-    public void setBisy(boolean bisy){
-        this.bisy = bisy;
+    public void setBusy(boolean busy){
+        this.bisy = busy;
     }
     @Override
     public byte[] getStrEndian() {
@@ -93,10 +88,6 @@ public class EDWARDS_D397_00_000  implements SomeDevice  {
         this.received = cnt;
     }
 
-    @Override
-    public int getRepetCounterLimit() {
-        return repetCounterLimit;
-    }
 
     public void setReceived(String answer){
         lastAnswerBytes = answer.getBytes();
@@ -114,9 +105,10 @@ public class EDWARDS_D397_00_000  implements SomeDevice  {
     }
 
     @Override
-    public long getRepeatGetAnswerTimeDelay() {
-        return repeatGetAnswerTimeDelay;
+    public long getRepeatWaitTime() {
+        return repeatWaitTime;
     }
+
 
     @Override
     public void setLastAnswer(byte[] sb) {
@@ -133,10 +125,7 @@ public class EDWARDS_D397_00_000  implements SomeDevice  {
         this.emulatedAnswer = sb;
     }
 
-    @Override
-    public int getBuffClearTimeLimit() {
-        return buffClearTimeLimit;
-    }
+
 
     @Override
     public void setHasAnswer(boolean hasAnswer) {
@@ -146,7 +135,7 @@ public class EDWARDS_D397_00_000  implements SomeDevice  {
     private CommandListClass commands = new CommandListClass();
 
     @Override
-    public CommandListClass getCommandListClass(){
+    public CommandListClass getCommandListClass() {
         return this.commands;
     }
 
@@ -167,8 +156,10 @@ public class EDWARDS_D397_00_000  implements SomeDevice  {
     public void parseData() {
         System.out.println("EDWARDS_D397_00_000 run parse");
         if(lastAnswerBytes.length > 0) {
-
             lastAnswer.setLength(0);
+
+
+
             if (commands.isKnownCommand(cmdToSend)) {
                 answerValues = commands.getCommand(cmdToSend).getResult(lastAnswerBytes);
                 hasAnswer = true;
@@ -222,7 +213,14 @@ public class EDWARDS_D397_00_000  implements SomeDevice  {
                         "?V00913", "?V00913 - Запрос давления",
                         (response) -> {
                             answerValues = null;
-                            if (response.length > 11 && response[1] == 'V') {  // Проверка длины и наличия буквы 'V' на позиции 1
+                            int startPosition = 1;
+                            for (int i = startPosition; i < response.length; i++) {
+                                if(response[i] == 'V'){
+                                    startPosition = i;
+                                    break;
+                                }
+                            }
+                            if (response.length > 11 && response[startPosition] == 'V') {  // Проверка длины и наличия буквы 'V' на позиции 1
                                 String responseStr = new String(response);
 
                                 int firstPart = responseStr.indexOf("V913 ") + 5;
@@ -251,7 +249,7 @@ public class EDWARDS_D397_00_000  implements SomeDevice  {
                                 System.out.println("Wrong Length or Missing 'V' at position 1, Length: " + response.length + ", Content: " + Arrays.toString(response));
                                 return null;
                             }
-                        })
+                        }, 5000)
         );
     }
 }

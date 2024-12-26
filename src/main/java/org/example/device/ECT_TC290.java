@@ -29,10 +29,8 @@ public class ECT_TC290 implements SomeDevice  {
     @Setter
     private byte [] strEndian = {13};//CR
     private int received = 0;
-    private final long millisLimit = 500000;
-    private final long repeatGetAnswerTimeDelay = 1;
-    private final int buffClearTimeLimit = 2;
-    private final int repetCounterLimit = 150;
+    private final long millisLimit = 150;
+    private final long repeatWaitTime = 100;
     private final long millisPrev = System.currentTimeMillis();
     private final Charset charset = Charset.forName("Cp1251");
     private final CharsetDecoder decoder = charset.newDecoder();
@@ -65,13 +63,13 @@ public class ECT_TC290 implements SomeDevice  {
     }
 
     @Override
-    public boolean isBisy(){
+    public boolean isBusy(){
         return bisy;
     }
 
     @Override
-    public void setBisy(boolean bisy){
-        this.bisy = bisy;
+    public void setBusy(boolean busy){
+        this.bisy = busy;
     }
 
     @Override
@@ -110,8 +108,8 @@ public class ECT_TC290 implements SomeDevice  {
     }
 
     @Override
-    public long getRepeatGetAnswerTimeDelay() {
-        return repeatGetAnswerTimeDelay;
+    public long getRepeatWaitTime() {
+        return repeatWaitTime;
     }
 
     @Override
@@ -133,11 +131,6 @@ public class ECT_TC290 implements SomeDevice  {
     }
 
     @Override
-    public int getBuffClearTimeLimit() {
-        return buffClearTimeLimit;
-    }
-
-    @Override
     public void setHasAnswer(boolean hasAnswer) {
 
     }
@@ -156,11 +149,6 @@ public class ECT_TC290 implements SomeDevice  {
             throw new RuntimeException("Cant open COM-Port");
         }
         return false;
-    }
-
-    @Override
-    public int getRepetCounterLimit() {
-        return repetCounterLimit;
     }
 
 
@@ -295,7 +283,7 @@ public class ECT_TC290 implements SomeDevice  {
                         System.out.println();
                     }
                     return answerValues;
-                })
+                }, 5000)
         );
 
         commands.addCommand(
@@ -348,7 +336,7 @@ public class ECT_TC290 implements SomeDevice  {
                         System.out.println();
                     }
                     return answerValues;
-                })
+                }, 5000)
         );
     }
 

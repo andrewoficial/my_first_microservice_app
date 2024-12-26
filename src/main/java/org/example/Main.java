@@ -15,44 +15,16 @@ import java.util.jar.Manifest;
 public class Main {
     public static final MyProperties prop = new MyProperties();
     public static ComPort comPorts = new ComPort();
-    public static String currentVersion = "1.7.6-Beta";
+    public static String currentVersion = "1.7.10-Beta";
     public static String programName = "Elephant-Monitor";
     public static String programTitle = programName + " v" + currentVersion;
     public static MainWindow mainWindow;
 
     public static void main(String[] args) {
-
-//        IgniteConfiguration cfg = new IgniteConfiguration();
-//        cfg.setClientMode(true);
-//
-//
-//        try (Ignite ignite = Ignition.start(cfg)) {
-//            // ваша логика работы с кэшем
-//            System.out.println("OK");
-//        }
-
-//        try (Ignite ignite = Ignition.start(cfg)) {
-//            // Конфигурация кэша
-//            CacheConfiguration<Long, String> cacheCfg = new CacheConfiguration<>("myCache");
-//            cacheCfg.setCacheMode(CacheMode.PARTITIONED);
-//
-//            // Создание или получение кэша
-//            ignite.getOrCreateCache(cacheCfg);
-//
-//            // Кэш операции
-//            ignite.cache("myCache").put(1L, "Hello, Ignite!");
-//            String value = (String) ignite.cache("myCache").get(1L);
-//
-//            System.out.println("Value: " + value);
-//        }
-
-
-        //System.exit(0);
-
         Thread.currentThread().setName("Elephant Monitor");
         Logger log = Logger.getLogger(Main.class);
-        log.info("Запуск программы...");
-        log.info(Thread.currentThread().getName());
+        log.debug("Запуск программы...");
+        log.debug(Thread.currentThread().getName());
 
 
 
@@ -80,11 +52,10 @@ public class Main {
                 log.info("Оставил версию программы" + currentVersion);
             }
             programTitle = programName + " v" + currentVersion;
-            log.info("Установил имя заголовка программы" + programTitle);
+            log.debug("Установил имя заголовка программы и версию" + programTitle);
         }
 
         ProgramUpdater programUpdater = new ProgramUpdater();
-        System.out.println(programUpdater.getLatestVersion());
 
         boolean isAvailableNewVersion =  programUpdater.isAvailableNewVersion(programUpdater.getLatestVersion(), currentVersion);
         if (isAvailableNewVersion) {
@@ -102,7 +73,7 @@ public class Main {
         if(resource != null){
             ImageIcon pic = new ImageIcon(resource);
             mainWindow.setIconImage(pic.getImage());
-            log.info("Установка картинки");
+            log.debug("Установка картинки");
         }
         mainWindow.pack();
         mainWindow.setVisible(true);
