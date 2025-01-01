@@ -55,16 +55,11 @@ public class Main {
             log.debug("Установил имя заголовка программы и версию" + programTitle);
         }
 
-        ProgramUpdater programUpdater = new ProgramUpdater();
 
-        boolean isAvailableNewVersion =  programUpdater.isAvailableNewVersion(programUpdater.getLatestVersion(), currentVersion);
-        if (isAvailableNewVersion) {
-            try {
-                programUpdater.downloadUpdate();
-            } catch (IOException | InterruptedException e) {
-                System.out.println("Ошибка: " + e.getMessage());
-            }
-        }
+        //In new windows
+
+
+
 
         URL resource = Main.class.getClassLoader().getResource("GUI_Images/Pic.png");
         mainWindow = new MainWindow();

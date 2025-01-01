@@ -13,7 +13,7 @@ import org.example.gui.MainWindow;
 import org.example.services.AnswerStorage;
 import org.example.services.TabAnswerPart;
 import org.example.web.entity.MyUser;
-import org.example.web.service.userServ.UserService;
+
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,11 +25,8 @@ import java.util.Map;
 @RequestMapping("/api/v1/apps") // обработка запросов, начинающихся с ./genre
 public class StateMeasureController {
 
-    private final UserService userService;
 
-    public StateMeasureController( UserService userService) {
-        this.userService = userService;
-    }
+
 
     @GetMapping("/welcome")
     public String welcome(){
@@ -43,7 +40,7 @@ public class StateMeasureController {
 
     @PostMapping("/new-user")
     public String addUser(@RequestBody MyUser user){
-        userService.addUser(user);
+
         return user.getName()+" is saved";
     }
 

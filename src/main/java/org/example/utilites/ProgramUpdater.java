@@ -13,6 +13,7 @@ import java.nio.file.StandardCopyOption;
 
 import com.nimbusds.jose.shaded.gson.JsonObject;
 import com.nimbusds.jose.shaded.gson.JsonParser;
+import lombok.Getter;
 import org.apache.log4j.Logger;
 import org.example.Main;
 import org.example.services.AnswerStorage;
@@ -25,6 +26,12 @@ public class ProgramUpdater {
     private static final String API_URL = "https://api.github.com/repos/andrewoficial/my_first_microservice_app/releases/latest";
     private static final String UPDATE_FILE_PATH = new File("◘").getAbsolutePath().replaceAll("◘", "");
     private static final Logger log = Logger.getLogger(ProgramUpdater.class);
+    private String whatsNews = "Запрос не был произведён";
+
+    @Getter
+    private boolean busy = false;
+    @Getter
+    private volatile int updatePercents = 0;
     public String getLatestVersion() {
         try {
             // Создаем URL и открываем соединение
@@ -54,6 +61,8 @@ public class ProgramUpdater {
 
             // Парсим JSON
             JSONObject jsonResponse = new JSONObject(response.toString());
+            whatsNews = jsonResponse.getString("body"); // Строка с описанием "что нового" (уже содержит r n)
+            System.out.println(whatsNews);
             return jsonResponse.getString("tag_name"); // Метка версии в поле "tag_name"
         } catch (Exception e) {
             log.warn("Error while fetching version: " + e.getMessage());
@@ -131,10 +140,16 @@ public class ProgramUpdater {
         return false;
     }
 
+    public String getInfo() throws IOException {
+        return whatsNews;
+    }
+
     public void downloadUpdate() throws IOException, InterruptedException {
+        updatePercents = 0;
+
         // Отладочное сообщение
         log.info("Загрузка новой версии.");
-
+        this.busy = true;
         // Создание HTTP-клиента
         HttpClient client = HttpClient.newHttpClient();
 
@@ -152,6 +167,7 @@ public class ProgramUpdater {
         // Проверка статуса ответа
         if (response.statusCode() != 200) {
             log.warn("Ошибка при загрузке новой версии.");
+            this.busy = false;
             return;
         }
 
@@ -186,17 +202,27 @@ public class ProgramUpdater {
                     downloadedBytes += bytesRead;
 
                     long currentTime = System.currentTimeMillis();
-                    if (currentTime - lastReportTime >= 300) { // Каждые 300 мс
+                    if (currentTime - lastReportTime >= 150) { // Каждые 300 мс
+
+
                         System.out.printf("Загружено: %.2f МБ / %.2f МБ%n",
                                 downloadedBytes / 1_048_576.0, totalBytes / 1_048_576.0);
+
+                        updatePercents = (int) ((downloadedBytes / (double) totalBytes) * 100);
+                        System.out.printf("Прогресс: %d%%%n", updatePercents);
+
                         lastReportTime = currentTime;
                     }
+                    updatePercents = 100;
                 }
             }
 
             log.info("Файл успешно загружен: " + filePath);
         } catch (IOException e) {
+            updatePercents = 0;
             log.info("Ошибка при загрузке файла: " + e.getMessage());
+        }finally {
+            busy = false;
         }
     }
 

@@ -102,6 +102,35 @@ public class JmenuFile {
         return viewMenu;
     }
 
+    /**
+     * Функция создания меню "Система"
+     */
+    public JMenu createInfo(ExecutorService thPool)
+    {
+        // создадим выпадающее меню
+        JMenu viewMenu = new JMenu("Справка");
+        // меню-флажки
+        JMenuItem sysUpdate  = new JMenuItem("Проверка обновлений");
+        // добавим все в меню
+        viewMenu.add(sysUpdate);
+        sysUpdate.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                System.out.println("Update Window");
+                UpdateWindow updateWindow = new UpdateWindow();
+                updateWindow.setName("Update Window");
+                updateWindow.setTitle("Update Window");
+                updateWindow.pack();
+                updateWindow.setModal(false);
+                updateWindow.setVisible(true);
+                thPool.submit(new RenderThread(updateWindow));
+
+
+            }
+        });
+        return viewMenu;
+    }
 
 
     /**
