@@ -20,7 +20,10 @@ import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 
 public class PoolService implements Runnable{
     private boolean threadLive = true;
+
+    @Getter
     private volatile boolean  comBusy = false;
+
     private ArrayList <Integer> currentTab = new ArrayList<>();
     private ArrayList <String> textToSend = new ArrayList<>();
     @Getter
@@ -105,6 +108,9 @@ public class PoolService implements Runnable{
         }
     }
 
+    public boolean isComBusy(){
+        return comBusy;
+    }
     public void setupComConnection(SerialPort comPort){
         this.comPort = comPort;
     }

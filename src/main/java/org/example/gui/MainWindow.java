@@ -7,6 +7,7 @@ import com.fazecast.jSerialComm.SerialPort;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
+import lombok.Getter;
 import org.apache.log4j.Logger;
 import org.example.Main;
 import org.example.services.AnswerStorage;
@@ -47,7 +48,9 @@ public class MainWindow extends JFrame implements Rendeble {
     private final ArrayList<String> textToSendValue = new ArrayList<>();
     private final ArrayList<String> prefToSendValue = new ArrayList<>();
     private final ArrayList<JTextPane> logDataTransferJtextPanel = new ArrayList<>();
-    private final ArrayList<PoolService> poolServices = new ArrayList<>();
+
+    @Getter
+    private static final ArrayList<PoolService> poolServices = new ArrayList<>();
 
     private MainLeftPanelStateCollection leftPanState = new MainLeftPanelStateCollection();
 
@@ -723,18 +726,53 @@ public class MainWindow extends JFrame implements Rendeble {
 
     }
 
+    public static void waitTab(int tabNumber) {
+        int mySuperWatchdog = 0;
+        while (MainWindow.isBusy(tabNumber)) {
+            mySuperWatchdog++;
+            try {
+                System.out.println("Ожидаю освобождение вкладки...");
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                //throw new RuntimeException(e);
+            }
+            if (mySuperWatchdog > 1000) {
+                log.error("Выход из ожидания выполнения отправки через web-интерфейс по вачдогу!");
+                break;
+            }
+        }
+    }
+
     public static void webSend(int tabSend, String command) {
         Main.mainWindow.setCurrentTab(tabSend);
+        System.out.println("Установил активную вкладку " + tabSend);
+        MainWindow.waitTab(tabSend);
         //Main.mainWindow.addCustomMessage("Команда из web-интерфейса не была отправлена. Метод не реализован. Текст команды." + command);
         String prevCommand = Main.mainWindow.getTextToSendValue(tabSend);
+        System.out.println("Предыдущая команда была " + prevCommand);
+
+
         Main.mainWindow.setTextToSendValue(tabSend, command);
         Main.mainWindow.startSend(true);
+        System.out.println("Установил новую команду " + command);
+        System.out.println("Инициировал отправку");
+        MainWindow.waitTab(tabSend);
+        //Возможно нужно ждать
+        Main.mainWindow.setCurrentTab(tabSend);
+        System.out.println("Установил активную вкладку " + tabSend);
         Main.mainWindow.setTextToSendValue(tabSend, prevCommand);
+        System.out.println("Установил новую команду " + prevCommand);
+
+        Main.mainWindow.startSend(true);
+        System.out.println("Инициировал отправку");
     }
 
     public void setTextToSendValue(int tabInp, String text) {
+        textToSendValue.set(tab, textToSend.getText());
         if (tabbedPane1.getTabCount() > tabInp && tab == tabInp) {
-            if (text != null && text.length() > 2) {
+            if (text == null || text.isEmpty()) {
+
+            } else {
                 textToSend.setText(text);
                 textToSendValue.set(tabInp, text);
             }
@@ -755,6 +793,22 @@ public class MainWindow extends JFrame implements Rendeble {
             this.tab = tabInp;
             tabbedPane1.setSelectedIndex(tabInp);
         }
+    }
+
+
+    public static boolean isBusy(int tabNumber) {
+        if (tabNumber < 0 || tabNumber >= MainWindow.getCurrTabCount()) {
+            log.warn("Обращение с неверным номером вкладки. Возвращаю статус свободна.");
+            return false;
+        }
+        ArrayList<PoolService> poolServices = MainWindow.getPoolServices();
+        for (PoolService poolService : poolServices) {
+            if (poolService.containTabDev(tabNumber)) {
+                return poolService.isComBusy();
+            }
+        }
+        log.warn("Для указанной вкладки не найден сервис опроса. предпологается, что ком-порт свободен.");
+        return false;
     }
 
 
