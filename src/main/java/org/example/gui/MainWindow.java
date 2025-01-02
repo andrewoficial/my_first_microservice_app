@@ -260,6 +260,7 @@ public class MainWindow extends JFrame implements Rendeble {
                     }
                     if (editedPort.isOpen()) {
                         addCustomMessage("Порт " + editedPort.getSystemPortName() + " открыт успешно! ");
+                        prop.setPortForTab(editedPort.getSystemPortName(), tab);
                     } else {
                         addCustomMessage("Ошибка открытия порта " + editedPort.getSystemPortName() + "! Код ошибки: " + editedPort.getLastErrorCode());
                     }
@@ -583,9 +584,15 @@ public class MainWindow extends JFrame implements Rendeble {
                         for (int i = 0; i < portsListForUpdateState.size(); i++) {
                             if (prop.getPorts().length <= tab) {
                                 log.warn("Ошибка...");
+
                             } else {
                                 if (portsListForUpdateState.get(i).getSystemPortName().equals(prop.getPorts()[tab])) {
                                     CB_ComPorts.setSelectedIndex(i);
+                                } else {
+                                    log.warn("Пропущен ком-порт для выбора. Сравнение... Номер вкладки: " + i +
+                                            " Название ком порта по номеру:" + portsListForUpdateState.get(i).getSystemPortName() +
+                                            " Название ком порта в свойствах для номера вкладки:" + prop.getPorts()[tab]);
+                                    /* Искать тут */
                                 }
                             }
 

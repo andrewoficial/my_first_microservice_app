@@ -478,44 +478,46 @@ public class MyProperties {
         log.debug("Обновлено значение класса левой вклдаки... ");
     }
 
-    public void setLastPorts(ArrayList<ComPort> portsInp, int tabCounter){
+    public void setPortForTab(String portName, int tabNumber){
         //getCurrentComName()
+        if(ports == null){
+            ports = new String[2];
+        }
 
-        StringBuilder sb = new StringBuilder();
-        String[] portsBack = new String[ports.length];
-        System.arraycopy(this.ports, 0, portsBack, 0, ports.length);
+        if(portName == null || portName.isEmpty()){
+            log.warn("В метод сохранения ком-портов передано null название");
+            return;
+        }
 
-        this.ports = new String[tabCounter];
+        if(tabNumber < 0 || tabNumber > 999){
+            log.warn("В метод сохранения ком-портов передано недопустимое значение номера вкладки");
+            return;
+        }
 
-        for (int i = 0; i < tabCounter; i++) {
-            ComPort port = portsInp.get(i);
-            if(port.activePort != null){
-                this.ports [i] = port.getCurrentComName();
-                sb.append(port.getCurrentComName());
-                sb.append(", ");
-            }else{
-                if(ports.length > i && portsBack.length > i){
-                    if(portsBack[i] != null && portsBack[i].length()>1){
-                        this.ports [i] = portsBack[i];
-                        sb.append(portsBack[i]);
-                        sb.append(", ");
-                    }else{
-                        this.ports [i] = "notOpen";
-                        sb.append("notOpen");
-                        sb.append(", ");
-                    }
-                }
-                else{
-                    this.ports [i] = "DUNNO";
-                    sb.append("DUNNO");
-                    sb.append(", ");
-                }
+        if(ports.length < tabNumber){
+            String[] newPorts = new String[tabNumber + 1];
+            System.arraycopy(ports, 0, newPorts, 0, tabNumber);
+            ports = newPorts;
+            log.info("Произведено выравнивание длинны сохраняемого массива к количеству вкладок");
+        }
+
+        for (int i = 0; i < ports.length; i++) {
+            if(ports[i] == null || ports[i].isEmpty()){
+                ports[i] = "notOpen";
             }
         }
 
-        properties.setProperty("ports", sb.toString());
+        ports[tabNumber] = portName;
+        log.info("Для вкладки " + tabNumber + ". Обновлен ком порт на " + portName);
+
+        StringBuilder stringBuilder = new StringBuilder();
+        for (String port : ports) {
+            stringBuilder.append(port);
+            stringBuilder.append(", ");
+        }
+        properties.setProperty("ports", stringBuilder.toString());
         this.updateFile();
-        log.debug("Обновлено значение последних префиксов: " + sb);
+        log.debug("Обновлено значение последних портов по названиям: " + stringBuilder);
     }
 
     public void setLogLevel(org.apache.log4j.Level level){

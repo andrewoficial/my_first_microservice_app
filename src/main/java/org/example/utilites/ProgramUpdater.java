@@ -213,7 +213,7 @@ public class ProgramUpdater {
 
                         lastReportTime = currentTime;
                     }
-                    updatePercents = 100;
+
                 }
             }
 
