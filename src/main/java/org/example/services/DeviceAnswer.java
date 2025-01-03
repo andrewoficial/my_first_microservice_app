@@ -20,6 +20,10 @@ public class DeviceAnswer {
     private String requestSendString;
     @Setter @Getter
     private String answerReceivedString;
+
+    @Setter @Getter
+    private String answerReceivedStringCSV;
+
     @Setter @Getter
     private AnswerValues answerReceivedValues;
     @Setter @Getter
@@ -47,5 +51,26 @@ public class DeviceAnswer {
     public String toString(){
         String formattedString = answerReceivedTime.format(MyUtilities.CUSTOM_FORMATTER);
         return formattedString + "\t" + "className" + "\t" + answerReceivedString + "\n";
+    }
+
+    public String toStringCSV(){
+        StringBuilder formattedString = new StringBuilder();
+        formattedString.append(answerReceivedTime.format(MyUtilities.CUSTOM_FORMATTER_CSV));
+        formattedString.append(MyUtilities.separator);
+        for (int i = 0; i < answerReceivedValues.getCounter(); i++) {
+            if(answerReceivedValues.getValues() != null){
+                formattedString.append(MyUtilities.changeToNeedSeparator(answerReceivedValues.getValues()[i]));
+                formattedString.append(MyUtilities.separator);
+                formattedString.append(answerReceivedValues.getUnits()[i]);
+                formattedString.append(MyUtilities.separator);
+            }else{
+                formattedString.append("nullValue");
+                formattedString.append(MyUtilities.separator);
+                formattedString.append("nullUnits");
+                formattedString.append(MyUtilities.separator);
+            }
+        }
+        formattedString.append("\n");
+        return formattedString.toString();
     }
 }

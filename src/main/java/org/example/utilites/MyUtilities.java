@@ -14,9 +14,11 @@ import java.util.ArrayList;
 import java.util.Date;
 
 public class MyUtilities {
-
+    public static String separator = ";";
+    public static String dotOrPoint = ",";
     public static final DateTimeFormatter CUSTOM_FORMATTER = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm:ss.SSS");
     public static final DateTimeFormatter CUSTOM_FORMATTER_FILES = DateTimeFormatter.ofPattern("yyyy.MM.dd HH.mm.ss.SSS");
+    public static final DateTimeFormatter CUSTOM_FORMATTER_CSV = DateTimeFormatter.ofPattern("yyyy.MM.dd"+MyUtilities.separator+"HH.mm.ss.SSS");
     public static final int[] CRC16_TABLE = {
             0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50A5, 0x60C6, 0x70E7,
             0x8108, 0x9129, 0xA14A, 0xB16B, 0xC18C, 0xD1AD, 0xE1CE, 0xF1EF,
@@ -51,6 +53,18 @@ public class MyUtilities {
             0xEF1F, 0xFF3E, 0xCF5D, 0xDF7C, 0xAF9B, 0xBFBA, 0x8FD9, 0x9FF8,
             0x6E17, 0x7E36, 0x4E55, 0x5E74, 0x2E93, 0x3EB2, 0x0ED1, 0x1EF0
     };
+
+    public static String changeToNeedSeparator(String str){
+        if(str == null || str.isEmpty()){
+            return "";
+        }
+        return str.replaceAll("[.,]", MyUtilities.dotOrPoint);
+    }
+
+    public static String changeToNeedSeparator(double value){
+        String str = Double.toString(value);
+        return str.replaceAll("[.,]", MyUtilities.dotOrPoint);
+    }
 
     public static boolean checkCRC16(String dataPart, String crcPart) {
         int crcCalculated = calculateCRC16(dataPart.getBytes());
