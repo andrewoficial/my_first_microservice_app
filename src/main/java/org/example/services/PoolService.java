@@ -8,19 +8,21 @@ import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.utilites.ProtocolsList;
 import org.example.device.*;
+import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Objects;
 
-import static org.example.Main.comPorts;
+
 import static org.example.utilites.MyUtilities.bytesToHex;
 import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 
+
 public class PoolService implements Runnable{
     private boolean threadLive = true;
-
+    ComPort comPorts = null;
     @Getter
     private volatile boolean  comBusy = false;
 

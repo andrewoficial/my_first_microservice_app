@@ -1,6 +1,7 @@
 package org.example.web.config.myUserDetails;
 
 import org.example.web.entity.MyUser;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -19,7 +20,7 @@ import java.util.stream.Collectors;
  * @version 1.0
  */
 
-
+@ConditionalOnProperty(name = "server.enabled", havingValue = "true")
 @Profile("offline")
 public class MyUserDetailsOffline implements UserDetails {
     private MyUser user;

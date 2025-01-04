@@ -4,6 +4,7 @@ package org.example.web.config;
 import com.zaxxer.hikari.HikariDataSource;
 import org.example.web.service.myUserDetailService.MyUserDetailServiceOffline;
 import org.example.web.service.myUserDetailService.MyUserDetailServiceProduction;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -19,10 +20,16 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 import javax.sql.DataSource;
-
+@ConditionalOnProperty(name = "server.enabled", havingValue = "true")
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+    @Bean
+    @ConditionalOnProperty(name = "server.enabled", havingValue = "true", matchIfMissing = false)
+    public SecurityConfig serverService() {
+        return new SecurityConfig();
+    }
+
     @Profile("offline")
     @Bean
     public UserDetailsService userDetailsServiceOffline (){

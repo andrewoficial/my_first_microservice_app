@@ -5,6 +5,7 @@ import org.example.web.config.myUserDetails.MyUserDetails;
 import org.example.web.config.myUserDetails.MyUserDetailsOffline;
 import org.example.web.entity.MyUser;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 import org.springframework.security.core.userdetails.User;
@@ -16,7 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
-
+@ConditionalOnProperty(name = "server.enabled", havingValue = "true")
 @Profile("offline")
 @Service
 public class MyUserDetailServiceOffline implements UserDetailsService {

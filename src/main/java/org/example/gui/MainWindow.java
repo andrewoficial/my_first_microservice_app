@@ -16,6 +16,10 @@ import org.example.services.TabAnswerPart;
 import org.example.utilites.*;
 import org.example.services.PoolService;
 import org.jfree.data.json.JSONUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.stereotype.Component;
 import org.w3c.dom.ls.LSOutput;
 
 import javax.lang.model.element.Name;
@@ -27,15 +31,15 @@ import javax.swing.event.DocumentListener;
 import javax.swing.text.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static org.example.Main.comPorts;
-
 
 public class MainWindow extends JFrame implements Rendeble {
+    public static MainWindow mainWindow = null;
     private JPanel contentPane;
     private static int currTabCount = 0;
     private final static Logger log = Logger.getLogger(MainWindow.class);
@@ -44,7 +48,12 @@ public class MainWindow extends JFrame implements Rendeble {
     private final ExecutorService thPool = Executors.newCachedThreadPool();
     private final ExecutorService uiThPool = Executors.newCachedThreadPool();
 
-    MyProperties prop = Main.prop;
+    //MyProperties prop = Main.prop;
+
+    private final MyProperties prop;
+    private final ComPort comPorts;
+
+
     private final ArrayList<String> textToSendValue = new ArrayList<>();
     private final ArrayList<String> prefToSendValue = new ArrayList<>();
     private final ArrayList<JTextPane> logDataTransferJtextPanel = new ArrayList<>();
@@ -88,8 +97,30 @@ public class MainWindow extends JFrame implements Rendeble {
      **/
     private int tab = 0; //Текущая вкладка
 
-    public MainWindow() {
 
+    private void initUI() {
+        assert prop != null;
+        setTitle(prop.getTitle() + " v" + prop.getVersion());
+        URL resource = Main.class.getClassLoader().getResource("GUI_Images/Pic.png");
+        if (resource != null) {
+            ImageIcon pic = new ImageIcon(resource);
+            this.setIconImage(pic.getImage());
+            log.debug("Установка картинки");
+        }
+        this.pack();
+        this.setVisible(true);
+    }
+
+
+    public MainWindow(MyProperties myProperties, ComPort comPorts) {
+
+        this.prop = myProperties;
+        this.comPorts = comPorts;
+        initUI();
+
+        //this.prop = new MyProperties();
+        //this.comPorts = new ComPort();
+        MainWindow.mainWindow = this;
 
         log.debug("Подготовка к рендеру окна....");
         log.debug(Thread.currentThread().getName());
@@ -726,7 +757,9 @@ public class MainWindow extends JFrame implements Rendeble {
 
     }
 
+
     public static void waitTab(int tabNumber) {
+        /*
         int mySuperWatchdog = 0;
         while (MainWindow.isBusy(tabNumber)) {
             mySuperWatchdog++;
@@ -741,30 +774,35 @@ public class MainWindow extends JFrame implements Rendeble {
                 break;
             }
         }
+
+         */
     }
 
     public static void webSend(int tabSend, String command) {
-        Main.mainWindow.setCurrentTab(tabSend);
+        /*
+        MainWindow.mainWindow.setCurrentTab(tabSend);
         System.out.println("Установил активную вкладку " + tabSend);
         MainWindow.waitTab(tabSend);
-        //Main.mainWindow.addCustomMessage("Команда из web-интерфейса не была отправлена. Метод не реализован. Текст команды." + command);
-        String prevCommand = Main.mainWindow.getTextToSendValue(tabSend);
+        // MainWindow.mainWindow.addCustomMessage("Команда из web-интерфейса не была отправлена. Метод не реализован. Текст команды." + command);
+        String prevCommand = MainWindow.mainWindow.getTextToSendValue(tabSend);
         System.out.println("Предыдущая команда была " + prevCommand);
 
 
-        Main.mainWindow.setTextToSendValue(tabSend, command);
-        Main.mainWindow.startSend(true);
+        MainWindow.mainWindow.setTextToSendValue(tabSend, command);
+        MainWindow.mainWindow.startSend(true);
         System.out.println("Установил новую команду " + command);
         System.out.println("Инициировал отправку");
         MainWindow.waitTab(tabSend);
         //Возможно нужно ждать
-        Main.mainWindow.setCurrentTab(tabSend);
+        MainWindow.mainWindow.setCurrentTab(tabSend);
         System.out.println("Установил активную вкладку " + tabSend);
-        Main.mainWindow.setTextToSendValue(tabSend, prevCommand);
+        MainWindow.mainWindow.setTextToSendValue(tabSend, prevCommand);
         System.out.println("Установил новую команду " + prevCommand);
 
-        Main.mainWindow.startSend(true);
+        MainWindow.mainWindow.startSend(true);
         System.out.println("Инициировал отправку");
+
+         */
     }
 
     public void setTextToSendValue(int tabInp, String text) {
@@ -797,6 +835,8 @@ public class MainWindow extends JFrame implements Rendeble {
 
 
     public static boolean isBusy(int tabNumber) {
+        return true;
+        /*
         if (tabNumber < 0 || tabNumber >= MainWindow.getCurrTabCount()) {
             log.warn("Обращение с неверным номером вкладки. Возвращаю статус свободна.");
             return false;
@@ -809,6 +849,8 @@ public class MainWindow extends JFrame implements Rendeble {
         }
         log.warn("Для указанной вкладки не найден сервис опроса. предпологается, что ком-порт свободен.");
         return false;
+
+         */
     }
 
 
@@ -1028,6 +1070,7 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
     private void closeUnusedPorts() {
+        /*
         int coutTabs = getCurrTabCount();
         for (int i = 0; i < poolServices.size(); i++) {
             if (!(i < coutTabs)) {
@@ -1036,6 +1079,8 @@ public class MainWindow extends JFrame implements Rendeble {
                 poolServices.remove(i);
             }
         }
+
+         */
     }
 
     private PoolService findPoolServiceByOpenedPort() {
@@ -1127,8 +1172,9 @@ public class MainWindow extends JFrame implements Rendeble {
         return true;
     }
 
+
     public static int getCurrTabCount() {
-        return currTabCount;
+        return 5; //ToDo fix it
     }
 
 
@@ -1150,27 +1196,6 @@ public class MainWindow extends JFrame implements Rendeble {
 
 
     }
-/*
-Старый обработчик связки вкладки и айдишника устройства
-
-            //*SERVICE:SETPAIR:xxx:END
-
-            if (textToSend.getText().contains("*SERVICE:SETPAIR:") && textToSend.getText().contains(":END")) {
-                String tmp = textToSend.getText();
-                int pos = tmp.indexOf("SETPAIR:");
-                tmp = tmp.substring(pos + 8);
-                if (tmp.length() > 1) {
-                    tmp = tmp.replace(":END", "");
-                    AnswerStorage.registerDeviceTabPair(tmp, tab);
-                    System.out.println("Registered");
-                } else {
-                    System.out.println("TooShortArgument");
-                    System.out.println(tmp);
-                }
-
-                return;
-            }
-            */
 
 
     {

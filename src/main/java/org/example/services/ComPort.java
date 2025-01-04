@@ -6,16 +6,17 @@
 package org.example.services;
 
 import com.fazecast.jSerialComm.SerialPort;
-import com.fazecast.jSerialComm.SerialPortDataListener;
-import com.fazecast.jSerialComm.SerialPortEvent;
 import lombok.Getter;
 import org.example.utilites.MyUtilities;
+import org.springframework.stereotype.Component;
 
-import java.io.Serial;
+
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Scanner;
 
+
+
+@Component
 public class ComPort {
     public  SerialPort activePort;
     private SerialPort[] ports = SerialPort.getCommPorts();

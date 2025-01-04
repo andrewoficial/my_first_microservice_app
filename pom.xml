@@ -128,6 +128,31 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
 
+            <!-- Плагин, помещающий в контекст спринга текущую версию -->
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.0</version>
+                <executions>
+                    <execution>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>resources</goal>
+                        </goals>
+                        <configuration>
+                            <filters>
+                                <filter>${project.basedir}/src/main/resources/application.properties</filter>
+                            </filters>
+                            <delimiters>
+                                <delimiter>@</delimiter>
+                            </delimiters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+
             <!-- Maven Release Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

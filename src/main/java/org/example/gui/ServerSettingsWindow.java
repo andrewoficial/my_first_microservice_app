@@ -7,6 +7,7 @@ import org.example.Main;
 import org.example.utilites.MyProperties;
 import org.example.utilites.SpringLoader;
 import org.springframework.core.env.Environment;
+import org.springframework.core.env.MapPropertySource;
 
 import javax.swing.*;
 import java.awt.*;
@@ -51,12 +52,12 @@ public class ServerSettingsWindow extends JDialog {
         setModal(true);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setContentPane(serverParametersPanel);
-        System.out.println("USR GET " + Main.prop.getUsr());
-        IN_Login.setText(Main.prop.getUsr());
-        IN_Pwd.setText(Main.prop.getPwd());
-        IN_ServerPort.setText(Main.prop.getPrt());
-        IN_Url.setText(Main.prop.getUrl());
-        IN_DbDriver.setText(Main.prop.getDrv());
+        //System.out.println("USR GET " + Main.prop.getUsr());
+        //IN_Login.setText(Main.prop.getUsr());
+        //IN_Pwd.setText(Main.prop.getPwd());
+        //IN_ServerPort.setText(Main.prop.getPrt());
+       // IN_Url.setText(Main.prop.getUrl());
+        //IN_DbDriver.setText(Main.prop.getDrv());
 
         saveButton.addActionListener(
                 new ActionListener() {
@@ -81,6 +82,12 @@ public class ServerSettingsWindow extends JDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.out.println("Pressed BT_StartServer");
+                SpringLoader.ctx.getEnvironment().getPropertySources().addFirst(
+                        new MapPropertySource("dynamicProperties", Map.of("server.enabled", "true"))
+                );
+                SpringLoader.RunApp();
+
+                /*
                 springPort = IN_ServerPort.getText();
                 driver = IN_DbDriver.getText();
                 dbUsername = IN_Login.getText();
@@ -130,6 +137,8 @@ public class ServerSettingsWindow extends JDialog {
 
                 System.out.println("Active profiles: " + String.join(", ", activeProfiles));
 
+                 */
+
             }
         });
 
@@ -158,7 +167,7 @@ public class ServerSettingsWindow extends JDialog {
             springPort = "8080";
         } else if (springPort.length() > 5 || springPort.length() < 2) {
             springPort = "8080";
-            Main.prop.setPrt(springPort);
+            //Main.prop.setPrt(springPort);
         }
 
         if (driver == null) {
@@ -167,7 +176,7 @@ public class ServerSettingsWindow extends JDialog {
             driver = "org.postgresql.DriverLength";
         } else {
             driver = driver.trim();
-            Main.prop.setDrv(driver);
+            //Main.prop.setDrv(driver);
         }
 
         if (dbUrl == null) {
@@ -176,7 +185,7 @@ public class ServerSettingsWindow extends JDialog {
             dbUrl = "jdbc:postgresql://somesite.com:5432/someDataBaseLength";
         } else {
             dbUrl = dbUrl.trim();
-            Main.prop.setUrl(dbUrl);
+            //Main.prop.setUrl(dbUrl);
         }
 
         if (dbPassword == null) {
@@ -185,7 +194,7 @@ public class ServerSettingsWindow extends JDialog {
             dbPassword = "some_passwordLength";
         } else {
             dbPassword = dbPassword.trim();
-            Main.prop.setPwd(dbPassword);
+            //Main.prop.setPwd(dbPassword);
         }
 
         if (dbUsername == null) {
@@ -194,10 +203,10 @@ public class ServerSettingsWindow extends JDialog {
             dbUsername = "some_usernameLength";
         } else {
             dbUsername = dbUsername.trim();
-            Main.prop.setUsr(dbUsername);
+            //Main.prop.setUsr(dbUsername);
         }
-        Main.prop.updateServerConf();
-        Main.prop.updateFile();
+        //Main.prop.updateServerConf();
+        //Main.prop.updateFile();
 
         System.out.println(this.driver);
         System.out.println(this.dbUsername);

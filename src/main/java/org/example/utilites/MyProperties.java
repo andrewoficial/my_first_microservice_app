@@ -20,6 +20,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
 /**
  * The class responsible for getting the settings from the file
  * (what not to place in the code and on the git-hub)
@@ -27,10 +30,35 @@ import java.util.*;
  * <p>Author: Andrew Kantser</p>
  * <p>Date: 2023-07-01</p>
  *
+ * <p>Refactored: 2025-01-05</p>
  */
-
+@Component
+@ConfigurationProperties(prefix = "app")
 public class MyProperties {
     private static Logger log = null;
+
+    @Value("${app.version}")
+    private String version;
+
+    @Value("${app.title}")
+    private String title;
+
+    // Геттеры и сеттеры
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
 
     @Setter
     @Getter
@@ -77,6 +105,7 @@ public class MyProperties {
     private final java.util.Properties properties;
 
     private final java.util.Properties propertiesIdentAssociation;
+
 
     public MyProperties() {
         //Thread.currentThread().setName("MyProperties");

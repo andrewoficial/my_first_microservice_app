@@ -32,7 +32,8 @@ public class UpdateWindow extends JDialog implements Rendeble {
 
     public UpdateWindow() {
 
-        String currentVersion = Main.currentVersion;
+        //String currentVersion = Main.currentVersion;
+        String currentVersion = "LOL";
 
 
         setModal(false);

@@ -19,10 +19,10 @@ public class SpringConfig {
     @Bean
     public DataSource getDataSource() {
         DataSourceBuilder dataSourceBuilder = DataSourceBuilder.create();
-        dataSourceBuilder.username(Main.prop.getUsr());
-        dataSourceBuilder.password(Main.prop.getPwd());
-        dataSourceBuilder.url(Main.prop.getUrl());
-        dataSourceBuilder.driverClassName(Main.prop.getDrv());
+        //dataSourceBuilder.username(Main.prop.getUsr());
+        //dataSourceBuilder.password(Main.prop.getPwd());
+        //dataSourceBuilder.url(Main.prop.getUrl());
+        //dataSourceBuilder.driverClassName(Main.prop.getDrv());
         return dataSourceBuilder.build();
     }
 
