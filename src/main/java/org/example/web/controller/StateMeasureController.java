@@ -15,13 +15,14 @@ import org.example.services.TabAnswerPart;
 import org.example.web.entity.MyUser;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@ConditionalOnProperty(name = "server.enabled", havingValue = "true")
+@Profile({ "srv-offline", "srv-online" })
 @Validated // в классе будет использоваться валидация по аннотациям
 @RestController
 @RequestMapping("/api/v1/apps") // обработка запросов, начинающихся с ./genre

@@ -1,16 +1,17 @@
 package org.example.web.config;
 
 
-import org.example.utilites.SpringLoader;
+//import org.example.utilites.SpringLoader;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.spring6.templateresolver.SpringResourceTemplateResolver;
 import org.thymeleaf.spring6.view.ThymeleafViewResolver;
 import org.thymeleaf.templatemode.TemplateMode;
-@ConditionalOnProperty(name = "server.enabled", havingValue = "true")
+@Profile({ "srv-offline", "srv-online" })
 @Configuration
 @EnableWebSecurity
 public class TemplateEngineConfig {

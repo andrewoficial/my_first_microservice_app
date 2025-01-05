@@ -1,6 +1,6 @@
 package org.example.web.service.myUserDetailService;
 
-import org.example.utilites.SpringLoader;
+//import org.example.utilites.SpringLoader;
 import org.example.web.config.myUserDetails.MyUserDetails;
 import org.example.web.config.myUserDetails.MyUserDetailsOffline;
 import org.example.web.entity.MyUser;
@@ -17,17 +17,16 @@ import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
-@ConditionalOnProperty(name = "server.enabled", havingValue = "true")
-@Profile("offline")
+@Profile({ "srv-offline", "srv-online" })
 @Service
 public class MyUserDetailServiceOffline implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         System.out.println("Run MyUserDetailServiceOffline");
-        Environment env = SpringLoader.ctx.getEnvironment();
-        String[] activeProfiles = env.getActiveProfiles();
-        System.out.println("Active profiles: " + String.join(", ", activeProfiles));
+        //Environment env = SpringLoader.ctx.getEnvironment();
+        //String[] activeProfiles = env.getActiveProfiles();
+        //System.out.println("Active profiles: " + String.join(", ", activeProfiles));
 
 
         // Проверка захардкоженного пользователя

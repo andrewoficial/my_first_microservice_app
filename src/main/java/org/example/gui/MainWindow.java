@@ -227,9 +227,12 @@ public class MainWindow extends JFrame implements Rendeble {
             public void windowClosed(WindowEvent windowEvent) {
                 saveParameters();
                 log.info("Выход из программы" + tab);
-                if (SpringLoader.ctx != null && SpringLoader.ctx.isRunning()) {
-                    SpringLoader.ctx.close();
-                }
+
+//                if (SpringLoader.ctx != null && SpringLoader.ctx.isRunning()) {
+//                    SpringLoader.ctx.close();
+//                }
+
+
                 thPool.shutdownNow();
                 uiThPool.shutdownNow();
                 MainWindow.super.dispose();

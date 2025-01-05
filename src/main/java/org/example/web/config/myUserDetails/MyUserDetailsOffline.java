@@ -17,11 +17,11 @@ import java.util.stream.Collectors;
  * о пользователе, необходимую для аутентификации и авторизации.
  *
  * @author [Kantser Andrey]
- * @version 1.0
+ * @version 1.1
  */
 
-@ConditionalOnProperty(name = "server.enabled", havingValue = "true")
-@Profile("offline")
+//@ConditionalOnProperty(name = "server.enabled", havingValue = "true") раньше было так....
+@Profile("srv-offline")
 public class MyUserDetailsOffline implements UserDetails {
     private MyUser user;
     public MyUserDetailsOffline(MyUser user){

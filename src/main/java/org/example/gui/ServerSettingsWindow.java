@@ -5,7 +5,12 @@ import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import org.example.Main;
 import org.example.utilites.MyProperties;
-import org.example.utilites.SpringLoader;
+//import org.example.utilites.SpringLoader;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.MapPropertySource;
 
@@ -16,8 +21,12 @@ import java.awt.event.ActionListener;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.stereotype.Component;
 
+
+@Component
 public class ServerSettingsWindow extends JDialog {
+    private ApplicationContext applicationContext;
 
     private String driver;
     private JPanel serverParametersPanel;
@@ -56,14 +65,14 @@ public class ServerSettingsWindow extends JDialog {
         //IN_Login.setText(Main.prop.getUsr());
         //IN_Pwd.setText(Main.prop.getPwd());
         //IN_ServerPort.setText(Main.prop.getPrt());
-       // IN_Url.setText(Main.prop.getUrl());
+        // IN_Url.setText(Main.prop.getUrl());
         //IN_DbDriver.setText(Main.prop.getDrv());
 
         saveButton.addActionListener(
                 new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        System.out.println("Pressed BT_StartServer");
+                        System.out.println("Pressed BT_Save (and check)");
                         springPort = IN_ServerPort.getText();
                         driver = IN_DbDriver.getText();
                         dbUsername = IN_Login.getText();
@@ -82,62 +91,11 @@ public class ServerSettingsWindow extends JDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.out.println("Pressed BT_StartServer");
-                SpringLoader.ctx.getEnvironment().getPropertySources().addFirst(
-                        new MapPropertySource("dynamicProperties", Map.of("server.enabled", "true"))
-                );
-                SpringLoader.RunApp();
-
-                /*
-                springPort = IN_ServerPort.getText();
-                driver = IN_DbDriver.getText();
-                dbUsername = IN_Login.getText();
-                StringBuilder pwdInput = new StringBuilder();
-                for (char c : IN_Pwd.getPassword()) {
-                    pwdInput.append(c);
-                }
-                dbPassword = pwdInput.toString();
-                dbUrl = IN_Url.getText();
-
-                checkParameters();
-                Map<String, Object> parameters = new HashMap<>();
                 if (offlineModeFlag) {
-                    System.out.println("Run in OFFLINE MODE");
-                    parameters.put("spring.datasource.url", "");
-                    parameters.put("spring.datasource.username", "");
-                    parameters.put("spring.datasource.password", "");
-                    parameters.put("spring.datasource.driver-class-name", ""); // Отключаем драйвер базы данных
-                    parameters.put("spring.jpa.hibernate.ddl-auto", "none");
-                    parameters.put("spring.jpa.generate-ddl", "false"); // Отключаем генерацию DDL
-                    parameters.put("spring.jpa.open-in-view", "false"); // Отключаем кеширование сессий
-                    parameters.put("spring.datasource.initialization-mode", "never");
-                    parameters.put("spring.jpa.show-sql", "false"); // Не показывать SQL-запросы в режиме офлайн
-                    parameters.put("spring.profiles.active", "offline");
-                    parameters.put("spring.datasource.hikari.enabled", "false");
-
-                    parameters.put("spring.sql.init.enabled", "false");
-                    parameters.put("spring.jpa.hibernate.ddl", "none");
-
+                    Main.restart("srv-offline");
                 } else {
-                    System.out.println("Run in online mode");
-                    parameters.put("spring.profiles.active", "production");
-                    parameters.put("spring.datasource.hikari.enabled", "true");
-
+                    Main.restart("srv-online");
                 }
-                //parameters.put("logging.level.org.springframework", "DEBUG");
-
-                offlineMode.setSelected(offlineModeFlag);
-                parameters.put("server.port", springPort);
-                SpringLoader.app.setDefaultProperties(parameters);
-
-
-                SpringLoader.RunApp(); //Контекст присваевается тут
-
-                Environment env = SpringLoader.ctx.getEnvironment();
-                String[] activeProfiles = env.getActiveProfiles();
-
-                System.out.println("Active profiles: " + String.join(", ", activeProfiles));
-
-                 */
 
             }
         });
@@ -147,7 +105,7 @@ public class ServerSettingsWindow extends JDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
                 System.out.println("Pressed BT_StopServer");
-                SpringLoader.ctx.close();
+                Main.restart("gui-only");
             }
         });
 
@@ -159,6 +117,8 @@ public class ServerSettingsWindow extends JDialog {
             }
         });
     }
+
+
 
     private void checkParameters() {
         if (springPort == null) {

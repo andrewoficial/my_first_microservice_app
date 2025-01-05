@@ -2,7 +2,9 @@ package org.example.web.entity;
 
 import jakarta.persistence.*;
 import jdk.jfr.DataAmount;
+import org.springframework.context.annotation.Profile;
 
+@Profile({ "srv-offline", "srv-online" })
 @Entity
 @Table(name = "tb_users")
 public class MyUser {

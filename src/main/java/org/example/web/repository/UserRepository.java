@@ -7,8 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-@ConditionalOnProperty(name = "server.enabled", havingValue = "true")
-@Profile("production")
+@Profile({ "srv-offline", "srv-online" })
 public interface UserRepository extends JpaRepository<MyUser, Long> {
     Optional<MyUser> findByName(String username);
 }

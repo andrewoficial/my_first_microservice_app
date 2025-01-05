@@ -22,7 +22,7 @@ import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 
 public class PoolService implements Runnable{
     private boolean threadLive = true;
-    ComPort comPorts = null;
+    ComPort comPorts = null; //ToDo Надо это фиксить............
     @Getter
     private volatile boolean  comBusy = false;
 

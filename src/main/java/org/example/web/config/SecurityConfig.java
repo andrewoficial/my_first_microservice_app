@@ -20,7 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 import javax.sql.DataSource;
-@ConditionalOnProperty(name = "server.enabled", havingValue = "true")
+@Profile({ "srv-offline", "srv-online" })
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -30,17 +30,17 @@ public class SecurityConfig {
         return new SecurityConfig();
     }
 
-    @Profile("offline")
+    @Profile("srv-offline")
     @Bean
     public UserDetailsService userDetailsServiceOffline (){
         System.out.println("Try find MyUserDetailService in userDetailsServiceOffline");
         return new MyUserDetailServiceOffline();
     }
 
-    @Profile("production")
+    @Profile("srv-online")
     @Bean
     public UserDetailsService userDetailsServiceProduction (){
-        System.out.println("Try find MyUserDetailService in userDetailsServiceProduction");
+        System.out.println("Try find MyUserDetailService in userDetailsServiceOnline");
         return new MyUserDetailServiceProduction();
     }
 
@@ -57,7 +57,7 @@ public class SecurityConfig {
     }
 
 
-    @Profile("offline")
+    @Profile("srv-offline")
     @Bean
     public AuthenticationProvider authenticationProviderOffline(){
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
@@ -66,7 +66,7 @@ public class SecurityConfig {
         return provider;
     }
 
-    @Profile("production")
+    @Profile("srv-online")
     @Bean
     public AuthenticationProvider authenticationProviderProduction(){
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();

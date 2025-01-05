@@ -21,7 +21,8 @@ import java.util.stream.Collectors;
  */
 
 
-@ConditionalOnProperty(name = "server.enabled", havingValue = "true")
+//@ConditionalOnProperty(name = "server.enabled", havingValue = "true")
+@Profile("srv-online")
 public class MyUserDetails implements UserDetails {
     private MyUser user;
     public MyUserDetails(MyUser user){

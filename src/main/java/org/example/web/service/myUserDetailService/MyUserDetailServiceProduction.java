@@ -1,6 +1,6 @@
 package org.example.web.service.myUserDetailService;
 
-import org.example.utilites.SpringLoader;
+//import org.example.utilites.SpringLoader;
 import org.example.web.config.myUserDetails.MyUserDetails;
 import org.example.web.entity.MyUser;
 import org.example.web.repository.UserRepository;
@@ -17,19 +17,18 @@ import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
-@ConditionalOnProperty(name = "server.enabled", havingValue = "true")
-@Profile("production")
+@Profile({ "srv-offline", "srv-online" })
 @Service
 public class MyUserDetailServiceProduction implements UserDetailsService {
 
-    @Autowired
+
     private UserRepository repository;
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         System.out.println("Run MyUserDetailServiceProduction");
-        Environment env = SpringLoader.ctx.getEnvironment();
-        String[] activeProfiles = env.getActiveProfiles();
-        System.out.println("Active profiles: " + String.join(", ", activeProfiles));
+        //Environment env = SpringLoader.ctx.getEnvironment();
+        // String[] activeProfiles = env.getActiveProfiles();
+        // System.out.println("Active profiles: " + String.join(", ", activeProfiles));
 
 
         Optional <MyUser> user = repository.findByName(username);
