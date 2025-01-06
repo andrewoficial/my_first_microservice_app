@@ -6,10 +6,10 @@ import lombok.Setter;
 import org.apache.log4j.Category;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.example.device.ProtocolsList;
 import org.example.gui.MainLeftPanelState;
 import org.example.gui.MainLeftPanelStateCollection;
 import org.example.services.AnswerStorage;
-import org.example.services.ComPort;
 
 import java.io.*;
 import java.io.FileOutputStream;
@@ -20,6 +20,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
+import org.example.services.comPort.BaudRatesList;
+import org.example.services.comPort.DataBitsList;
+import org.example.services.comPort.ParityList;
+import org.example.services.comPort.StopBitsList;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;

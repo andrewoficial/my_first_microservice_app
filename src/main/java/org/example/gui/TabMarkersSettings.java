@@ -12,12 +12,16 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.example.services.AnswerStorage;
+import org.example.services.comPool.AnyPoolService;
 import org.example.utilites.MyProperties;
+import org.springframework.stereotype.Service;
 
 import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 
+
 public class TabMarkersSettings extends JDialog {
     private static final Logger log = Logger.getLogger(TabMarkersSettings.class);
+    private final AnyPoolService anyPoolService;
     HashMap<String, Integer> pairs = AnswerStorage.getDeviceTabPair();
     private JTextField TF_marker;
     private JComboBox CB_tabsList;
@@ -28,7 +32,7 @@ public class TabMarkersSettings extends JDialog {
     private MyProperties properties;
     private StringBuilder sb = new StringBuilder();
 
-    public TabMarkersSettings(MyProperties prop) {
+    public TabMarkersSettings(MyProperties prop, AnyPoolService anyPoolService) {
         setModal(false);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setContentPane(mainPanel);
@@ -48,12 +52,13 @@ public class TabMarkersSettings extends JDialog {
                 prop.setIdentAndTabBounding(AnswerStorage.getDeviceTabPair());
             }
         });
+        this.anyPoolService = anyPoolService;
     }
 
     private void updateTabList() {
         CB_tabsList.removeAllItems();
-        int tabCount = MainWindow.getCurrTabCount();
-        for (int i = 0; i < tabCount; i++) {
+
+        for (int i = 0; i < anyPoolService.getCurrentComClientsQuantity(); i++) {
             CB_tabsList.addItem("dev" + (i + 1));
         }
     }

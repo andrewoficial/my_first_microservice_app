@@ -8,7 +8,6 @@ import com.fazecast.jSerialComm.SerialPort;
 import lombok.Setter;
 import org.example.services.AnswerValues;
 import org.apache.log4j.Logger;
-import org.example.utilites.CommandListClass;
 
 public class ARD_BAD_VLT implements SomeDevice{
     private volatile boolean busy = false;

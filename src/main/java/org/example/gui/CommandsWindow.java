@@ -2,11 +2,10 @@ package org.example.gui;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
-import com.intellij.uiDesigner.core.Spacer;
 import org.example.device.SomeDevice;
-import org.example.utilites.CommandListClass;
-import org.example.utilites.ProtocolsList;
-import org.example.utilites.SingleCommand;
+import org.example.device.CommandListClass;
+import org.example.device.ProtocolsList;
+import org.example.device.SingleCommand;
 
 import javax.swing.*;
 import java.awt.*;

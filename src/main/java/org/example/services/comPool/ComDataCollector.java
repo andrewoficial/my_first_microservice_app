@@ -1,4 +1,4 @@
-package org.example.services;
+package org.example.services.comPool;
 
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
@@ -6,9 +6,14 @@ import com.fazecast.jSerialComm.SerialPortEvent;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.log4j.Logger;
-import org.example.utilites.ProtocolsList;
+import org.example.services.AnswerStorage;
+import org.example.services.comPort.ComPort;
+import org.example.services.DeviceAnswer;
+import org.example.services.loggers.DeviceLogger;
+import org.example.services.loggers.GPS_Loger;
+import org.example.services.loggers.PoolLogger;
+import org.example.device.ProtocolsList;
 import org.example.device.*;
-import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -20,11 +25,12 @@ import static org.example.utilites.MyUtilities.bytesToHex;
 import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 
 
-public class PoolService implements Runnable{
+public class ComDataCollector implements Runnable{
     private boolean threadLive = true;
-    ComPort comPorts = null; //ToDo Надо это фиксить............
+
     @Getter
     private volatile boolean  comBusy = false;
+
 
     private ArrayList <Integer> currentTab = new ArrayList<>();
     private ArrayList <String> textToSend = new ArrayList<>();
@@ -51,8 +57,8 @@ public class PoolService implements Runnable{
 
     //private final long millisLimit = poolDelay;
     private long millisPrev = System.currentTimeMillis() - (poolDelay * 100);
-    private static final Logger log = Logger.getLogger(PoolService.class);
-    public PoolService(ProtocolsList protocol,
+    private static final Logger log = Logger.getLogger(ComDataCollector.class);
+    public ComDataCollector(ProtocolsList protocol,
                        String textToSendString,
                        SerialPort comPort,
                        int poolDelay,
@@ -101,33 +107,44 @@ public class PoolService implements Runnable{
         if(device == null){
             try {
                 device = createDeviceByProtocol(protocol, comPort);
+                log.info("Device in ComDataCollector created!! " + protocol.getValue());
             }catch (RuntimeException e){
+                log.error("Device in ComDataCollector creating ERROR");
                 System.out.println(e.getMessage());
             }
             if(device == null){
-                System.out.println("device obj still null");
+                log.warn("Device in ComDataCollector still null");
             }
         }
     }
 
-    public boolean isComBusy(){
-        return comBusy;
-    }
     public void setupComConnection(SerialPort comPort){
         this.comPort = comPort;
     }
+
     public int getProtocolForJCombo(){
         return ProtocolsList.getNumber(this.protocol);
     }
 
+    public int getClientsCount() {
+        if(currentTab == null){
+            return 0;
+        }
+
+        return currentTab.size();
+    }
+
     public int getComPortForJCombo(){
+        ComPort comPorts = new ComPort();
         ArrayList <SerialPort> ports = comPorts.getAllPorts();
         for (int i = 0; i < ports.size(); i++) {
             if(ports.get(i) != null && this.comPort != null && ports.get(i).getSystemPortName().equalsIgnoreCase(this.comPort.getSystemPortName())){
+                comPorts = null;
                 return i;
             }
         }
         System.out.println("Текущий ком-порт не найден в списке доступных");
+        comPorts = null;
         return 0;
     }
 

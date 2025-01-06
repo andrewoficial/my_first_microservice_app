@@ -1,6 +1,7 @@
 package org.example.web.controller;
 
 import org.example.gui.MainWindow;
+import org.example.services.comPool.AnyPoolService;
 import org.example.web.service.FilePathService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -18,11 +19,14 @@ public class TerminalController {
 
     @Autowired
     private FilePathService filePathService;
+    @Autowired
+    private AnyPoolService anyPoolService;
 
     @GetMapping("/terminal")
     public String myPage(Model model) {
         // Получаем количество вкладок из статического метода MainWindow
-        int tabCount = MainWindow.getCurrTabCount();
+
+        int tabCount = anyPoolService.getCurrentComClientsQuantity();
         model.addAttribute("tabCount", tabCount);
         return "terminal";
     }

@@ -1,8 +1,10 @@
-package org.example.services;
+package org.example.services.loggers;
+
+import org.example.services.AnswerStorage;
+import org.example.services.DeviceAnswer;
 
 import java.io.*;
 import java.text.SimpleDateFormat;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
 
@@ -83,7 +85,7 @@ public class GPS_Loger {
         line.setLength(0);
         if(answer != null && answer.getAnswerReceivedValues() != null
                 && answer.getAnswerReceivedValues().getValues().length > 5){
-            line.append("var data_"+AnswerStorage.getIdentByTab(dev_ident)+" = [\n");
+            line.append("var data_"+ AnswerStorage.getIdentByTab(dev_ident)+" = [\n");
             for (int i = 0; i < AnswerStorage.getAnswersForGraph(dev_ident).size(); i++) {
                 DeviceAnswer deviceAnswer = AnswerStorage.getAnswersForGraph(dev_ident).get(i);
                 if(deviceAnswer != null && deviceAnswer.getAnswerReceivedValues() != null

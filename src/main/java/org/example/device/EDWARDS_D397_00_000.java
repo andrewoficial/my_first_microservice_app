@@ -1,16 +1,11 @@
 package org.example.device;
 
-import java.nio.CharBuffer;
-import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
 import java.util.Arrays;
 
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.services.AnswerValues;
-import org.example.utilites.CommandListClass;
-import org.example.utilites.SingleCommand;
 
 
 public class EDWARDS_D397_00_000  implements SomeDevice  {

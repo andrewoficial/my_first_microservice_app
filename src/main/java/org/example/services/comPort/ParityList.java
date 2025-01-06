@@ -1,4 +1,4 @@
-package org.example.utilites;
+package org.example.services.comPort;
 
 import lombok.Getter;
 

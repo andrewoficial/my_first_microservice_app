@@ -1,7 +1,8 @@
 package org.example;
 
 import org.example.gui.MainWindow;
-import org.example.services.ComPort;
+import org.example.services.comPool.AnyPoolService;
+import org.example.services.comPort.ComPort;
 import org.example.utilites.MyProperties;
 
 import org.springframework.boot.SpringApplication;
@@ -35,7 +36,8 @@ public class Main {
         SwingUtilities.invokeLater(() -> {
             MyProperties myProperties = context.getBean(MyProperties.class);
             ComPort comPorts = context.getBean(ComPort.class);
-            MainWindow mainWindow = new MainWindow(myProperties, comPorts);
+            AnyPoolService anyPoolService = context.getBean(AnyPoolService.class);
+            MainWindow mainWindow = new MainWindow(myProperties, comPorts, anyPoolService);
             mainWindow.pack();
             mainWindow.setVisible(true);
             //mainWindow.setVisible(true);

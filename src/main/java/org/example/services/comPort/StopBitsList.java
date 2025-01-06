@@ -1,23 +1,20 @@
-package org.example.utilites;
-
-
+package org.example.services.comPort;
 import java.util.*;
-public enum DataBitsList {
-    B5(5),
-    B6(6),
-    B7(7),
-    B8(8);
+
+public enum StopBitsList {
+    S1(1),
+    S2(2);
 
     private final int value;
     private static final List<Integer> VALUES;
 
     static {
         VALUES = new ArrayList<>();
-        for (DataBitsList someEnum : DataBitsList.values()) {
+        for (StopBitsList someEnum : StopBitsList.values()) {
             VALUES.add(someEnum.value);
         }
     }
-    DataBitsList(int value) {
+    StopBitsList(int value) {
         this.value = value;
     }
 
@@ -29,10 +26,8 @@ public enum DataBitsList {
         return Collections.unmodifiableList(VALUES);
     }
 
-    public static Integer getNameLikeArray(int number){
-        List<Integer> values = DataBitsList.getValues();
+    public static  Integer getNameLikeArray(int number){
+        List<Integer> values = StopBitsList.getValues();
         return values.get(number);
     }
-
-
 }

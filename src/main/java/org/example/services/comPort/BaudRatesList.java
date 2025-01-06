@@ -1,7 +1,7 @@
 /*
 Перечень типичных скоростей ком-порта
  */
-package org.example.utilites;
+package org.example.services.comPort;
 
 import java.util.*;
 

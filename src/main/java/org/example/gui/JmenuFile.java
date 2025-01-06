@@ -13,6 +13,7 @@ import java.util.HashSet;
 import java.util.concurrent.ExecutorService;
 
 import org.example.services.AnswerStorage;
+import org.example.services.comPool.AnyPoolService;
 import org.example.utilites.MyProperties;
 
 import static org.example.gui.ChartWindow.getFieldsCountForTab;
@@ -20,11 +21,13 @@ import static org.example.gui.ChartWindow.getFieldsCountForTab;
 public class JmenuFile {
     private static final Logger logger = Logger.getLogger(JmenuFile.class);
     private final MyProperties prop;
+    private final AnyPoolService anyPoolService;
 
 
-    public JmenuFile (MyProperties prop){
+    public JmenuFile (MyProperties prop, AnyPoolService anyPoolService){
         super();
         this.prop = prop;
+        this.anyPoolService = anyPoolService;
     }
 
 
@@ -365,7 +368,7 @@ public class JmenuFile {
             @Override
             public void actionPerformed(ActionEvent arg0) {
                 System.out.println("Tab Marker Setting");
-                TabMarkersSettings tabMarkersSettings = new TabMarkersSettings(prop);
+                TabMarkersSettings tabMarkersSettings = new TabMarkersSettings(prop, anyPoolService);
                 tabMarkersSettings.setName("Tab Marker Setting");
                 tabMarkersSettings.setTitle("Tab Marker Setting");
                 tabMarkersSettings.pack();

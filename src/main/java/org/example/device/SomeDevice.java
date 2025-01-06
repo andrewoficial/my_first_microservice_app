@@ -4,10 +4,8 @@ package org.example.device;
 import com.fazecast.jSerialComm.SerialPort;
 import org.apache.log4j.Logger;
 import org.example.services.AnswerValues;
-import org.example.utilites.CommandListClass;
 
 import java.io.ByteArrayOutputStream;
-import java.util.ArrayList;
 
 import static org.example.utilites.MyUtilities.bytesToHex;
 

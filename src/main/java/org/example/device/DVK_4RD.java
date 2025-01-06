@@ -6,8 +6,6 @@ import com.fazecast.jSerialComm.SerialPort;
 import lombok.Setter;
 import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
-import org.example.utilites.CommandListClass;
-import org.example.utilites.SingleCommand;
 
 import static org.example.utilites.MyUtilities.*;
 

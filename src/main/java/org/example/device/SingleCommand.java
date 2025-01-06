@@ -1,8 +1,7 @@
-package org.example.utilites;
+package org.example.device;
 
 import org.example.services.AnswerValues;
 
-import java.util.List;
 import java.util.function.Function;
 
 public class SingleCommand {

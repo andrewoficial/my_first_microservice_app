@@ -1,7 +1,5 @@
 package org.example.device;
 
-import java.nio.CharBuffer;
-import java.nio.charset.CharsetDecoder;
 import java.util.Arrays;
 
 import com.fazecast.jSerialComm.SerialPort;
@@ -9,8 +7,6 @@ import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
 import lombok.Setter;
 import org.apache.log4j.Logger;
-import org.example.utilites.CommandListClass;
-import org.example.utilites.SingleCommand;
 
 import java.nio.charset.Charset;
 

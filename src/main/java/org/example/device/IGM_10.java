@@ -8,7 +8,6 @@ import com.fazecast.jSerialComm.SerialPort;
 import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.services.AnswerValues;
-import org.example.utilites.CommandListClass;
 
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;

@@ -2,10 +2,6 @@ package org.example.gui;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.example.utilites.ParityList;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class MainLeftPanelState {
     @Setter

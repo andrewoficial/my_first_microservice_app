@@ -2,8 +2,9 @@
 Сингл-тон объект, который при ините создает файл и если нужно дописывает в него принимаемые ответы
 
  */
-package org.example.services;
+package org.example.services.loggers;
 
+import org.example.services.DeviceAnswer;
 import org.example.utilites.MyUtilities;
 
 import java.io.BufferedWriter;
@@ -11,8 +12,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
 
