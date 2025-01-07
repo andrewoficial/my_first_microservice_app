@@ -39,10 +39,7 @@ public class IGM_10 implements SomeDevice {
     public IGM_10(SerialPort port){
         System.out.println("Создан объект протокола ИГМ-10");
         this.comPort = port;
-        if(! this.enable()){
-            System.out.println("Error open");
-            throw new RuntimeException("Error open Com-Port");
-        }
+        this.enable();
     }
 
     public IGM_10(){
@@ -125,12 +122,21 @@ public class IGM_10 implements SomeDevice {
     private CommandListClass commands = new CommandListClass();
     public boolean enable() throws RuntimeException{
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 65, 65);
-        if(comPort.isOpen()){
-            log.info("Порт открыт, задержки выставлены");
+        if(! comPort.isOpen()){
+            comPort.openPort();
+            comPort.flushDataListener();
+            comPort.removeDataListener();
+            comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 15, 10);
+            if(comPort.isOpen()){
+                log.info("Порт открыт, задержки выставлены");
+                return true;
+            }else {
+                throw new RuntimeException("Cant open COM-Port");
+            }
+
+        }else{
+            log.info("Порт был открыт ранее");
             return true;
-        }else {
-            return false;
-            //throw new RuntimeException("Cant open COM-Port");
         }
 
     }

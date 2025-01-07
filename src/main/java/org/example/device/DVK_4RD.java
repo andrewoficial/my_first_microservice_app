@@ -140,14 +140,25 @@ public class DVK_4RD  implements SomeDevice  {
     }
 
     public boolean enable() {
-        comPort.openPort();
-        comPort.flushDataListener();
-        comPort.removeDataListener();
-        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 10, 5);
+
         if(! comPort.isOpen()){
-            throw new RuntimeException("Cant open COM-Port");
+            comPort.openPort();
+            comPort.flushDataListener();
+            comPort.removeDataListener();
+            comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 10, 5);
+            if(comPort.isOpen()){
+                log.info("Порт открыт, задержки выставлены");
+                return true;
+            }else {
+                throw new RuntimeException("Cant open COM-Port");
+            }
+
+        }else{
+            log.info("Порт был открыт ранее");
+            return true;
         }
-        return false;
+
+
     }
 
     @Override

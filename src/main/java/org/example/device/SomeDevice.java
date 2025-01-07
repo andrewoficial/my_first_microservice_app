@@ -11,7 +11,7 @@ import static org.example.utilites.MyUtilities.bytesToHex;
 
 public interface SomeDevice {
 
-
+    public static final Logger log = Logger.getLogger(SomeDevice.class);
     public CommandListClass commandList = null;
     byte [] getStrEndian ();
     SerialPort getComPort ();
@@ -39,7 +39,7 @@ public interface SomeDevice {
     default CommandListClass getCommandListClass(){
         return this.commands;
     }
-    static final Logger log = Logger.getLogger(SomeDevice.class);
+
     default void sendData(String data, byte [] strEndian, SerialPort comPort, boolean knownCommand, int buffClearTimeLimit, SomeDevice device){
         if(device.isBusy()){
             log.warn("Попытка записи при активном соединении");

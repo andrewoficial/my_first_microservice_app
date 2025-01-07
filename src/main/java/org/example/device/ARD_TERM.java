@@ -135,16 +135,22 @@ public class ARD_TERM implements SomeDevice {
         return this.commands;
     }
     public boolean enable() {
-        comPort.openPort();
-        comPort.flushDataListener();
-        comPort.removeDataListener();
-        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 15, 10);
-        if(comPort.isOpen()){
-            log.info("Порт открыт, задержки выставлены");
-        }else {
-            throw new RuntimeException("Cant open COM-Port");
+        if(! comPort.isOpen()){
+            comPort.openPort();
+            comPort.flushDataListener();
+            comPort.removeDataListener();
+            comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 15, 10);
+            if(comPort.isOpen()){
+                log.info("Порт открыт, задержки выставлены");
+                return true;
+            }else {
+                throw new RuntimeException("Cant open COM-Port");
+            }
+
+        }else{
+            log.info("Порт был открыт ранее");
+            return true;
         }
-        return false;
     }
 
 

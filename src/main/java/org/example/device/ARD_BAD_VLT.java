@@ -115,18 +115,22 @@ public class ARD_BAD_VLT implements SomeDevice{
     private CommandListClass commands = new CommandListClass();
     public boolean enable() {
 
-        comPort.openPort();
-        comPort.flushDataListener();
-        //comPort.addDataListener(this);
-        //System.out.println("open port and add listener");
-        int timeout = 600;
-        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, timeout, timeout);
-        if(comPort.isOpen()){
-            log.info("Порт открыт, задержки выставлены");
-        }else {
-            throw new RuntimeException("Cant open COM-Port");
+        if(! comPort.isOpen()){
+            comPort.openPort();
+            comPort.flushDataListener();
+            comPort.removeDataListener();
+            comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 85, 95);
+            if(comPort.isOpen()){
+                log.info("Порт открыт, задержки выставлены");
+                return true;
+            }else {
+                throw new RuntimeException("Cant open COM-Port");
+            }
+
+        }else{
+            log.info("Порт был открыт ранее");
+            return true;
         }
-        return false;
     }
 
 
