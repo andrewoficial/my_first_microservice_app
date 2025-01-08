@@ -236,7 +236,7 @@ public class MainWindow extends JFrame implements Rendeble {
 
                 if (ps == null) {
                     log.info("Для вкладки " + tab + " не найден сервис опроса");
-                    createComDataCollector(tab, false, false, 1200);
+                    anyPoolService.createComDataCollector(tab, getCurrComSelection(), CB_Protocol.getSelectedIndex(), false, false, 1200, prepareTextToSend(tab));
                     ps = anyPoolService.findComDataCollectorByTabNumber(tab);
                     if (ps == null) {
                         log.warn("Для вкладки " + tab + " не найден сервис опроса даже после его создания");
@@ -345,7 +345,7 @@ public class MainWindow extends JFrame implements Rendeble {
         BT_Send.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                log.info("Pressed BT_Send");
+                //log.info("Pressed BT_Send");
                 renderData();
 
             }
@@ -470,7 +470,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 leftPanState.removeEntry(tab);
 
 
-                ComDataCollector ps = findPoolServiceByOpenedPort();
+                ComDataCollector ps = anyPoolService.findComDataCollector(tab, getCurrComSelection());
                 if (ps != null) {
                     if (ps.containTabDev(tab)) {
                         ps.removeDeviceFromComDataCollector(tab);
@@ -503,7 +503,7 @@ public class MainWindow extends JFrame implements Rendeble {
                     updateLeftPaneStateClassFromUI();
                     saveParameters();
                     if (anyPoolService.getComDataCollectors().size() > tab) {
-                        anyPoolService.getComDataCollectors().get(tab).setTextToSendString(prefOneToSend.getText() + textToSend.getText(), tab);
+                        anyPoolService.getComDataCollectors().get(tab).setTextToSendString(prefOneToSend.getText(), textToSend.getText(), tab);
                     }
                 } else {
                     log.warn("Ошибка при обновлении пула команд для опроса");
@@ -519,7 +519,7 @@ public class MainWindow extends JFrame implements Rendeble {
 
                     saveParameters();
                     if (anyPoolService.getComDataCollectors().size() > tab) {
-                        anyPoolService.getComDataCollectors().get(tab).setTextToSendString(prefOneToSend.getText() + textToSend.getText(), tab);
+                        anyPoolService.getComDataCollectors().get(tab).setTextToSendString(prefOneToSend.getText(), textToSend.getText(), tab);
                     }
                 } else {
                     log.warn("Ошибка при обновлении пула префиксов для опроса");
@@ -646,7 +646,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 if (tab < prefToSendValue.size()) {
                     ComDataCollector ps = anyPoolService.findComDataCollectorByTabNumber(tab);
                     if (ps != null)
-                        ps.setTextToSendString(prefOneToSend.getText() + textToSend.getText(), tab);
+                        ps.setTextToSendString(prefOneToSend.getText(), textToSend.getText(), tab);
                 }
             }
         });
@@ -668,7 +668,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 if (tab < textToSendValue.size()) { //ToDo убрать повтор, это убого
                     ComDataCollector ps = anyPoolService.findComDataCollectorByTabNumber(tab);
                     if (ps != null)
-                        ps.setTextToSendString(prefOneToSend.getText() + textToSend.getText(), tab);
+                        ps.setTextToSendString(prefOneToSend.getText(), textToSend.getText(), tab);
                 }
             }
         });
@@ -818,25 +818,24 @@ public class MainWindow extends JFrame implements Rendeble {
     public void startSend(boolean isBtn) {
         //isBtn - вызов по кнопке / pool - вызов про чекбоксу
         if (isBtn) {
-            log.info("Инициализация отправки по нажатию кнопки ОТПРАВИТЬ");
+            //log.info("Инициализация отправки по нажатию кнопки ОТПРАВИТЬ");
         } else {
-            log.info("Инициализация отправки по по таймеру в цикле");
+            //log.info("Инициализация отправки по по таймеру в цикле");
         }
-        log.info("Статус опроса на владке " + tab + " " + CB_Pool.isSelected());
         prefToSendValue.set(tab, prefOneToSend.getText());
         textToSendValue.set(tab, textToSend.getText());
 
 
         saveParameters();
         boolean pool = CB_Pool.isSelected();
-        int poolDelay = 1000;
+        int poolDelay = 10000;
         try {
             poolDelay = Integer.parseInt(IN_PoolDelay.getText());
         } catch (Exception e1) {
             IN_PoolDelay.setText("10000");
         }
 
-        createComDataCollector(tab, pool, isBtn, poolDelay);
+        anyPoolService.createComDataCollector(tab, getCurrComSelection(), CB_Protocol.getSelectedIndex(), pool, isBtn, poolDelay, prepareTextToSend(tab));
 
     }
 
@@ -856,119 +855,21 @@ public class MainWindow extends JFrame implements Rendeble {
         leftPanState.setProtocol(tab, CB_Protocol.getSelectedIndex());
     }
 
-    private void createComDataCollector(int tab, boolean pool, boolean isBtn, int poolDelay) {
-        ComDataCollector psT = anyPoolService.findComDataCollectorByTabNumber(tab);
-        ComDataCollector psC = null;
-        if (psT != null) {
-            log.warn("Найден сервис опроса по ВКЛАДКЕ");
-        } else {
-            psC = findPoolServiceByOpenedPort();
+
+    private String[] prepareTextToSend(int tab) {
+        if (prefToSendValue.get(tab) == null || prefToSendValue.get(tab).isEmpty()) {
+            prefToSendValue.set(tab, "");
         }
 
-        if (psC != null) {
-            log.warn("Найден сервис опроса по КОМ-ПОРТУ");
+        if (textToSendValue.get(tab) == null || textToSendValue.get(tab).isEmpty()) {
+            textToSendValue.set(tab, "");
         }
-        ComDataCollector ps = null;
-        if (psT != null)
-            ps = psT;//by Tab
-        else
-            ps = psC;//by Com Port
-
-        if (ps != null) {
-            log.info("Порт уже используется, проверка  среди запущенных потоков");
-            if (ps.containTabDev(tab)) {
-                log.info("Для текущей вкладки устройство существует в потоке опроса");
-                if (pool || isBtn) {
-                    if (isBtn) {
-                        log.info("Разовая отправка");
-                        ps.sendOnce(prefToSendValue.get(tab) + textToSendValue.get(tab), tab, false);
-
-                    } else {
-                        log.info("Команда к запуску");
-                        ps.setNeedPool(tab, true);
-                        ps.setPoolDelay(String.valueOf(poolDelay));
-                        log.info("pool delay " + ps.getPoolDelay());
-                        if (ps.getTextToSensByTab(tab) == null) {
-                            ps.setTextToSendString(prefToSendValue.get(tab) + textToSendValue.get(tab), tab);
-                        }
-                        log.info("text to send " + ps.getTextToSensByTab(tab));
-                        log.info("isNeedPool " + ps.isNeedPool(tab));
-                        log.info("isLoggedTab " + ps.isLoggedTab(tab));
-                        log.info("isRootTab " + ps.isRootTab(tab));
-                        log.info("isNeedLog " + ps.isNeedLog(tab));
-
-                        try {
-                            Thread.sleep(60);
-                        } catch (InterruptedException e) {
-                            //throw new RuntimeException(e);
-                        }
-                    }
-
-
-                } else {
-                    log.info("Команда к остановке опроса");
-                    ps.setNeedPool(tab, false);
-                    if (ps.isRootTab(tab)) {
-                        log.info("Текущий поток является корневым для других");
-                    } else {
-                        log.info("Вкладка одинока. Но поток не будет завершен. Ожидание входящих сообщений.");
-                    }
-                }
-            } else {
-
-                if (!isBtn) {
-                    log.info("Для текущей вкладки устройство не существует в потоке опроса (по чек-боксу)");
-                    ps.addDeviceToService(tab, prefToSendValue.get(tab) + textToSendValue.get(tab), false, true);
-                } else {
-                    log.info("Для текущей вкладки устройство не существует в потоке опроса (по кнопке)");
-                    ps.addDeviceToService(tab, prefToSendValue.get(tab) + textToSendValue.get(tab), false, false);
-                }
-
-            }
-        } else {
-            log.info("Порт не используется, создание нового потока");
-            boolean forEvent;
-            if (isBtn) {
-                forEvent = true;
-            } else {
-                forEvent = !pool;
-            }
-            log.info("соединение будет обрабатывать event события => " + forEvent);
-            ComPort avaComPorts = new ComPort();
-            avaComPorts.setPort(CB_ComPorts.getSelectedIndex());
-            ComDataCollector toAdd = new ComDataCollector(
-                    ProtocolsList.getLikeArrayEnum(CB_Protocol.getSelectedIndex()),
-                    prefToSendValue.get(tab) + textToSendValue.get(tab),
-                    avaComPorts.activePort,
-                    poolDelay,
-                    false,
-                    forEvent,
-                    tab);
-
-
-            anyPoolService.addComDataCollector(toAdd);
-
-
-            if (isBtn) {
-                anyPoolService.getComDataCollectors().get(anyPoolService.getComDataCollectors().size() - 1).setNeedPool(tab, false);
-                anyPoolService.getComDataCollectors().get(anyPoolService.getComDataCollectors().size() - 1).sendOnce(prefToSendValue.get(tab) + textToSendValue.get(tab), tab, false);
-
-                log.info("Поток создан и запущен один раз");
-                try {
-                    Thread.sleep(60);
-                } catch (InterruptedException e) {
-                    //throw new RuntimeException(e);
-                }
-            } else if (pool) {
-                anyPoolService.getComDataCollectors().get(anyPoolService.getComDataCollectors().size() - 1).setNeedPool(tab, true);
-                log.info("Параметры добавленного потока установлены в режим с опросом");
-            } else {
-
-                anyPoolService.getComDataCollectors().get(anyPoolService.getComDataCollectors().size() - 1).setNeedPool(tab, false);
-                log.info("Поток создан и запущен для Event (без опроса)");
-            }
-        }
+        String str[] = new String[2];
+        str[0] = prefToSendValue.get(tab);
+        str[1] = textToSendValue.get(tab);
+        return str;
     }
+
 
     private void checkIsUsedPort() {
         currTabCount = getCurrTabCount();
@@ -1013,9 +914,8 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
 
-    private ComDataCollector findPoolServiceByOpenedPort() {
-        int currentSelectedCom = CB_ComPorts.getSelectedIndex();
-        return anyPoolService.findComDataCollectorByOpenedPort(currentSelectedCom);
+    private int getCurrComSelection() {
+        return CB_ComPorts.getSelectedIndex();
     }
 
 
@@ -1079,8 +979,7 @@ public class MainWindow extends JFrame implements Rendeble {
     public int getCurrTabCount() {
         //Отладка
         if (anyPoolService.getCurrentComClientsQuantity() != tabbedPane1.getTabCount()) {
-            log.error("Несовпадение количества вкладок и клиентов в классе anyPoolService "
-                    + tabbedPane1.getTabCount() + " и " + anyPoolService.getCurrentComClientsQuantity());
+            //log.error("Несовпадение количества вкладок и клиентов в классе anyPoolService " + tabbedPane1.getTabCount() + " и " + anyPoolService.getCurrentComClientsQuantity());
 
         }
         return tabbedPane1.getTabCount();

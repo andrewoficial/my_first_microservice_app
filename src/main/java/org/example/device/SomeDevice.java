@@ -61,19 +61,19 @@ public interface SomeDevice {
         System.arraycopy(strEndian, 0, buffer, data.length() , strEndian.length);
 
         if(log.isInfoEnabled()){
-            //System.out.println("Логирование ответа в файл...");
-            StringBuilder sb = new StringBuilder();
-            for (byte b : buffer) {
-                sb.append((char)b);
-            }
-            log.info("Parse request ASCII [" + sb.toString().trim() + "] ");
-            log.info("Parse request HEX [" + buffer.toString() + "] ");
-            sb = null;
+//            //System.out.println("Логирование ответа в файл...");
+//            StringBuilder sb = new StringBuilder();
+//            for (byte b : buffer) {
+//                sb.append((char)b);
+//            }
+//            log.info("Parse request ASCII [" + sb.toString().trim() + "] ");
+//            log.info("Parse request HEX [" + buffer.toString() + "] ");
+//            sb = null;
         }
         comPort.flushIOBuffers();
-        log.info("  Выполнено flushIOBuffers и теперь bytesAvailable " + comPort.bytesAvailable());
+        //log.info("  Выполнено flushIOBuffers и теперь bytesAvailable " + comPort.bytesAvailable());
         comPort.writeBytes(buffer, buffer.length);
-        log.info("  Завершена отправка данных");
+        //log.info("  Завершена отправка данных");
         device.setBusy(false);
     }
 
@@ -83,7 +83,7 @@ public interface SomeDevice {
             return;
         }
         device.setBusy(true);
-        log.info("  Начинаю receiveData ");
+        //log.info("  Начинаю receiveData ");
 
         SerialPort comPort = device.getComPort();
         long startTime = System.currentTimeMillis();
@@ -103,7 +103,7 @@ public interface SomeDevice {
                         int readBytes = comPort.readBytes(buffer, buffer.length);
                         if (readBytes > 0) {
                             receivedData.write(buffer, 0, readBytes);
-                            log.info("Добавлено {"+  readBytes +"} байт. Всего: {"+  receivedData.size()+"} Ожидается {"+expectedBytes+"}");
+                            //log.info("Добавлено {"+  readBytes +"} байт. Всего: {"+  receivedData.size()+"} Ожидается {"+expectedBytes+"}");
                             // Сброс таймера при поступлении данных
                             startTime = System.currentTimeMillis();
                         }
@@ -114,7 +114,7 @@ public interface SomeDevice {
             } catch (InterruptedException e) {
                 log.error("Ошибка при чтении данных: ", e);
             } finally {
-                log.info("Освобождение буфера");
+                //log.info("Освобождение буфера");
                 comPort.flushIOBuffers();
             }
         }
@@ -130,10 +130,10 @@ public interface SomeDevice {
         }
 
         if (log.isInfoEnabled()) {
-            String asciiResponse = new String(responseBytes).trim();
-            String hexResponse = bytesToHex(responseBytes);
-            log.info("Parse answer ASCII [{ " + asciiResponse + " }]");
-            log.info("Parse answer HEX [{ " + hexResponse + " }]");
+//            String asciiResponse = new String(responseBytes).trim();
+//            String hexResponse = bytesToHex(responseBytes);
+//            log.info("Parse answer ASCII [{ " + asciiResponse + " }]");
+//            log.info("Parse answer HEX [{ " + hexResponse + " }]");
         }
 
         device.setBusy(false);

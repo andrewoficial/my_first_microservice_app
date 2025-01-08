@@ -14,6 +14,7 @@ import org.example.services.loggers.GPS_Loger;
 import org.example.services.loggers.PoolLogger;
 import org.example.device.ProtocolsList;
 import org.example.device.*;
+import org.example.utilites.MyProperties;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -27,7 +28,10 @@ import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 
 
 public class ComDataCollector implements Runnable{
+    private final MyProperties myProperties = new MyProperties();
     private boolean threadLive = true;
+
+    private final AnyPoolService parentService;
 
     @Getter
     private volatile boolean  comBusy = false;
@@ -37,7 +41,8 @@ public class ComDataCollector implements Runnable{
     private final ArrayList <Integer> clientsTabNumbers = new ArrayList<>();
     private ArrayList <Boolean> needLogArrayList = new ArrayList<>();
 
-    private ArrayList <String> textToSend = new ArrayList<>();
+    private final ArrayList <String> prefToSend = new ArrayList<>();
+    private final ArrayList <String> textToSend = new ArrayList<>();
     @Getter
     private ArrayList <StringBuffer> answersCollection = new ArrayList<>();
     private ArrayList <DeviceLogger> deviceLoggerArrayList = new ArrayList<>();
@@ -63,20 +68,28 @@ public class ComDataCollector implements Runnable{
     private long millisPrev = System.currentTimeMillis() - (poolDelay * 100);
     private static final Logger log = Logger.getLogger(ComDataCollector.class);
     public ComDataCollector(ProtocolsList protocol,
-                       String textToSendString,
-                       SerialPort comPort,
-                       int poolDelay,
-                       boolean needLog,
-                       boolean threadForEvent,
-                       Integer tabNumber) {
+                            String prefix,
+                            String command,
+                            SerialPort comPort,
+                            int poolDelay,
+                            boolean needLog,
+                            boolean threadForEvent,
+                            Integer tabNumber,
+                            AnyPoolService parentService) {
         super();
+        this.parentService = parentService;
         if(protocol == null){
             log.error("Передан параметр protocol null");
             return;
         }
 
-        if(textToSendString == null){
-            log.error("Передан параметр textToSendString null");
+        if(command == null){
+            log.error("Передан параметр command null");
+            return;
+        }
+
+        if(prefix == null){
+            log.error("Передан параметр prefix null");
             return;
         }
 
@@ -109,7 +122,8 @@ public class ComDataCollector implements Runnable{
         this.poolDelay = poolDelay;
         this.threadForEvent = threadForEvent;
         needPool.put(tabNumber, true);
-        textToSend.add(null);
+        textToSend.add("");
+        prefToSend.add("");
 
 
         serialPortDataListener = new SerialPortDataListener() {
@@ -136,8 +150,8 @@ public class ComDataCollector implements Runnable{
                     }
                 }
 
-                log.info("Parse external Event ASCII [" + builder.toString().trim() + "]");
-                log.info("Parse external Event HEX [" + bytesToHex(builder.toString().getBytes()) + "]");
+                //log.info("Parse external Event ASCII [" + builder.toString().trim() + "]");
+                //log.info("Parse external Event HEX [" + bytesToHex(builder.toString().getBytes()) + "]");
                 receiveByEvent(builder.toString(), tabNumber);
             }
         };
@@ -190,8 +204,8 @@ public class ComDataCollector implements Runnable{
                         continue;
                     }
                     waitForComBusy();
-                    log.info("Отправка команды: " + textToSend.get(i));
-                    sendOnce(textToSend.get(i), i, true);
+                    //log.info("Отправка префикса: " + prefToSend.get(i) + " и команды: " + textToSend.get(i));
+                    sendOnce(prefToSend.get(i) + textToSend.get(i), i, true);
                 }
             } else {
                 sleepSafely(Math.min((poolDelay / 5), 100L));
@@ -225,10 +239,10 @@ public class ComDataCollector implements Runnable{
 
     public void sendOnce (String arg, int i, boolean internal){
         if(!internal){
-            log.info("Инициирована отправка команды прибору " + arg + " внутренний вызов? " + false + ". Будет выполнена.  Флаг comBusy проигнорирован, его статус " + comBusy);
-            log.info("Старый аргумент указателя "  + i + " соответствует вкладке " + findSubDevByTabNumber(i));
+            //log.info("Инициирована отправка команды прибору " + arg + " внутренний вызов? " + false + ". Будет выполнена.  Флаг comBusy проигнорирован, его статус " + comBusy);
+            //log.info("Старый аргумент указателя "  + i + " соответствует вкладке " + findSubDevByTabNumber(i));
             i = findSubDevByTabNumber(i);
-            log.info("Новый аргумент указателя "  + i + " соответствует вкладке " + findSubDevByTabNumber(i));
+            //log.info("Новый аргумент указателя "  + i + " соответствует вкладке " + findSubDevByTabNumber(i));
         }
         //Проверка, если команда уже выполняется (занят ком-порт)
         if (comBusy) {
@@ -244,7 +258,7 @@ public class ComDataCollector implements Runnable{
         }
 
         int tabDirection = getTabNumberByInnerNumber(i);
-        log.info("Параметр i = " + i + " tabDirection будет задан " + tabDirection);
+        //log.info("Параметр i = " + i + " tabDirection будет задан " + tabDirection);
 
         LocalDateTime startSend = LocalDateTime.now();
         comPort.flushDataListener();
@@ -253,16 +267,23 @@ public class ComDataCollector implements Runnable{
         if(textToSend.get(i) == null){
             textToSend.add(arg);//Что бы не была нулем при начале опроса по галке
         }
+
+        if(prefToSend.get(i) == null){
+            prefToSend.add("");
+        }
         device.sendData(arg, device.getStrEndian(), comPort, device.isKnownCommand(), 150, device);
         device.receiveData(device);
 
         comPort.addDataListener(serialPortDataListener);
 
         device.parseData();
-        DeviceAnswer answer = new DeviceAnswer(startSend,textToSend.get(i),tabDirection);
+
+        DeviceAnswer answer = new DeviceAnswer(startSend,prefToSend.get(i) + textToSend.get(i),tabDirection);
         answer.setDeviceType(device);
         answer.setAnswerReceivedTime(LocalDateTime.now());
         answer.setRequestSendString(arg);
+
+
         if (device.getValues() != null) {
             answer.setAnswerReceivedString(device.getAnswer());
             answer.setAnswerReceivedValues(device.getValues());
@@ -270,8 +291,15 @@ public class ComDataCollector implements Runnable{
             answer.setAnswerReceivedString(device.getAnswer());
             answer.setAnswerReceivedValues(null);
         }
-        AnswerStorage.addAnswer(answer);
-        logSome(answer, i);
+
+
+        if(myProperties.getNeedSyncSavingAnswer()){
+            parentService.getAnswerSaverLogger().addAnswer(answer, tabDirection);
+        }else{
+            AnswerStorage.addAnswer(answer);
+            logSome(answer, i);
+        }
+
         comBusy = false;
     }
 
@@ -301,8 +329,12 @@ public class ComDataCollector implements Runnable{
         answer.setAnswerReceivedString(device.getAnswer());
         answer.setAnswerReceivedValues(device.getValues());
 
-        AnswerStorage.addAnswer(answer);
-        logSome(answer, tabN);
+        if(myProperties.getNeedSyncSavingAnswer()) {
+            AnswerStorage.addAnswer(answer);
+            logSome(answer, tabN);
+        }else{
+            logSome(answer, tabN);
+        }
     }
 
     public void setNeedPool (int tabNum, boolean needStatePool){
@@ -360,43 +392,26 @@ public class ComDataCollector implements Runnable{
         return -1;
     }
     private void logSome(DeviceAnswer answer, int subDevNum){
-        //System.out.println("Делаю общий лог");
-        PoolLogger poolLogger = PoolLogger.getInstance();
+
         PoolLogger.writeLine(answer);
+        DeviceLogger deviceLogger= null;
         while (needLogArrayList.size() <= subDevNum) {
             needLogArrayList.add(false);
         }
         if(needLogArrayList.get(subDevNum)) {
-            //System.out.println("Делаю лог отдельный для прибора");
-            //PoolLogger poolLogger = PoolLogger.getInstance();
-            //PoolLogger.writeLine(answer);
+
             while (deviceLoggerArrayList.size() <= subDevNum) {
                 deviceLoggerArrayList.add(new DeviceLogger("lol"));
             }
-            deviceLoggerArrayList.get(subDevNum).writeLine(answer);
-        }
+            deviceLogger = deviceLoggerArrayList.get(subDevNum);
 
-        if(this.device != null && this.device.getClass().equals(GPS_Test.class) && (! loggersSet.containsKey(answer.getTabNumber()) )){
-            //System.out.println("Создан GPS logger");
-            loggersSet.put(answer.getTabNumber(), new GPS_Loger("GPS_"+AnswerStorage.getIdentByTab(answer.getTabNumber()),answer.getTabNumber() ));
-            //gpsLoger = new GPS_Loger("demo",answer.getTabNumber() );
-        }else{
-//            System.out.println("Не создан по одной из причин");
-//            System.out.print("Не содержится в коллекции? (надо создать) ");
-//            System.out.println(! loggersSet.containsKey(answer.getTabNumber()));
-//            System.out.print("Выбранный протокол не подходит? ");
-//            System.out.println(this.device.getClass().equals(GPS_Test.class));
-//            System.out.print("Не выбран протокол? ");
-//            System.out.println(this.device != null);
         }
-        if(loggersSet.containsKey(answer.getTabNumber())){
-            //System.out.println("Run write GPS LOG" + answer);
-            loggersSet.get(answer.getTabNumber()).writeLine(answer);
-        }
-
-
+        log.info("Будет предложено согласованное логирование");
+        parentService.getAnswerSaverLogger().doLog(answer, subDevNum, PoolLogger.getInstance(), deviceLogger);
 
     }
+
+    private void logSomeClearly(DeviceAnswer answer, int tab){}
 
 
     public void setPoolDelay(String poolDelay) {
@@ -412,21 +427,28 @@ public class ComDataCollector implements Runnable{
 
     //Получает номер вкладки на которой надо обновить команду, сопаставляет со списком
     //однотипных устройств и обновляет
-    public void setTextToSendString(String cmd, int tabNumber){
+    public void setTextToSendString(String prf, String cmd, int tabNumber){
         if(cmd == null || cmd.isEmpty()){
             return;
         }
+        if(prf == null ){
+            prf = "";
+        }
         if(findSubDevByTabNumber(tabNumber) != -1){
             while (textToSend.size() <= findSubDevByTabNumber(tabNumber)){
-                textToSend.add(null);
+                textToSend.add("");
             }
+            while (prefToSend.size() <= findSubDevByTabNumber(tabNumber)){
+                prefToSend.add("");
+            }
+            prefToSend.set(findSubDevByTabNumber(tabNumber), prf);
             textToSend.set(findSubDevByTabNumber(tabNumber), cmd);
         }
     }
 
     public String getTextToSensByTab(int tabNum){
         if(findSubDevByTabNumber(tabNum) != -1){
-            return textToSend.get(findSubDevByTabNumber(tabNum));
+            return prefToSend.get(findSubDevByTabNumber(tabNum)) + textToSend.get(findSubDevByTabNumber(tabNum));
         }
         return  null;
     }
@@ -480,9 +502,10 @@ public class ComDataCollector implements Runnable{
         return false;
     }
 
-    public void addDeviceToService(int tabNumber, String command, boolean needLog, boolean needPoolFlag) {
+    public void addDeviceToService(int tabNumber, String prf, String cmd, boolean needLog, boolean needPoolFlag) {
         clientsTabNumbers.add(tabNumber);
-        textToSend.add(command);
+        prefToSend.add(prf);
+        textToSend.add(cmd);
         needLogArrayList.add(needLog);
         deviceLoggerArrayList.add(new DeviceLogger(String.valueOf(tabNumber)));
         answersCollection.add(new StringBuffer());
@@ -501,6 +524,7 @@ public class ComDataCollector implements Runnable{
         }
         if(forRemove > 0){
             textToSend.remove(forRemove);
+            prefToSend.remove(forRemove);
             needLogArrayList.remove(forRemove);
             deviceLoggerArrayList.remove(forRemove);
             answersCollection.remove(forRemove);

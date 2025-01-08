@@ -19,8 +19,8 @@ public class DVK_4RD  implements SomeDevice  {
     @Setter
     private byte [] strEndian = {13};//CR
     private int received = 0;
-    private final long millisLimit = 600;
-    private final long repeatWaitTime = 500;
+    private final long millisLimit = 400;
+    private final long repeatWaitTime = 250;
     private final long millisPrev = System.currentTimeMillis();
     private AnswerValues answerValues = null;
     private String cmdToSend;

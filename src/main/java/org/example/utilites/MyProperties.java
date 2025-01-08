@@ -102,6 +102,12 @@ public class MyProperties {
     private String [] prefixes = new String[2];
 
     @Getter
+    private boolean needSyncSavingAnswer = false;
+
+    @Getter
+    private int SyncSavingAnswerTimerLimitMS = 1000; //1 sec
+
+    @Getter
     private MainLeftPanelStateCollection leftPanelStateCollection = new MainLeftPanelStateCollection();
 
     private File settingFile = null;
@@ -183,7 +189,33 @@ public class MyProperties {
             Category tmpLogger = (Category) allLoggers.nextElement();
             tmpLogger.setLevel(Level.toLevel(this.logLevel));
         }
+        /*
+        @Getter
+        private boolean needSyncSavingAnswer = false;
 
+        @Getter
+        private int SyncSavingAnswerTimerLimitMS = 1000; //1 sec
+
+         */
+        try{
+            if(props.getProperty("needSyncSavingAnswer") == null){
+                props.setProperty("needSyncSavingAnswer", String.valueOf(needSyncSavingAnswer));
+            } else{
+                this.needSyncSavingAnswer = Boolean.parseBoolean(props.getProperty("needSyncSavingAnswer"));
+            }
+        }catch (NumberFormatException exception){
+            log.debug("configAccess.properties содержит недопустимое значение параметра needSyncSavingAnswer");
+        }
+
+        try{
+            if(props.getProperty("SyncSavingAnswerTimerLimitMS") == null){
+                props.setProperty("SyncSavingAnswerTimerLimitMS", String.valueOf(SyncSavingAnswerTimerLimitMS));
+            } else{
+                this.SyncSavingAnswerTimerLimitMS = Integer.parseInt(props.getProperty("SyncSavingAnswerTimerLimitMS"));
+            }
+        }catch (NumberFormatException exception){
+            log.debug("configAccess.properties содержит недопустимое значение параметра SyncSavingAnswerTimerLimitMS");
+        }
 
         try {
             if (props.getProperty("usr") == null) {
@@ -420,7 +452,7 @@ public class MyProperties {
         }
         properties.setProperty("commands", sb.toString());
         this.updateFile();
-        log.info("Обновлено значение последних команд: " + sb);
+        //log.info("Обновлено значение последних команд: " + sb);
     }
 
     public void setLastPrefixes(ArrayList <String> prefixesInp){
@@ -435,7 +467,7 @@ public class MyProperties {
         }
         properties.setProperty("prefixes", sb.toString());
         this.updateFile();
-        log.info("Обновлено значение последних префиксов: " + sb);
+        //log.info("Обновлено значение последних префиксов: " + sb);
     }
 
     public void setIdentAndTabBounding(HashMap<String, Integer> pairs){
@@ -602,6 +634,8 @@ public class MyProperties {
     }
 
 
-
+    public boolean getNeedSyncSavingAnswer() {
+        return needSyncSavingAnswer;
+    }
 }
 
