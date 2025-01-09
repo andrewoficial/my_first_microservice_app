@@ -385,7 +385,7 @@ public class MainWindow extends JFrame implements Rendeble {
         BT_AddDev.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                log.info("Нажата кнопка добавить устройство");
+                //log.info("Нажата кнопка добавить устройство");
 
                 tab = tabbedPane1.getTabCount();
                 leftPanState.addEntry();
@@ -689,7 +689,9 @@ public class MainWindow extends JFrame implements Rendeble {
             public void update() {
                 log.info("Инициировано обновление периода опроса для владки " + tab);
                 if (anyPoolService.getComDataCollectors().size() > tab && anyPoolService.getComDataCollectors().get(tab) != null) {
-                    anyPoolService.getComDataCollectors().get(tab).setPoolDelay(IN_PoolDelay.getText());
+
+
+                    anyPoolService.getComDataCollectors().get(tab).setPoolDelay(getPoolDelayFromGui());
                     log.info(" выполнено обновление периода опроса для владки " + tab);
                 }
             }
@@ -704,6 +706,21 @@ public class MainWindow extends JFrame implements Rendeble {
         });
 
 
+    }
+
+    private int getPoolDelayFromGui() {
+        int newDelay = 3000;
+
+        if (IN_PoolDelay.getText() != null) {
+            try {
+                newDelay = Integer.parseInt(IN_PoolDelay.getText());
+            } catch (NumberFormatException e) {
+                IN_PoolDelay.setText("3000");
+            }
+        } else {
+            IN_PoolDelay.setText("3000");
+        }
+        return newDelay;
     }
 
     private void configureComPort(SerialPort serialPort) {

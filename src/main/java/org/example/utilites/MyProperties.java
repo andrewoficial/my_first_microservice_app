@@ -102,7 +102,7 @@ public class MyProperties {
     private String [] prefixes = new String[2];
 
     @Getter
-    private boolean needSyncSavingAnswer = false;
+    private boolean needSyncSavingAnswer = true;
 
     @Getter
     private int SyncSavingAnswerTimerLimitMS = 1000; //1 sec
@@ -189,14 +189,7 @@ public class MyProperties {
             Category tmpLogger = (Category) allLoggers.nextElement();
             tmpLogger.setLevel(Level.toLevel(this.logLevel));
         }
-        /*
-        @Getter
-        private boolean needSyncSavingAnswer = false;
 
-        @Getter
-        private int SyncSavingAnswerTimerLimitMS = 1000; //1 sec
-
-         */
         try{
             if(props.getProperty("needSyncSavingAnswer") == null){
                 props.setProperty("needSyncSavingAnswer", String.valueOf(needSyncSavingAnswer));

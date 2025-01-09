@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 
 
@@ -43,8 +44,10 @@ public class AnyPoolService {
         }
 
         if (psSearch != null) {
+            log.info("Изменение существующего потока");
             processExistingComDataCollector(psSearch, tab, prefixAndCmd, pool, isBtn, poolDelay);
         } else {
+            log.info("Создание нового потока");
             createNewComDataCollector(tab, pool, isBtn, poolDelay, prefixAndCmd, selectedComPort, selectedProtocol);
         }
     }
@@ -55,10 +58,9 @@ public class AnyPoolService {
                 //log.info("Разовая отправка");
                 psSearch.sendOnce(prefixAndCmd[0] + prefixAndCmd[1], tab, false);
             } else {
-                //log.info("Команда к запуску");
+                log.info("Команда к запуску");
                 psSearch.setNeedPool(tab, true);
-                psSearch.setPoolDelay(String.valueOf(poolDelay));
-                //log.info("pool delay " + psSearch.getPoolDelay());
+                psSearch.setPoolDelay(poolDelay);
                 psSearch.setTextToSendString(prefixAndCmd[0], prefixAndCmd[1], tab);
                 sleepFor(60);
             }
@@ -77,9 +79,11 @@ public class AnyPoolService {
     private void processExistingComDataCollector(ComDataCollector psSearch, int tab, String [] prefixAndCmd, boolean pool, boolean isBtn, int poolDelay) {
         //log.info("Порт уже используется, проверка среди запущенных потоков");
         if (psSearch.containTabDev(tab)) {
+            log.info("Клинет уже содержится в потоке");
             handleTabInExistingCollector(psSearch, tab, prefixAndCmd, pool, isBtn, poolDelay);
         } else {
-            addDeviceToCollector(psSearch, tab, prefixAndCmd, isBtn);
+            log.info("Клинет не содержится в потоке");
+            addDeviceToCollector(psSearch, tab, prefixAndCmd, isBtn, pool);
         }
     }
 
@@ -115,7 +119,7 @@ public class AnyPoolService {
         }
     }
 
-    private void addDeviceToCollector(ComDataCollector psSearch, int tab, String[] prefixAndCmd, boolean isBtn) {
+    private void addDeviceToCollector(ComDataCollector psSearch, int tab, String[] prefixAndCmd, boolean isBtn, boolean pool) {
         if (!isBtn) {
             log.info("Для текущей вкладки устройство не существует в потоке опроса (по чек-боксу)");
             psSearch.addDeviceToService(tab, prefixAndCmd[0], prefixAndCmd [1], false, true);
