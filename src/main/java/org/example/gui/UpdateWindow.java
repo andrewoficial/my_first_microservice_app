@@ -5,6 +5,7 @@ import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import org.example.Main;
 import org.example.utilites.*;
+import org.example.utilites.properties.MyProperties;
 
 import javax.swing.*;
 import java.awt.*;
@@ -32,8 +33,7 @@ public class UpdateWindow extends JDialog implements Rendeble {
 
     public UpdateWindow() {
 
-        //String currentVersion = Main.currentVersion;
-        String currentVersion = "LOL";
+        String currentVersion = MyProperties.getInstance().getVersion();
 
 
         setModal(false);
