@@ -18,6 +18,7 @@ import org.example.services.comPort.ParityList;
 import org.example.services.comPort.StopBitsList;
 import org.example.utilites.*;
 import org.example.services.comPool.ComDataCollector;
+import org.example.utilites.properties.MyProperties;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
@@ -48,7 +49,7 @@ public class MainWindow extends JFrame implements Rendeble {
 
     //MyProperties prop = Main.prop;
 
-    private final MyProperties prop;
+    private MyProperties prop;
     private final ComPort comPorts;
 
 
@@ -105,16 +106,28 @@ public class MainWindow extends JFrame implements Rendeble {
             this.setIconImage(pic.getImage());
             log.debug("Установка картинки");
         }
-        this.pack();
-        this.setVisible(true);
+        super.setVisible(true);
+        super.pack();
     }
 
 
     public MainWindow(MyProperties myProperties, ComPort comPorts, AnyPoolService anyPoolService) {
+
+        if (anyPoolService == null) {
+            log.warn("В конструктор MainWindow передан null anyPoolService");
+        }
+
+        if (comPorts == null) {
+            log.warn("В конструктор MainWindow передан null comPorts");
+        }
+
+        if (comPorts == null) {
+            log.warn("В конструктор MainWindow передан null myProperties");
+        }
         this.anyPoolService = anyPoolService;
         this.prop = myProperties;
         this.comPorts = comPorts;
-        initUI();
+
 
         MainWindow.mainWindow = this;
 
@@ -123,7 +136,7 @@ public class MainWindow extends JFrame implements Rendeble {
         log.debug("Получено имя окна " + contentPane.getName());
 
         JmenuFile jmenu = new JmenuFile(prop, anyPoolService);
-        log.info("В менюю программы переданы восстановленные параметры");
+        log.info("В меню программы переданы восстановленные параметры");
         // Создание строки главного меню
         JMenuBar menuBar = new JMenuBar();
 
@@ -140,6 +153,18 @@ public class MainWindow extends JFrame implements Rendeble {
         log.debug("Инициализация панели и меню завершена");
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         MainLeftPanelStateCollection restoredFromFile = prop.getLeftPanelStateCollection();
+        if (prop.getLeftPanelStateCollection() == null) {//Пришлось добавить костыль
+            try {
+
+                log.info("Строки найдены" + this.prop.getCommands().length);
+            } catch (RuntimeException e) {
+                //
+            }
+            this.prop = MyProperties.getInstance();
+            restoredFromFile = prop.getLeftPanelStateCollection();
+        }
+
+        log.warn(" Размер restoredFromFile" + restoredFromFile.getAllAsList().size());
         BaudRatesList[] baudRate = BaudRatesList.values();
         for (int i = 0; i < baudRate.length; i++) {
             CB_BaudRate.addItem(baudRate[i].getValue() + "");
@@ -705,7 +730,7 @@ public class MainWindow extends JFrame implements Rendeble {
             }
         });
 
-
+        initUI();
     }
 
     private int getPoolDelayFromGui() {

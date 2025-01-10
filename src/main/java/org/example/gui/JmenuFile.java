@@ -14,8 +14,9 @@ import java.util.concurrent.ExecutorService;
 
 import org.example.services.AnswerStorage;
 import org.example.services.comPool.AnyPoolService;
-import org.example.utilites.MyProperties;
+import org.example.utilites.properties.MyProperties;
 
+import static org.example.device.SomeDevice.log;
 import static org.example.gui.ChartWindow.getFieldsCountForTab;
 
 public class JmenuFile {
@@ -28,6 +29,9 @@ public class JmenuFile {
         super();
         this.prop = prop;
         this.anyPoolService = anyPoolService;
+        if(anyPoolService == null){
+            logger.warn("В конструктор JmenuFile передан null anyPoolService");
+        }
     }
 
 
@@ -197,7 +201,7 @@ public class JmenuFile {
             @Override
             public void actionPerformed(ActionEvent arg0) {
                 System.out.println("LogWindows");
-                LogSettingWindows logWindows = new LogSettingWindows();
+                LogSettingWindows logWindows = new LogSettingWindows(prop);
                 logWindows.setName("Log settings");
                 logWindows.setTitle("Log settings");
                 logWindows.pack();

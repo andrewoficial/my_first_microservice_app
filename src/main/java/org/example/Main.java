@@ -3,8 +3,7 @@ package org.example;
 import org.example.gui.MainWindow;
 import org.example.services.comPool.AnyPoolService;
 import org.example.services.comPort.ComPort;
-import org.example.utilites.MyProperties;
-
+import org.example.utilites.properties.MyProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -24,22 +23,16 @@ public class Main {
         context  =  new SpringApplicationBuilder(Main.class)
                 .run(args);
 
-
         //Проверка чтения конфига
-        Environment env = context.getEnvironment();
-        String serverEnabled = env.getProperty("server.enabled", "true");
-        String confName = env.getProperty("spring.config.name", "dunno");
-        System.out.println("Параметр server.enabled: " + serverEnabled);
+        String confName = context.getEnvironment().getProperty("spring.config.name", "dunno");
         System.out.println("Параметр confName: " + confName);
 
-
         SwingUtilities.invokeLater(() -> {
-            MyProperties myProperties = context.getBean(MyProperties.class);
             ComPort comPorts = context.getBean(ComPort.class);
             AnyPoolService anyPoolService = context.getBean(AnyPoolService.class);
+            MyProperties myProperties = context.getBean(MyProperties.class);
             MainWindow mainWindow = new MainWindow(myProperties, comPorts, anyPoolService);
-            mainWindow.pack();
-            mainWindow.setVisible(true);
+
             //mainWindow.setVisible(true);
         });
 

@@ -1,27 +1,33 @@
 package org.example.services;
 
 import org.apache.log4j.Logger;
-import org.example.services.comPool.ComDataCollector;
 import org.example.services.loggers.DeviceLogger;
 import org.example.services.loggers.PoolLogger;
-import org.example.utilites.MyProperties;
+import org.example.utilites.properties.MyProperties;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
+@Service
 public class AnswerSaverLogger {
     private final ConcurrentMap<Integer, DeviceAnswer> lastAnswers = new ConcurrentHashMap<>();
-    private final MyProperties properties = new MyProperties();
-    private final long MAX_ALLOWED_DIFFERENCE = properties.getSyncSavingAnswerTimerLimitMS(); // Максимальный допустимый разброс
+    private final MyProperties properties;
+    //private final long MAX_ALLOWED_DIFFERENCE = properties.getSyncSavingAnswerTimerLimitMS(); // Максимальный допустимый разброс
+    private final long MAX_ALLOWED_DIFFERENCE = 1200; // Максимальный допустимый разброс
     private final long SYNC_WINDOW = 950000; // Длительность окна синхронизации
     private static final Logger log = Logger.getLogger(AnswerSaverLogger.class);
 
     private long currentSyncStart = System.currentTimeMillis(); // Начало текущего окна
     private final Set<Integer> ignoredThreads = ConcurrentHashMap.newKeySet(); // Потоки, которые временно игнорируются
 
+    @Autowired
+    public AnswerSaverLogger(MyProperties properties) {
+        this.properties = properties;
+    }
     public synchronized boolean shouldSaveAnswer(DeviceAnswer answer, int threadId) {
         //log.info("Начинаю принятие решения для threadId: " + threadId);
 

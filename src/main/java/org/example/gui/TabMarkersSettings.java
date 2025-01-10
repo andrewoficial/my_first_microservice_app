@@ -13,8 +13,8 @@ import java.util.Map;
 
 import org.example.services.AnswerStorage;
 import org.example.services.comPool.AnyPoolService;
-import org.example.utilites.MyProperties;
-import org.springframework.stereotype.Service;
+import org.example.utilites.properties.MyProperties;
+
 
 import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 
@@ -33,9 +33,13 @@ public class TabMarkersSettings extends JDialog {
     private StringBuilder sb = new StringBuilder();
 
     public TabMarkersSettings(MyProperties prop, AnyPoolService anyPoolService) {
+        if (anyPoolService == null) {
+            log.warn("В конструктор TabMarkersSettings передан null anyPoolService");
+        }
         setModal(false);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setContentPane(mainPanel);
+        this.anyPoolService = anyPoolService;
         updateList();
         updateTabList();
         properties = prop;
@@ -52,7 +56,6 @@ public class TabMarkersSettings extends JDialog {
                 prop.setIdentAndTabBounding(AnswerStorage.getDeviceTabPair());
             }
         });
-        this.anyPoolService = anyPoolService;
     }
 
     private void updateTabList() {

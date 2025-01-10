@@ -6,6 +6,8 @@ import org.example.device.ProtocolsList;
 import org.example.services.AnswerSaverLogger;
 import org.example.services.AnswerStorage;
 import org.example.services.comPort.ComPort;
+import org.example.utilites.properties.MyProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -23,16 +25,20 @@ import java.util.concurrent.ThreadPoolExecutor;
 @Service
 public class AnyPoolService {
     private final ExecutorService thPool = Executors.newCachedThreadPool();
-    //ToDo подумать: когда сервис будет передаваться спрингом, есть вероятность что будет создаваться новый класс. Нужно что бы этого не происходило. Каждый раз передавать существующий
+
     @Getter
     private final ArrayList <ComDataCollector> comDataCollectors = new ArrayList<>();
     private final Logger log = Logger.getLogger(AnyPoolService.class);
     private final ComPort comPort;
+    private MyProperties properties;
     @Getter
-    private final AnswerSaverLogger answerSaverLogger = new AnswerSaverLogger();
+    private final AnswerSaverLogger answerSaverLogger;
 
-    public AnyPoolService(ComPort comPort) {
+    @Autowired
+    public AnyPoolService(ComPort comPort, MyProperties properties1) {
         this.comPort = comPort;
+        this.properties = properties1;
+        answerSaverLogger = new AnswerSaverLogger(properties);
     }
 
     public void createComDataCollector(int tab, int selectedComPort, int selectedProtocol, boolean pool, boolean isBtn, int poolDelay, String[] prefixAndCmd) {

@@ -13,7 +13,7 @@ import org.example.services.loggers.DeviceLogger;
 import org.example.services.loggers.PoolLogger;
 import org.example.device.ProtocolsList;
 import org.example.device.*;
-import org.example.utilites.MyProperties;
+import org.example.utilites.properties.MyProperties;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -26,7 +26,7 @@ import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 public class ComDataCollector implements Runnable{
     private final static Logger log = Logger.getLogger(ComDataCollector.class); // Объект логера
     private final AnyPoolService parentService;//Родительский класс для получения единого для всех потомков объекта синхронизаци логирования.
-    private final MyProperties myProperties = new MyProperties(); //Объект с параметрами для того, что бы определять тип логирования
+    private final MyProperties myProperties = MyProperties.getInstance(); //Объект с параметрами для того, что бы определять тип логирования
     @Getter
     private boolean alive = true; // Признак того, что поток жив (после введения Event всегда истина и сбрасывается в shutdown, раньше сбрасывался если нету клиентов у потока)
     @Getter
