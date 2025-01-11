@@ -584,29 +584,12 @@ public class MainWindow extends JFrame implements Rendeble {
                 ComDataCollector ps = anyPoolService.findComDataCollectorByTabNumber(tab);
 
                 if (ps == null) {
-                    log.info("Для выбранной вкладки нет сервиса опроса");
+                    //log.info("Для выбранной вкладки нет сервиса опроса");
                 } else {
                     if (ps.getComPort() == null) {
-                        log.info("Для выбранной вкладки сервис опроса не содержит активного соединения");
+                        //log.info("Для выбранной вкладки сервис опроса не содержит активного соединения");
                     } else {
-                        //Ищу, какой ком-порт сделать активным...
-                        ArrayList<SerialPort> portsListForUpdateState = comPorts.getAllPorts();
-                        for (int i = 0; i < portsListForUpdateState.size(); i++) {
-                            if (prop.getPorts().length <= tab) {
-                                log.warn("Ошибка...");
-
-                            } else {
-                                if (portsListForUpdateState.get(i).getSystemPortName().equals(prop.getPorts()[tab])) {
-                                    CB_ComPorts.setSelectedIndex(i);
-                                } else {
-                                    log.warn("Пропущен ком-порт для выбора. Сравнение... Номер вкладки: " + i +
-                                            " Название ком порта по номеру:" + portsListForUpdateState.get(i).getSystemPortName() +
-                                            " Название ком порта в свойствах для номера вкладки:" + prop.getPorts()[tab]);
-                                    /* Искать тут */
-                                }
-                            }
-
-                        }
+                        updateComPortSelectorFromProp();
                     }
                 }
                 checkIsUsedPort();
@@ -887,6 +870,25 @@ public class MainWindow extends JFrame implements Rendeble {
         CB_StopBit.setSelectedIndex(leftPanState.getStopBits(tab));
         CB_BaudRate.setSelectedIndex(leftPanState.getBaudRate(tab));
         CB_Protocol.setSelectedIndex(leftPanState.getProtocol(tab));
+        updateComPortSelectorFromProp();
+
+    }
+
+    private void updateComPortSelectorFromProp() {
+        if (prop != null && prop.getPorts() != null && prop.getPorts().length > tab && prop.getPorts()[tab] != null) {
+            CB_ComPorts.setSelectedIndex(searchComPortNumberByName(prop.getPorts()[tab]));
+        }
+    }
+
+
+    private int searchComPortNumberByName(String name) {
+        ArrayList<SerialPort> ports = comPorts.getAllPorts();
+        for (SerialPort port : ports) {
+            if (port.getSystemPortName().equalsIgnoreCase(name)) {
+                return ports.indexOf(port);
+            }
+        }
+        return -1;
     }
 
     private void updateLeftPaneStateClassFromUI() {
@@ -926,29 +928,27 @@ public class MainWindow extends JFrame implements Rendeble {
         if (alreadyOpen) {
             BT_Open.setEnabled(false);
             CB_Protocol.setEnabled(false);
-            //addCustomMessage("Соединение с выбранным портом уже установлено");
+            BT_Close.setEnabled(true);
         } else {
             BT_Open.setEnabled(true);
             CB_Protocol.setEnabled(true);
+            BT_Close.setEnabled(false);
         }
         int rootTab = -1;
 
         rootTab = anyPoolService.getRootTabForComConnection(targetComNum);
-        log.info("Просмотр для вкладки  " + tab);
-        log.info("Найденная корневая " + rootTab);
+        //log.info("Просмотр для вкладки  " + tab);
+        //log.info("Найденная корневая " + rootTab);
         if (rootTab > -1) {
             if (rootTab != tab) {
-                log.info("Корневая вкладка для ком-порта " + rootTab);
                 addCustomMessage("Управление выбранным ком-портом возможно на вкладке 'dev" + (rootTab + 1) + "' ");
+                log.info("Управление выбранным ком-портом возможно на вкладке 'dev" + (rootTab + 1) + "' Просматриваемая вкладка " + tab);
                 BT_Close.setEnabled(false);
                 BT_Open.setEnabled(false);
                 CB_Protocol.setEnabled(false);
 
             } else {
                 log.info("Это и есть корневая вкладка для ком-порта " + rootTab);
-                BT_Close.setEnabled(true);
-                BT_Open.setEnabled(true);
-                CB_Protocol.setEnabled(true);
             }
         }
 

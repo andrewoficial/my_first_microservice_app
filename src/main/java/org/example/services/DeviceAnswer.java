@@ -43,7 +43,7 @@ public class DeviceAnswer {
     }
     public Integer getFieldCount (){
         if(answerReceivedValues != null){
-            return answerReceivedValues.getCounter() + 1; //ToDo recheck it
+            return answerReceivedValues.getCounter(); //ToDo recheck it
         }
         return 0;
     }

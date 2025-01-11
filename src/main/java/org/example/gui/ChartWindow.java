@@ -42,11 +42,9 @@ public class ChartWindow extends JFrame implements Rendeble {
     private static final int CONTROL_PANEL_MARGIN = 38;
     private static final Logger log = Logger.getLogger(ChartWindow.class);
     private volatile boolean isGraphBusy = false;
-    private ArrayList<DeviceAnswer> deviceAnswers = new ArrayList<>();
     private ArrayList<Boolean> cbStates = new ArrayList<>(15);
     private HashSet<Integer> tabs = new HashSet<>();
     private ArrayList<Integer> tabsFieldCapacity = new ArrayList<>();
-    private ArrayList<TimeSeries> timeSeries = new ArrayList<>();
     private TimeSeriesCollection collection = new TimeSeriesCollection();
     private ArrayList<JCheckBox> seriesBox = new ArrayList<>();
 
@@ -229,13 +227,13 @@ public class ChartWindow extends JFrame implements Rendeble {
         int index = AnswerStorage.getAnswersForGraph(tab).size() - 1;
         index = Math.max(0, index);
         if (Objects.equals(AnswerStorage.getAnswersForGraph(tab).get(index).getTabNumber(), tab)) {
-            int size = AnswerStorage.getAnswersForGraph(tab).size();
+            int sizeArraySizeImAnswer = AnswerStorage.getAnswersForGraph(tab).get(index).getFieldCount();
             if (tab == 0) {
                 int dunnoFix = AnswerStorage.getAnswersForGraph(tab).get(index).getFieldCount();
                 dunnoFix = Math.max(1, dunnoFix);
                 return dunnoFix;
             }
-            return AnswerStorage.getAnswersForGraph(tab).get(index).getFieldCount();
+            return sizeArraySizeImAnswer;
         }
 
         return 1; // Возвращаем 1, если данные для вкладки не найдены
@@ -321,8 +319,10 @@ public class ChartWindow extends JFrame implements Rendeble {
                 collection.getSeries(pointer).clear();
 
                 if (cbStates.get(pointer)) {
+                    log.info("pointer " + pointer + " will be showed");
                     //System.out.println("pointer " + pointer + " will be showed");
                     for (DeviceAnswer answer : recentAnswers) {
+                        log.info("answer tab " + answer.getTabNumber() + " field ");
                         if (isCorrectAnswerValue(answer, tab)) {
 
                             AnswerValues currentAnswers = answer.getAnswerReceivedValues();
@@ -330,6 +330,7 @@ public class ChartWindow extends JFrame implements Rendeble {
                             Millisecond millisecond = new Millisecond(convertToLocalDateViaMilisecond(answer.getAnswerReceivedTime()));
 
                             collection.getSeries(pointer).addOrUpdate(millisecond, currentValues);
+                            log.info("addOrUpdate " + millisecond + " " + currentValues);
                         }
                     }
                 } else {
@@ -342,22 +343,22 @@ public class ChartWindow extends JFrame implements Rendeble {
 
     private boolean isCorrectAnswerValue(DeviceAnswer answer, int tab) {
         if (answer == null) {
-            System.out.println("Answer is null");
+            log.debug("Answer is null");
             return false;
         }
 
         if (answer.getAnswerReceivedValues() == null) {
-            System.out.println("AnswerReceivedValues is null");
+            log.info("AnswerReceivedValues is null");
             return false;
         }
 
         if (answer.getAnswerReceivedValues().getValues() == null) {
-            System.out.println("AnswerReceivedValues array of values is null");
+            log.info("AnswerReceivedValues array of values is null");
             return false;
         }
 
         if (answer.getAnswerReceivedValues().getValues().length != tabsFieldCapacity.get(tab)) {
-            System.out.println("array of values not equal to tabsFieldCapacity. " + answer.getAnswerReceivedValues().getValues().length + " != " + tabsFieldCapacity.get(tab));
+            log.info("array of values not equal to tabsFieldCapacity. " + answer.getAnswerReceivedValues().getValues().length + " != " + tabsFieldCapacity.get(tab));
             return false;
         }
         return true;
