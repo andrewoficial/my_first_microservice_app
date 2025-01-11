@@ -50,10 +50,10 @@ public class AnyPoolService {
         }
 
         if (psSearch != null) {
-            log.info("Изменение существующего потока");
+            //log.info("Изменение существующего потока");
             processExistingComDataCollector(psSearch, tab, prefixAndCmd, pool, isBtn, poolDelay);
         } else {
-            log.info("Создание нового потока");
+            //log.info("Создание нового потока");
             createNewComDataCollector(tab, pool, isBtn, poolDelay, prefixAndCmd, selectedComPort, selectedProtocol);
         }
     }
@@ -85,10 +85,10 @@ public class AnyPoolService {
     private void processExistingComDataCollector(ComDataCollector psSearch, int tab, String [] prefixAndCmd, boolean pool, boolean isBtn, int poolDelay) {
         //log.info("Порт уже используется, проверка среди запущенных потоков");
         if (psSearch.containTabDev(tab)) {
-            log.info("Клинет уже содержится в потоке");
+            //log.info("Клинет уже содержится в потоке");
             handleTabInExistingCollector(psSearch, tab, prefixAndCmd, pool, isBtn, poolDelay);
         } else {
-            log.info("Клинет не содержится в потоке");
+            //log.info("Клинет не содержится в потоке");
             addDeviceToCollector(psSearch, tab, prefixAndCmd, isBtn, pool);
         }
     }
@@ -225,6 +225,10 @@ public class AnyPoolService {
             //log.info("Начинаю поиск корневой вкладки для порта номер: " + portNumber + " это порт:" + comPort.getAllPorts().get(portNumber).getSystemPortName());
         }else{
             log.info("Начинаю поиск корневой вкладки для порта номер: " + portNumber + " Не может быть проверен. Такого порта нет в системе.");
+            return -1;
+        }
+        if(comPort.getAllPorts().get(portNumber).isOpen()) { //Если порт закрыт, то  не ищу его вкладку
+            log.info("Начинаю поиск корневой вкладки для порта номер: " + portNumber + " В системе этот " + comPort.getAllPorts().get(portNumber).getSystemPortName() + " Порт закрыт.");
             return -1;
         }
         int forReturnFix = -1;
