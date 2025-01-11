@@ -226,6 +226,7 @@ public class ChartWindow extends JFrame implements Rendeble {
     public static int getFieldsCountForTab(Integer tab) {
         int index = AnswerStorage.getAnswersForGraph(tab).size() - 1;
         index = Math.max(0, index);
+        log.info("Получаю количество полей в ответе для вкладки " + tab + " размер массива с ответами " + index);
         if (Objects.equals(AnswerStorage.getAnswersForGraph(tab).get(index).getTabNumber(), tab)) {
             int sizeArraySizeImAnswer = AnswerStorage.getAnswersForGraph(tab).get(index).getFieldCount();
             if (tab == 0) {
@@ -297,21 +298,23 @@ public class ChartWindow extends JFrame implements Rendeble {
         tabs.addAll(AnswerStorage.answersByTab.keySet());
 
         updateCB();
-
+        int pointer = 0;
         for (int tab : tabs) {
             List<DeviceAnswer> recentAnswers = AnswerStorage.getRecentAnswersForGraph(tab, range);
             if (tabsFieldCapacity.size() <= tab) {
                 continue;
             }
             for (int j = 0; j < tabsFieldCapacity.get(tab); j++) {
-                int pointer = (tab) + j;
+
                 /*
                 if (pointer < 0)
                     pointer = 0;
                  */
+                log.info("Для вкладки " + tab + " для ответа " + j + " был получен указатель " + pointer);
 
                 while (collection.getSeriesCount() <= pointer || collection.getSeries(pointer) == null) {
                     collection.addSeries(new TimeSeries("graph " + pointer));
+                    log.info("Для вкладки " + tab + " для ответа " + pointer + " был получен указатель " + pointer);
                     //System.out.println("addSeries " + pointer);
                 }
 
@@ -320,7 +323,6 @@ public class ChartWindow extends JFrame implements Rendeble {
 
                 if (cbStates.get(pointer)) {
                     log.info("pointer " + pointer + " will be showed");
-                    //System.out.println("pointer " + pointer + " will be showed");
                     for (DeviceAnswer answer : recentAnswers) {
                         log.info("answer tab " + answer.getTabNumber() + " field ");
                         if (isCorrectAnswerValue(answer, tab)) {
@@ -335,8 +337,10 @@ public class ChartWindow extends JFrame implements Rendeble {
                     }
                 } else {
                     //System.out.println("pointer " + pointer + " will be removed");
+                    log.info("Для указателя " + pointer + " коллекция будет удалена");
                     collection.getSeries(pointer).clear();
                 }
+                pointer++;
             }
         }
     }
@@ -359,6 +363,10 @@ public class ChartWindow extends JFrame implements Rendeble {
 
         if (answer.getAnswerReceivedValues().getValues().length != tabsFieldCapacity.get(tab)) {
             log.info("array of values not equal to tabsFieldCapacity. " + answer.getAnswerReceivedValues().getValues().length + " != " + tabsFieldCapacity.get(tab));
+            for (double answer1 : answer.getAnswerReceivedValues().getValues()) {
+                log.info(answer1);
+            }
+            log.info(getFieldsCountForTab(tab));
             return false;
         }
         return true;
