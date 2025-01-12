@@ -218,6 +218,21 @@ public class MyPropertiesSettingsLoader {
         return result;
     }
 
+    public void setString(String name, String parameter){
+        if(name == null || name.isEmpty()){
+            log.warn("в setString не передано название параметра");
+            return;
+        }
+
+        if(parameter == null || parameter.isEmpty()){
+            log.warn("в setString не передано значение параметра при установке " + name);
+            return;
+        }
+
+        putOrUpdateProperty(name, parameter);
+        fileHandler.updateFileFromProperties(properties);
+
+    }
 
     public void setStringArray(String name, String [] parameters, boolean makeNullEmpty){
         if(makeNullEmpty){

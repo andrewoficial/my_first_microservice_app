@@ -101,8 +101,63 @@ public class MyProperties {
     @Getter
     private int syncSavingAnswerWindowMS = 100000; //100 sec
 
+    // CSV Logging
+    @Setter
+    @Getter
+    private boolean csvLogState = true;
+
+    @Setter
+    @Getter
+    private String csvLogSeparator = ";";
+
+    @Setter
+    @Getter
+    private boolean csvLogOutputASCII = false;
+
+    @Setter
+    @Getter
+    private boolean csvLogInputASCII = false;
+
+    @Setter
+    @Getter
+    private boolean csvLogInputParsed = false;
+
+    // TXT Logging
+    @Setter
+    @Getter
+    private boolean dbgLogState = false;
+
+    @Setter
+    @Getter
+    private String dbgLogSeparator = "\t";
+
+    @Setter
+    @Getter
+    private boolean dbgLogOutputASCII = false;
+
+    @Setter
+    @Getter
+    private boolean dbgLogOutputHEX = false;
+
+    @Setter
+    @Getter
+    private boolean dbgLogInputASCII = false;
+
+    @Setter
+    @Getter
+    private boolean dbgLogInputHEX = false;
+
+    @Setter
+    @Getter
+    private boolean dbgLogInputParsed = false;
+
+
+
     @Getter
     private MainLeftPanelStateCollection leftPanelStateCollection;
+
+
+
 
     private final MyPropertiesFileHandler fileHandler = new MyPropertiesFileHandler();
     private MyPropertiesSettingsLoader settingsLoader;
@@ -176,6 +231,22 @@ public class MyProperties {
         clientAssociationMarkers = settingsLoader.getStringArray("clientAssociationMarkers", "", tabCounter);
         clientAssociationID = settingsLoader.getIntegerArray("clientAssociationID", 0, tabCounter);
         updatePairsState();
+
+        // Load CSV settings
+        csvLogState = settingsLoader.getBoolean("csvLogState", true);
+        csvLogSeparator = settingsLoader.getString("csvLogSeparator", ";");
+        csvLogOutputASCII = settingsLoader.getBoolean("csvLogOutputASCII", false);
+        csvLogInputASCII = settingsLoader.getBoolean("csvLogInputASCII", true);
+        csvLogInputParsed = settingsLoader.getBoolean("csvLogInputParsed", false);
+
+        // Load TXT settings
+        dbgLogState = settingsLoader.getBoolean("dbgLogState", false);
+        dbgLogSeparator = settingsLoader.getString("dbgLogSeparator", "\t");
+        dbgLogOutputASCII = settingsLoader.getBoolean("dbgLogOutputASCII", false);
+        dbgLogOutputHEX = settingsLoader.getBoolean("dbgLogOutputHEX", false);
+        dbgLogInputASCII = settingsLoader.getBoolean("dbgLogInputASCII", false);
+        dbgLogInputHEX = settingsLoader.getBoolean("dbgLogInputHEX", false);
+        dbgLogInputParsed = settingsLoader.getBoolean("dbgLogInputParsed", false);
         updateLeftPanelStateCollectionClass();
     }
 
@@ -347,6 +418,75 @@ public class MyProperties {
         properties.setProperty("tabCounter", String.valueOf(counter));
         fileHandler.updateFileFromProperties(properties);
         log.debug("Обновлено значение последнего tabCounter: " + logLevel);
+    }
+
+
+    public void setCsvLogState (boolean state) {
+        settingsLoader.setBoolean("csvLogState", state);
+        this.csvLogState = state;
+    }
+
+    public void setCsvLogSeparator(String separator) {
+        if (separator == null || separator.isEmpty()) {
+            log.warn("в setCsvLogSeparator не передан параметр разделителя");
+            return;
+        }
+        this.csvLogSeparator = separator;
+        settingsLoader.setString("csvLogSeparator", separator);
+    }
+
+    public void setCsvLogOutputASCII (boolean state) {
+        settingsLoader.setBoolean("csvLogOutputASCII", state);
+        this.csvLogOutputASCII = state;
+    }
+
+    public void setCsvLogInputASCII (boolean state) {
+        settingsLoader.setBoolean("csvLogInputASCII", state);
+        this.csvLogInputASCII = state;
+    }
+
+    public void setCsvLogInputParsed (boolean state) {
+        settingsLoader.setBoolean("csvLogInputParsed", state);
+        this.csvLogInputParsed = state;
+    }
+
+    public void setDbgLogState(boolean state) {
+        settingsLoader.setBoolean("dbgLogState", state);
+        this.dbgLogState = state;
+    }
+
+    public void setDbgLogSeparator(String separator) {
+        if (separator == null || separator.isEmpty()) {
+            log.warn("в setDbgLogSeparator не передан параметр разделителя");
+            return;
+        }
+        this.dbgLogSeparator = separator;
+        settingsLoader.setString("dbgLogSeparator", separator);
+    }
+
+    public void setDbgLogOutputASCII(boolean state) {
+        settingsLoader.setBoolean("dbgLogOutputASCII", state);
+        this.dbgLogOutputASCII = state;
+    }
+
+    public void setDbgLogOutputHEX(boolean state) {
+        settingsLoader.setBoolean("dbgLogOutputHEX", state);
+        this.dbgLogOutputHEX = state;
+    }
+
+    public void setDbgLogInputASCII(boolean state) {
+        settingsLoader.setBoolean("dbgLogInputASCII", state);
+        this.dbgLogInputASCII = state;
+    }
+
+    public void setDbgLogInputHEX(boolean state) {
+        settingsLoader.setBoolean("dbgLogInputHEX", state);
+        this.dbgLogInputHEX = state;
+    }
+
+    public void setDbgLogInputParsed(boolean state) {
+        settingsLoader.setBoolean("dbgLogInputParsed", state);
+        this.dbgLogInputParsed = state;
     }
 
 
