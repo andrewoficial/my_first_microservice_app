@@ -56,7 +56,7 @@ public class OWON_SPE3051 implements SomeDevice {
     }
 
 
-    @Override
+
     public boolean isBusy(){
         return bisy;
     }

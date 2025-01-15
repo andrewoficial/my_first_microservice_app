@@ -42,7 +42,7 @@ public class ARD_BAD_VLT implements SomeDevice{
         return null;
     }
 
-    @Override
+
     public boolean isBusy(){
         return busy;
     }

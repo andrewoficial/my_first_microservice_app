@@ -55,7 +55,6 @@ public class ERSTEVAK_MTP4D implements SomeDevice {
     }
 
 
-    @Override
     public boolean isBusy(){
         return busy;
     }

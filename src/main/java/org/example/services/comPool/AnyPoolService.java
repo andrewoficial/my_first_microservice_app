@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 
 
 
@@ -41,7 +40,7 @@ public class AnyPoolService {
         answerSaverLogger = new AnswerSaverLogger(properties);
     }
 
-    public void createComDataCollector(int tab, int selectedComPort, int selectedProtocol, boolean pool, boolean isBtn, int poolDelay, String[] prefixAndCmd) {
+    public void createOrUpdateComDataCollector(int tab, int selectedComPort, int selectedProtocol, boolean pool, boolean isBtn, int poolDelay, String[] prefixAndCmd) {
         ComDataCollector psSearch = findComDataCollector(tab, selectedComPort);
         if(prefixAndCmd == null){
             prefixAndCmd = new String[2];
@@ -50,10 +49,10 @@ public class AnyPoolService {
         }
 
         if (psSearch != null) {
-            //log.info("Изменение существующего потока");
+            log.info("Изменение существующего потока");
             processExistingComDataCollector(psSearch, tab, prefixAndCmd, pool, isBtn, poolDelay);
         } else {
-            //log.info("Создание нового потока");
+            log.info("Создание нового потока");
             createNewComDataCollector(tab, pool, isBtn, poolDelay, prefixAndCmd, selectedComPort, selectedProtocol);
         }
     }
@@ -61,8 +60,8 @@ public class AnyPoolService {
     private void handleTabInExistingCollector(ComDataCollector psSearch, int tab, String [] prefixAndCmd, boolean pool, boolean isBtn, int poolDelay) {
         if (pool || isBtn) {
             if (isBtn) {
-                //log.info("Разовая отправка");
-                psSearch.sendOnce(prefixAndCmd[0] + prefixAndCmd[1], tab, false);
+                log.info("Разовая отправка");
+                psSearch.sendOnce(prefixAndCmd[0], prefixAndCmd[1], tab, false);
             } else {
                 log.info("Команда к запуску");
                 psSearch.setNeedPool(tab, true);
@@ -85,10 +84,10 @@ public class AnyPoolService {
     private void processExistingComDataCollector(ComDataCollector psSearch, int tab, String [] prefixAndCmd, boolean pool, boolean isBtn, int poolDelay) {
         //log.info("Порт уже используется, проверка среди запущенных потоков");
         if (psSearch.containTabDev(tab)) {
-            //log.info("Клинет уже содержится в потоке");
+            log.info("Клинет уже содержится в потоке");
             handleTabInExistingCollector(psSearch, tab, prefixAndCmd, pool, isBtn, poolDelay);
         } else {
-            //log.info("Клинет не содержится в потоке");
+            log.info("Клинет не содержится в потоке");
             addDeviceToCollector(psSearch, tab, prefixAndCmd, isBtn, pool);
         }
     }
@@ -113,7 +112,7 @@ public class AnyPoolService {
 
         if (isBtn) {
             lastAdded.setNeedPool(tab, false);
-            lastAdded.sendOnce(prefixAndCmd[0] + prefixAndCmd[1], tab, false);
+            lastAdded.sendOnce(prefixAndCmd[0], prefixAndCmd[1], tab, false);
             log.info("Поток создан и запущен один раз");
             sleepFor(60);
         } else if (pool) {
@@ -227,6 +226,10 @@ public class AnyPoolService {
             log.info("Начинаю поиск корневой вкладки для порта номер: " + portNumber + " Не может быть проверен. Такого порта нет в системе.");
             return -1;
         }
+        if(comPort.getAllPorts().size() > portNumber) { //Если порт закрыт, то  не ищу его вкладку
+            log.info("Начинаю поиск корневой вкладки для порта номер: " + portNumber + " В системе порта нету ");
+            return -1;
+        }
         if(comPort.getAllPorts().get(portNumber).isOpen()) { //Если порт закрыт, то  не ищу его вкладку
             log.info("Начинаю поиск корневой вкладки для порта номер: " + portNumber + " В системе этот " + comPort.getAllPorts().get(portNumber).getSystemPortName() + " Порт закрыт.");
             return -1;
@@ -295,6 +298,12 @@ public class AnyPoolService {
         if(ps != null) {
             ps.removeDeviceFromComDataCollector(number);
             ps.shutdown();
+            for (int i = 0; i < comDataCollectors.size(); i++) {
+                if(comDataCollectors.get(i) != null && comDataCollectors.get(i).isAlive() == false){
+                    comDataCollectors.remove(i);
+                    i--;
+                }
+            }
         }else{
             log.error("Попытка остановки потока с неассоциированного клиента (вкладки)");
         }

@@ -49,7 +49,6 @@ public class EDWARDS_D397_00_000  implements SomeDevice  {
         return null;
     }
 
-    @Override
     public boolean isBusy(){
         return bisy;
     }

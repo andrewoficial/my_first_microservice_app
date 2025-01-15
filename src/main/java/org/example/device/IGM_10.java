@@ -194,7 +194,7 @@ public class IGM_10 implements SomeDevice {
 
     }
 
-    @Override
+
     public boolean isBusy(){
         return busy;
     }

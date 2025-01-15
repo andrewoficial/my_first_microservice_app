@@ -55,7 +55,7 @@ public class DVK_4RD  implements SomeDevice  {
     }
 
 
-    @Override
+
     public boolean isBusy(){
         return busy;
     }

@@ -261,7 +261,7 @@ public class MainWindow extends JFrame implements Rendeble {
 
                 if (ps == null) {
                     log.info("Для вкладки " + tab + " не найден сервис опроса");
-                    anyPoolService.createComDataCollector(tab, getCurrComSelection(), CB_Protocol.getSelectedIndex(), false, false, 1200, prepareTextToSend(tab));
+                    anyPoolService.createOrUpdateComDataCollector(tab, getCurrComSelection(), CB_Protocol.getSelectedIndex(), false, false, 1200, prepareTextToSend(tab));
                     ps = anyPoolService.findComDataCollectorByTabNumber(tab);
                     if (ps == null) {
                         log.warn("Для вкладки " + tab + " не найден сервис опроса даже после его создания");
@@ -331,6 +331,8 @@ public class MainWindow extends JFrame implements Rendeble {
 
                 if (!ps.getComPort().isOpen()) {
                     addCustomMessage("Порт " + ps.getComPort().getSystemPortName() + " закрыт.");
+                    BT_Close.setEnabled(false);
+                    BT_Open.setEnabled(true);
                 } else {
                     addCustomMessage("Ошибка обращения к порту");
                     log.warn("Ошибка обращения к порту");
@@ -351,6 +353,7 @@ public class MainWindow extends JFrame implements Rendeble {
             @Override
             public void actionPerformed(ActionEvent e) {
                 startSend(true);
+                renderData();
             }
         });
 
@@ -367,14 +370,6 @@ public class MainWindow extends JFrame implements Rendeble {
             }
         });
 
-        BT_Send.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                //log.info("Pressed BT_Send");
-                renderData();
-
-            }
-        });
 
         CB_BaudRate.addActionListener(new ActionListener() {
             @Override
@@ -821,6 +816,7 @@ public class MainWindow extends JFrame implements Rendeble {
 
 
     public static boolean isBusy(int tabNumber) {
+        
         return true;
         /*
         if (tabNumber < 0 || tabNumber >= MainWindow.getCurrTabCount()) {
@@ -842,26 +838,10 @@ public class MainWindow extends JFrame implements Rendeble {
 
     public void startSend(boolean isBtn) {
         //isBtn - вызов по кнопке / pool - вызов про чекбоксу
-        if (isBtn) {
-            //log.info("Инициализация отправки по нажатию кнопки ОТПРАВИТЬ");
-        } else {
-            //log.info("Инициализация отправки по по таймеру в цикле");
-        }
-        prefToSendValue.set(tab, prefOneToSend.getText());
-        textToSendValue.set(tab, textToSend.getText());
-
-
         saveParameters();
-        boolean pool = CB_Pool.isSelected();
-        int poolDelay = 10000;
-        try {
-            poolDelay = Integer.parseInt(IN_PoolDelay.getText());
-        } catch (Exception e1) {
-            IN_PoolDelay.setText("10000");
-        }
 
-        anyPoolService.createComDataCollector(tab, getCurrComSelection(), CB_Protocol.getSelectedIndex(), pool, isBtn, poolDelay, prepareTextToSend(tab));
-
+        anyPoolService.createOrUpdateComDataCollector(tab, getCurrComSelection(), getCurrProtocolSelection(),
+                getNeedPoolState(), isBtn, getCurrPoolDelay(), prepareTextToSend(tab));
     }
 
     private void updateLeftPaneFromClass() {
@@ -958,6 +938,24 @@ public class MainWindow extends JFrame implements Rendeble {
 
     private int getCurrComSelection() {
         return CB_ComPorts.getSelectedIndex();
+    }
+
+    private int getCurrProtocolSelection() {
+        return CB_Protocol.getSelectedIndex();
+    }
+
+    private boolean getNeedPoolState() {
+        return CB_Pool.isSelected();
+    }
+
+    private int getCurrPoolDelay() {
+        int poolDelay = 10000;
+        try {
+            poolDelay = Integer.parseInt(IN_PoolDelay.getText());
+        } catch (Exception e1) {
+            IN_PoolDelay.setText("10000");
+        }
+        return poolDelay;
     }
 
 

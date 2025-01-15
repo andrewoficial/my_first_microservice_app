@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Objects;
 
 
+import static org.example.utilites.MyUtilities.bytesToHex;
 import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 
 
@@ -30,7 +31,7 @@ public class ComDataCollector implements Runnable{
     @Getter
     private boolean alive = true; // Признак того, что поток жив (после введения Event всегда истина и сбрасывается в shutdown, раньше сбрасывался если нету клиентов у потока)
     @Getter
-    private volatile boolean  comBusy = false;// Признак того, что текущее соединение по ком-порту занято
+    private volatile boolean comDataCollectorBusy = false;// Признак того, что текущее соединение по ком-порту занято
     @Setter
     private boolean threadForEvent; //Признак того, что при открытии соединения по ком-порту будет подключен SerialPortDataListener.
     private ProtocolsList protocol = null;//Enum с протоколами, что бы определять что за устройство является клиентом соединения по ком-порту, задается через гуи
@@ -43,11 +44,14 @@ public class ComDataCollector implements Runnable{
     private long poolDelay = 2000;//Задает переодичность отправки запросов в мс.
     private long millisPrev = System.currentTimeMillis() - (poolDelay * 100);//Обслуживание таймера в миллисекундах (основная переменная poolDelay).
 
-    private final ArrayList <Integer> clientsTabNumbers = new ArrayList<>();//Массив номеров клиентов (вкладок)
+    /**
+     *Массив номеров клиентов (вкладок)
+     */
+    private final ArrayList <Integer> clientsTabNumbers = new ArrayList<>();//
     private final ArrayList <Boolean> needLogArrayList = new ArrayList<>();//Массив флагов логирования
     private final ArrayList <Boolean> needPool = new ArrayList<>(); //Массив флагов, опроса
-    private final ArrayList <String> prefToSend = new ArrayList<>();//Массив префиксов для команд [PREF_command]
-    private final ArrayList <String> textToSend = new ArrayList<>();//Массив команд [pref_COMMAND] (в будущем префикс и номер вкладки станет настоящим id устройства)
+    private final ArrayList <String> prefixToSendArray = new ArrayList<>();//Массив префиксов для команд [PREF_command]
+    private final ArrayList <String> commandsToSendArray = new ArrayList<>();//Массив команд [pref_COMMAND] (в будущем префикс и номер вкладки станет настоящим id устройства)
     private final ArrayList <DeviceLogger> deviceLoggerArrayList = new ArrayList<>();//Массив логеров
 
 
@@ -103,8 +107,8 @@ public class ComDataCollector implements Runnable{
         this.poolDelay = poolDelay;
         this.threadForEvent = threadForEvent;
         needPool.add(true);
-        textToSend.add("");
-        prefToSend.add("");
+        commandsToSendArray.add("");
+        prefixToSendArray.add("");
         needLogArrayList.add(needLog);
 
         serialPortDataListener = new SerialPortDataListener() {
@@ -132,8 +136,8 @@ public class ComDataCollector implements Runnable{
                 }
 
                 //log.info("Parse external Event ASCII [" + builder.toString().trim() + "]");
-                //log.info("Parse external Event HEX [" + bytesToHex(builder.toString().getBytes()) + "]");
-                receiveByEvent(builder.toString(), tabNumber);
+                log.info("Принято по событию (без запроса) [" + bytesToHex(builder.toString().getBytes()) + "]");
+                saveReceivedByEvent(builder.toString(), tabNumber);
             }
         };
 
@@ -175,15 +179,21 @@ public class ComDataCollector implements Runnable{
 
         millisPrev = System.currentTimeMillis() - (poolDelay * 100);//Запуск может быть отдельно от создания
         while ((!Thread.currentThread().isInterrupted()) && alive) {
-            comPort.addDataListener(serialPortDataListener);
+            if(threadForEvent && (! isComDataCollectorBusy())){
+                waitForComDataCollectorBusy(300);
+                if (!isComDataCollectorBusy()) {
+                    comPort.addDataListener(serialPortDataListener);
+                }
+            }
+
             if (System.currentTimeMillis() - millisPrev > poolDelay) {
                 millisPrev = System.currentTimeMillis();
-                for (int i = 0; i < textToSend.size(); i++) {
+                for (int i = 0; i < commandsToSendArray.size(); i++) {
                     if (shouldSkipCommand(i)) {
                         continue;
                     }
-                    waitForComBusy();
-                    sendOnce(prefToSend.get(i) + textToSend.get(i), i, true);
+                    waitForComDataCollectorBusy();
+                    sendOnce(prefixToSendArray.get(i), commandsToSendArray.get(i), i, true);
                 }
             } else {
                 sleepSafely(Math.min((poolDelay / 5), 100L));
@@ -191,18 +201,24 @@ public class ComDataCollector implements Runnable{
         }
     }
 
+
     private boolean shouldSkipCommand(int i) {
         addMissingObjects(i);
         return i < 0 || ! needPool.get(i);
     }
 
-    private void waitForComBusy() {
-        while (comBusy) {
-            try {
-                Thread.sleep(20);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+
+    private void waitForComDataCollectorBusy(int totalLimit) {
+        if(totalLimit < 20) totalLimit = 20;
+        int i = totalLimit / 20;
+        while (comDataCollectorBusy && i < totalLimit) {
+            sleepSafely(20);
+            i++;
+        }
+    }
+    private void waitForComDataCollectorBusy() {
+        while (comDataCollectorBusy) {
+            sleepSafely(20);
         }
     }
 
@@ -215,46 +231,52 @@ public class ComDataCollector implements Runnable{
     }
 
 
-    public void sendOnce (String arg, int i, boolean internal){
+    public void sendOnce (String pref, String arg, int i, boolean internal){
         if(!internal){
-            //log.info("Инициирована отправка команды прибору " + arg + " внутренний вызов? " + false + ". Будет выполнена.  Флаг comBusy проигнорирован, его статус " + comBusy);
-            //log.info("Старый аргумент указателя "  + i + " соответствует вкладке " + findSubDevByTabNumber(i));
             i = findSubDevByTabNumber(i);
-            //log.info("Новый аргумент указателя "  + i + " соответствует вкладке " + findSubDevByTabNumber(i));
         }
         //Проверка, если команда уже выполняется (занят ком-порт)
-        if (comBusy) {
+        waitForComDataCollectorBusy(40);
+
+        if (comDataCollectorBusy) {
+            log.info("Прервал отправку. Слишком долгое ожидание освобождения порта");
             return;
-        }else{
-            comBusy = true;
+        } else {
+            synchronized (this) {
+                comDataCollectorBusy = true;
+            }
         }
 
-        //Првоерка, что команда уже выполняется (занят прибором)
-        if(device.isBusy()){
-            log.info("ОТМЕНЕНА ОТПРАВКА ЗАНЯТОМУ УСТРОЙСТВУ");
+        if(arg == null || arg.isEmpty()){
+            log.info("Прервал отправку. Нет текста команды");
             return;
         }
-
+        if(pref == null){
+            pref = "";
+        }
+        //comPort.flushDataListener();
+        comPort.removeDataListener();
+        //comPort.flushIOBuffers();
         int tabDirection = getTabNumberByInnerNumber(i);
         //log.info("Параметр i = " + i + " tabDirection будет задан " + tabDirection);
 
         LocalDateTime startSend = LocalDateTime.now();
-        comPort.flushDataListener();
-        comPort.removeDataListener();
-        sleepSafely(50);
-        if(textToSend.get(i) == null){
-            textToSend.add(arg);//Что бы не была нулем при начале опроса по галке
+        //log.info("Для отправки textToSend = " + arg + " prefToSend = " + pref);
+
+        try {
+            device.sendAndReceiveData(pref + arg, device);
+        } catch (Exception e) {
+            log.info("Во время отправки произошло исключение" + e.getMessage());
+            //throw new RuntimeException(e);
+        }finally {
+            synchronized (this) {
+                comDataCollectorBusy = false;
+            }
+            comPort.addDataListener(serialPortDataListener);
+            device.parseData();
         }
 
-        if(prefToSend.get(i) == null){
-            prefToSend.add("");
-        }
-        device.sendData(arg, device.getStrEndian(), comPort, device.isKnownCommand(), 150, device);
-        device.receiveData(device);
 
-        comPort.addDataListener(serialPortDataListener);
-
-        device.parseData();
 
         DeviceAnswer answer = new DeviceAnswer(startSend,arg,tabDirection);
         answer.setDeviceType(device);
@@ -264,10 +286,9 @@ public class ComDataCollector implements Runnable{
 
         saveAndLogSome(answer, i);
 
-        comBusy = false;
     }
 
-    public void receiveByEvent (String msg, int tabN){
+    public void saveReceivedByEvent(String msg, int tabN){
         tabN =  findSubDevByTabNumber(tabN);
 
 
@@ -319,6 +340,7 @@ public class ComDataCollector implements Runnable{
         }
         Thread.currentThread().interrupt();
     }
+
     private int getTabNumberByInnerNumber(int innerNumber){
         for (int i = 0; i < clientsTabNumbers.size(); i++) {
             if(i == innerNumber){
@@ -380,6 +402,14 @@ public class ComDataCollector implements Runnable{
         while(needLogArrayList.size() <= subDevNum){
             needLogArrayList.add(false);
         }
+
+        while (commandsToSendArray.size() <= subDevNum) {
+            commandsToSendArray.add(null);
+        }
+
+        while (prefixToSendArray.size() <= subDevNum) {
+            prefixToSendArray.add(null);
+        }
     }
 
 
@@ -403,14 +433,14 @@ public class ComDataCollector implements Runnable{
         int innerNumber = findSubDevByTabNumber(tabNumber);
         if(innerNumber != -1){
 
-            while (textToSend.size() <= innerNumber){
-                textToSend.add("");
+            while (commandsToSendArray.size() <= innerNumber){
+                commandsToSendArray.add("");
             }
-            while (prefToSend.size() <= innerNumber){
-                prefToSend.add("");
+            while (prefixToSendArray.size() <= innerNumber){
+                prefixToSendArray.add("");
             }
-            prefToSend.set(innerNumber, prf);
-            textToSend.set(innerNumber, cmd);
+            prefixToSendArray.set(innerNumber, prf);
+            commandsToSendArray.set(innerNumber, cmd);
             //log.info("Значения команды и префикса обновлены для подустройства номер " + innerNumber + " в потоке опроса");
         }else{
             log.info("Клиент с вкладкой " + tabNumber + " не найден");
@@ -420,7 +450,7 @@ public class ComDataCollector implements Runnable{
     public String getTextToSensByTab(int tabNum){
         int innerNumber = findSubDevByTabNumber(tabNum);
         if(innerNumber != -1){
-            return prefToSend.get(innerNumber) + textToSend.get(innerNumber);
+            return prefixToSendArray.get(innerNumber) + commandsToSendArray.get(innerNumber);
         }
         return  null;
     }
@@ -464,8 +494,8 @@ public class ComDataCollector implements Runnable{
 
     public void addDeviceToService(int tabNumber, String prf, String cmd, boolean needLog, boolean needPoolFlag) {
         clientsTabNumbers.add(tabNumber);
-        prefToSend.add(prf);
-        textToSend.add(cmd);
+        prefixToSendArray.add(prf);
+        commandsToSendArray.add(cmd);
         needLogArrayList.add(needLog);
         if(needLog){
             deviceLoggerArrayList.add(new DeviceLogger(String.valueOf(tabNumber)));
@@ -487,8 +517,8 @@ public class ComDataCollector implements Runnable{
             }
         }
         if(innerNumber > 0){
-            textToSend.remove(innerNumber);
-            prefToSend.remove(innerNumber);
+            commandsToSendArray.remove(innerNumber);
+            prefixToSendArray.remove(innerNumber);
             needLogArrayList.remove(innerNumber);
             deviceLoggerArrayList.remove(innerNumber);
         }
@@ -497,8 +527,6 @@ public class ComDataCollector implements Runnable{
             log.info(clientsTabNumber);
         }
         log.info(clientsTabNumbers.toString());
-
-
     }
 
     public boolean isEmpty(){

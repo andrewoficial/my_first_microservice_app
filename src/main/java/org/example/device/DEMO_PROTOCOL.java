@@ -66,7 +66,7 @@ public class DEMO_PROTOCOL implements SomeDevice {
         return null;
     }
 
-    @Override
+
     public boolean isBusy(){
         return bisy;
     }

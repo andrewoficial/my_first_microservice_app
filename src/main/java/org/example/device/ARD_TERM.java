@@ -4,12 +4,16 @@ import java.nio.CharBuffer;
 import java.nio.charset.CharsetDecoder;
 
 import com.fazecast.jSerialComm.SerialPort;
+import lombok.Getter;
 import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.services.AnswerValues;
 import org.example.utilites.MyUtilities;
 
 import java.nio.charset.Charset;
+import java.util.Arrays;
+
+import static org.example.utilites.MyUtilities.*;
 
 public class ARD_TERM implements SomeDevice {
     private volatile boolean bisy = false;
@@ -24,12 +28,9 @@ public class ARD_TERM implements SomeDevice {
     @Setter
     private byte [] strEndian = {13};//CR
     private int received = 0;
-    private final long millisLimit = 170;
-    private final long repeatWaitTime = 100;
+    private final long millisLimit = 800;
+    private final long repeatWaitTime = 5;
     private final long millisPrev = System.currentTimeMillis();
-    private final Charset charset = Charset.forName("Cp1251");
-    private final CharsetDecoder decoder = charset.newDecoder();
-    private final CharBuffer charBuffer = CharBuffer.allocate(512);  // Предполагаемый максимальный размер
     private static AnswerValues answerValues = new AnswerValues(0);
     String cmdToSend;
 
@@ -56,7 +57,6 @@ public class ARD_TERM implements SomeDevice {
     }
 
 
-    @Override
     public boolean isBusy(){
         return bisy;
     }
@@ -128,6 +128,7 @@ public class ARD_TERM implements SomeDevice {
         this.hasAnswer = hasAnswer;
     }
 
+
     public CommandListClass commands = new CommandListClass();
 
     @Override
@@ -139,7 +140,7 @@ public class ARD_TERM implements SomeDevice {
             comPort.openPort();
             comPort.flushDataListener();
             comPort.removeDataListener();
-            comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 15, 10);
+            comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 400, 100);
             if(comPort.isOpen()){
                 log.info("Порт открыт, задержки выставлены");
                 return true;
@@ -168,7 +169,7 @@ public class ARD_TERM implements SomeDevice {
     public void parseData() {
         //System.out.println("OWON_SPE3051 run parse");
         //ToDo сделать в остальных
-        lastAnswerBytes = MyUtilities.clearAsciiString(lastAnswerBytes);
+        //lastAnswerBytes = MyUtilities.clearAsciiString(lastAnswerBytes);
         if(lastAnswerBytes.length > 0) {
 
             lastAnswer.setLength(0);
@@ -196,7 +197,10 @@ public class ARD_TERM implements SomeDevice {
         }
     }
 
-
+    @Override
+    public int getExpectedBytes(){
+            return commands.getExpectedBytes(cmdToSend);
+    }
 
     public String getAnswer(){
         if(hasAnswer) {
@@ -226,10 +230,36 @@ public class ARD_TERM implements SomeDevice {
                 new SingleCommand(
                         "F", "F - запрос измеренного значения температуры и давления. ",
                         (response) -> {
-                            answerValues = null;
-                            //System.out.println("Proceed MEAS:CURR?");
-                            //String example = "5.229";
-                            if (response.length > 1 && response.length < 95) {
+                                answerValues = null;
+                                boolean messagIsValid = false;
+                                if( ! checkStructureForF(response)){
+                                    log.info("Не пройдена проверка по признакам длинны, первого символа, табуляций и последнего символа");
+                                    StringBuilder sb = new StringBuilder();
+                                    for (byte b : response) {
+                                        //sb.append((char) b);
+                                        sb.append("[");
+                                        sb.append(b);
+                                        sb.append("], ");
+                                    }
+                                    log.warn("Рассматривал массив длинною " + response.length + " " + sb.toString());
+                                    return null;
+                                }else{
+                                    messagIsValid = true;
+                                }
+                                if (response[70] != calculateCRCforF(response)) {
+                                    log.info("ERROR CRC for F");
+                                    log.info("Expected CRC F " + calculateCRCforF(response) + " received " + response[70] + " ARD_TERM");
+                                    StringBuilder sb = new StringBuilder();
+                                    for (byte b : response) {
+                                        //sb.append((char) b);
+                                        sb.append("[");
+                                        sb.append(b);
+                                        sb.append("], ");
+                                    }
+                                    log.warn("Рассматривал массив длинною " + response.length + " " + sb.toString());
+                                    return null;
+
+                                }
 
                                 double outputState = -1.0;
                                 StringBuilder sb = new StringBuilder();
@@ -237,7 +267,7 @@ public class ARD_TERM implements SomeDevice {
                                     sb.append((char) b);
                                 }
                                 sb.replace(0, 1, "");
-                                System.out.println(sb);
+                                //log.info("F answer " + sb.toString());
                                 StringBuilder tmpSb = new StringBuilder();
                                 for (int i = 0; i < 5; i++) {
                                     if(sb.charAt(i) > 47 && sb.charAt(i) < 58) {
@@ -251,12 +281,16 @@ public class ARD_TERM implements SomeDevice {
                                 double termTwo = 0;
                                 int serialNum = 0;
                                 if(tmpSb.length() == 5){
-                                    System.out.print("termOne " + tmpSb);
-                                    System.out.println(" is Correct");
-                                    termOne = Double.parseDouble(tmpSb.toString()) / 100;
-                                }else{
-                                    System.out.print("termOne " + tmpSb);
-                                    System.out.println(" is wrong");
+                                    //System.out.print("termOne " + tmpSb);
+                                    //System.out.println(" is Correct");
+                                    try {
+                                        termOne = Double.parseDouble(tmpSb.toString()) / 100;
+                                        isOk = true;
+                                    }catch (NumberFormatException e){
+                                        log.warn("NumberFormatException" +  e.getMessage());
+                                        isOk = false;
+                                    }
+                                }else {
                                     isOk = false;
                                 }
 
@@ -268,13 +302,20 @@ public class ARD_TERM implements SomeDevice {
                                         }
                                     }
                                 }
+
                                 if(tmpSb.length() == 5){
-                                    System.out.print("pressOne " + tmpSb);
-                                    System.out.println(" is Correct");
-                                    pressOne = Double.parseDouble(tmpSb.toString()) / 10;
+                                    //System.out.print("pressOne " + tmpSb);
+                                    //System.out.println(" is Correct");
+                                    try {
+                                        pressOne = Double.parseDouble(tmpSb.toString()) / 10;
+                                        isOk = true;
+                                    }catch (NumberFormatException e){
+                                        log.warn("NumberFormatException" +  e.getMessage());
+                                        isOk = false;
+                                    }
                                 }else{
-                                    System.out.print("pressOne " + tmpSb);
-                                    System.out.println(" is wrong");
+                                    //System.out.print("pressOne " + tmpSb);
+                                    //System.out.println(" is wrong");
                                     isOk = false;
                                 }
 
@@ -287,14 +328,42 @@ public class ARD_TERM implements SomeDevice {
                                     }
                                 }
                                 if(tmpSb.length() == 5){
-                                    System.out.print("termTwo " + tmpSb);
-                                    System.out.println(" is Correct");
-                                    termTwo = Double.parseDouble(tmpSb.toString()) / 100;
+                                    try {
+                                        termTwo = Double.parseDouble(tmpSb.toString()) / 100;
+                                        isOk = true;
+                                    }catch (NumberFormatException e){
+                                        log.warn("NumberFormatException" +  e.getMessage());
+                                        isOk = false;
+                                    }
+
                                 }else{
-                                    System.out.print("termTwo " + tmpSb);
-                                    System.out.println(" is wrong");
+
                                     isOk = false;
                                 }
+
+
+                                if(isOk){
+                                    tmpSb.setLength(0);
+                                    for (int i = 60; i < 67; i++) {
+                                        if(sb.charAt(i) > 47 && sb.charAt(i) < 58) {
+                                            tmpSb.append(sb.charAt(i));
+                                        }
+                                    }
+                                }
+                                if(true){
+                                    try {
+                                        serialNum = Integer.parseInt(tmpSb.toString());
+                                        isOk = true;
+                                    }catch (NumberFormatException e){
+                                        log.warn("NumberFormatException" +  e.getMessage() + " " + tmpSb.toString());
+                                        isOk = false;
+                                    }
+
+                                }else{
+
+                                    isOk = false;
+                                }
+
                                 if(isOk) {
                                     answerValues = new AnswerValues(4);
                                     answerValues.addValue(termOne, "C");
@@ -305,11 +374,8 @@ public class ARD_TERM implements SomeDevice {
                                 }else{
                                     //System.out.println("Answer doesnt contain dot " + sb.toString());
                                 }
-                            } else {
-                                //System.out.println("Wrong answer length " + response.length);
-                            }
                             return answerValues;
-                        }, 72)
+                        }, 73)
         );
     }
 

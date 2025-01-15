@@ -56,7 +56,7 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
         return null;
     }
 
-    @Override
+
     public boolean isBusy() {
         return bisy;
     }

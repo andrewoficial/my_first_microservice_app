@@ -360,12 +360,7 @@ public class GPS_Test implements SomeDevice {
     }
     @Override
     public void sendData(String data, byte [] strEndian, SerialPort comPort, boolean knownCommand, int buffClearTimeLimit, SomeDevice device){
-        if(device.isBusy()){
-            log.warn("Попытка записи при активном соединении");
-            return;
-        }else {
-            device.setBusy(true);
-        }
+
         setCmdToSend(data);
         comPort.flushDataListener();
         //log.info("  Выполнено flushDataListener ");
@@ -518,7 +513,6 @@ public class GPS_Test implements SomeDevice {
         System.out.println("  Relay 1 Error: " + relay1Error);
     }
 
-    @Override
     public boolean isBusy(){
         return bisy;
     }

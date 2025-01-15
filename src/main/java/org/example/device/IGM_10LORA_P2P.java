@@ -352,13 +352,7 @@ public class IGM_10LORA_P2P implements SomeDevice {
 
     @Override
     public void sendData(String data, byte [] strEndian, SerialPort comPort, boolean knownCommand, int buffClearTimeLimit, SomeDevice device){
-        if(device.isBusy()){
-            log.warn("Попытка записи при активном соединении (sendData)");
-            //device.setBisy(false);
-            return;
-        }else {
-            device.setBusy(true);
-        }
+
         setCmdToSend(data);
         comPort.flushDataListener();
         //log.info("  Выполнено flushDataListener ");
@@ -392,7 +386,7 @@ public class IGM_10LORA_P2P implements SomeDevice {
         device.setBusy(false);
     }
 
-    @Override
+
     public boolean isBusy(){
         return busy;
     }

@@ -1,7 +1,10 @@
 package org.example.services.loggers;
 
+import org.apache.log4j.Logger;
 import org.example.services.DeviceAnswer;
 import org.example.utilites.MyUtilities;
+import org.example.utilites.ProgramUpdater;
+import org.example.utilites.properties.MyProperties;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -14,91 +17,103 @@ public class DeviceLogger {
     private String fileNameCSV = (java.time.LocalDateTime.now().format(MyUtilities.CUSTOM_FORMATTER_FILES));
     private File logFile;
     private File logFileCSV;
+    private MyProperties properties = MyProperties.getInstance();
+    private static final Logger log = Logger.getLogger(DeviceLogger.class);
     private Long dateTimeLastWrite = System.currentTimeMillis();
     private final ArrayList<String> stringsBuffer = new ArrayList<>();
     private final ArrayList<String> stringsBufferCSV = new ArrayList<>();
 
-    public DeviceLogger(String name){
-        this.fileName = this.fileName + " " + "tab_" + name + ".txt";
-        this.fileNameCSV = this.fileNameCSV + " " + "tab_" + name + ".csv";
-        File logFile = null;
-        File logFileCSV = null;
-        try{
-            logFile = new File("logs"+fileName);
-            logFileCSV = new File("logs"+fileNameCSV);
-
-            if(logFile.exists() && !logFile.isDirectory()) {
-                // do something
-            }else {
-                new File("logs").mkdirs();
-            }
-        } catch (Exception e) {
-            //throw new RuntimeException(e);
+    public DeviceLogger(String name) {
+        if(properties.isCsvLogState()){
+            this.fileNameCSV = this.fileNameCSV + " " + "tab_" + name + ".csv";
+            this.logFileCSV = createLogFile("logs", this.fileNameCSV);
         }
 
+        if(properties.isDbgLogState()){
+            this.fileName = this.fileName + " " + "tab_" + name + ".txt";
+            this.logFile = createLogFile("logs", this.fileName);
+        }
+    }
+
+    private File createLogFile(String directory, String fileName) {
+        File logFile = null;
         try {
-            logFile = new File("logs/"+fileName);
-            if (logFile.createNewFile()) {
-                //System.out.println("File created: " + myObj.getName());
-                //System.out.println("File created: " + logFile.getAbsolutePath());
-            } else {
-                //System.out.println("File already exists.");
-                //System.out.println(logFile.getAbsolutePath());
+            logFile = new File(directory + "/" + fileName);
+            if (!logFile.exists()) {
+                new File(directory).mkdirs();
+                if (logFile.createNewFile()) {
+                    // Log file creation success if needed
+                } else {
+                    // Log file already exists
+                }
             }
         } catch (IOException e) {
-            //System.out.println("An error occurred.");
-            //e.printStackTrace();
+            // Handle exception for file creation
+            log.warn("Проблема при создании файла лога" + e.getMessage());
+        } catch (Exception e) {
+            // Handle other exceptions
+            log.warn("Проблема при создании файла лога" + e.getMessage());
         }
-
-        try{
-            logFileCSV = new File("logs/"+fileNameCSV);
-        }catch (Exception e){
-            //Dunno...
-        }
-        this.logFile = logFile;
-        this.logFileCSV = logFileCSV;
+        return logFile;
     }
 
     public void writeLine (DeviceAnswer answer){
-        StringBuilder lineCSV = new StringBuilder();
-        StringBuilder line = new StringBuilder();
+        StringBuilder lineCSV = null;
+        StringBuilder line = null;
 
-        line.append(answer.getRequestSendTime().format(MyUtilities.CUSTOM_FORMATTER));
-        line.append("\t");
-        line.append(answer.getRequestSendString());
-        line.append("\n");
-        line.append(answer.getAnswerReceivedTime().format(MyUtilities.CUSTOM_FORMATTER));
-        line.append("\t");
-        line.append(answer.getAnswerReceivedString());
-        line.append("\n");
+        // Create lineCSV builder if CSV logging is enabled
+        if (properties.isCsvLogState()) {
+            lineCSV = new StringBuilder();
+            lineCSV.append(answer.toStringCSV());
+        }
 
-        lineCSV.append(answer.toStringCSV());
+        // Create line builder if TXT logging is enabled
+        if (properties.isDbgLogState()) {
+            line = new StringBuilder();
+            line.append(answer.toStringDBG());
+        }
 
-
-
-        if((System.currentTimeMillis() - dateTimeLastWrite ) < 300L ){
-            stringsBuffer.add(line.toString());
-            stringsBufferCSV.add(lineCSV.toString());
-            //System.out.println("Log buffered");
-        }else {
-            //ToDo Do in another thread
+        // Check buffering conditions
+        if ((System.currentTimeMillis() - dateTimeLastWrite) < 300L) {
+            if (line != null) {
+                stringsBuffer.add(line.toString());
+            }
+            if (lineCSV != null) {
+                stringsBufferCSV.add(lineCSV.toString());
+            }
+        } else {
             dateTimeLastWrite = System.currentTimeMillis();
-            stringsBuffer.add(line.toString());
-            stringsBufferCSV.add(lineCSV.toString());
+            if (line != null) {
+                stringsBuffer.add(line.toString());
+            }
+            if (lineCSV != null) {
+                stringsBufferCSV.add(lineCSV.toString());
+            }
+
+            // Combine buffered lines for writing
             StringBuilder stringBuilder = new StringBuilder();
-            StringBuilder stringBuilderCSV = new StringBuilder();
             for (String s : stringsBuffer) {
                 stringBuilder.append(s);
             }
+
+            StringBuilder stringBuilderCSV = new StringBuilder();
             for (String s : stringsBufferCSV) {
                 stringBuilderCSV.append(s);
             }
+
+            // Clear buffers after writing
             stringsBuffer.clear();
             stringsBufferCSV.clear();
-            writeFile(stringBuilder, logFile);
-            writeFile(stringBuilderCSV, logFileCSV);
 
+            // Write to files
+            if (properties.isDbgLogState() && logFile != null) {
+                writeFile(stringBuilder, logFile);
+            }
+            if (properties.isCsvLogState() && logFileCSV != null) {
+                writeFile(stringBuilderCSV, logFileCSV);
+            }
         }
+
     }
 
     private void writeFile(StringBuilder sbToWrite, File file){

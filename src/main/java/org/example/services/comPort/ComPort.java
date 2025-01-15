@@ -23,6 +23,7 @@ public class ComPort {
 
 
 
+
     @Getter
     private int comNumber = 0;
 
@@ -37,6 +38,10 @@ public class ComPort {
         }
     }
 
+
+    /**
+     *Текущий массив портов преобразует в список и возвращает
+     */
     public ArrayList<SerialPort> getAllPorts(){
         ArrayList <SerialPort> forReturn = new ArrayList<SerialPort>();
         forReturn.addAll(Arrays.asList(ports));

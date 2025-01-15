@@ -9,6 +9,7 @@ import org.example.services.AnswerValues;
 import org.example.services.DeviceAnswer;
 import org.jfree.chart.*;
 import org.jfree.chart.axis.LogarithmicAxis;
+import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.block.BlockBorder;
 import org.jfree.chart.entity.ChartEntity;
 import org.jfree.chart.entity.XYItemEntity;
@@ -168,41 +169,29 @@ public class ChartWindow extends JFrame implements Rendeble {
                 "Graph", "Time", "Value", dataset, true, true, false);
         chart.setBackgroundPaint(Color.WHITE);
         XYPlot plot = chart.getXYPlot();
-
-        LogarithmicAxis yAxis = new LogarithmicAxis("Y");
-
-        // Настройка логарифмической оси для предотвращения ошибок с отрицательными значениями.
-        yAxis.setAllowNegativesFlag(true);  // Позволяет использовать отрицательные значения (экспериментально).
-        yAxis.setExpTickLabelsFlag(true);
-        yAxis.setAutoRangeNextLogFlag(true);
-        plot.setRangeAxis(yAxis);
+        boolean useLogarithmicScale = false;
+        if (useLogarithmicScale) {
+            // Логарифмическая ось
+            LogarithmicAxis yAxis = new LogarithmicAxis("Y");
+            yAxis.setAllowNegativesFlag(true);  // Позволяет использовать отрицательные значения
+            yAxis.setExpTickLabelsFlag(true);
+            yAxis.setAutoRangeNextLogFlag(true);
+            plot.setRangeAxis(yAxis);
+        } else {
+            // Обычная линейная ось
+            NumberAxis yAxis = new NumberAxis("Y");
+            yAxis.setAutoRangeIncludesZero(true); // Включает ноль в диапазон оси
+            plot.setRangeAxis(yAxis);
+        }
 
         XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
-
         plot.setRenderer(renderer);
         plot.setBackgroundPaint(Color.white);
         plot.setRangeGridlinesVisible(true);
         plot.setDomainGridlinesVisible(true);
 
-        /*
-        plot.setRangeGridlinePaint(Color.ORANGE);
-        plot.setDomainGridlinePaint(Color.ORANGE);
-        renderer.setSeriesPaint(0, Color.RED);
-        renderer.setSeriesStroke(0, new BasicStroke(2.0f));
-        renderer.setSeriesPaint(1, Color.BLUE);
-        renderer.setSeriesStroke(1, new BasicStroke(2.0f));
-        renderer.setDefaultItemLabelsVisible(false);
-        renderer.setDefaultItemLabelGenerator(renderer.getDefaultItemLabelGenerator());
-        NumberFormat format = NumberFormat.getNumberInstance();
-        format.setMaximumFractionDigits(2);
-        XYItemLabelGenerator generator = new StandardXYItemLabelGenerator("{0} {1} {2}", format, format);
-        renderer.setDefaultItemLabelGenerator(generator);//ItemLabelsVisible(true);
-        renderer.setDefaultItemLabelsVisible(false);
-        chart.getLegend().setFrame(BlockBorder.NONE);
-         */
         return chart;
     }
-
 
     private void updateCB() {
         seriesBox.clear();
@@ -226,7 +215,7 @@ public class ChartWindow extends JFrame implements Rendeble {
     public static int getFieldsCountForTab(Integer tab) {
         int index = AnswerStorage.getAnswersForGraph(tab).size() - 1;
         index = Math.max(0, index);
-        log.info("Получаю количество полей в ответе для вкладки " + tab + " размер массива с ответами " + index);
+        //log.info("Получаю количество полей в ответе для вкладки " + tab + " размер массива с ответами " + index);
         if (Objects.equals(AnswerStorage.getAnswersForGraph(tab).get(index).getTabNumber(), tab)) {
             int sizeArraySizeImAnswer = AnswerStorage.getAnswersForGraph(tab).get(index).getFieldCount();
             if (tab == 0) {
@@ -268,8 +257,8 @@ public class ChartWindow extends JFrame implements Rendeble {
         boolean newState = jb.isSelected();
         cbStates.set(numberSeries, newState);
         seriesBox.get(numberSeries).setSelected(newState);
-        log.info("Setup visibility for " + jb.getName() + " now is " + newState);
-        System.out.println("Setup visibility for " + jb.getName() + " now is " + newState);
+        //log.info("Setup visibility for " + jb.getName() + " now is " + newState);
+        //System.out.println("Setup visibility for " + jb.getName() + " now is " + newState);
     }
 
     private void syncCheckBoxStates() {
@@ -310,11 +299,11 @@ public class ChartWindow extends JFrame implements Rendeble {
                 if (pointer < 0)
                     pointer = 0;
                  */
-                log.info("Для вкладки " + tab + " для ответа " + j + " был получен указатель " + pointer);
+                //log.info("Для вкладки " + tab + " для ответа " + j + " был получен указатель " + pointer);
 
                 while (collection.getSeriesCount() <= pointer || collection.getSeries(pointer) == null) {
                     collection.addSeries(new TimeSeries("graph " + pointer));
-                    log.info("Для вкладки " + tab + " для ответа " + pointer + " был получен указатель " + pointer);
+                    //log.info("Для вкладки " + tab + " для ответа " + pointer + " был получен указатель " + pointer);
                     //System.out.println("addSeries " + pointer);
                 }
 
@@ -322,9 +311,9 @@ public class ChartWindow extends JFrame implements Rendeble {
                 collection.getSeries(pointer).clear();
 
                 if (cbStates.get(pointer)) {
-                    log.info("pointer " + pointer + " will be showed");
+                    //log.info("pointer " + pointer + " will be showed");
                     for (DeviceAnswer answer : recentAnswers) {
-                        log.info("answer tab " + answer.getTabNumber() + " field ");
+                        //log.info("answer tab " + answer.getTabNumber() + " field ");
                         if (isCorrectAnswerValue(answer, tab)) {
 
                             AnswerValues currentAnswers = answer.getAnswerReceivedValues();
@@ -332,12 +321,12 @@ public class ChartWindow extends JFrame implements Rendeble {
                             Millisecond millisecond = new Millisecond(convertToLocalDateViaMilisecond(answer.getAnswerReceivedTime()));
 
                             collection.getSeries(pointer).addOrUpdate(millisecond, currentValues);
-                            log.info("addOrUpdate " + millisecond + " " + currentValues);
+                            //log.info("addOrUpdate " + millisecond + " " + currentValues);
                         }
                     }
                 } else {
                     //System.out.println("pointer " + pointer + " will be removed");
-                    log.info("Для указателя " + pointer + " коллекция будет удалена");
+                    //log.info("Для указателя " + pointer + " коллекция будет удалена");
                     collection.getSeries(pointer).clear();
                 }
                 pointer++;
@@ -352,21 +341,19 @@ public class ChartWindow extends JFrame implements Rendeble {
         }
 
         if (answer.getAnswerReceivedValues() == null) {
-            log.info("AnswerReceivedValues is null");
+            //log.info("AnswerReceivedValues is null");
             return false;
         }
 
         if (answer.getAnswerReceivedValues().getValues() == null) {
-            log.info("AnswerReceivedValues array of values is null");
+            //log.info("AnswerReceivedValues array of values is null");
             return false;
         }
 
         if (answer.getAnswerReceivedValues().getValues().length != tabsFieldCapacity.get(tab)) {
-            log.info("array of values not equal to tabsFieldCapacity. " + answer.getAnswerReceivedValues().getValues().length + " != " + tabsFieldCapacity.get(tab));
-            for (double answer1 : answer.getAnswerReceivedValues().getValues()) {
-                log.info(answer1);
-            }
-            log.info(getFieldsCountForTab(tab));
+            //log.info("array of values not equal to tabsFieldCapacity. " + answer.getAnswerReceivedValues().getValues().length + " != " + tabsFieldCapacity.get(tab));
+
+            //log.info(getFieldsCountForTab(tab));
             return false;
         }
         return true;

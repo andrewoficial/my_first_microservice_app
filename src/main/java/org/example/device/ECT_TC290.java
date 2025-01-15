@@ -60,7 +60,7 @@ public class ECT_TC290 implements SomeDevice  {
         return null;
     }
 
-    @Override
+
     public boolean isBusy(){
         return bisy;
     }
