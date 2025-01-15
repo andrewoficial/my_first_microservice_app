@@ -49,7 +49,7 @@ public class AnyPoolService {
         }
 
         if (psSearch != null) {
-            log.info("Изменение существующего потока");
+            //log.info("Изменение существующего потока");
             processExistingComDataCollector(psSearch, tab, prefixAndCmd, pool, isBtn, poolDelay);
         } else {
             log.info("Создание нового потока");
@@ -60,7 +60,7 @@ public class AnyPoolService {
     private void handleTabInExistingCollector(ComDataCollector psSearch, int tab, String [] prefixAndCmd, boolean pool, boolean isBtn, int poolDelay) {
         if (pool || isBtn) {
             if (isBtn) {
-                log.info("Разовая отправка");
+                //log.info("Разовая отправка");
                 psSearch.sendOnce(prefixAndCmd[0], prefixAndCmd[1], tab, false);
             } else {
                 log.info("Команда к запуску");
