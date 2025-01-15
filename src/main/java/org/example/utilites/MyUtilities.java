@@ -137,12 +137,71 @@ public class MyUtilities {
         return crc;
     }
 
+
+    public static boolean checkStructureForF(byte[] responseArray) {
+        int limit = 72;
+        if (responseArray.length <= limit) {
+            System.out.println("Ошибка: Минимальная длина " + limit + " символов, получено: " + responseArray.length);
+            return false;
+        }
+
+        if (responseArray[0] != 14) {
+            System.out.println("Ошибка: Ожидаемый маркер (14) отсутствует в начале посылки.");
+            return false;
+        }
+
+        int[] tabIndices = {6, 12, 18, 24, 30, 36, 42, 48, 54, 60, 69};
+        for (int index : tabIndices) {
+            if (responseArray[index] != 9) {
+                System.out.println("Ошибка: Отсутствует ожидаемая табуляция (9) в позиции " + index);
+                return false;
+            }
+        }
+/*
+        if (responseArray[72] != 13) {
+            System.out.println("Ошибка: Отсутствует перенос строки (13) в позиции 72.");
+            return false;
+        }
+*/
+        byte calculatedCRC = calculateCRCforF(responseArray);
+        byte calculatedCRCdocumentation = calculateCRCforFdocumentation(responseArray);
+        boolean isOkCRC = calculatedCRC == responseArray[70];
+        boolean isOkCRCdocumentation = calculatedCRCdocumentation == responseArray[70];
+
+        if (!isOkCRC && !isOkCRCdocumentation) {
+            System.out.println("Ошибка: CRC не совпадает. "
+                    + "Рассчитанный CRC: " + calculatedCRC
+                    + ", Рассчитанный CRC по документации: " + calculatedCRCdocumentation
+                    + ", Принятый CRC: " + responseArray[70]);
+            return false;
+        }
+
+        return true;
+    }
+
     public static byte calculateCRCforF(byte[] responseArray) {
         byte crcVar = responseArray[1];
         if(responseArray.length < 70) return 0;
         for (int i = 2; i < 70; i++) {
             crcVar ^= responseArray[i];
         }
+        return crcVar;
+    }
+
+    public static byte calculateCRCforFdocumentation(byte[] responseArray) {
+        if (responseArray.length < 70) return 0;
+
+        byte crcVar = 0;
+
+        for (int i = 1; i < 70; i++) {
+            // Исключить маркер 0x0E (responseArray[0])
+            // Исключить символ ВК и символ 0x09, предшествующий CRC
+            if (responseArray[i] == 0x0E || responseArray[i] == 0x09 && i == 69) {
+                continue;
+            }
+            crcVar ^= responseArray[i];
+        }
+
         return crcVar;
     }
     public static String removeComWord(String arg){

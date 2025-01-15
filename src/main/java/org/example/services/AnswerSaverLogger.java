@@ -17,8 +17,8 @@ public class AnswerSaverLogger {
     private final ConcurrentMap<Integer, DeviceAnswer> lastAnswers = new ConcurrentHashMap<>();
     private final MyProperties properties;
     //private final long MAX_ALLOWED_DIFFERENCE = properties.getSyncSavingAnswerTimerLimitMS(); // Максимальный допустимый разброс
-    private final long MAX_ALLOWED_DIFFERENCE = 1200; // Максимальный допустимый разброс
-    private final long SYNC_WINDOW = 950000; // Длительность окна синхронизации
+    private long MAX_ALLOWED_DIFFERENCE = 1200; // Максимальный допустимый разброс
+    private long SYNC_WINDOW = 950000; // Длительность окна синхронизации
     private static final Logger log = Logger.getLogger(AnswerSaverLogger.class);
 
     private long currentSyncStart = System.currentTimeMillis(); // Начало текущего окна
@@ -30,7 +30,8 @@ public class AnswerSaverLogger {
     }
     public synchronized boolean shouldSaveAnswer(DeviceAnswer answer, int threadId) {
         //log.info("Начинаю принятие решения для threadId: " + threadId);
-
+        SYNC_WINDOW = properties.getSyncSavingAnswerWindowMS();
+        MAX_ALLOWED_DIFFERENCE = properties.getSyncSavingAnswerTimerLimitMS();
         long now = System.currentTimeMillis();
 
         // Проверка начала нового окна синхронизации
@@ -41,11 +42,13 @@ public class AnswerSaverLogger {
             ignoredThreads.clear();
         }
 
+        /*
         // Проверка, игнорируется ли поток
         if (ignoredThreads.contains(threadId)) {
             log.info("Поток " + threadId + " в списке игнорируемых. Ответ не будет сохранен.");
             return false;
         }
+         */
 
         // Добавление ответа в коллекцию
         lastAnswers.put(threadId, answer);
@@ -77,7 +80,7 @@ public class AnswerSaverLogger {
     public synchronized void doLog(DeviceAnswer answer, int threadId, PoolLogger poolLogger, DeviceLogger devLogger) {
         //log.info("Было принято к рассмотрению логирование ответа от threadId: " + threadId);
         if (shouldSaveAnswer(answer, threadId)) {
-            //log.info("Ответ принят для логирования от threadId: " + threadId);
+            log.info("Ответ принят для логирования от threadId: " + threadId);
             PoolLogger.writeLine(answer);
             if (devLogger != null) {
                 devLogger.writeLine(answer);
