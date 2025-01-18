@@ -17,6 +17,7 @@ import org.example.utilites.properties.MyProperties;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 
@@ -91,7 +92,7 @@ public class ComDataCollector implements Runnable{
 
             try {
                 device = createDeviceByProtocol(protocol, comPort);
-                log.info("Device in ComDataCollector created!! " + protocol.getValue());
+                log.info("Device in ComDataCollector created " + protocol.getValue());
             }catch (RuntimeException e){
                 log.error("Device in ComDataCollector creating ERROR");
                 System.out.println(e.getMessage());
@@ -136,7 +137,7 @@ public class ComDataCollector implements Runnable{
                 }
 
                 //log.info("Parse external Event ASCII [" + builder.toString().trim() + "]");
-                log.info("Принято по событию (без запроса) [" + bytesToHex(builder.toString().getBytes()) + "]");
+                //log.info("Принято по событию (без запроса) [" + bytesToHex(builder.toString().getBytes()) + "]");
                 saveReceivedByEvent(builder.toString(), tabNumber);
             }
         };
@@ -153,61 +154,100 @@ public class ComDataCollector implements Runnable{
     }
 
     public int getClientsCount() {
-        if(clientsTabNumbers == null){
-            return 0;
-        }
+        if(clientsTabNumbers == null) return 0;
         return clientsTabNumbers.size();
     }
 
     public int getComPortForJCombo(){
+        if(this.comPort == null) return 0;
+
         ComPort comPorts = new ComPort();
         ArrayList <SerialPort> ports = comPorts.getAllPorts();
         for (int i = 0; i < ports.size(); i++) {
-            if(ports.get(i) != null && this.comPort != null && ports.get(i).getSystemPortName().equalsIgnoreCase(this.comPort.getSystemPortName())){
-                comPorts = null;
+            SerialPort port = ports.get(i);
+            if (port != null && portsAreEqual(port, comPort)) {
                 return i;
             }
         }
         log.error("Текущий ком-порт не найден в списке доступных");
-        comPorts = null;
         return 0;
     }
-
+    private boolean portsAreEqual(SerialPort port1, SerialPort port2) {
+        return port1.getSystemPortName().equalsIgnoreCase(port2.getSystemPortName());
+    }
     @Override
     public void run() {
         Thread.currentThread().setName("Thread Pool Tab " + clientsTabNumbers.get(0));
+        millisPrev = System.currentTimeMillis() - (poolDelay * 2); // Инициализация таймера
 
-        millisPrev = System.currentTimeMillis() - (poolDelay * 100);//Запуск может быть отдельно от создания
         while ((!Thread.currentThread().isInterrupted()) && alive) {
-            if(threadForEvent && (! isComDataCollectorBusy())){
-                waitForComDataCollectorBusy(300);
-                if (!isComDataCollectorBusy()) {
-                    comPort.addDataListener(serialPortDataListener);
-                }
-            }
-
-            if (System.currentTimeMillis() - millisPrev > poolDelay) {
-                millisPrev = System.currentTimeMillis();
-                for (int i = 0; i < commandsToSendArray.size(); i++) {
-                    if (shouldSkipCommand(i)) {
-                        continue;
-                    }
-                    waitForComDataCollectorBusy();
-                    sendOnce(prefixToSendArray.get(i), commandsToSendArray.get(i), i, true);
-                }
+            handleEventListener();
+            if (shouldPoll()) {
+                pollCommands();
             } else {
-                sleepSafely(Math.min((poolDelay / 5), 100L));
+                sleepSafely(Math.min(poolDelay / 5, 100L));
             }
         }
     }
 
+    /**
+     * Определение нужно ли добавлять слушатиель
+     */
+    private void handleEventListener() {
+        if (threadForEvent && !comDataCollectorBusy) {
+            waitForComDataCollectorBusy(300);
+            if (!comDataCollectorBusy) {
+                comPort.addDataListener(serialPortDataListener);
+            }
+        }
+    }
 
-    private boolean shouldSkipCommand(int i) {
-        addMissingObjects(i);
-        return i < 0 || ! needPool.get(i);
+    /**
+     * Проверяет, нужно ли выполнять следующий опрос
+     * @return true - если время ожидания следующего опроса истекло
+     */
+    private boolean shouldPoll() {
+        return System.currentTimeMillis() - millisPrev > poolDelay;
     }
 
 
+
+    /**
+     * Начинает перебор внутренней очереди клиентов.
+     * Ожидая завершения отправки предыдущей команды
+     */
+    private void pollCommands() {
+        millisPrev = System.currentTimeMillis();
+        for (int i = 0; i < commandsToSendArray.size(); i++) {
+            if (shouldSkipCommand(i)) {
+                continue;
+            }
+            waitForComDataCollectorBusy(500);
+            if (!comDataCollectorBusy) {
+                sendOnce(prefixToSendArray.get(i), commandsToSendArray.get(i), i, true);
+            }
+        }
+    }
+
+    /**
+     * Проверяет нужно ли проводить отправку команды
+     * @param i - Внутренний номер клиента в потоке
+     * @return true - если в листе needPool содержиться маркер true
+     */
+    private boolean shouldSkipCommand(int i) {
+//        //Debug
+//        if(i < 0)   log.info("i < 0");
+//        if(needPool.size() <= i)    log.info("needPool.size() <= i");
+//        if(! needPool.get(i))   log.info("! needPool.get(i)");
+
+        return i < 0 || needPool.size() < i || (! needPool.get(i));
+    }
+
+    /**
+     * Ожидает завершения отправки предыдущей команды
+     *
+     * @param totalLimit - Максимальное количесвто циклов ожидания по 20мс. Лучше задавать кратное 20.
+     */
     private void waitForComDataCollectorBusy(int totalLimit) {
         if(totalLimit < 20) totalLimit = 20;
         int i = totalLimit / 20;
@@ -216,11 +256,7 @@ public class ComDataCollector implements Runnable{
             i++;
         }
     }
-    private void waitForComDataCollectorBusy() {
-        while (comDataCollectorBusy) {
-            sleepSafely(20);
-        }
-    }
+
 
     private void sleepSafely(long millis) {
         try {
@@ -249,6 +285,9 @@ public class ComDataCollector implements Runnable{
 
         if(arg == null || arg.isEmpty()){
             log.info("Прервал отправку. Нет текста команды");
+            synchronized (this) {
+                comDataCollectorBusy = false;
+            }
             return;
         }
         if(pref == null){
@@ -320,7 +359,7 @@ public class ComDataCollector implements Runnable{
 
 
     public void setNeedPool (int tabNum, boolean needStatePool){
-        addMissingObjects(tabNum);
+        addMissingObjects(getInnerNumberByTabNumber(tabNum));
         needPool.set(getInnerNumberByTabNumber(tabNum), needStatePool);
         log.info("Значение флага пороса для клиента " + tabNum + " изменено на " + needStatePool + " (Внутреннрий номер " + getInnerNumberByTabNumber(tabNum) + ")");
     }
@@ -395,23 +434,16 @@ public class ComDataCollector implements Runnable{
     }
 
     private void addMissingObjects(int subDevNum){
-        while (deviceLoggerArrayList.size() <= subDevNum) {
-            deviceLoggerArrayList.add(null);
-        }
-
-        while(needLogArrayList.size() <= subDevNum){
-            needLogArrayList.add(false);
-        }
-
-        while (commandsToSendArray.size() <= subDevNum) {
-            commandsToSendArray.add(null);
-        }
-
-        while (prefixToSendArray.size() <= subDevNum) {
-            prefixToSendArray.add(null);
+        ensureSize(deviceLoggerArrayList, subDevNum, null);
+        ensureSize(needLogArrayList, subDevNum, false);
+        ensureSize(commandsToSendArray, subDevNum, null);
+        ensureSize(prefixToSendArray, subDevNum, null);
+    }
+    private <T> void ensureSize(List<T> list, int requiredSize, T defaultValue) {
+        while (list.size() <= requiredSize) {
+            list.add(defaultValue);
         }
     }
-
 
     public void setPoolDelay(int poolDelay) {
 
@@ -433,15 +465,11 @@ public class ComDataCollector implements Runnable{
         int innerNumber = findSubDevByTabNumber(tabNumber);
         if(innerNumber != -1){
 
-            while (commandsToSendArray.size() <= innerNumber){
-                commandsToSendArray.add("");
-            }
-            while (prefixToSendArray.size() <= innerNumber){
-                prefixToSendArray.add("");
-            }
+            addMissingObjects(innerNumber);
             prefixToSendArray.set(innerNumber, prf);
             commandsToSendArray.set(innerNumber, cmd);
-            //log.info("Значения команды и префикса обновлены для подустройства номер " + innerNumber + " в потоке опроса");
+            log.info("Значения команды и префикса обновлены для подустройства номер " + innerNumber + " в потоке опроса для вкладки устройства " + tabNumber);
+            log.info("Теперь команда " + cmd + " и префикс " + prf);
         }else{
             log.info("Клиент с вкладкой " + tabNumber + " не найден");
         }
