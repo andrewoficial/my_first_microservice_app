@@ -517,34 +517,15 @@ public class MainWindow extends JFrame implements Rendeble {
         textToSend.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (textToSendValue.size() > tab || prefToSendValue.size() > tab) {
-                    textToSendValue.set(tab, textToSend.getText());
-                    prefToSendValue.set(tab, prefOneToSend.getText());
-                    updateLeftPaneStateClassFromUI();
-                    saveParameters();
-                    if (anyPoolService.getComDataCollectors().size() > tab) {
-                        anyPoolService.getComDataCollectors().get(tab).setTextToSendString(prefOneToSend.getText(), textToSend.getText(), tab);
-                    }
-                } else {
-                    log.warn("Ошибка при обновлении пула команд для опроса");
-                }
+                readAndUpdateInputPrefAndCommandValues();
             }
         });
         prefOneToSend.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (textToSendValue.size() > tab || prefToSendValue.size() > tab) {
-                    textToSendValue.set(tab, textToSend.getText());
-                    prefToSendValue.set(tab, prefOneToSend.getText());
-
-                    saveParameters();
-                    if (anyPoolService.getComDataCollectors().size() > tab) {
-                        anyPoolService.getComDataCollectors().get(tab).setTextToSendString(prefOneToSend.getText(), textToSend.getText(), tab);
-                    }
-                } else {
-                    log.warn("Ошибка при обновлении пула префиксов для опроса");
-                }
+                readAndUpdateInputPrefAndCommandValues();
             }
+
         });
         CB_ComPorts.addActionListener(new ActionListener() {
             @Override
@@ -816,7 +797,7 @@ public class MainWindow extends JFrame implements Rendeble {
 
 
     public static boolean isBusy(int tabNumber) {
-        
+
         return true;
         /*
         if (tabNumber < 0 || tabNumber >= MainWindow.getCurrTabCount()) {
@@ -879,15 +860,37 @@ public class MainWindow extends JFrame implements Rendeble {
         leftPanState.setProtocol(tab, CB_Protocol.getSelectedIndex());
     }
 
+    private void readAndUpdateInputPrefAndCommandValues() {
+        log.info("Изменение в поле ввода префикса");
+        if (textToSendValue.size() > tab && prefToSendValue.size() > tab) {
+            log.info("Обновление в массивах");
+            ComDataCollector ps = anyPoolService.getComDataCollectors().get(tab);
+            if (ps != null) {
+                log.info("Попытка обновить команды опроса в найденом потоке");
+                anyPoolService.findComDataCollectorByTabNumber(tab).setTextToSendString(prepareTextToSend(tab)[0], prepareTextToSend(tab)[1], tab);
+            } else {
+                log.info("поток для обновления префикса и команды пуст");
+            }
+            saveParameters();
+        } else {
+            log.warn("Ошибка при обновлении пула префиксов для опроса");
+        }
+    }
 
     private String[] prepareTextToSend(int tab) {
-        if (prefToSendValue.get(tab) == null || prefToSendValue.get(tab).isEmpty()) {
+
+        if (prefOneToSend.getText() != null && !prefOneToSend.getText().isEmpty()) {
+            prefToSendValue.set(tab, prefOneToSend.getText());
+        } else {
             prefToSendValue.set(tab, "");
         }
 
-        if (textToSendValue.get(tab) == null || textToSendValue.get(tab).isEmpty()) {
+        if (textToSend.getText() != null && !textToSend.getText().isEmpty()) {
+            textToSendValue.set(tab, textToSend.getText());
+        } else {
             textToSendValue.set(tab, "");
         }
+
         String str[] = new String[2];
         str[0] = prefToSendValue.get(tab);
         str[1] = textToSendValue.get(tab);
