@@ -67,6 +67,7 @@ public class AnyPoolService {
                 psSearch.setNeedPool(tab, true);
                 psSearch.setPoolDelay(poolDelay);
                 psSearch.setTextToSendString(prefixAndCmd[0], prefixAndCmd[1], tab);
+                //thPool.submit(psSearch);
                 sleepFor(60);
             }
         } else {
