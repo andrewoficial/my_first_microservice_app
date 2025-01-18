@@ -49,7 +49,7 @@ public class AnyPoolService {
         }
 
         if (psSearch != null) {
-            //log.info("Изменение существующего потока");
+            log.info("Изменение существующего потока. Отправка префикса "  + prefixAndCmd[0] + " и команды " + prefixAndCmd[1]);
             processExistingComDataCollector(psSearch, tab, prefixAndCmd, pool, isBtn, poolDelay);
         } else {
             log.info("Создание нового потока");
@@ -84,7 +84,7 @@ public class AnyPoolService {
     private void processExistingComDataCollector(ComDataCollector psSearch, int tab, String [] prefixAndCmd, boolean pool, boolean isBtn, int poolDelay) {
         //log.info("Порт уже используется, проверка среди запущенных потоков");
         if (psSearch.containTabDev(tab)) {
-            log.info("Клинет уже содержится в потоке");
+            log.info("Клинет уже содержится в потоке отправка префикса ");
             handleTabInExistingCollector(psSearch, tab, prefixAndCmd, pool, isBtn, poolDelay);
         } else {
             log.info("Клинет не содержится в потоке");
