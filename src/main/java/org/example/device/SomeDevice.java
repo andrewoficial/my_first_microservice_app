@@ -25,7 +25,7 @@ public interface SomeDevice {
     long getMillisPrev();
     long getMillisLimit();
     long getRepeatWaitTime();
-
+    boolean busy = false;
     void setLastAnswer(byte [] ans);
 
     StringBuilder getEmulatedAnswer();
@@ -36,6 +36,10 @@ public interface SomeDevice {
     //boolean isBusy();
     String cmdToSend = "";
     void setBusy(boolean busy);
+
+    default boolean isBusy() {
+        return busy;
+    }
     void setCmdToSend(String str);
     Integer getTabForAnswer();
     CommandListClass commands = null;
@@ -53,10 +57,13 @@ public interface SomeDevice {
         //buffer [data.length()] = 13;//CR
         System.arraycopy(strEndian, 0, buffer, data.length() , strEndian.length);
 
-
-        comPort.writeBytes(buffer, buffer.length);
-        //log.info("  Завершена отправка данных");
-        device.setBusy(false);
+        if (!device.isBusy()) {
+            device.setBusy(true);
+            comPort.writeBytes(buffer, buffer.length);
+            device.setBusy(false);
+        }
+        log.info("Порт всё еще открыт " + device.getComPort().isOpen());
+        //comPort.flushIOBuffers();
     }
 
     default void receiveData(SomeDevice device) {
@@ -118,19 +125,15 @@ public interface SomeDevice {
     }
 
 
-    default void sendAndReceiveData(String data, SomeDevice device) throws IOException {
-
-        device.setBusy(true); // Устанавливаем состояние устройства как занятое
+    default void sendAndReceiveData(String data, SomeDevice device){
         device.setCmdToSend(data);
         SerialPort deviceComPort = device.getComPort();
         if(deviceComPort == null) {
-            device.setBusy(false);
             log.warn("Попытка записи или чтения при отсутствии порта");
             return;
         }
 
         if(! deviceComPort.isOpen()){
-            device.setBusy(false);
             log.warn("Попытка записи или чтения при закрытом порте");
             return;
         }
@@ -142,44 +145,42 @@ public interface SomeDevice {
         }
         System.arraycopy(device.getStrEndian(), 0, buffer, data.length(), device.getStrEndian().length);
 
-        // Отправка данных
-        try {
-            deviceComPort.writeBytes(buffer, buffer.length);
-            //log.info("Данные отправлены: " + data);
-        } catch (Exception e) {
-            log.error("Ошибка при отправке данных: ", e);
-            device.setBusy(false);
-            return;
-        }
+        deviceComPort.writeBytes(buffer, buffer.length);
+
+
 
         // Прием данных
         ByteArrayOutputStream receivedData = new ByteArrayOutputStream();
         long startTime = System.currentTimeMillis();
         long timeout = device.getMillisLimit();
         int expectedBytes = device.getExpectedBytes();
+        long firstStartTime = System.currentTimeMillis();
 
-        try {
-            while ((System.currentTimeMillis() - startTime) < timeout && receivedData.size() < expectedBytes) {
-                int available = deviceComPort.bytesAvailable();
-                if (available > 0) {
-                    byte[] readBuffer = new byte[available];
-                    int readBytes = deviceComPort.readBytes(readBuffer, readBuffer.length);
-                    if (readBytes > 0) {
-                        receivedData.write(readBuffer, 0, readBytes);
-                        //log.info("Прочитано байт: " + readBytes + ", всего: " + receivedData.size());
-                        startTime = System.currentTimeMillis(); // Сброс таймера
-                    }
-                } else {
+
+        while ((System.currentTimeMillis() - startTime) < timeout && receivedData.size() < expectedBytes) {
+            int available = deviceComPort.bytesAvailable();
+            if (available > 0) {
+                byte[] readBuffer = new byte[available];
+                int readBytes = deviceComPort.readBytes(readBuffer, readBuffer.length);
+                if (readBytes > 0) {
+                    receivedData.write(readBuffer, 0, readBytes);
+                    //log.info("Прочитано байт: " + readBytes + ", всего: " + receivedData.size());
+                    startTime = System.currentTimeMillis(); // Сброс таймера
+                }
+            } else {
+                try {
                     Thread.sleep(device.getRepeatWaitTime());
+                } catch (InterruptedException e) {
+                    log.error("Ошибка попытке уснуть во время приёма данных: ", e);
                 }
             }
-
-            log.info("Прием данных завершен. Ожидаемые байты: " + expectedBytes + ", получено байт: " + receivedData.size());
-        } catch (InterruptedException e) {
-            log.error("Ошибка при чтении данных: ", e);
-        } finally {
-            deviceComPort.flushIOBuffers(); // Освобождение буфера
         }
+
+
+        log.info("Прием данных завершен. Ожидаемые байты: " + expectedBytes + ", получено байт: " + receivedData.size() + " время получения " + (System.currentTimeMillis() - firstStartTime) + " мс, КОМ-ПОРТ" + deviceComPort.getSystemPortName() + " скорость порта " + deviceComPort.getBaudRate());
+
+        //deviceComPort.flushIOBuffers(); // Освобождение буфера
+
 
         // Обработка полученных данных
         byte[] responseBytes = receivedData.toByteArray();
@@ -191,11 +192,7 @@ public interface SomeDevice {
             device.setLastAnswer(new byte[0]);
             device.setHasAnswer(false);
         }
-
-        device.setBusy(false); // Устройство становится доступным
-
-
-
+        log.info("Завершена установка ответа в объект прибора ");
     }
     void parseData();
 

@@ -47,6 +47,19 @@ public class ComPort {
         forReturn.addAll(Arrays.asList(ports));
         return forReturn;
     }
+
+    public int getComNumber(SerialPort portInput){
+        if(portInput == null) return 0;
+
+        SerialPort[] ports = SerialPort.getCommPorts();
+        for (int i = 0; i < ports.length; i++) {
+            SerialPort port = ports[i];
+            if (port != null && port.getSystemPortName().equalsIgnoreCase(portInput.getSystemPortName())) {
+                return i;
+            }
+        }
+        return 0;
+    }
     public void setPort(int portIndex) {
         activePort = ports[portIndex];
         comNumber = portIndex;

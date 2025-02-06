@@ -28,11 +28,14 @@ import javax.swing.event.DocumentListener;
 import javax.swing.text.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.lang.management.ManagementFactory;
 import java.net.URL;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
 
 
 public class MainWindow extends JFrame implements Rendeble {
@@ -112,7 +115,7 @@ public class MainWindow extends JFrame implements Rendeble {
 
 
     public MainWindow(MyProperties myProperties, ComPort comPorts, AnyPoolService anyPoolService) {
-
+        logStartupInfo();
         if (anyPoolService == null) {
             log.warn("В конструктор MainWindow передан null anyPoolService");
         }
@@ -1047,6 +1050,45 @@ public class MainWindow extends JFrame implements Rendeble {
 
 
     }
+
+
+
+        public static void logStartupInfo() {
+            // Логируем версию JDK
+            String jdkVersion = System.getProperty("java.version");
+            String jdkVendor = System.getProperty("java.vendor");
+
+            // Логируем папку запуска
+            String workingDir = Paths.get("").toAbsolutePath().toString();
+
+            // Логируем битность системы и JDK
+            String osArch = System.getProperty("os.arch"); // x86 или amd64
+            String osName = System.getProperty("os.name");
+            String javaArch = System.getProperty("sun.arch.data.model") + "-bit";
+
+            // Логируем подключённые библиотеки
+            String libraries = ManagementFactory.getRuntimeMXBean().getClassPath();
+
+            // Формируем лог
+            log.info("Application Startup Info:");
+            log.info("JDK Version: " + jdkVersion + " (" + jdkVendor + ")");
+            log.info("Working Directory: " + workingDir);
+            log.info("OS: " + osName + " (" + osArch + ")");
+            log.info("JDK Architecture: " + javaArch);
+            log.info("Loaded Libraries:");
+            for (String lib : libraries.split(";")) {
+                log.info(" - " + lib);
+            }
+//            System.out.println("Application Startup Info:");
+//            System.out.println("JDK Version: " + jdkVersion + " (" + jdkVendor + ")");
+//            System.out.println("Working Directory: " + workingDir);
+//            System.out.println("OS: " + osName + " (" + osArch + ")");
+//            System.out.println("JDK Architecture: " + javaArch);
+//            System.out.println("Loaded Libraries:");
+//            for (String lib : libraries.split(";")) {
+//                System.out.println(" - " + lib);
+//            }
+        }
 
 
     {

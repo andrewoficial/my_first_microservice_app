@@ -1,22 +1,14 @@
 package org.example.device;
 
-import java.nio.CharBuffer;
-import java.nio.charset.CharsetDecoder;
-
 import com.fazecast.jSerialComm.SerialPort;
-import lombok.Getter;
 import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.services.AnswerValues;
-import org.example.utilites.MyUtilities;
-
-import java.nio.charset.Charset;
-import java.util.Arrays;
 
 import static org.example.utilites.MyUtilities.*;
 
 public class ARD_TERM implements SomeDevice {
-    private volatile boolean bisy = false;
+    private volatile boolean busy = false;
     private static final Logger log = Logger.getLogger(ARD_TERM.class);
     private final SerialPort comPort;
     private byte [ ] lastAnswerBytes = new byte[1];
@@ -57,13 +49,14 @@ public class ARD_TERM implements SomeDevice {
     }
 
 
+    @Override
     public boolean isBusy(){
-        return bisy;
+        return busy;
     }
 
     @Override
     public void setBusy(boolean busy){
-        this.bisy = busy;
+        this.busy = busy;
     }
 
     @Override
@@ -136,22 +129,7 @@ public class ARD_TERM implements SomeDevice {
         return this.commands;
     }
     public boolean enable() {
-        if(! comPort.isOpen()){
-            comPort.openPort();
-            comPort.flushDataListener();
-            comPort.removeDataListener();
-            comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 400, 100);
-            if(comPort.isOpen()){
-                log.info("Порт открыт, задержки выставлены");
-                return true;
-            }else {
-                throw new RuntimeException("Cant open COM-Port");
-            }
-
-        }else{
-            log.info("Порт был открыт ранее");
-            return true;
-        }
+        return true;
     }
 
 

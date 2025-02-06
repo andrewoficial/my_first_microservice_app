@@ -1,10 +1,12 @@
 package org.example.services.loggers;
 
 import org.apache.log4j.Logger;
+import org.example.device.SomeDevice;
 import org.example.services.DeviceAnswer;
 import org.example.utilites.MyUtilities;
 import org.example.utilites.ProgramUpdater;
 import org.example.utilites.properties.MyProperties;
+import org.hibernate.engine.spi.IdentifierValue;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -13,6 +15,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 public class DeviceLogger {
+
     private String fileName = (java.time.LocalDateTime.now().format(MyUtilities.CUSTOM_FORMATTER_FILES));
     private String fileNameCSV = (java.time.LocalDateTime.now().format(MyUtilities.CUSTOM_FORMATTER_FILES));
     private File logFile;
@@ -113,7 +116,7 @@ public class DeviceLogger {
                 writeFile(stringBuilderCSV, logFileCSV);
             }
         }
-
+        log.info("Завершено ведение лога согласно настройками для идентефикатора " + answer.getTabNumber());
     }
 
     private void writeFile(StringBuilder sbToWrite, File file){

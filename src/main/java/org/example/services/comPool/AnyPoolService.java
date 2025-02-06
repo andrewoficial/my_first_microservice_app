@@ -95,13 +95,11 @@ public class AnyPoolService {
 
     private void createNewComDataCollector(int tab, boolean pool, boolean isBtn, int poolDelay, String [] prefixAndCmd , int comPortNumber, int protocolIndex) {
         log.info("Порт не используется, создание нового потока");
-        boolean forEvent = isBtn ? true : !pool;
-        log.info("соединение будет обрабатывать event события => " + forEvent);
 
         ComPort avaComPorts = new ComPort();
         avaComPorts.setPort(comPortNumber);
         ProtocolsList protocol = ProtocolsList.getLikeArrayEnum(protocolIndex);
-        ComDataCollector toAdd = new ComDataCollector(protocol,prefixAndCmd[0],prefixAndCmd[1],avaComPorts.activePort,poolDelay,false,forEvent,tab, this);
+        ComDataCollector toAdd = new ComDataCollector(protocol,prefixAndCmd[0],prefixAndCmd[1],avaComPorts.activePort,poolDelay,false,tab, this);
 
         this.addComDataCollector(toAdd);
 

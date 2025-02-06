@@ -26,7 +26,7 @@ public class Main {
         //Проверка чтения конфига
         String confName = context.getEnvironment().getProperty("spring.config.name", "dunno");
         System.out.println("Параметр confName: " + confName);
-
+        //int trololo = 5 / (100-100);
         SwingUtilities.invokeLater(() -> {
             ComPort comPorts = context.getBean(ComPort.class);
             AnyPoolService anyPoolService = context.getBean(AnyPoolService.class);

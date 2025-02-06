@@ -44,7 +44,10 @@ public class AnswerStorage {
             tabAnswers.clear();
         }
         tabAnswers.add(answer);
-        //log.info("Новое значение ответа со вкладки " + answer.getTabNumber() + " протокол " + answer.getDeviceType().getClass().getSimpleName() + " строка  :" + answer.getAnswerReceivedString());
+        log.info("Новое значение ответа с идентефикатором " + answer.getTabNumber() + " протокол " + answer.getDeviceType().getClass().getSimpleName());
+        if(answer.getAnswerReceivedString() != null) {
+            log.info(answer.getAnswerReceivedString());
+        }
     }
 
     public static TabAnswerPart getAnswersQueForTab(Integer lastPosition, Integer tabNumber, boolean showCommands) {

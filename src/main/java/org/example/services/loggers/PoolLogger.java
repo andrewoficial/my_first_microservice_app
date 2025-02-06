@@ -4,6 +4,8 @@
  */
 package org.example.services.loggers;
 
+import org.apache.log4j.Logger;
+import org.example.device.SomeDevice;
 import org.example.services.DeviceAnswer;
 import org.example.utilites.MyUtilities;
 
@@ -15,7 +17,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 
+import static org.example.device.SomeDevice.log;
+
 public class PoolLogger {
+    public static final Logger log = Logger.getLogger(PoolLogger.class);
     private static final String fileName = (new SimpleDateFormat("yyyy.MM.dd HH-mm-ss").format(Calendar.getInstance().getTime())) + " SumLog.txt";
     private static File logFile;
     private static Long dateTimeLastWrite = System.currentTimeMillis();
@@ -102,7 +107,7 @@ public class PoolLogger {
                 }
             }
         }
-
+        log.info("Завершено логирование в общий файл с ответами для клиента " + answer.getTabNumber());
 
     }
 
