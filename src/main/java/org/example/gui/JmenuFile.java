@@ -276,7 +276,7 @@ public class JmenuFile {
 
                 // Обновление списка чек-боксов
                 for (Integer tab : tabs) {
-                    int fieldsCounter = getFieldsCountForTab(tab);
+                    int fieldsCounter = getFieldsCountForTab(tab).size();
                     tabsFieldCapacity.add(fieldsCounter);
                 }
 

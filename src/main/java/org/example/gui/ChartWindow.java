@@ -199,10 +199,10 @@ public class ChartWindow extends JFrame implements Rendeble {
 
         // Обновление списка чек-боксов
         for (Integer tab : tabs) {
-            int fieldsCounter = getFieldsCountForTab(tab);
+            int fieldsCounter = getFieldsCountForTab(tab).size();
             System.out.printf("Найдено полей для вкладки %d: %d\n", tab, fieldsCounter);
             tabsFieldCapacity.add(fieldsCounter);
-            addCheckBoxesForTab(tab, fieldsCounter);
+            addCheckBoxesForTab(tab, fieldsCounter, getFieldsCountForTab(tab));
         }
 
         // Синхронизация состояний чек-боксов
@@ -212,28 +212,38 @@ public class ChartWindow extends JFrame implements Rendeble {
         updateControlPanel();
     }
 
-    public static int getFieldsCountForTab(Integer tab) {
+    public static ArrayList<String> getFieldsCountForTab(Integer tab) {
+        ArrayList<String> unitsInAnswer = new ArrayList<>();
         int index = AnswerStorage.getAnswersForGraph(tab).size() - 1;
         index = Math.max(0, index);
-        //log.info("Получаю количество полей в ответе для вкладки " + tab + " размер массива с ответами " + index);
-        if (Objects.equals(AnswerStorage.getAnswersForGraph(tab).get(index).getTabNumber(), tab)) {
-            int sizeArraySizeImAnswer = AnswerStorage.getAnswersForGraph(tab).get(index).getFieldCount();
-            if (tab == 0) {
-                int dunnoFix = AnswerStorage.getAnswersForGraph(tab).get(index).getFieldCount();
-                dunnoFix = Math.max(1, dunnoFix);
-                return dunnoFix;
+        DeviceAnswer selectedAnswer = AnswerStorage.getAnswersForGraph(tab).get(index);
+
+
+        if (Objects.equals(selectedAnswer.getTabNumber(), tab)) {
+            if (tab == 0 && selectedAnswer.getFieldCount() == 0) {
+                unitsInAnswer.add(" ");
+                return unitsInAnswer;
             }
-            return sizeArraySizeImAnswer;
         }
 
-        return 1; // Возвращаем 1, если данные для вкладки не найдены
+        if (selectedAnswer.getFieldCount() > 0) {
+            AnswerValues values = selectedAnswer.getAnswerReceivedValues();
+            unitsInAnswer.addAll(Arrays.asList(values.getUnits()));
+        }
+
+        return unitsInAnswer;
     }
 
-    private void addCheckBoxesForTab(Integer tab, int fieldsCounter) {
+    private void addCheckBoxesForTab(Integer tab, int fieldsCounter, ArrayList<String> unitsInAnswer) {
         for (int j = 0; j < fieldsCounter; j++) {
             JCheckBox jb = new JCheckBox();
             jb.setName(seriesBox.size() + "");
-            jb.setText("tab" + (tab + 1) + "_" + j);
+            if (unitsInAnswer.size() > j) {
+                jb.setText("tab" + (tab + 1) + "_" + unitsInAnswer.get(j));
+            } else {
+                jb.setText("tab" + (tab + 1) + "_");
+            }
+
             jb.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
@@ -302,7 +312,17 @@ public class ChartWindow extends JFrame implements Rendeble {
                 //log.info("Для вкладки " + tab + " для ответа " + j + " был получен указатель " + pointer);
 
                 while (collection.getSeriesCount() <= pointer || collection.getSeries(pointer) == null) {
-                    collection.addSeries(new TimeSeries("graph " + pointer));
+
+                    ArrayList<String> unitsInAnswer = getFieldsCountForTab(tab);
+                    for (String s : unitsInAnswer) {
+                        if (s == null || s.isEmpty()) {
+                            collection.addSeries(new TimeSeries("tab" + tab + "_" + "defaultUnits"));
+                        } else {
+                            collection.addSeries(new TimeSeries("tab" + tab + "_" + s));
+                        }
+
+                    }
+
                     //log.info("Для вкладки " + tab + " для ответа " + pointer + " был получен указатель " + pointer);
                     //System.out.println("addSeries " + pointer);
                 }
