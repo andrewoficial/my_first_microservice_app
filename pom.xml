@@ -13,7 +13,7 @@
 
     <groupId>org.example</groupId>
     <artifactId>Elephant-Monitor</artifactId>
-    <version>1.8.2-Beta</version>
+    <version>1.8.3-Beta</version>
     <distributionManagement>
         <repository>
             <id>github</id>
@@ -210,15 +210,15 @@
         <dependency>
             <groupId>com.fazecast</groupId>
             <artifactId>jSerialComm</artifactId>
-            <!-- <version>2.10.4</version> -->
-            <version>2.11.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.json</groupId>
-            <artifactId>json</artifactId>
-            <version>20230618</version>
-        </dependency>
-        <!-- Apache Ignite -->
+             <version>2.10.4</version>
+        <!-- <version>2.11.0</version> -->
+    </dependency>
+    <dependency>
+        <groupId>org.json</groupId>
+        <artifactId>json</artifactId>
+        <version>20230618</version>
+    </dependency>
+    <!-- Apache Ignite -->
         <!--
         <dependency>
             <groupId>org.apache.ignite</groupId>
