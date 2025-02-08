@@ -523,12 +523,60 @@ public class MainWindow extends JFrame implements Rendeble {
                 readAndUpdateInputPrefAndCommandValues();
             }
         });
+        textToSend.addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+                // Не используется в этом примере
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                // Проверяем, была ли нажата клавиша Enter
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    // Вызываем нужный метод
+                    readAndUpdateInputPrefAndCommandValues();
+                    startSend(true);
+                    renderData();
+                    //onEnterPressed(textToSend.getText());
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                // Не используется в этом примере
+            }
+        });
+
         prefOneToSend.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 readAndUpdateInputPrefAndCommandValues();
             }
 
+        });
+
+        prefOneToSend.addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+                // Не используется в этом примере
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                // Проверяем, была ли нажата клавиша Enter
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    // Вызываем нужный метод
+                    readAndUpdateInputPrefAndCommandValues();
+                    startSend(true);
+                    renderData();
+                    //onEnterPressed(textToSend.getText());
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                // Не используется в этом примере
+            }
         });
         CB_ComPorts.addActionListener(new ActionListener() {
             @Override
