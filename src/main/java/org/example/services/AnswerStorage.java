@@ -14,7 +14,7 @@ public class AnswerStorage {
 
     public static void registerDeviceTabPair(String ident, Integer tabN) {
         AnswerStorage.deviceTabPairs.put(ident, tabN);
-        log.info("Регестрирую связку устройства с вкладкой. Device id: " + ident + " and tab num: " + tabN);
+        log.info("Регистрирую связку устройства с вкладкой. Device id: " + ident + " and tab num: " + tabN);
     }
 
     public static HashMap<String, Integer> getDeviceTabPair() {
@@ -41,7 +41,8 @@ public class AnswerStorage {
         ArrayList<DeviceAnswer> tabAnswers = answersByTab.get(answer.getTabNumber());
         if (tabAnswers.size() > 10000) {
             // Push to cache
-            tabAnswers.clear();
+            //tabAnswers.clear();
+            tabAnswers.remove(0);
         }
         tabAnswers.add(answer);
         log.info("Новое значение ответа с идентефикатором " + answer.getTabNumber() + " протокол " + answer.getDeviceType().getClass().getSimpleName());

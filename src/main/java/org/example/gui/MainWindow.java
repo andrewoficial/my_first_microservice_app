@@ -44,7 +44,6 @@ public class MainWindow extends JFrame implements Rendeble {
     private JPanel contentPane;
     private static int currTabCount = 0;
     private final static Logger log = Logger.getLogger(MainWindow.class);
-    private int countRender = 0;
 
 
     private final ExecutorService uiThPool = Executors.newCachedThreadPool();
@@ -1051,24 +1050,39 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
     public void renderData() {
-        //ToDo ограничить размер. Попробовать без вызова сборщика.
         tab = tabbedPane1.getSelectedIndex();
         Document doc = logDataTransferJtextPanel.get(tab).getDocument();
+        final int maxLength = 25_000_000; // Примерно 50 МБ (25 млн символов)
+        //final int maxLength = 2000; // Проверка на коротком тексте
+
+
 
         try {
             an = AnswerStorage.getAnswersQueForTab(lastGotedValueFromStorage.get(tab), tab, true);
             lastGotedValueFromStorage.set(tab, an.getPosition());
-            doc.insertString(doc.getLength(), an.getAnswerPart(), null);
-            logDataTransferJtextPanel.get(tab).setCaretPosition(doc.getLength());//Прокрутка текста
+            String newText = an.getAnswerPart();
+            if (newText.isEmpty()) {
+                return;
+            }
+
+            int currentLength = doc.getLength();
+            int newTextLength = newText.length();
+
+            // Проверяем, не превысит ли общая длина максимальный размер
+            if (currentLength + newTextLength > maxLength) {
+                // Вычисляем, сколько символов нужно удалить
+                int overflow = (currentLength + newTextLength) - maxLength;
+                int removeCount = Math.min(currentLength, overflow + 1024); // Удаляем с запасом
+                doc.remove(0, removeCount);
+            }
+            // Вставляем новый текст
+            doc.insertString(doc.getLength(), newText, null);
+            logDataTransferJtextPanel.get(tab).setCaretPosition(doc.getLength());
         } catch (BadLocationException ex) {
-            //throw new RuntimeException(ex);
+            //ex.printStackTrace(); // Лучше залогировать ошибку
+            log.warn(ex.getMessage());
         }
         doc = null;
-        countRender++;
-        if (countRender > 90) {
-            System.gc(); //Runtime.getRuntime().gc();
-        }
-
     }
 
     @Override
