@@ -1,5 +1,6 @@
 package org.example.services.comPool;
 
+import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
 import org.apache.log4j.Logger;
 import org.example.device.ProtocolsList;
@@ -219,13 +220,18 @@ public class AnyPoolService {
     }
 
     public int getRootTabForComConnection(int portNumber) {
-        if(comPort.getAllPorts().size() > portNumber) {
-            //log.info("Начинаю поиск корневой вкладки для порта номер: " + portNumber + " это порт:" + comPort.getAllPorts().get(portNumber).getSystemPortName());
-        }else{
-            log.info("Начинаю поиск корневой вкладки для порта номер: " + portNumber + " Не может быть проверен. Такого порта нет в системе.");
-            return -1;
+        ArrayList<SerialPort> ports = comPort.getAllPorts();
+        int counter = 0;
+        for (SerialPort port : ports) {
+            System.out.println(port.getSystemPortName());
+            if(counter == portNumber){
+                System.out.println(" Это был нужный порт");
+            }
+            counter = counter + 1;
         }
-        if(comPort.getAllPorts().size() > portNumber) { //Если порт закрыт, то  не ищу его вкладку
+
+
+        if(comPort.getAllPorts().size() < portNumber) { //Номер больше чем количество портов
             log.info("Начинаю поиск корневой вкладки для порта номер: " + portNumber + " В системе порта нету ");
             return -1;
         }

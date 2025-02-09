@@ -37,7 +37,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 
-
 public class MainWindow extends JFrame implements Rendeble {
     private final AnyPoolService anyPoolService;
 
@@ -485,11 +484,19 @@ public class MainWindow extends JFrame implements Rendeble {
             public void actionPerformed(ActionEvent e) {
                 tab = tabbedPane1.getSelectedIndex();
                 log.info("Нажата кнопка удалить устройство на вкладке " + tab);
+                if (tab == 0 && currTabCount == 1) {
+                    addCustomMessage("Хотя бы одна вкладка должна быть открыта для работы приложения");
+                    return;
+                }
+                if (anyPoolService.getRootTabForComConnection(getCurrComSelection()) == tab) {
+                    addCustomMessage("Текущая вкладка является корневой. Необходимо закрыть все зависимые вкладки и закрыть ком-порт");
+                    BT_Close.setEnabled(true);
+                    return;
+                }
                 textToSendValue.remove(tab);
                 prefToSendValue.remove(tab);
                 lastGotedValueFromStorage.remove(tab);
                 logDataTransferJtextPanel.remove(tab);
-
                 leftPanState.removeEntry(tab);
 
 
@@ -1100,33 +1107,32 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
 
+    public static void logStartupInfo() {
+        // Логируем версию JDK
+        String jdkVersion = System.getProperty("java.version");
+        String jdkVendor = System.getProperty("java.vendor");
 
-        public static void logStartupInfo() {
-            // Логируем версию JDK
-            String jdkVersion = System.getProperty("java.version");
-            String jdkVendor = System.getProperty("java.vendor");
+        // Логируем папку запуска
+        String workingDir = Paths.get("").toAbsolutePath().toString();
 
-            // Логируем папку запуска
-            String workingDir = Paths.get("").toAbsolutePath().toString();
+        // Логируем битность системы и JDK
+        String osArch = System.getProperty("os.arch"); // x86 или amd64
+        String osName = System.getProperty("os.name");
+        String javaArch = System.getProperty("sun.arch.data.model") + "-bit";
 
-            // Логируем битность системы и JDK
-            String osArch = System.getProperty("os.arch"); // x86 или amd64
-            String osName = System.getProperty("os.name");
-            String javaArch = System.getProperty("sun.arch.data.model") + "-bit";
+        // Логируем подключённые библиотеки
+        String libraries = ManagementFactory.getRuntimeMXBean().getClassPath();
 
-            // Логируем подключённые библиотеки
-            String libraries = ManagementFactory.getRuntimeMXBean().getClassPath();
-
-            // Формируем лог
-            log.info("Application Startup Info:");
-            log.info("JDK Version: " + jdkVersion + " (" + jdkVendor + ")");
-            log.info("Working Directory: " + workingDir);
-            log.info("OS: " + osName + " (" + osArch + ")");
-            log.info("JDK Architecture: " + javaArch);
-            log.info("Loaded Libraries:");
-            for (String lib : libraries.split(";")) {
-                log.info(" - " + lib);
-            }
+        // Формируем лог
+        log.info("Application Startup Info:");
+        log.info("JDK Version: " + jdkVersion + " (" + jdkVendor + ")");
+        log.info("Working Directory: " + workingDir);
+        log.info("OS: " + osName + " (" + osArch + ")");
+        log.info("JDK Architecture: " + javaArch);
+        log.info("Loaded Libraries:");
+        for (String lib : libraries.split(";")) {
+            log.info(" - " + lib);
+        }
 //            System.out.println("Application Startup Info:");
 //            System.out.println("JDK Version: " + jdkVersion + " (" + jdkVendor + ")");
 //            System.out.println("Working Directory: " + workingDir);
@@ -1136,7 +1142,7 @@ public class MainWindow extends JFrame implements Rendeble {
 //            for (String lib : libraries.split(";")) {
 //                System.out.println(" - " + lib);
 //            }
-        }
+    }
 
 
     {
