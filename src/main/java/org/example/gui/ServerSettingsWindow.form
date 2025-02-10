@@ -148,7 +148,7 @@
           </grid>
         </constraints>
         <properties>
-          <text value="8080"/>
+          <text value="8085"/>
         </properties>
       </component>
       <scrollpane id="bc12a">

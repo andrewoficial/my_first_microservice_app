@@ -1,5 +1,6 @@
 package org.example.utilites.properties;
 
+import jakarta.annotation.PreDestroy;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.log4j.Category;
@@ -36,6 +37,10 @@ public class MyProperties {
     private static MyProperties INSTANCE;
     private static Logger log = Logger.getLogger(MyProperties.class);
 
+    @Value("${spring.profiles.active:dunno}") // Берем профиль или "dunno", если не установлен
+    private String activeProfile;
+
+
     @Getter
     private int tabCounter;
 
@@ -69,7 +74,7 @@ public class MyProperties {
     @Getter
     private String usr = "";
 
-    @Setter
+
     @Getter
     private String prt = "";
 
@@ -180,10 +185,13 @@ public class MyProperties {
                     log.info("Задаю инстанс при запуске спринга");
                     initializeProperties();
                     INSTANCE = this;
-                    log.info("Количество вкладок " + tabCounter);
-                }else{
-                    log.warn("Инстанс уже существует (лол) ");
                     log.info("Количество вкладок " + INSTANCE.getTabCounter());
+                    log.info("activeProfile при запуске спринга" + this.activeProfile);
+                }else{
+                    log.warn("Инстанс уже существует (динамический перезапуск?) ");
+                    log.info("Количество вкладок " + INSTANCE.getTabCounter());
+                    log.info("activeProfile (динамический перезапуск?)" + this.activeProfile);
+
                 }
             }
         } else {
@@ -205,6 +213,11 @@ public class MyProperties {
         return INSTANCE;
     }
 
+    @PreDestroy
+    public void destroy() {
+        log.info("Очистка Singleton при закрытии контекста");
+        INSTANCE = null;
+    }
     private void initializeProperties() {
         log.info("Инициализирую класс MyProperties");
         if (fileHandler.getSettingFile() == null) {
@@ -220,11 +233,11 @@ public class MyProperties {
         tabCounter = settingsLoader.getInt("tabCounter", 1);
         syncSavingAnswerTimerLimitMS = settingsLoader.getInt("syncSavingAnswerTimerLimitMS", 1000);
         syncSavingAnswerWindowMS = settingsLoader.getInt("syncSavingAnswerWindowMS", 100000);
-        usr = settingsLoader.getString("usr", "");
-        pwd = settingsLoader.getString("pwd", "");
-        prt = settingsLoader.getString("prt", "");
-        url = settingsLoader.getString("url", "");
-        drv = settingsLoader.getString("drv", "");
+        usr = settingsLoader.getString("usr", "user");
+        pwd = settingsLoader.getString("pwd", "1234");
+        prt = settingsLoader.getString("prt", "8075");
+        url = settingsLoader.getString("url", "127.0.0.1");
+        drv = settingsLoader.getString("drv", "jdbc:postgresql://");
         commands = settingsLoader.getStringArray("commands", "", tabCounter);
         prefixes = settingsLoader.getStringArray("prefixes", "", tabCounter);
         ports = settingsLoader.getStringArray("ports", "", tabCounter);
@@ -435,6 +448,15 @@ public class MyProperties {
         settingsLoader.setString("csvLogSeparator", separator);
     }
 
+    public void setPrt(String prt){
+        if (prt == null || prt.isEmpty()) {
+            log.warn("в prt не передан параметр разделителя");
+            return;
+        }
+        this.prt = prt;
+        settingsLoader.setString("prt", prt);
+    }
+
     public void setCsvLogOutputASCII (boolean state) {
         settingsLoader.setBoolean("csvLogOutputASCII", state);
         this.csvLogOutputASCII = state;
@@ -587,7 +609,7 @@ public class MyProperties {
             AnswerStorage.registerDeviceTabPair(ident, tabNumber);
         }
 
-        log.info("Успешно загружены пары идентификаторов устройств и вкладок: " + AnswerStorage.deviceTabPairs);
+        //log.info("Успешно загружены пары идентификаторов устройств и вкладок: " + AnswerStorage.deviceTabPairs);
 
     }
 }

@@ -5,6 +5,8 @@ import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import org.example.Main;
 //import org.example.utilites.SpringLoader;
+import org.example.utilites.properties.MyProperties;
+import org.springframework.boot.autoconfigure.mail.MailProperties;
 import org.springframework.context.ApplicationContext;
 
 import javax.swing.*;
@@ -18,7 +20,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class ServerSettingsWindow extends JDialog {
     private ApplicationContext applicationContext;
-
+    private MyProperties myProperties = MyProperties.getInstance();
     private String driver;
     private JPanel serverParametersPanel;
     private JTextField IN_DbDriver;
@@ -55,7 +57,7 @@ public class ServerSettingsWindow extends JDialog {
         //System.out.println("USR GET " + Main.prop.getUsr());
         //IN_Login.setText(Main.prop.getUsr());
         //IN_Pwd.setText(Main.prop.getPwd());
-        //IN_ServerPort.setText(Main.prop.getPrt());
+        IN_ServerPort.setText(myProperties.getPrt());
         // IN_Url.setText(Main.prop.getUrl());
         //IN_DbDriver.setText(Main.prop.getDrv());
 
@@ -110,17 +112,18 @@ public class ServerSettingsWindow extends JDialog {
     }
 
 
-
     private void checkParameters() {
         if (springPort == null) {
             springPort = "8080";
+            IN_ServerPort.setText("8080");
         } else if (!this.stringIsNumeric(springPort)) {
             springPort = "8080";
+            IN_ServerPort.setText("8080");
         } else if (springPort.length() > 5 || springPort.length() < 2) {
             springPort = "8080";
-            //Main.prop.setPrt(springPort);
+            IN_ServerPort.setText("8080");
         }
-
+        myProperties.setPrt(springPort);
         if (driver == null) {
             driver = "org.postgresql.DriverNull";
         } else if (driver.length() < 2 || driver.length() > 500) {
@@ -243,7 +246,7 @@ public class ServerSettingsWindow extends JDialog {
         label5.setText("port");
         serverParametersPanel.add(label5, new GridConstraints(5, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         IN_ServerPort = new JTextField();
-        IN_ServerPort.setText("8080");
+        IN_ServerPort.setText("8085");
         serverParametersPanel.add(IN_ServerPort, new GridConstraints(5, 2, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         final JScrollPane scrollPane1 = new JScrollPane();
         serverParametersPanel.add(scrollPane1, new GridConstraints(11, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));

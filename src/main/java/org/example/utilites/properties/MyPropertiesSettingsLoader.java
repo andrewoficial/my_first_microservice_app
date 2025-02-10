@@ -102,7 +102,7 @@ public class MyPropertiesSettingsLoader {
         }
 
         String value = properties.getProperty(name).trim();
-        if (value.isEmpty()) {
+        if (value.length() < 1) {
             log.warn("configAccess.properties содержит пустое значение для параметра " + name + ". Оно будет заменено на " + defaultValue);
             properties.setProperty(name, defaultValue);
             fileHandler.updateFileFromProperties(properties);

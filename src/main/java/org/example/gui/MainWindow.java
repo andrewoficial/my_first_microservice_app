@@ -38,12 +38,17 @@ import java.util.concurrent.Executors;
 
 
 public class MainWindow extends JFrame implements Rendeble {
-    private final AnyPoolService anyPoolService;
+    private AnyPoolService anyPoolService;
 
     public static MainWindow mainWindow = null;
-    private JPanel contentPane;
     private static int currTabCount = 0;
     private final static Logger log = Logger.getLogger(MainWindow.class);
+
+
+    @Getter
+    private static final ArrayList<ComDataCollector> poolServices1 = new ArrayList<>();
+
+    private JPanel contentPane;
 
 
     private final ExecutorService uiThPool = Executors.newCachedThreadPool();
@@ -51,15 +56,13 @@ public class MainWindow extends JFrame implements Rendeble {
     //MyProperties prop = Main.prop;
 
     private MyProperties prop;
-    private final ComPort comPorts;
+    private ComPort comPorts;
 
 
     private final ArrayList<String> textToSendValue = new ArrayList<>();
     private final ArrayList<String> prefToSendValue = new ArrayList<>();
     private final ArrayList<JTextPane> logDataTransferJtextPanel = new ArrayList<>();
 
-    @Getter
-    private static final ArrayList<ComDataCollector> poolServices1 = new ArrayList<>();
 
     private MainLeftPanelStateCollection leftPanState = new MainLeftPanelStateCollection();
 
@@ -446,8 +449,10 @@ public class MainWindow extends JFrame implements Rendeble {
                 sb.append((tabbedPane1.getTabCount() + 1));
                 boolean needRename = false;
                 for (int i = 0; i < currTabCount; i++) {
-                    if (tabbedPane1.getTitleAt(i).equalsIgnoreCase(sb.toString())) {
-                        needRename = true;
+                    if (tabbedPane1.getTabCount() > i) {
+                        if (tabbedPane1.getTitleAt(i).equalsIgnoreCase(sb.toString())) {
+                            needRename = true;
+                        }
                     }
                 }
                 if (needRename) {
@@ -1057,7 +1062,6 @@ public class MainWindow extends JFrame implements Rendeble {
         //final int maxLength = 2000; // Проверка на коротком тексте
 
 
-
         try {
             an = AnswerStorage.getAnswersQueForTab(lastGotedValueFromStorage.get(tab), tab, true);
             lastGotedValueFromStorage.set(tab, an.getPosition());
@@ -1100,7 +1104,14 @@ public class MainWindow extends JFrame implements Rendeble {
         }
         return tabbedPane1.getTabCount();
     }
+    public void updateServices(MyProperties newProps, ComPort newComPort, AnyPoolService newService) {
+        this.prop = newProps;
+        this.comPorts = newComPort;
+        this.anyPoolService = newService;
 
+        // Если необходимо, перезапусти логику (например, обнови UI)
+        renderData();
+    }
 
     private void saveParameters() {
         log.debug("Обновление файла настроек со вкладки" + tab);
@@ -1144,9 +1155,9 @@ public class MainWindow extends JFrame implements Rendeble {
         log.info("Working Directory: " + workingDir);
         log.info("OS: " + osName + " (" + osArch + ")");
         log.info("JDK Architecture: " + javaArch);
-        log.info("Loaded Libraries:");
+        //log.info("Loaded Libraries:");
         for (String lib : libraries.split(";")) {
-            log.info(" - " + lib);
+            //log.info(" - " + lib);
         }
 //            System.out.println("Application Startup Info:");
 //            System.out.println("JDK Version: " + jdkVersion + " (" + jdkVendor + ")");

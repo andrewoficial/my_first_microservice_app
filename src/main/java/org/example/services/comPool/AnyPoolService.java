@@ -222,13 +222,13 @@ public class AnyPoolService {
     public int getRootTabForComConnection(int portNumber) {
         ArrayList<SerialPort> ports = comPort.getAllPorts();
         int counter = 0;
-        for (SerialPort port : ports) {
-            System.out.println(port.getSystemPortName());
-            if(counter == portNumber){
-                System.out.println(" Это был нужный порт");
-            }
-            counter = counter + 1;
-        }
+//        for (SerialPort port : ports) {
+//            //System.out.println(port.getSystemPortName());
+//            if(counter == portNumber){
+//                //System.out.println(" Это был нужный порт");
+//            }
+//            counter = counter + 1;
+//        }
 
 
         if(portNumber < 0){
