@@ -13,7 +13,7 @@
 
     <groupId>org.example</groupId>
     <artifactId>Elephant-Monitor</artifactId>
-    <version>1.8.6-Beta</version>
+    <version>1.8.7-Beta</version>
     <distributionManagement>
         <repository>
             <id>github</id>
