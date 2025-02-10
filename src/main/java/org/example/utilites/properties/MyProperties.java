@@ -204,9 +204,12 @@ public class MyProperties {
         if (INSTANCE == null) {
             synchronized (MyProperties.class) {
                 if (INSTANCE == null) {
-                    log.info("Создаю инстанс при getInstance");
-                    INSTANCE = new MyProperties();
-                    log.info("Количество вкладок " + INSTANCE.getTabCounter());
+                    return null;
+//                    log.info("Создаю инстанс при getInstance");
+//                    MyProperties myProperties = new MyProperties();
+//                    myProperties.initializeProperties();
+//                    INSTANCE = myProperties;
+//                    log.info("Количество вкладок " + INSTANCE.getTabCounter());
                 }
             }
         }

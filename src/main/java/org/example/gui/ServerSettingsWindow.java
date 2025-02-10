@@ -57,7 +57,10 @@ public class ServerSettingsWindow extends JDialog {
         //System.out.println("USR GET " + Main.prop.getUsr());
         //IN_Login.setText(Main.prop.getUsr());
         //IN_Pwd.setText(Main.prop.getPwd());
-        IN_ServerPort.setText(myProperties.getPrt());
+        if (myProperties != null) {
+            IN_ServerPort.setText(myProperties.getPrt());
+        }
+
         // IN_Url.setText(Main.prop.getUrl());
         //IN_DbDriver.setText(Main.prop.getDrv());
 

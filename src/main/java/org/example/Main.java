@@ -59,17 +59,18 @@ public class Main {
                 + String.join(", ", context.getEnvironment().getActiveProfiles()));
         SpringApplication app = new SpringApplication(Main.class);
 
-//        // Переинициализируем сервисы, если окно уже существует
-//        if (mainWindow != null) {
-//            SwingUtilities.invokeLater(() -> {
-//                ComPort comPorts = context.getBean(ComPort.class);
-//                AnyPoolService anyPoolService = context.getBean(AnyPoolService.class);
-//                MyProperties myProperties = context.getBean(MyProperties.class);
-//
-//                // Передаём новые бины в уже созданное окно
-//                mainWindow.updateServices(myProperties, comPorts, anyPoolService);
-//            });
-//        }
+        // Переинициализируем сервисы, если окно уже существует
+        if (mainWindow != null) {
+            SwingUtilities.invokeLater(() -> {
+                MyProperties myProperties = context.getBean(MyProperties.class);
+                ComPort comPorts = context.getBean(ComPort.class);
+                AnyPoolService anyPoolService = context.getBean(AnyPoolService.class);
+
+
+                // Передаём новые бины в уже созданное окно
+                mainWindow.updateServices(myProperties, comPorts, anyPoolService);
+            });
+        }
     }
 }
 

@@ -53,8 +53,9 @@ public class ChartWindow extends JFrame implements Rendeble {
     private JPanel window;
     private JPanel graph;
     private JPanel setup;
-
+    private JPanel selectors = new JPanel();
     private JPanel controlPanel = new JPanel();
+
 
     private JSlider slider = new JSlider();
 
@@ -119,9 +120,37 @@ public class ChartWindow extends JFrame implements Rendeble {
     }
 
     private void initUI() {
+        setLayout(new BorderLayout()); // Главный Layout окна
+
+        // Левый блок с чекбоксами
+        selectors.setLayout(new BoxLayout(selectors, BoxLayout.Y_AXIS));
+        JScrollPane scrollPane = new JScrollPane(selectors); // Делаем его скроллируемым
+        scrollPane.setPreferredSize(new Dimension(200, getHeight()));
+
+        // Панель с графиком
+        JFreeChart chart = createChart(collection);
+        chartPanel = new ChartPanel(chart);
+        chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        chartPanel.setBackground(Color.white);
+
+        // Нижняя панель управления
+        controlPanel.setLayout(new FlowLayout());
+        controlPanel.add(slider);
+        controlPanel.add(selectedValue);
+
+        // Добавляем в главное окно
+        add(scrollPane, BorderLayout.WEST);   // Слева — чекбоксы
+        add(chartPanel, BorderLayout.CENTER); // В центре — график
+        add(controlPanel, BorderLayout.SOUTH); // Внизу — панель управления
+
+        setTitle("Time Chart");
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+
         slider.setMaximum(1000);
         slider.setMinimum(10);
-        selectedValue.setText("12345");
+        selectedValue.setText(" ");
 
         slider.addChangeListener(new ChangeListener() {
             @Override
@@ -130,18 +159,24 @@ public class ChartWindow extends JFrame implements Rendeble {
             }
         });
 
-        getLastData();
-        JFreeChart chart = createChart(collection);
-        chartPanel = new ChartPanel(chart);
-        chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
-        chartPanel.setBackground(Color.white);
-        chartPanel.setName("Chart Panel");
-        chartPanel.setPreferredSize(dimension);
-        add(chartPanel);
 
-        setTitle("Time chart");
-        setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+//        JFreeChart chart = createChart(collection);
+//        chartPanel = new ChartPanel(chart);
+//        chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+//        chartPanel.setBackground(Color.white);
+//        chartPanel.setName("Chart Panel");
+//        //chartPanel.setPreferredSize(dimension);
+//        JPanel jPanel = new JPanel();
+//        jPanel.add(chartPanel, 1);
+//        //jPanel.add(chartPanel, 2);
+//        //jPanel.add(controlPanel, 3);
+//
+//        add(jPanel);
+//
+//
+//        setTitle("Time chart");
+//        setLocationRelativeTo(null);
+//        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
         chartPanel.addChartMouseListener(new ChartMouseListener() {
             @Override
@@ -279,8 +314,9 @@ public class ChartWindow extends JFrame implements Rendeble {
 
     private void updateControlPanel() {
         controlPanel.removeAll();
+        selectors.removeAll();
         for (JCheckBox jCheckBox : seriesBox) {
-            controlPanel.add(jCheckBox);
+            selectors.add(jCheckBox);
         }
 
         slider.setValue(range);
@@ -316,9 +352,9 @@ public class ChartWindow extends JFrame implements Rendeble {
                     ArrayList<String> unitsInAnswer = getFieldsCountForTab(tab);
                     for (String s : unitsInAnswer) {
                         if (s == null || s.isEmpty()) {
-                            collection.addSeries(new TimeSeries("tab" + tab + "_" + "defaultUnits"));
+                            collection.addSeries(new TimeSeries("tab" + (tab + 1) + "_" + "defaultUnits"));
                         } else {
-                            collection.addSeries(new TimeSeries("tab" + tab + "_" + s));
+                            collection.addSeries(new TimeSeries("tab" + (tab + 1) + "_" + s));
                         }
 
                     }
@@ -421,17 +457,13 @@ public class ChartWindow extends JFrame implements Rendeble {
      */
     private void $$$setupUI$$$() {
         window = new JPanel();
-        window.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
+        window.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
         graph = new JPanel();
         graph.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
         window.add(graph, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        final Spacer spacer1 = new Spacer();
-        window.add(spacer1, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final Spacer spacer2 = new Spacer();
-        window.add(spacer2, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         setup = new JPanel();
         setup.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        window.add(setup, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        window.add(setup, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
     }
 
     /**
