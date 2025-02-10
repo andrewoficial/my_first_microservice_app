@@ -1052,7 +1052,8 @@ public class MainWindow extends JFrame implements Rendeble {
     public void renderData() {
         tab = tabbedPane1.getSelectedIndex();
         Document doc = logDataTransferJtextPanel.get(tab).getDocument();
-        final int maxLength = 25_000_000; // Примерно 50 МБ (25 млн символов)
+        //final int maxLength = 25_000_000; // Примерно 50 МБ (25 млн символов)
+        final int maxLength = 10_000_000; // Примерно 20 МБ (25 млн символов)
         //final int maxLength = 2000; // Проверка на коротком тексте
 
 
@@ -1080,7 +1081,7 @@ public class MainWindow extends JFrame implements Rendeble {
             logDataTransferJtextPanel.get(tab).setCaretPosition(doc.getLength());
         } catch (BadLocationException ex) {
             //ex.printStackTrace(); // Лучше залогировать ошибку
-            log.warn(ex.getMessage());
+            log.warn("Произошло исключение в ходе рендера окна с историей данных:" + ex.getMessage());
         }
         doc = null;
     }

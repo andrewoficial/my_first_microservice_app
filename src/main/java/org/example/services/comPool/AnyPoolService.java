@@ -231,6 +231,10 @@ public class AnyPoolService {
         }
 
 
+        if(portNumber < 0){
+            log.info("В поиск корневой вкладки был передан неправильный номер порта ");
+            return -1;
+        }
         if(comPort.getAllPorts().size() < portNumber) { //Номер больше чем количество портов
             log.info("Начинаю поиск корневой вкладки для порта номер: " + portNumber + " В системе порта нету ");
             return -1;
