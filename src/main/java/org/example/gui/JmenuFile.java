@@ -306,6 +306,7 @@ public class JmenuFile {
         JMenu utilitiesMenu = new JMenu("Утилиты");
         // меню-флажки
         JMenuItem grabber  = new JMenuItem("Перехват трафика");
+        JMenuItem hidDevices  = new JMenuItem("HID - устройвства");
         JMenuItem commandList  = new JMenuItem("Список команд");
         JMenuItem tabMarkersSetting  = new JMenuItem("Переадресация вкладок");
         JMenuItem webSocket  = new JMenuItem("webSocket");
@@ -314,6 +315,7 @@ public class JmenuFile {
 
         // добавим все в меню
         utilitiesMenu.add(grabber);
+        utilitiesMenu.add(hidDevices);
         utilitiesMenu.add(commandList);
         utilitiesMenu.add(tabMarkersSetting);
         utilitiesMenu.add(webSocket);
@@ -333,6 +335,22 @@ public class JmenuFile {
                 System.out.println(grabberWindow.isShowing());
                 //chartWindow.isEnabled();
                 thPool.submit(new RenderThread(grabberWindow));
+            }
+        });
+        hidDevices.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                System.out.println("HidDevWindow");
+                HidDevWindow HidDevWindow = new HidDevWindow();
+                HidDevWindow.setName("HidDevWindow");
+                HidDevWindow.setTitle("HidDevWindow");
+                HidDevWindow.pack();
+                HidDevWindow.setVisible(true);
+                HidDevWindow.renderData();
+                System.out.println(HidDevWindow.isShowing());
+                //chartWindow.isEnabled();
+                thPool.submit(new RenderThread(HidDevWindow));
             }
         });
         webSocket.addActionListener(new ActionListener()

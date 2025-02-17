@@ -95,10 +95,34 @@ public class ComDataCollector implements Runnable{
             @Override
             public void serialEvent(SerialPortEvent event) {
                 if (event.getEventType() == SerialPort.LISTENING_EVENT_PORT_DISCONNECTED) {
-                    log.info("Найдено LISTENING_EVENT_PORT_DISCONNECTED");
+                    log.warn("Найдено событие для слушателя порта LISTENING_EVENT_PORT_DISCONNECTED" + comPort.getSystemPortName());
                     comPort.closePort();
+                } else if (event.getEventType() == SerialPort.LISTENING_EVENT_BREAK_INTERRUPT) {
+                    log.warn("Найдено событие для слушателя порта LISTENING_EVENT_BREAK_INTERRUPT" + comPort.getSystemPortName());
+
+                } else if (event.getEventType() == SerialPort.LISTENING_EVENT_CARRIER_DETECT) {
+                    log.warn("Найдено событие для слушателя порта LISTENING_EVENT_CARRIER_DETECT" + comPort.getSystemPortName());
+
+                } else if (event.getEventType() == SerialPort.LISTENING_EVENT_FIRMWARE_OVERRUN_ERROR) {
+                    log.warn("Найдено событие для слушателя порта LISTENING_EVENT_FIRMWARE_OVERRUN_ERROR" + comPort.getSystemPortName());
+
+                } else if (event.getEventType() == SerialPort.LISTENING_EVENT_FRAMING_ERROR) {
+                    log.warn("Найдено событие для слушателя порта LISTENING_EVENT_FRAMING_ERROR" + comPort.getSystemPortName());
+
+                } else if (event.getEventType() == SerialPort.LISTENING_EVENT_PARITY_ERROR) {
+                    log.warn("Найдено событие для слушателя порта LISTENING_EVENT_PARITY_ERROR" + comPort.getSystemPortName());
+
+                } else if (event.getEventType() == SerialPort.LISTENING_EVENT_SOFTWARE_OVERRUN_ERROR) {
+                    log.warn("Найдено событие для слушателя порта LISTENING_EVENT_SOFTWARE_OVERRUN_ERROR" + comPort.getSystemPortName());
+
+                } else if (event.getEventType() == SerialPort.LISTENING_EVENT_TIMED_OUT) {
+                    log.warn("Найдено событие для слушателя порта LISTENING_EVENT_TIMED_OUT" + comPort.getSystemPortName());
+
+                } else if (event.getEventType() == SerialPort.LISTENING_EVENT_RING_INDICATOR) {
+                    log.warn("Найдено событие для слушателя порта LISTENING_EVENT_RING_INDICATOR" + comPort.getSystemPortName());
+
                 } else if (event.getEventType() == SerialPort.LISTENING_EVENT_DATA_AVAILABLE) {
-                    log.info("Найдено LISTENING_EVENT_DATA_AVAILABLE");
+                    log.info("Найдено событие для слушателя порта LISTENING_EVENT_DATA_AVAILABLE" + comPort.getSystemPortName());
                     StringBuilder builder = new StringBuilder();
                     while (comPort.bytesAvailable() > 0) {
                         byte[] buffer = new byte[comPort.bytesAvailable()];
@@ -113,16 +137,16 @@ public class ComDataCollector implements Runnable{
                     if (responseRequested && (System.currentTimeMillis() - requestTimestamp) < RESPONSE_TIMEOUT_MS) {
                         saveReceivedByEvent(receivedData, tabNumber, true, lastCommand);
                         log.info("Получен и обработан ожидаемый ответ");
-                        comPort.flushDataListener();
+                        //comPort.flushDataListener();
                         responseRequested = false;  // Сбрасываем флаг
                     } else {
                         saveReceivedByEvent(receivedData, tabNumber, false, null);
                         log.info("Получены неожиданные данные: " + receivedData);
-                        comPort.flushDataListener();
+                        //comPort.flushDataListener();
                     }
                     comDataCollectorBusy = false;
                 }else if (event.getEventType() == SerialPort.LISTENING_EVENT_DATA_RECEIVED) {
-                    log.info("Найдено LISTENING_EVENT_DATA_RECEIVED");
+                    log.info("Найдено событие для слушателя порта LISTENING_EVENT_DATA_RECEIVED" + comPort.getSystemPortName());
                     readSerialQueue(tabNumber);
                 }
             }
@@ -144,16 +168,18 @@ public class ComDataCollector implements Runnable{
         String receivedData = builder.toString();
 
         if (responseRequested && (System.currentTimeMillis() - requestTimestamp) < RESPONSE_TIMEOUT_MS) {
+            log.info("Получены ожидаемые данные: " + receivedData + " (ответ)");
             saveReceivedByEvent(receivedData, clientId, true, lastCommand);
-            log.info("Получен и обработан ожидаемый ответ");
-            comPort.flushDataListener();
+            log.info("Завершена обработка ожидаемых данных (ответа)");
             responseRequested = false;  // Сбрасываем флаг
         } else {
-            saveReceivedByEvent(receivedData, clientId, false, null);
             log.info("Получены неожиданные данные: " + receivedData);
-            comPort.flushDataListener();
+            saveReceivedByEvent(receivedData, clientId, false, null);
+            log.info("Завершена обработка неожиданных данных");
         }
         comDataCollectorBusy = false;
+        comPort.flushIOBuffers();
+        comPort.addDataListener(serialPortDataListener);
     }
 
     public int getClientsCount() {
@@ -169,12 +195,15 @@ public class ComDataCollector implements Runnable{
 
     @Override
     public void run() {
+        alive = true;
         Thread.currentThread().setName("Thread Pool Tab " + clientsTabNumbers.get(0));
+        log.info("Запущен поток опроса " + Thread.currentThread().getName() + " для вкладки " + clientsTabNumbers.get(0) + " порта " + comPort.getSystemPortName());
         millisPrev = System.currentTimeMillis() - (poolDelay * 2); // Инициализация таймера
-        int limit = 3;
+        int limit = 2;
         int counter = 0;
         poolDelay = 1500;
         while ((!Thread.currentThread().isInterrupted()) && alive) {
+            //log.info("Поток опроса совершает цикл " + Thread.currentThread().getName());
             if (shouldPoll()) {
                 millisPrev = System.currentTimeMillis();
                 //log.info("Поток опроса запущен");
@@ -187,6 +216,7 @@ public class ComDataCollector implements Runnable{
                     counter++;
                     comPort.addDataListener(serialPortDataListener);
                 }
+                comDataCollectorBusy = false;//ToDo ИСПРАВИТЬ (костыль от завичания в слуяае отсутствия ответа)
 
             } else {
                 sleepSafely(Math.min(poolDelay / 5, 100L));
@@ -229,13 +259,16 @@ public class ComDataCollector implements Runnable{
         }
     }
     public void sendOnce(String pref, String arg, int i, boolean internal) {
+        log.info(" Начал отправку " + Thread.currentThread().getName());
         if (!internal) {
             i = findSubDevByTabNumber(i);
         }
         waitForComDataCollectorBusy(40);
 
         if (comDataCollectorBusy) {
-            log.info("Прервал отправку. Слишком долгое ожидание освобождения порта");
+            log.info("Прервал отправку. Слишком долгое ожидание освобождения порта") ;
+            //comPort.addDataListener(serialPortDataListener);
+            log.info(" Номер вкладки " + getTabNumberByInnerNumber(i) + " номер порта " + comPort.getSystemPortName() + " поток " + Thread.currentThread().getName());
             return;
         } else {
             log.info("Завершил ожидание освобождения устройства и занял его.");
@@ -254,8 +287,16 @@ public class ComDataCollector implements Runnable{
 
         if (!comPort.isOpen()) {
             log.info("Прервал отправку. Порт закрыт");
-            comDataCollectorBusy = false;
-            return;
+            boolean isReopened = false;
+            try{
+                isReopened = comPort.openPort();
+            }catch (Exception e){
+                log.warn("Исключение при попытке переоткрытия порта" + e.getMessage());
+            }
+            if( ! isReopened) {
+                comDataCollectorBusy = false;
+                return;
+            }
         }
 
         responseRequested = true;
@@ -338,6 +379,15 @@ public class ComDataCollector implements Runnable{
         return -1;
     }
     private void saveAndLogSome(DeviceAnswer answer, int subDevNum){
+        if(answer == null){
+            log.warn("Попытка сохранить null ответ");
+            return;
+        }
+
+        if(answer.getTabNumber() < 0){
+            log.warn("Попытка сохранить ответ с отрицательным номером вкладки");
+            return;
+        }
         addMissingObjects(subDevNum);
         AnswerStorage.addAnswer(answer);//Answer Storage
         PoolLogger.writeLine(answer); //Sum log

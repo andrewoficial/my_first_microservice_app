@@ -37,6 +37,14 @@ public class AnswerStorage {
     }
 
     public static void addAnswer(DeviceAnswer answer) {
+        if(answer.getTabNumber() == null || answer.getTabNumber() < 0) {
+            if(answer.getDeviceType() != null) {
+                log.info(" Отклонено сохранение ответа с идентефикатором [" + answer.getTabNumber() + "] протокол " + answer.getDeviceType().getClass().getSimpleName());
+            }else{
+                log.info(" Отклонено сохранение ответа (объект ответа null)");
+            }
+            return;
+        }
         answersByTab.putIfAbsent(answer.getTabNumber(), new ArrayList<>());
         ArrayList<DeviceAnswer> tabAnswers = answersByTab.get(answer.getTabNumber());
         if (tabAnswers.size() > 10000) {

@@ -242,7 +242,7 @@ public class DVK_4RD  implements SomeDevice  {
             }
             double value = 0.0;
             double serialNumber = 0.0;
-            answerValues = new AnswerValues(11);
+            answerValues = new AnswerValues(10);
             byte subResponse[] = Arrays.copyOfRange(response, 1, 6);
             if (isCorrectNumberF(subResponse)) {
                 boolean success = true;
@@ -293,7 +293,7 @@ public class DVK_4RD  implements SomeDevice  {
 
                 // Применяем десятичный порядок для получения числа в формате 123.45
                 if (success) {
-                    answerValues.addValue(value, " 1");
+                    answerValues.addValue(value, " Units");
                 } else {
                     answerValues.addValue(-88.88, " 1(ERR)");
                     resetAnswerValues();
@@ -320,7 +320,7 @@ public class DVK_4RD  implements SomeDevice  {
                     }
                 }
                 if (success) {
-                    answerValues.addValue(value, " 2");
+                    answerValues.addValue(value, " Units");
                 } else {
                     answerValues.addValue(-88.88, " 2(ERR)");
                     resetAnswerValues();
@@ -347,7 +347,7 @@ public class DVK_4RD  implements SomeDevice  {
                     }
                 }
                 if (success) {
-                    answerValues.addValue(value, " 3");
+                    answerValues.addValue(value, " Units");
                 } else {
                     answerValues.addValue(-88.88, " 3(ERR)");
                     resetAnswerValues();
@@ -374,7 +374,7 @@ public class DVK_4RD  implements SomeDevice  {
                     }
                 }
                 if (success) {
-                    answerValues.addValue(value, " 4");
+                    answerValues.addValue(value, " Units");
                 } else {
                     answerValues.addValue(-88.88, " 4(ERR)");
                     resetAnswerValues();
@@ -401,7 +401,7 @@ public class DVK_4RD  implements SomeDevice  {
                     }
                 }
                 if (success) {
-                    answerValues.addValue(value, " 5");
+                    answerValues.addValue(value, " Units");
                 } else {
                     answerValues.addValue(-88.88, " 5(ERR)");
                     resetAnswerValues();
@@ -465,7 +465,7 @@ public class DVK_4RD  implements SomeDevice  {
                 }
                 if (success) {
                     value = isNegative ? -value : value; // Применяем знак
-                    answerValues.addValue(value, " 7");
+                    answerValues.addValue(value, " Units");
                 } else {
                     answerValues.addValue(-88.88, " 7(ERR)");
                     resetAnswerValues();
@@ -489,7 +489,7 @@ public class DVK_4RD  implements SomeDevice  {
                     }
                 }
                 if (success) {
-                    answerValues.addValue(value, " 8");
+                    answerValues.addValue(value, " C0");
                 } else {
                     answerValues.addValue(-88.88, " 8(ERR)");
                     resetAnswerValues();
@@ -516,7 +516,7 @@ public class DVK_4RD  implements SomeDevice  {
                     }
                 }
                 if (success) {
-                    answerValues.addValue(value, " 9");
+                    answerValues.addValue(value, " C1");
                 } else {
                     answerValues.addValue(-88.88, " 9(ERR)");
                     resetAnswerValues();

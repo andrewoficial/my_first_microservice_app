@@ -71,6 +71,15 @@ public class PoolLogger {
     }
 
     public static void writeLine(DeviceAnswer answer){
+        if(answer == null){
+            log.warn("Для логирования передан ответ null");
+            return;
+        }
+
+        if(answer.getTabNumber() < 0){
+            log.warn("Для логирования передан ответ с отрицательным номером");
+            return;
+        }
         StringBuilder line = new StringBuilder(answer.getAnswerReceivedTime().format(MyUtilities.CUSTOM_FORMATTER));
         line.append("\t");
         line.append(answer.getDeviceType().getClass().toString().replace("class org.example.device.", ""));
