@@ -107,6 +107,16 @@ public class DVK_4RD  implements SomeDevice  {
     }
 
     @Override
+    public int getMillisReadLimit() {
+        return 150;
+    }
+
+    @Override
+    public int getMillisWriteLimit() {
+        return 150;
+    }
+
+    @Override
     public long getRepeatWaitTime() {
         return repeatWaitTime;
     }

@@ -330,7 +330,7 @@ public class ChartWindow extends JFrame implements Rendeble {
     private synchronized void getLastData() {
         tabs.clear();
         // Get the list of all tab numbers
-        tabs.addAll(AnswerStorage.answersByTab.keySet());
+        tabs.addAll(AnswerStorage.getListOfTabsInStorage());
 
         updateCB();
         int pointer = 0;

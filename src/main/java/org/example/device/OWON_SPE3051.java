@@ -102,6 +102,16 @@ public class OWON_SPE3051 implements SomeDevice {
     }
 
     @Override
+    public int getMillisReadLimit() {
+        return 350;
+    }
+
+    @Override
+    public int getMillisWriteLimit() {
+        return 350;
+    }
+
+    @Override
     public long getRepeatWaitTime() {
         return repeatWaitTime;
     }

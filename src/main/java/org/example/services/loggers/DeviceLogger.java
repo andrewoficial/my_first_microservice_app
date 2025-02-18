@@ -38,6 +38,18 @@ public class DeviceLogger {
         }
     }
 
+    public DeviceLogger(Integer name) {
+        if(properties.isCsvLogState()){
+            this.fileNameCSV = this.fileNameCSV + " " + "tab_" + name + ".csv";
+            this.logFileCSV = createLogFile("logs", this.fileNameCSV);
+        }
+
+        if(properties.isDbgLogState()){
+            this.fileName = this.fileName + " " + "tab_" + name + ".txt";
+            this.logFile = createLogFile("logs", this.fileName);
+        }
+    }
+
     private File createLogFile(String directory, String fileName) {
         File logFile = null;
         try {

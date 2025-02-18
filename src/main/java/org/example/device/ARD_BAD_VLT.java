@@ -88,6 +88,16 @@ public class ARD_BAD_VLT implements SomeDevice{
     }
 
     @Override
+    public int getMillisReadLimit() {
+        return 350;
+    }
+
+    @Override
+    public int getMillisWriteLimit() {
+        return 350;
+    }
+
+    @Override
     public long getRepeatWaitTime() {
         return repeatWaitTime;
     }

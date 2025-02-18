@@ -86,7 +86,7 @@ public class AnyPoolService {
     private void processExistingComDataCollector(ComDataCollector psSearch, int tab, String [] prefixAndCmd, boolean pool, boolean isBtn, int poolDelay) {
         //log.info("Порт уже используется, проверка среди запущенных потоков");
         if (psSearch.containTabDev(tab)) {
-            log.info("Клинет уже содержится в потоке отправка префикса ");
+            log.info("Клинет уже содержится в потоке отправка префикса и команды");
             handleTabInExistingCollector(psSearch, tab, prefixAndCmd, pool, isBtn, poolDelay);
         } else {
             log.info("Клинет не содержится в потоке");

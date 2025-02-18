@@ -5,114 +5,117 @@ import org.example.utilites.MyUtilities;
 
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.*;
+import java.util.concurrent.*;
 
 public class AnswerStorage {
     private static final Logger log = Logger.getLogger(AnswerStorage.class);
-    static StringBuilder sbAnswer = new StringBuilder();
-    public static HashMap<Integer, ArrayList<DeviceAnswer>> answersByTab = new HashMap<>();
-    public static HashMap<String, Integer> deviceTabPairs = new HashMap<>();
+
+    private static final ThreadLocal<StringBuilder> sbAnswer = ThreadLocal.withInitial(StringBuilder::new);
+    private static final ConcurrentHashMap<Integer, ConcurrentLinkedQueue<DeviceAnswer>> answersByTab = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Integer> deviceTabPairs = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Integer, String> tabDevicePairs = new ConcurrentHashMap<>();
+    private static final int MAX_ANSWERS_PER_TAB = 10_000;
 
     public static void registerDeviceTabPair(String ident, Integer tabN) {
-        AnswerStorage.deviceTabPairs.put(ident, tabN);
-        log.info("Регистрирую связку устройства с вкладкой. Device id: " + ident + " and tab num: " + tabN);
+        tabDevicePairs.put(tabN, ident); // Добавлено
+        log.info("Регистрирую связку устройства с вкладкой. Device id: " + ident + " and tab num: " + tabN);
+    }
+
+    public static List<Integer> getListOfTabsInStorage(){
+        return new ArrayList<>(answersByTab.keySet());
     }
 
     public static HashMap<String, Integer> getDeviceTabPair() {
-        return AnswerStorage.deviceTabPairs;
+        return new HashMap<>(deviceTabPairs);
     }
 
-
     public static Integer getTabByIdent(String ident) {
-        return AnswerStorage.deviceTabPairs.get(ident);
+        return deviceTabPairs.get(ident);
     }
 
     public static String getIdentByTab(Integer tab) {
-        for (Map.Entry<String, Integer> entry : deviceTabPairs.entrySet()) {
-            if (Objects.equals(entry.getValue(), tab)) {
-                return entry.getKey();
-            }
-        }
-        log.warn("Попытка получить несуществующую связку Вкладка/Прибор по признаку вкладки");
-        return null;
+        return tabDevicePairs.getOrDefault(tab, null);
     }
 
     public static void addAnswer(DeviceAnswer answer) {
-        if(answer.getTabNumber() == null || answer.getTabNumber() < 0) {
-            if(answer.getDeviceType() != null) {
-                log.info(" Отклонено сохранение ответа с идентефикатором [" + answer.getTabNumber() + "] протокол " + answer.getDeviceType().getClass().getSimpleName());
-            }else{
-                log.info(" Отклонено сохранение ответа (объект ответа null)");
-            }
+        if (answer == null || answer.getTabNumber() == null || answer.getTabNumber() < 0) {
+            log.info("Отклонено сохранение ответа [" + answer + "]");
             return;
         }
-        answersByTab.putIfAbsent(answer.getTabNumber(), new ArrayList<>());
-        ArrayList<DeviceAnswer> tabAnswers = answersByTab.get(answer.getTabNumber());
-        if (tabAnswers.size() > 10000) {
-            // Push to cache
-            //tabAnswers.clear();
-            tabAnswers.remove(0);
-        }
-        tabAnswers.add(answer);
-        log.info("Новое значение ответа с идентефикатором " + answer.getTabNumber() + " протокол " + answer.getDeviceType().getClass().getSimpleName());
-        if(answer.getAnswerReceivedString() != null) {
-            log.info(answer.getAnswerReceivedString());
+
+        answersByTab.computeIfAbsent(answer.getTabNumber(), k -> new ConcurrentLinkedQueue<>())
+                .add(answer);
+
+        log.debug("Новое значение ответа с идентификатором " + answer.getTabNumber());
+        // Удаляем старые ответы, если превышен лимит
+        if (answersByTab.get(answer.getTabNumber()).size() > MAX_ANSWERS_PER_TAB) {
+            answersByTab.get(answer.getTabNumber()).poll();
         }
     }
 
     public static TabAnswerPart getAnswersQueForTab(Integer lastPosition, Integer tabNumber, boolean showCommands) {
-        sbAnswer.setLength(0); // Clear the StringBuilder
-        ArrayList<DeviceAnswer> tabAnswers = answersByTab.getOrDefault(tabNumber, new ArrayList<>());
-        if (lastPosition >= tabAnswers.size()) {
-            //return null;
-            return new TabAnswerPart("", tabAnswers.size());
+        StringBuilder sb = new StringBuilder();
+
+        List<DeviceAnswer> tabAnswers = List.copyOf(answersByTab.getOrDefault(tabNumber, new ConcurrentLinkedQueue<>()));
+        int size = tabAnswers.size();
+
+        if (lastPosition >= size) {
+            return new TabAnswerPart("", size);
         }
-        for (int i = lastPosition; i < tabAnswers.size(); i++) {
-            DeviceAnswer answer = tabAnswers.get(i);
-            appendAnswer(answer, showCommands);
+
+        for (int i = lastPosition; i < size; i++) {
+            appendAnswer(sb, tabAnswers.get(i), showCommands);
         }
-        return new TabAnswerPart(sbAnswer.toString(), tabAnswers.size());
+
+        return new TabAnswerPart(sb.toString(), size);
     }
+
 
     public static String getAnswersForTab(Integer tabNumber, boolean showCommands) {
-        sbAnswer.setLength(0); // Clear the StringBuilder
-        ArrayList<DeviceAnswer> tabAnswers = answersByTab.getOrDefault(tabNumber, new ArrayList<>());
-        for (DeviceAnswer answer : tabAnswers) {
-            appendAnswer(answer, showCommands);
+        StringBuilder sb = sbAnswer.get();
+        sb.setLength(0);
+
+        List<DeviceAnswer> tabAnswers = List.copyOf(answersByTab.getOrDefault(tabNumber, new ConcurrentLinkedQueue<>()));
+        if(tabAnswers != null) {
+            for (DeviceAnswer answer : tabAnswers) {
+                appendAnswer(sb, answer, showCommands);
+            }
         }
-        return sbAnswer.toString();
+        return sb.toString();
     }
 
-    private static void appendAnswer(DeviceAnswer answer, boolean showCommands) {
+    private static void appendAnswer(StringBuilder sb, DeviceAnswer answer, boolean showCommands) {
         if (showCommands) {
-            //
-            sbAnswer.append(MyUtilities.CUSTOM_FORMATTER.format(answer.getRequestSendTime()));
-            sbAnswer.append(" :\t");
-            sbAnswer.append(answer.getRequestSendString());
-            sbAnswer.append("\n");
+            sb.append(MyUtilities.CUSTOM_FORMATTER.format(answer.getRequestSendTime()))
+                    .append(" :\t")
+                    .append(answer.getRequestSendString())
+                    .append("\n");
         }
-        sbAnswer.append(MyUtilities.CUSTOM_FORMATTER.format(answer.getAnswerReceivedTime()));
+        sb.append(MyUtilities.CUSTOM_FORMATTER.format(answer.getAnswerReceivedTime()));
         if (answer.getAnswerReceivedString() != null) {
-            sbAnswer.append(":\t");
-            sbAnswer.append(answer.getAnswerReceivedString());
+            sb.append(":\t").append(answer.getAnswerReceivedString());
         }
-        sbAnswer.append("\n");
+        sb.append("\n");
     }
 
-    // New methods for getting data for graphs
     public static List<DeviceAnswer> getAnswersForGraph(Integer tabNumber) {
-        return new ArrayList<>(answersByTab.getOrDefault(tabNumber, new ArrayList<>()));
+        return new ArrayList<>(answersByTab.getOrDefault(tabNumber, null));
     }
 
     public static List<DeviceAnswer> getRecentAnswersForGraph(Integer tabNumber, int range) {
-        ArrayList<DeviceAnswer> tabAnswers = answersByTab.getOrDefault(tabNumber, new ArrayList<>());
-        int size = tabAnswers.size();
+
+        List<DeviceAnswer> snapshot = List.copyOf(answersByTab.getOrDefault(tabNumber, new ConcurrentLinkedQueue<>()));
+
+        int size = snapshot.size();
         if (range >= size) {
-            return new ArrayList<>(tabAnswers);
+            return snapshot;
         }
-        return new ArrayList<>(tabAnswers.subList(size - range, size));
+
+        return snapshot.subList(size - range, size); // Берём последние `range` элементов
     }
 
-    public static void removeAnswersForTab(int tabNum){
-        answersByTab.remove(tabNum);
+    public static void removeAnswersForTab(int tabNum) {
+        tabDevicePairs.remove(tabNum); // Если используется обратная мапа
     }
 }

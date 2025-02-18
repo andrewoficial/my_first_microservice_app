@@ -94,6 +94,16 @@ public class IGM_10LORA_P2P implements SomeDevice {
     }
 
     @Override
+    public int getMillisReadLimit() {
+        return 350;
+    }
+
+    @Override
+    public int getMillisWriteLimit() {
+        return 350;
+    }
+
+    @Override
     public long getRepeatWaitTime() {
         return repeatWaitTime;
     }

@@ -272,7 +272,7 @@ public class JmenuFile {
                 ArrayList<Integer> tabsFieldCapacity = new ArrayList<>();
 
                 // Get the list of all tab numbers
-                tabs.addAll(AnswerStorage.answersByTab.keySet());
+                tabs.addAll(AnswerStorage.getListOfTabsInStorage());
 
                 // Обновление списка чек-боксов
                 for (Integer tab : tabs) {

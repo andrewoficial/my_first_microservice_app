@@ -24,6 +24,8 @@ public interface SomeDevice {
     void setReceivedCounter(int cnt);
     long getMillisPrev();
     long getMillisLimit();
+    int getMillisReadLimit();
+    int getMillisWriteLimit();
     long getRepeatWaitTime();
     boolean busy = false;
     void setLastAnswer(byte [] ans);
@@ -204,6 +206,6 @@ public interface SomeDevice {
 
     default int getExpectedBytes() {
         // Возвращает ожидаемое количество байт. Например:
-        return 55; // Или любое значение, зависящее от устройства.
+        return 600; // Или любое значение, зависящее от устройства.
     }
 }

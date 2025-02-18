@@ -92,6 +92,16 @@ public class IGM_10 implements SomeDevice {
     }
 
     @Override
+    public int getMillisReadLimit() {
+        return 150;
+    }
+
+    @Override
+    public int getMillisWriteLimit() {
+        return 1024;
+    }
+
+    @Override
     public long getRepeatWaitTime() {
         return repeatWaitTime;
     }

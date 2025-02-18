@@ -123,6 +123,16 @@ public class DEMO_PROTOCOL implements SomeDevice {
     }
 
     @Override
+    public int getMillisReadLimit() {
+        return 500;
+    }
+
+    @Override
+    public int getMillisWriteLimit() {
+        return 500;
+    }
+
+    @Override
     public long getRepeatWaitTime() {
         return this.repeatWaitTime;
     }
