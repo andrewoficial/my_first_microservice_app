@@ -31,19 +31,19 @@ public class DeviceAnswer {
     @Setter @Getter
     private AnswerValues answerReceivedValues;
     @Setter @Getter
-    private Integer tabNumber;
+    private Integer clientId;
 
     public DeviceAnswer(LocalDateTime requestSendTime,
                         String requestSendString,
-                        Integer tabNumber) {
+                        Integer clientId) {
 
         this.requestSendTime = requestSendTime;
         this.requestSendString = requestSendString;
-        this.tabNumber = tabNumber;
+        this.clientId = clientId;
     }
 
     public void changeTabNum(Integer num){
-        this.tabNumber = num;
+        this.clientId = num;
     }
     public Integer getFieldCount (){
         if(answerReceivedValues != null){

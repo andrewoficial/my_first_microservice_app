@@ -128,7 +128,7 @@ public class DeviceLogger {
                 writeFile(stringBuilderCSV, logFileCSV);
             }
         }
-        log.info("Завершено ведение лога согласно настройками для идентефикатора " + answer.getTabNumber());
+        log.info("Завершено ведение лога согласно настройками для clientId " + answer.getClientId());
     }
 
     private void writeFile(StringBuilder sbToWrite, File file){

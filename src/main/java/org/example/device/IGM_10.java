@@ -1,19 +1,25 @@
 package org.example.device;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Setter;
 import org.apache.log4j.Logger;
+import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
+import org.example.utilites.MyUtilities;
 
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CoderResult;
+
+import static org.example.utilites.MyUtilities.*;
+import static org.example.utilites.MyUtilities.isCorrectNumberF;
 
 public class IGM_10 implements SomeDevice {
     private volatile boolean busy = false;
@@ -33,8 +39,12 @@ public class IGM_10 implements SomeDevice {
     private final long millisPrev = System.currentTimeMillis();
     private final static Charset charset = Charset.forName("Cp1251");
     private static final CharsetDecoder decoder = charset.newDecoder();
-    private AnswerValues answerValues = new AnswerValues(0);
+    private AnswerValues answerValues = null;
     String cmdToSend;
+    private Integer TabForAnswer;
+    private String devIdent = "IGM_10_ASCII";
+    private int expectedBytes = 0;
+    private CommandListClass commands = new CommandListClass();
 
     public IGM_10(SerialPort port){
         System.out.println("Создан объект протокола ИГМ-10");
@@ -48,7 +58,14 @@ public class IGM_10 implements SomeDevice {
     }
     @Override
     public void setCmdToSend(String str) {
+        //Получает количесвто одидаемых байт душная история
+        expectedBytes = commands.getExpectedBytes(str); //ToDo распространить на сотальные девайсы
         cmdToSend = str;
+    }
+
+    @Override
+    public int getExpectedBytes(){
+        return expectedBytes;
     }
 
     @Override
@@ -129,26 +146,8 @@ public class IGM_10 implements SomeDevice {
         this.hasAnswer = hasAnswer;
     }
 
-    private CommandListClass commands = new CommandListClass();
     public boolean enable() throws RuntimeException{
-        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 65, 65);
-        if(! comPort.isOpen()){
-            comPort.openPort();
-            comPort.flushDataListener();
-            comPort.removeDataListener();
-            comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 15, 10);
-            if(comPort.isOpen()){
-                log.info("Порт открыт, задержки выставлены");
-                return true;
-            }else {
-                throw new RuntimeException("Cant open COM-Port");
-            }
-
-        }else{
-            log.info("Порт был открыт ранее");
             return true;
-        }
-
     }
 
 
@@ -159,48 +158,37 @@ public class IGM_10 implements SomeDevice {
 
     @Override
     public void parseData() {
-        System.out.println("Start parse...");
-            if(lastAnswerBytes.length > 0) {
-                answerValues = null;
-                CommandList cmd = CommandList.getCommandByName(cmdToSend);
-                //System.out.println("cmdToSend" + cmdToSend);
-                //lastAnswer = new StringBuilder(lastAnswer.toString().replaceAll("\\p{C}", "?"));
-                if (cmd != null) {
-                    answerValues = cmd.parseAnswer(lastAnswerBytes);
-                    //System.out.println("lastAnswer.toString()" + lastAnswer.toString());
-
-                }
-
-                lastAnswer.setLength(0);
+        //System.out.println("IGM_10_ASCII run parse");
+        if(lastAnswerBytes != null && lastAnswerBytes.length > 0) { //ToDo Распространить эту проверку
+            lastAnswer.setLength(0);
+            if (commands.isKnownCommand(cmdToSend)) {
+                answerValues = commands.getCommand(cmdToSend).getResult(lastAnswerBytes);
                 if(answerValues != null){
-                    hasAnswer = true;
                     for (int i = 0; i < answerValues.getValues().length; i++) {
-                        lastAnswer.append(answerValues.getValues()[i]);
-                        lastAnswer.append(" ");
-                        lastAnswer.append(answerValues.getUnits()[i]);
-                        lastAnswer.append("  ");
+                        if(i == 0){
+                            double ans = answerValues.getValues()[i] * 100;
+                            ans = Math.round(ans) / 100.0;
+                            lastAnswer.append(ans);
+                            lastAnswer.append("\t");
+                        }else {
+                            lastAnswer.append(Math.round(answerValues.getValues()[i]));
+                            lastAnswer.append("\t");
+                        }
                     }
-                    System.out.println("done correct...");
-
                 }else{
-                    hasAnswer = true;
-                    for (byte lastAnswerByte : lastAnswerBytes) {
-                        System.out.print(lastAnswerByte);
-                        System.out.print(" ");
-                        lastAnswer.append((char) lastAnswerByte);
-                    }
-                    System.out.println("done unknown...");
-                }
-            }else {
-                for (byte lastAnswerByte : lastAnswerBytes) {
-                    System.out.print(lastAnswerByte);
-                    System.out.print(" ");
-                    lastAnswer.append((char) lastAnswerByte);
-                }
-                System.out.println("done empty...");
-                hasAnswer = false;
-            }
+                    System.out.println("IGM-10-ASCII Can`t create answers obj (error in answer)");
 
+                }
+
+            }else {
+                for (int i = 0; i < lastAnswerBytes.length; i++) {
+                    lastAnswer.append( (char) lastAnswerBytes[i]);
+                }
+                System.out.println("IGM-10-ASCII Cant create answers obj (unknown command)");
+            }
+        }else{
+            System.out.println("IGM-10-ASCII empty received");
+        }
 
     }
 
@@ -214,9 +202,9 @@ public class IGM_10 implements SomeDevice {
         this.busy = busy;
     }
     public String getAnswer(){
-        if(hasAnswer) {
-
-            hasAnswer = false;
+        if(lastAnswerBytes != null && lastAnswerBytes.length > 0) {
+            received = 0;
+            lastAnswerBytes = null;
             return lastAnswer.toString();
         }else {
             return null;
@@ -233,7 +221,7 @@ public class IGM_10 implements SomeDevice {
     }
 
     public AnswerValues getValues(){
-        return answerValues;
+        return this.answerValues;
     }
 
     private enum CommandList{
@@ -348,5 +336,399 @@ public class IGM_10 implements SomeDevice {
             }
             return null;
         }
+    }
+
+    {
+        commands.addCommand(
+                new SingleCommand(
+                        "F", "F - Основная команда опроса", //72 байта
+                        (response) -> {
+                            answerValues = null;
+                            String example = "02750\t07518\t00023\t00323\t08614\t01695\t06353\t03314\t03314\t00001\t08500012\t0x0D";
+                            System.out.println("Got string (array) [" + Arrays.toString(response) + "]");
+                            //System.out.println("Got string (string) [" + MyUtilities.byteArrayToString(response) + "] ");
+
+                            if (response.length >= 68) {
+                                if (response[71] != 13) {
+                                    System.out.println("Не найден CR");
+                                    //resetAnswerValues();
+                                    //return null;
+
+                                }
+                                double value = 0.0;
+                                double serialNumber = 0.0;
+                                answerValues = new AnswerValues(11);
+                                byte subResponse[] = Arrays.copyOfRange(response, 1, 5);
+                                if (isCorrectNumberF(subResponse)) {
+                                    boolean success = true;
+
+                                    // Преобразуем байты ASCII-чисел вручную
+                                    for (int i = 0; i < subResponse.length; i++) {
+                                        byte b = subResponse[i];
+                                        if (b >= '0' && b <= '9') {
+                                            value = value * 10 + (b - '0');
+                                        } else {
+                                            success = false;
+                                            break;
+                                        }
+                                    }
+
+                                    // Применяем десятичный порядок для получения числа в формате 123.45
+                                    if (success) {
+                                        value = (value*value*-0.0000006)-(value*0.0249)+122.08;
+                                        answerValues.addValue(value, " °C");
+                                        //System.out.println(termBM);
+                                    } else {
+                                        answerValues.addValue(-88.88, " °C(ERR)");
+                                        resetAnswerValues();
+                                        return null;
+                                    }
+                                } else {
+                                    System.out.println("Wrong isCorrectNumberF position (0)" + Arrays.toString(subResponse));
+                                    answerValues.addValue(-99.99, " °C(ERR)");
+                                    resetAnswerValues();
+                                    return null;
+                                }
+                                value = 0.0;
+
+                                subResponse = Arrays.copyOfRange(response, 6, 11);
+                                if (isCorrectNumberF(subResponse)) {
+                                    boolean success = true;
+                                    // Преобразуем байты ASCII-чисел вручную
+                                    for (int i = 0; i < subResponse.length; i++) {
+                                        byte b = subResponse[i];
+                                        // Проверяем, что символ – цифра
+                                        if (b >= '0' && b <= '9') {
+                                            value = value * 10 + (b - '0');
+                                        } else {
+                                            success = false;
+                                            break;
+                                        }
+                                    }
+
+                                    // Применяем десятичный порядок для получения числа в формате 123.45
+                                    if (success) {
+                                        answerValues.addValue(value, " Units");
+                                    } else {
+                                        answerValues.addValue(-88.88, " 1(ERR)");
+                                        resetAnswerValues();
+                                        return null;
+                                    }
+                                } else {
+                                    System.out.println("Wrong isCorrectNumberF position (1)" + Arrays.toString(subResponse));
+                                    answerValues.addValue(-99.99, " 1(ERR)");
+                                    resetAnswerValues();
+                                    return null;
+                                }
+                                value = 0.0;
+
+                                subResponse = Arrays.copyOfRange(response, 12, 17);
+                                if (isCorrectNumberF(subResponse)) {
+                                    boolean success = true;
+                                    for (int i = 0; i < subResponse.length; i++) {
+                                        byte b = subResponse[i];
+                                        if (b >= '0' && b <= '9') {
+                                            value = value * 10 + (b - '0');
+                                        } else {
+                                            success = false;
+                                            break;
+                                        }
+                                    }
+                                    if (success) {
+                                        answerValues.addValue(value, " Units");
+                                    } else {
+                                        answerValues.addValue(-88.88, " 2(ERR)");
+                                        resetAnswerValues();
+                                        return null;
+                                    }
+                                } else {
+                                    System.out.println("isCorrectNumberF found error in position (2)" + Arrays.toString(subResponse));
+                                    answerValues.addValue(-99.99, " 2(ERR)");
+                                    resetAnswerValues();
+                                    return null;
+                                }
+                                value = 0.0;
+
+                                subResponse = Arrays.copyOfRange(response, 18, 23);  //Напряжение питания
+                                if (isCorrectNumberF(subResponse)) {
+                                    boolean success = true;
+                                    for (int i = 0; i < subResponse.length; i++) {
+                                        byte b = subResponse[i];
+                                        if (b >= '0' && b <= '9') {
+                                            value = value * 10 + (b - '0');
+                                        } else {
+                                            success = false;
+                                            break;
+                                        }
+                                    }
+                                    if (success) {
+                                        answerValues.addValue(value, " Units");
+                                    } else {
+                                        answerValues.addValue(-88.88, " 3(ERR)");
+                                        resetAnswerValues();
+                                        return null;
+                                    }
+                                } else {
+                                    System.out.println("isCorrectNumberF found error in position (3)" + Arrays.toString(subResponse));
+                                    answerValues.addValue(-99.99, " 3(ERR)");
+                                    resetAnswerValues();
+                                    return null;
+                                }
+                                value = 0.0;
+
+                                subResponse = Arrays.copyOfRange(response, 24, 29);  //Сила тока шунт один до полинома
+                                if (isCorrectNumberF(subResponse)) {
+                                    boolean success = true;
+                                    for (int i = 0; i < subResponse.length; i++) {
+                                        byte b = subResponse[i];
+                                        if (b >= '0' && b <= '9') {
+                                            value = value * 10 + (b - '0');
+                                        } else {
+                                            success = false;
+                                            break;
+                                        }
+                                    }
+                                    if (success) {
+                                        answerValues.addValue(value, " Units");
+                                    } else {
+                                        answerValues.addValue(-88.88, " 4(ERR)");
+                                        resetAnswerValues();
+                                        return null;
+                                    }
+                                } else {
+                                    System.out.println("isCorrectNumberF found error in position (4)" + Arrays.toString(subResponse));
+                                    answerValues.addValue(-99.99, " 4(ERR)");
+                                    resetAnswerValues();
+                                    return null;
+                                }
+                                value = 0.0;
+
+                                subResponse = Arrays.copyOfRange(response, 30, 35);  // Сила тока шунт два до полинома
+                                byte[]  subResponse_short = Arrays.copyOfRange(response, 31, 35);  // Сила тока шунт два до полинома
+                                if (isCorrectNumberF(subResponse_short)) {
+                                    boolean success = true;
+                                    int sign = 1; // По умолчанию знак положительный
+                                    int startIndex = 0; // Индекс, с которого начинаем обработку цифр
+
+                                    // Проверяем первый байт на наличие знака минус
+                                    if (subResponse.length > 0 && subResponse[0] == '-') {
+                                        sign = -1; // Устанавливаем знак минус
+                                        startIndex = 1; // Начинаем обработку со второго байта
+                                    }
+
+                                    for (int i = startIndex; i < subResponse.length; i++) {
+                                        byte b = subResponse[i];
+                                        if (b >= '0' && b <= '9') {
+                                            value = value * 10 + (b - '0');
+                                        } else {
+                                            success = false;
+                                            break;
+                                        }
+                                    }
+
+                                    if (success) {
+                                        value *= sign; // Умножаем значение на знак
+                                        answerValues.addValue(value, " Units");
+                                    } else {
+                                        answerValues.addValue(-88.88, " 5(ERR)");
+                                        resetAnswerValues();
+                                        return null;
+                                    }
+                                } else {
+                                    System.out.println("isCorrectNumberF found error in position (5)" + Arrays.toString(subResponse));
+                                    answerValues.addValue(-99.99, " 5(ERR)");
+                                    resetAnswerValues();
+                                    return null;
+                                }
+                                value = 0.0;
+
+                                subResponse = Arrays.copyOfRange(response, 36, 41);  // Сила тока шунт два до полинома
+                                subResponse_short = Arrays.copyOfRange(response, 37, 41);  // Сила тока шунт два до полинома
+                                if (isCorrectNumberF(subResponse_short)) {
+                                    boolean success = true;
+                                    int sign = 1; // По умолчанию знак положительный
+                                    int startIndex = 0; // Индекс, с которого начинаем обработку цифр
+
+                                    // Проверяем первый байт на наличие знака минус
+                                    if (subResponse.length > 0 && subResponse[0] == '-') {
+                                        sign = -1; // Устанавливаем знак минус
+                                        startIndex = 1; // Начинаем обработку со второго байта
+                                    }
+
+                                    for (int i = startIndex; i < subResponse.length; i++) {
+                                        byte b = subResponse[i];
+                                        if (b >= '0' && b <= '9') {
+                                            value = value * 10 + (b - '0');
+                                        } else {
+                                            success = false;
+                                            break;
+                                        }
+                                    }
+
+                                    if (success) {
+                                        value *= sign; // Умножаем значение на знак
+                                        answerValues.addValue(value, " Units");
+                                    } else {
+                                        answerValues.addValue(-88.88, " 6(ERR)");
+                                        resetAnswerValues();
+                                        return null;
+                                    }
+                                } else {
+                                    System.out.println("isCorrectNumberF found error in position (6)" + Arrays.toString(subResponse));
+                                    answerValues.addValue(-99.99, " 6(ERR)");
+                                    resetAnswerValues();
+                                    return null;
+                                }
+                                value = 0.0;
+
+                                subResponse = Arrays.copyOfRange(response, 42, 47);  //Сила тока шунт два после полинома
+                                if (isCorrectNumberFExceptMinus(subResponse)) {
+                                    boolean success = true;
+                                    boolean isNegative = false;
+
+                                    for (int i = 0; i < subResponse.length; i++) {
+                                        byte b = subResponse[i];
+                                        if (i == 0 && b == '-' ) {
+                                            isNegative = true;
+                                            continue;
+                                        }
+
+                                        if (b >= '0' && b <= '9') {
+                                            value = value * 10 + (b - '0');
+                                        }
+                                    }
+                                    if (success) {
+                                        value = isNegative ? -value : value; // Применяем знак
+                                        answerValues.addValue(value, " Units");
+                                    } else {
+                                        answerValues.addValue(-88.88, " 7(ERR)");
+                                        resetAnswerValues();
+                                        return null;
+                                    }
+                                } else {
+                                    System.out.println("isCorrectNumberF found error in position (7)" + Arrays.toString(subResponse));
+                                    answerValues.addValue(-99.99, " 7(ERR)");
+                                    resetAnswerValues();
+                                    return null;
+                                }
+                                value = 0.0;
+
+                                subResponse = Arrays.copyOfRange(response, 48, 53);  //Сила тока выбранный результат (ардуиной)
+                                if (isCorrectNumberFExceptMinus(subResponse)) {
+                                    boolean success = true;
+                                    for (int i = 0; i < subResponse.length; i++) {
+                                        byte b = subResponse[i];
+                                        if (b >= '0' && b <= '9') {
+                                            value = value * 10 + (b - '0');
+                                        }
+                                    }
+                                    if (success) {
+                                        answerValues.addValue(value, " C0");
+                                    } else {
+                                        answerValues.addValue(-88.88, " 8(ERR)");
+                                        resetAnswerValues();
+                                        return null;
+                                    }
+                                } else {
+                                    System.out.println("isCorrectNumberF found error in position (8)" + Arrays.toString(subResponse));
+                                    answerValues.addValue(-99.99, " 8(ERR)");
+                                    resetAnswerValues();
+                                    return null;
+                                }
+                                value = 0.0;
+
+                                subResponse = Arrays.copyOfRange(response, 54, 59);  //Статус
+                                if (isCorrectNumberF(subResponse)) {
+                                    boolean success = true;
+                                    for (int i = 0; i < subResponse.length; i++) {
+                                        byte b = subResponse[i];
+                                        if (b >= '0' && b <= '9') {
+                                            value = value * 10 + (b - '0');
+                                        } else {
+                                            success = false;
+                                            break;
+                                        }
+                                    }
+                                    if (success) {
+                                        answerValues.addValue(value, " C1");
+                                    } else {
+                                        answerValues.addValue(-88.88, " 9(ERR)");
+                                        resetAnswerValues();
+                                        return null;
+                                    }
+                                } else {
+                                    System.out.println("isCorrectNumberF found error in position (9)" + Arrays.toString(subResponse));
+                                    answerValues.addValue(-99.99, " 9(ERR)");
+                                    resetAnswerValues();
+                                    return null;
+                                }
+                                value = 0.0;
+
+                                subResponse = Arrays.copyOfRange(response, 60, 68);  //Серийный номер
+                                if (isCorrectNumberF(subResponse)) {
+                                    boolean isNegative = false;
+                                    boolean success = true;
+                                    // Преобразуем байты ASCII-чисел вручную
+                                    for (int i = 0; i < subResponse.length; i++) {
+                                        byte b = subResponse[i];
+                                        if (b == '-' && i == 0) {
+                                            isNegative = true;
+                                            continue;
+                                        }
+                                        // Проверяем, что символ – цифра
+                                        if (b >= '0' && b <= '9') {
+                                            serialNumber = serialNumber * 10 + (b - '0');
+                                        } else {
+                                            serialNumber = 0.0;
+                                            success = false;
+                                            break;
+                                        }
+
+                                    }
+                                    value = 0.0;
+
+                                    // Применяем десятичный порядок для получения числа в формате 123.45
+                                    if (success) {
+                                        //stat /= 1000.0; // Сдвигаем запятую на два знака влево
+                                        TabForAnswer = AnswerStorage.getTabByIdent(String.valueOf(serialNumber));
+                                        devIdent = String.valueOf(serialNumber);
+                                        serialNumber = isNegative ? - serialNumber : serialNumber; // Применяем знак
+                                        answerValues.addValue(serialNumber, " SN");
+                                        //System.out.println(termBM);
+                                    } else {
+                                        answerValues.addValue(-88.88, " SN (ERR)");
+                                        resetAnswerValues();
+                                        return null;
+                                    }
+                                } else {
+                                    System.out.println("Wrong isCorrectNumberF position (serialNumber) 61, 69 " + Arrays.toString(subResponse));
+                                    answerValues.addValue(-99.99, " SN (ERR)");
+                                    resetAnswerValues();
+                                    return null;
+                                }
+                                value = 0.0;
+
+
+
+                                System.out.println("Answer size: " + answerValues.getCounter());
+                                return answerValues;
+                            } else {
+                                System.out.println("Wrong answer length " + response.length);
+                                for (byte b : response) {
+                                    System.out.print(b + " ");
+                                }
+                                System.out.println();
+                                resetAnswerValues();
+                                return null;
+                            }
+                        }, 73)
+        );
+    }
+
+    public void resetAnswerValues() {
+        answerValues = null;
+        lastAnswerBytes = null;
+        lastAnswer.setLength(0);
+
     }
 }

@@ -38,7 +38,6 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
         log.info("Создан объект протокола ARD_FEE_BRD_METER");
         this.comPort = port;
 
-        this.enable();
     }
 
     public ARD_FEE_BRD_METER() {
@@ -139,6 +138,11 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
 
     }
 
+    @Override
+    public boolean enable() {
+        return true;
+    }
+
     private CommandListClass commands = new CommandListClass();
 
     @Override
@@ -146,24 +150,7 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
         return this.commands;
     }
 
-    public boolean enable() {
-        if(! comPort.isOpen()){
-            comPort.openPort();
-            comPort.flushDataListener();
-            comPort.removeDataListener();
-            comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 15, 10);
-            if(comPort.isOpen()){
-                log.info("Порт открыт, задержки выставлены");
-                return true;
-            }else {
-                throw new RuntimeException("Cant open COM-Port");
-            }
 
-        }else{
-            log.info("Порт был открыт ранее");
-            return true;
-        }
-    }
 
     public String getForSend() {
         return cmdToSend;

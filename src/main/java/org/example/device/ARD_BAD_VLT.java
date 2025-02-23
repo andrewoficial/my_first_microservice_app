@@ -1,40 +1,46 @@
 package org.example.device;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.function.Function;
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Setter;
-import org.example.services.AnswerValues;
 import org.apache.log4j.Logger;
+import org.example.services.AnswerValues;
 
-public class ARD_BAD_VLT implements SomeDevice{
+import static org.example.utilites.MyUtilities.*;
+
+public class ARD_BAD_VLT implements SomeDevice {
     private volatile boolean busy = false;
-    private static final Logger log = Logger.getLogger(DEMO_PROTOCOL.class);
+    private static final Logger log = Logger.getLogger(ARD_BAD_VLT.class);
     private final SerialPort comPort;
+    private byte [ ] lastAnswerBytes = new byte[1];
+    private final StringBuilder lastAnswer = new StringBuilder();
+    private StringBuilder emulatedAnswer = new StringBuilder();
+    private final boolean knownCommand = false;
     private volatile boolean hasAnswer = false;
-    private volatile StringBuilder lastAnswer;
-    private AnswerValues answerValues = new AnswerValues(0);
+    private  volatile boolean hasValue = false;
     @Setter
-    private byte [] strEndian = {13, 10};//CR + LF
-    private boolean knownCommand = false;
-    private StringBuilder emulatedAnswer;
+    private byte [] strEndian = {13};//CR
     private int received = 0;
-    private final long millisLimit = 450;
-    private final long repeatWaitTime = 100;
+    private final long millisLimit = 800;
+    private final long repeatWaitTime = 5;
+    private final long millisPrev = System.currentTimeMillis();
+    private static AnswerValues answerValues = new AnswerValues(0);
+    String cmdToSend;
+
 
     public ARD_BAD_VLT(SerialPort port){
+        log.info("Создан объект протокола ARD_BAD_VLT");
         this.comPort = port;
         this.enable();
     }
+
     public ARD_BAD_VLT(){
-        System.out.println("Создан объект протокола ARD_BAD_VLT-10 эмуляция");
+        System.out.println("Создан объект протокола ARD_BAD_VLT эмуляция");
         this.comPort = null;
     }
     @Override
     public void setCmdToSend(String str) {
-        str = cmdToSend;
+        cmdToSend = str;
+        //str = cmdToSend;
     }
 
     @Override
@@ -43,6 +49,7 @@ public class ARD_BAD_VLT implements SomeDevice{
     }
 
 
+    @Override
     public boolean isBusy(){
         return busy;
     }
@@ -79,7 +86,7 @@ public class ARD_BAD_VLT implements SomeDevice{
 
     @Override
     public long getMillisPrev() {
-        return 100L;
+        return millisPrev;
     }
 
     @Override
@@ -89,12 +96,12 @@ public class ARD_BAD_VLT implements SomeDevice{
 
     @Override
     public int getMillisReadLimit() {
-        return 350;
+        return 150;
     }
 
     @Override
     public int getMillisWriteLimit() {
-        return 350;
+        return 150;
     }
 
     @Override
@@ -105,7 +112,7 @@ public class ARD_BAD_VLT implements SomeDevice{
 
     @Override
     public void setLastAnswer(byte[] sb) {
-        //this.lastAnswer = sb;
+        lastAnswerBytes = sb;
     }
 
     @Override
@@ -118,133 +125,234 @@ public class ARD_BAD_VLT implements SomeDevice{
         this.emulatedAnswer = sb;
     }
 
+
     @Override
     public void setHasAnswer(boolean hasAnswer) {
         this.hasAnswer = hasAnswer;
     }
-    private CommandListClass commands = new CommandListClass();
+
+
+    public CommandListClass commands = new CommandListClass();
+
+    @Override
+    public CommandListClass getCommandListClass(){
+        return this.commands;
+    }
     public boolean enable() {
-
-        if(! comPort.isOpen()){
-            comPort.openPort();
-            comPort.flushDataListener();
-            comPort.removeDataListener();
-            comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 85, 95);
-            if(comPort.isOpen()){
-                log.info("Порт открыт, задержки выставлены");
-                return true;
-            }else {
-                throw new RuntimeException("Cant open COM-Port");
-            }
-
-        }else{
-            log.info("Порт был открыт ранее");
-            return true;
-        }
+        return true;
     }
 
+
+    public String getForSend(){
+        return cmdToSend;
+    }
+
+    public void setReceived(String answer){
+        lastAnswerBytes = answer.getBytes();
+        this.received = lastAnswerBytes.length;
+        //this.parseData();
+    }
 
     @Override
     public void parseData() {
-        //ToDo принять решение: оставлять или удалять этот класс. Переделывать много.
-        if(received > 0) {
+        //System.out.println("OWON_SPE3051 run parse");
+        //ToDo сделать в остальных
+        //lastAnswerBytes = MyUtilities.clearAsciiString(lastAnswerBytes);
+        if(lastAnswerBytes.length > 0) {
 
-            System.out.println("Received Str " + lastAnswer);
-            if(hasAnswer){
-                ARD_BAD_VLT.CommandList cmd = ARD_BAD_VLT.CommandList.getCommandByName(cmdToSend);
-                if (cmd != null) {
-                    Double [] answer = cmd.parseAnswer(lastAnswer.toString());
-                    if(answer.length > 0){
-                        answerValues = new AnswerValues(answer.length);
-                        for (int i = 0; i < answer.length; i++) {
-                            answerValues.addValue(answer[i], " unit");
-                            System.out.println(answerValues.getValues()[i]);
-                        }
+            lastAnswer.setLength(0);
+            if (commands.isKnownCommand(cmdToSend)) {
+                answerValues = commands.getCommand(cmdToSend).getResult(lastAnswerBytes);
+                hasAnswer = true;
+                if (answerValues != null){
+                    for (int i = 0; i < answerValues.getValues().length; i++) {
+                        lastAnswer.append(answerValues.getValues()[i]);
+                        lastAnswer.append(" ");
                     }
                 }
+                //System.out.println("OWON_SPE3051 done correct...[" + lastAnswer.toString() + "]...");
+            }else {
+                hasAnswer = true;
+                for (int i = 0; i < lastAnswerBytes.length; i++) {
+                    lastAnswer.append( (char) lastAnswerBytes[i]);
+                }
+                //System.out.println("OWON_SPE3051 Cant create answers obj");
             }
 
-        }
 
+        }else{
+            //System.out.println("OWON_SPE3051 empty received");
+        }
     }
+
+    @Override
+    public int getExpectedBytes(){
+        return commands.getExpectedBytes(cmdToSend);
+    }
+
     public String getAnswer(){
-        String forReturn = lastAnswer.toString();
-        lastAnswer = null;
-        hasAnswer = false;
-        return forReturn;
+        if(hasAnswer) {
+            hasAnswer = false;
+            return lastAnswer.toString();
+        }else {
+            return null;
+        }
     }
 
     public boolean hasAnswer(){
-        System.out.println("return flags" + hasAnswer);
+        //System.out.println("return flag " + hasAnswer);
         return hasAnswer;
     }
 
     public boolean hasValue(){
-        return false;
+        return hasValue;
     }
 
     public AnswerValues getValues(){
-        return null;
+        return answerValues;
     }
 
-    private enum CommandList{
 
-        SRAL("SRAL?", (response) -> {
-            // Ваш алгоритм проверки для SRAL?
-            Double [] anAr = new Double[0];
-            if(response.length() == 7 && response.contains("\n")){
-                try{
-                    Double answer = Double.parseDouble(response);
-                    anAr = new Double[1];
-                    anAr [0] = answer;
-                }catch (NumberFormatException e){
-                    anAr = new Double[0];
-                }
-                return anAr;
-            }
-            return anAr;
-        });
+    {
+        commands.addCommand(
+                new SingleCommand(
+                        "F", "F - запрос измеренного значения температуры и давления. ",
+                        (response) -> {
+                            answerValues = null;
+                            boolean messagIsValid = false;
+                            if( ! checkStructureForArduinoBadVLTanswer(response)){
+                                log.info("Не пройдена проверка по признакам длинны, первого символа, табуляций и последнего символа");
+                                StringBuilder sb = new StringBuilder();
+                                for (byte b : response) {
+                                    //sb.append((char) b);
+                                    sb.append("[");
+                                    sb.append(b);
+                                    sb.append("], ");
+                                }
+                                log.warn("Рассматривал массив длинною " + response.length + " " + sb.toString());
+                                return null;
+                            }else{
+                                messagIsValid = true;
+                            }
 
-        private final String name;
-        private final Function<String, Double[]> parseFunction;
-        private static final List<String> VALUES;
 
-        static {
-            VALUES = new ArrayList<>();
-            for (ARD_BAD_VLT.CommandList someEnum : ARD_BAD_VLT.CommandList.values()) {
-                VALUES.add(someEnum.name);
-            }
-        }
+                            double outputState = -1.0;
+                            StringBuilder sb = new StringBuilder();
+                            for (byte b : response) {
+                                sb.append((char) b);
+                            }
+                            sb.replace(0, 1, "");
+                            //log.info("F answer " + sb.toString());
+                            StringBuilder tmpSb = new StringBuilder();
+                            for (int i = 0; i < 5; i++) {
+                                if(sb.charAt(i) > 47 && sb.charAt(i) < 58) {
+                                    tmpSb.append(sb.charAt(i));
+                                }
+                            }
 
-        CommandList(String name, Function<String, Double[]> parseFunction) {
-            this.name = name;
-            this.parseFunction = parseFunction;
-        }
+                            boolean isOk = true;
+                            double termOne = 0;
+                            double pressOne = 0;
+                            double termTwo = 0;
+                            int serialNum = 0;
+                            if(tmpSb.length() == 5){
+                                //System.out.print("termOne " + tmpSb);
+                                //System.out.println(" is Correct");
+                                try {
+                                    termOne = Double.parseDouble(tmpSb.toString()) / 100;
+                                    isOk = true;
+                                }catch (NumberFormatException e){
+                                    log.warn("NumberFormatException" +  e.getMessage());
+                                    isOk = false;
+                                }
+                            }else {
+                                isOk = false;
+                            }
 
-        public String getValue() {
-            return name;
-        }
+                            if(isOk){
+                                tmpSb.setLength(0);
+                                for (int i = 6; i < 12; i++) {
+                                    if(sb.charAt(i) > 47 && sb.charAt(i) < 58) {
+                                        tmpSb.append(sb.charAt(i));
+                                    }
+                                }
+                            }
 
-        public static List<String> getValues() {
-            return Collections.unmodifiableList(VALUES);
-        }
+                            if(tmpSb.length() == 5){
+                                //System.out.print("pressOne " + tmpSb);
+                                //System.out.println(" is Correct");
+                                try {
+                                    pressOne = Double.parseDouble(tmpSb.toString()) / 10;
+                                    isOk = true;
+                                }catch (NumberFormatException e){
+                                    log.warn("NumberFormatException" +  e.getMessage());
+                                    isOk = false;
+                                }
+                            }else{
+                                //System.out.print("pressOne " + tmpSb);
+                                //System.out.println(" is wrong");
+                                isOk = false;
+                            }
 
-        public static String getLikeArray(int number) {
-            List<String> values = ARD_BAD_VLT.CommandList.getValues();
-            return values.get(number);
-        }
+                            if(isOk){
+                                tmpSb.setLength(0);
+                                for (int i = 12; i < 17; i++) {
+                                    if(sb.charAt(i) > 47 && sb.charAt(i) < 58) {
+                                        tmpSb.append(sb.charAt(i));
+                                    }
+                                }
+                            }
+                            if(tmpSb.length() == 5){
+                                try {
+                                    termTwo = Double.parseDouble(tmpSb.toString()) / 100;
+                                    isOk = true;
+                                }catch (NumberFormatException e){
+                                    log.warn("NumberFormatException" +  e.getMessage());
+                                    isOk = false;
+                                }
 
-        public Double[] parseAnswer(String response) {
-            return parseFunction.apply(response);
-        }
+                            }else{
 
-        public static ARD_BAD_VLT.CommandList getCommandByName(String name) {
-            for (ARD_BAD_VLT.CommandList command : ARD_BAD_VLT.CommandList.values()) {
-                if (command.name.equals(name)) {
-                    return command;
-                }
-            }
-            return null;
-        }
+                                isOk = false;
+                            }
+
+
+                            if(isOk){
+                                tmpSb.setLength(0);
+                                for (int i = 60; i < 67; i++) {
+                                    if(sb.charAt(i) > 47 && sb.charAt(i) < 58) {
+                                        tmpSb.append(sb.charAt(i));
+                                    }
+                                }
+                            }
+                            if(true){
+                                try {
+                                    serialNum = Integer.parseInt(tmpSb.toString());
+                                    isOk = true;
+                                }catch (NumberFormatException e){
+                                    log.warn("NumberFormatException" +  e.getMessage() + " " + tmpSb.toString());
+                                    isOk = false;
+                                }
+
+                            }else{
+
+                                isOk = false;
+                            }
+
+                            if(isOk) {
+                                answerValues = new AnswerValues(4);
+                                answerValues.addValue(termOne, "C");
+                                answerValues.addValue(pressOne, "mmRg");
+                                answerValues.addValue(termTwo, "C");
+                                answerValues.addValue(serialNum, "S.N.");
+                                return answerValues;
+                            }else{
+                                //System.out.println("Answer doesnt contain dot " + sb.toString());
+                            }
+                            return answerValues;
+                        }, 73)
+        );
     }
+
+
 }

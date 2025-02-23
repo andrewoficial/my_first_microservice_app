@@ -39,25 +39,58 @@ public class AnswerStorage {
     }
 
     public static void addAnswer(DeviceAnswer answer) {
-        if (answer == null || answer.getTabNumber() == null || answer.getTabNumber() < 0) {
-            log.info("Отклонено сохранение ответа [" + answer + "]");
+        // Блок базовых проверок
+        if (answer == null) {
+            log.error("Отклонено сохранение ответа [ объект ответа null ]");
             return;
         }
 
-        answersByTab.computeIfAbsent(answer.getTabNumber(), k -> new ConcurrentLinkedQueue<>())
-                .add(answer);
+        Integer clientId = answer.getClientId();
+        if (clientId == null) {
+            log.error("Отклонено сохранение ответа [ ClientId: null ]");
+            return;
+        }
+        if (clientId < 0) {
+            log.error("Отклонено сохранение ответа [ ClientId: "+clientId+" < 0 ]");
+            return;
+        }
 
-        log.debug("Новое значение ответа с идентификатором " + answer.getTabNumber());
-        // Удаляем старые ответы, если превышен лимит
-        if (answersByTab.get(answer.getTabNumber()).size() > MAX_ANSWERS_PER_TAB) {
-            answersByTab.get(answer.getTabNumber()).poll();
+        // Проверки временных меток
+        if (answer.getRequestSendTime() == null) {
+            log.error("Отклонено сохранение ответа ["+clientId+"] - не указано время отправки");
+            return;
+        }
+        if (answer.getAnswerReceivedTime() == null) {
+            log.error("Отклонено сохранение ответа ["+clientId+"] - не указано время получения");
+            return;
+        }
+        if (answer.getAnswerReceivedTime().isBefore(answer.getRequestSendTime())) {
+            log.error("Отклонено сохранение ответа ["+clientId+"] - ответ получен до отправки запроса ({} < {})");
+            return;
+        }
+
+        // Проверки строковых данных
+        if (answer.getAnswerReceivedString() == null || answer.getAnswerReceivedString().trim().isEmpty()) {
+            log.error("Отклонено сохранение ответа ["+clientId+"] - пустая строка ответа");
+            return;
+        }
+
+
+
+        // Все проверки пройдены
+        answersByTab.computeIfAbsent(clientId, k -> new ConcurrentLinkedQueue<>()).add(answer);
+        log.info("Ответ ["+clientId+"] успешно сохранен (всего: "+answersByTab.get(clientId).size()+")");
+
+        // Очистка старых записей
+        if (answersByTab.get(clientId).size() > MAX_ANSWERS_PER_TAB) {
+            DeviceAnswer removed = answersByTab.get(clientId).poll();
+            log.debug("Удален устаревший ответ ["+ clientId +"]: "+ removed.getRequestSendTime() );
         }
     }
-
-    public static TabAnswerPart getAnswersQueForTab(Integer lastPosition, Integer tabNumber, boolean showCommands) {
+    public static TabAnswerPart getAnswersQueForTab(Integer lastPosition, Integer clientId, boolean showCommands) {
         StringBuilder sb = new StringBuilder();
 
-        List<DeviceAnswer> tabAnswers = List.copyOf(answersByTab.getOrDefault(tabNumber, new ConcurrentLinkedQueue<>()));
+        List<DeviceAnswer> tabAnswers = List.copyOf(answersByTab.getOrDefault(clientId, new ConcurrentLinkedQueue<>()));
         int size = tabAnswers.size();
 
         if (lastPosition >= size) {

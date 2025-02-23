@@ -153,22 +153,7 @@ public class DEMO_PROTOCOL implements SomeDevice {
     private CommandListClass commands = new CommandListClass();
 
     public boolean enable() {
-        if(! comPort.isOpen()){
-            comPort.openPort();
-            comPort.flushDataListener();
-            comPort.removeDataListener();
-            comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 85, 95);
-            if(comPort.isOpen()){
-                log.info("Порт открыт, задержки выставлены");
-                return true;
-            }else {
-                throw new RuntimeException("Cant open COM-Port");
-            }
-
-        }else{
-            log.info("Порт был открыт ранее");
             return true;
-        }
     }
 
 

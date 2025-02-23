@@ -27,6 +27,13 @@ public class DVK_4RD  implements SomeDevice  {
     private Integer TabForAnswer;
     private String devIdent = "DVK_4RD";
     private int expectedBytes = 0;
+    private CommandListClass commands = new CommandListClass();
+
+    @Override
+    public CommandListClass getCommandListClass() {
+        return this.commands;
+    }
+
 
     public DVK_4RD(SerialPort port){
         this.comPort = port;
@@ -142,33 +149,10 @@ public class DVK_4RD  implements SomeDevice  {
 
     }
 
-    private CommandListClass commands = new CommandListClass();
 
-    @Override
-    public CommandListClass getCommandListClass() {
-        return this.commands;
-    }
 
     public boolean enable() {
-
-        if(! comPort.isOpen()){
-            comPort.openPort();
-            comPort.flushDataListener();
-            comPort.removeDataListener();
-            comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 10, 5);
-            if(comPort.isOpen()){
-                log.info("Порт открыт, задержки выставлены");
-                return true;
-            }else {
-                throw new RuntimeException("Cant open COM-Port");
-            }
-
-        }else{
-            log.info("Порт был открыт ранее");
             return true;
-        }
-
-
     }
 
     @Override
@@ -176,11 +160,7 @@ public class DVK_4RD  implements SomeDevice  {
         //System.out.println("DVK_4RD run parse");
         if(lastAnswerBytes != null && lastAnswerBytes.length > 0) { //ToDo Распространить эту проверку
             lastAnswer.setLength(0);
-
-
-
             if (commands.isKnownCommand(cmdToSend)) {
-
                 answerValues = commands.getCommand(cmdToSend).getResult(lastAnswerBytes);
                 if(answerValues != null){
                     for (int i = 0; i < answerValues.getValues().length; i++) {

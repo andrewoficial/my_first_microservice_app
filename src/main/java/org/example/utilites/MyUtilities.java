@@ -179,6 +179,35 @@ public class MyUtilities {
         return true;
     }
 
+    public static boolean checkStructureForArduinoBadVLTanswer(byte[] responseArray) {
+        int limit = 72;
+        if (responseArray.length <= limit) {
+            System.out.println("Ошибка: Минимальная длина " + limit + " символов, получено: " + responseArray.length);
+            return false;
+        }
+
+        if (responseArray[0] != 14) {
+            System.out.println("Ошибка: Ожидаемый маркер (14) отсутствует в начале посылки.");
+            return false;
+        }
+
+        int[] tabIndices = {6, 12, 18, 24, 30};
+        for (int index : tabIndices) {
+            if (responseArray[index] != 9) {
+                System.out.println("Ошибка: Отсутствует ожидаемая табуляция (9) в позиции " + index);
+                return false;
+            }
+        }
+/*
+        if (responseArray[72] != 13) {
+            System.out.println("Ошибка: Отсутствует перенос строки (13) в позиции 72.");
+            return false;
+        }
+*/
+
+
+        return true;
+    }
     public static byte calculateCRCforF(byte[] responseArray) {
         byte crcVar = responseArray[1];
         if(responseArray.length < 70) return 0;
@@ -334,5 +363,18 @@ public class MyUtilities {
             }
         }
         return isOk;
+    }
+
+    public static String byteArrayToString(byte[] response) {
+        if (response == null) {
+            return null;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        for (byte b : response) {
+            sb.append((char) b);
+        }
+
+        return sb.toString();
     }
 }

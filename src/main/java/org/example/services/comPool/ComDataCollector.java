@@ -6,8 +6,9 @@ import com.fazecast.jSerialComm.SerialPortEvent;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.log4j.Logger;
+import org.example.gui.MainLeftPanelStateCollection;
 import org.example.services.AnswerStorage;
-import org.example.services.comPort.ComPort;
+import org.example.services.comPort.*;
 import org.example.services.DeviceAnswer;
 import org.example.services.loggers.DeviceLogger;
 import org.example.services.loggers.PoolLogger;
@@ -16,12 +17,10 @@ import org.example.device.*;
 import org.example.utilites.properties.MyProperties;
 
 import java.io.ByteArrayOutputStream;
-import java.io.UnsupportedEncodingException;
-import java.nio.charset.StandardCharsets;
+import java.net.ConnectException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -50,13 +49,14 @@ public class ComDataCollector implements Runnable{
 
     private volatile boolean responseRequested = false;
     private volatile long requestTimestamp = 0;
-    private final long RESPONSE_TIMEOUT_MS = 5000;  // Таймаут ожидания ответа
-    private volatile String lastCommand = "";
+    private final long RESPONSE_TIMEOUT_MS = 3000;  // Таймаут ожидания ответа
+    private MainLeftPanelStateCollection collection;
+    private int clientId;
 
-    public ComDataCollector(ProtocolsList protocol, String prefix, String command, SerialPort comPort, int poolDelay,boolean needLog,Integer tabNumber,AnyPoolService parentService) {
+    public ComDataCollector(MainLeftPanelStateCollection state, ProtocolsList protocol, String prefix, String command, SerialPort comPort, int poolDelay, boolean needLog, Integer clientId, AnyPoolService parentService) throws ConnectException {
         super();
         this.parentService = parentService;
-        if(protocol == null || command == null || prefix == null || comPort == null || tabNumber  == null){
+        if(protocol == null || command == null || prefix == null || comPort == null || clientId  == null || state == null){
             log.error("Один из параметров конструктора передан как null");
             return;
         }
@@ -71,10 +71,18 @@ public class ComDataCollector implements Runnable{
         }
 
         this.comPort = comPort;
-        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, device.getMillisReadLimit(), device.getMillisWriteLimit());
-        comPort.openPort();
+        this.clientId = clientId;
+        log.warn("getBaudRateValue " + state.getBaudRateValue(clientId) + "getDataBitsValue " +  state.getDataBitsValue(clientId)+ "getStopBitsValue " + state.getStopBitsValue(clientId)+ "getParityBitsValue " + state.getParityBitsValue(clientId));
+        comPort.setComPortParameters(state.getBaudRateValue(clientId), state.getDataBitsValue(clientId), state.getStopBitsValue(clientId), state.getParityBitsValue(clientId));
+        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 600, 600);
+        comPort.openPort(device.getMillisReadLimit());
+        if ( ! comPort.isOpen()) {
+            throw new ConnectException("Порт: " + comPort.getSystemPortName() + ". Код ошибки: " + comPort.getLastErrorCode() + ". Системное положение порта:" + comPort.getPortLocation() + ". VendorID:" + comPort.getVendorID());
+        }
+        this.clientId = clientId;
+        this.collection = state;
         this.poolDelay = poolDelay;
-        clientsMap.put(tabNumber, new ClientData(tabNumber, needLog, true, "", "", null));
+        clientsMap.put(clientId, new ClientData(clientId, needLog, true, "", "", null));
 
         serialPortDataListener = new SerialPortDataListener() {
             @Override
@@ -113,7 +121,8 @@ public class ComDataCollector implements Runnable{
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         byte[] chunk = new byte[1024];
         long delay = device == null ? 150L : device.getMillisReadLimit();
-        int sizeLimit = device == null ? 150 : device.getExpectedBytes();
+        //int sizeLimit = device == null ? 150 : device.getExpectedBytes();
+        int sizeLimit = 200;
         try {
             while (comPort.bytesAvailable() > 0) {
                 int bytesRead = comPort.readBytes(chunk, Math.min(chunk.length, comPort.bytesAvailable()));
@@ -123,19 +132,18 @@ public class ComDataCollector implements Runnable{
                 }
                 sleepSafely(delay);
             }
-            String receivedData = buffer.toString("UTF-8"); // Учитывайте кодировку устройства
+            //String receivedData = buffer.toString("UTF-8"); // Учитывайте кодировку устройства
+            String receivedData = buffer.toString(); // Учитывайте кодировку устройства
             if (responseRequested && (System.currentTimeMillis() - requestTimestamp) < RESPONSE_TIMEOUT_MS) {
-                log.info("Получен и обработан ожидаемый ответ");
-                saveReceivedByEvent(receivedData, currentClientId, true, lastCommand);
+                log.info("Получен ожидаемый ответ");
+                saveReceivedByEvent(receivedData, currentClientId, true);
                 responseRequested = false;
                 log.info("Завершена обработка ожидаемых данных (ответа)");
             } else {
                 log.info("Получены неожиданные данные: " + receivedData);
-                saveReceivedByEvent(receivedData, currentClientId, false, null);
-                log.info("Завершена обработка неожиданных данных");
+                saveReceivedByEvent(receivedData, currentClientId, false);
+                log.info("Завершена обработка неожиданных данных. responseRequested " + responseRequested + " requestTimestamp " + requestTimestamp);
             }
-        } catch (UnsupportedEncodingException exept) {
-            log.error("Ошибка чтения данных: " + exept.getMessage());
         }finally {
             comDataCollectorBusy.set(false);
             log.info(" Завершил получение данных");
@@ -185,7 +193,7 @@ public class ComDataCollector implements Runnable{
     }
 
     private void flopBusyFlag(){
-        if((System.currentTimeMillis() - requestTimestamp) < RESPONSE_TIMEOUT_MS){
+        if(((System.currentTimeMillis() - requestTimestamp) > RESPONSE_TIMEOUT_MS) || ((System.currentTimeMillis() - requestTimestamp) < 0)){
             responseRequested = false;
             comDataCollectorBusy.set(false);
         }
@@ -194,8 +202,10 @@ public class ComDataCollector implements Runnable{
         millisPrev = System.currentTimeMillis();
         for (ClientData client : clientsMap.values()) {
             if(client.needPool){
-                log.info("Во внутренней очереди устройств отправляю для устройства tabNumber " + client.tabNumber);
-                sendOnce(client.prefix, client.command, client.tabNumber, true);
+                log.info("Во внутренней очереди устройств отправляю для устройства clientId " + client.clientId + " командой " + client.command);
+
+                sendOnce(client.prefix, client.command, client.clientId, true);
+                comPort.addDataListener(serialPortDataListener);
             }
         }
     }
@@ -215,16 +225,16 @@ public class ComDataCollector implements Runnable{
             log.warn("Произошла ошибка при попытке сна" + e.getMessage());
         }
     }
-    public void sendOnce(String pref, String arg,int tabNumber, boolean internal) {
-        log.info(" Начал отправку " + Thread.currentThread().getName() + " для вкладки " + tabNumber);
+    public void sendOnce(String pref, String arg,int clientId, boolean internal) {
+        log.info(" Начал отправку " + Thread.currentThread().getName() + " для клиента " + clientId);
 
         if( ! internal){
-            if(! containTabDev(tabNumber)){
+            if(! containClientId(clientId)){
                 log.error(" Попытка отправки с внешнего вызова sendOnce для клиента, которого нет в потоке");
                 return;
             }
         }
-        currentDirection.set(tabNumber);
+        currentDirection.set(clientId);
         waitForComDataCollectorBusy(40);
 
         if (comDataCollectorBusy.get()) {
@@ -257,13 +267,13 @@ public class ComDataCollector implements Runnable{
         }
         responseRequested = true;
         requestTimestamp = System.currentTimeMillis();
-        String command = new StringBuilder(pref).append(arg).toString();
-        lastCommand = command;
-        device.sendData(lastCommand, device.getStrEndian(), comPort, true, 0, device);
-        log.info("Команда отправлена: " + pref + arg);
+
+        device.sendData(collection.getPrefix(clientId)+collection.getCommand(clientId), device.getStrEndian(), comPort, true, 0, device);
+        //device.setCmdToSend(collection.getPrefix(clientId)+collection.getCommand(clientId));
+        log.info("Команда отправлена: " + collection.getPrefix(clientId)+collection.getCommand(clientId));
     }
 
-    public void saveReceivedByEvent(String msg, int tabN, boolean responseRequested, String lastCommand) {
+    public void saveReceivedByEvent(String msg, int tabN, boolean responseRequested) {
         byte [] received = new byte[msg.length()];
         char [] receivedChar = msg.toCharArray();
         for (int i = 0; i < received.length; i++) {
@@ -274,7 +284,7 @@ public class ComDataCollector implements Runnable{
             return;
         }
         if(responseRequested) {
-            device.setCmdToSend(lastCommand);
+            device.setCmdToSend(collection.getCommand(clientId));
         }else{
             device.setCmdToSend(null);
         }
@@ -282,25 +292,25 @@ public class ComDataCollector implements Runnable{
         device.setLastAnswer(received);
         device.parseData();
 
-        int tabDirection = tabN;
+        int tabDirection = clientId;
         if(device.getTabForAnswer() != null) {
             tabDirection = device.getTabForAnswer();
         }
 
-        DeviceAnswer answer = new DeviceAnswer(LocalDateTime.now(),"",tabDirection);
+        DeviceAnswer answer = new DeviceAnswer(LocalDateTime.now(),collection.getCommand(clientId),tabDirection);
         answer.setDeviceType(device);
         answer.setAnswerReceivedTime(LocalDateTime.now());
         answer.setAnswerReceivedString(device.getAnswer());
         answer.setAnswerReceivedValues(device.getValues());
-        saveAndLogSome(answer, tabN);
+        saveAndLogSome(answer, tabDirection);
     }
 
-    public void setNeedPool (int tabNum, boolean needStatePool){
-        if(containTabDev(tabNum)) {
-            clientsMap.get(tabNum).needPool = needStatePool;
-            log.info("Значение флага пороса для клиента " + tabNum + " изменено на " + needStatePool);
+    public void setNeedPool (int clientId, boolean needStatePool){
+        if(containClientId(clientId)) {
+            clientsMap.get(clientId).needPool = needStatePool;
+            log.info("Значение флага пороса для клиента " + clientId + " изменено на " + needStatePool);
         }else{
-            log.warn("Значение флага пороса для клиента " + tabNum + " невозможно изменить клиента нет в этом потоке ");
+            log.warn("Значение флага пороса для клиента " + clientId + " невозможно изменить клиента нет в этом потоке ");
         }
     }
 
@@ -318,29 +328,31 @@ public class ComDataCollector implements Runnable{
     }
 
 
-    private void saveAndLogSome(DeviceAnswer answer, int tabNumber){
+    private void saveAndLogSome(DeviceAnswer answer, int clientId){
         if(answer == null){
             log.warn("Попытка сохранить null ответ");
             return;
         }
 
-        if(answer.getTabNumber() < 0){
+        if(answer.getClientId() < 0){
             log.warn("Попытка сохранить ответ с отрицательным номером вкладки");
             return;
         }
+
         AnswerStorage.addAnswer(answer);//Answer Storage
         PoolLogger.writeLine(answer); //Sum log
+
         DeviceLogger deviceLogger;
-        if(clientsMap.get(tabNumber).needLog) {
-            deviceLogger = clientsMap.get(tabNumber).logger;
+        if(clientsMap.get(clientId).needLog) {
+            deviceLogger = clientsMap.get(clientId).logger;
             if(deviceLogger == null){
                 log.info("Логгер не был инициализирован ранее");
-                clientsMap.get(tabNumber).logger = new DeviceLogger(clientsMap.get(tabNumber).tabNumber);
-                deviceLogger = clientsMap.get(tabNumber).logger;
+                clientsMap.get(clientId).logger = new DeviceLogger(clientsMap.get(clientId).clientId);
+                deviceLogger = clientsMap.get(clientId).logger;
             }
             assert myProperties != null;
             if(myProperties.getNeedSyncSavingAnswer()){
-                parentService.getAnswerSaverLogger().doLog(answer, tabNumber, PoolLogger.getInstance(), deviceLogger);
+                parentService.getAnswerSaverLogger().doLog(answer, clientId, PoolLogger.getInstance(), deviceLogger);
             }else{
                 if(deviceLogger != null){
                     deviceLogger.writeLine(answer);
@@ -353,7 +365,7 @@ public class ComDataCollector implements Runnable{
         this.poolDelay = poolDelay;
         log.info("Новое значение задержки опроса " + poolDelay);
     }
-    public void setTextToSendString(String prf, String cmd, int tabNumber){
+    public void setTextToSendString(String prf, String cmd, int clientId){
         if(cmd == null || cmd.isEmpty()){
             log.warn("Пустая команда");
             return;
@@ -363,79 +375,130 @@ public class ComDataCollector implements Runnable{
             prf = "";
         }
 
-        if(containTabDev(tabNumber)){
-            clientsMap.get(tabNumber).prefix = prf;
-            clientsMap.get(tabNumber).command = cmd;
-            log.info("Значения команды и префикса обновлены в потоке опроса для вкладки устройства " + tabNumber);
+        if(containClientId(clientId)){
+            clientsMap.get(clientId).prefix = prf;
+            clientsMap.get(clientId).command = cmd;
+            log.info("Значения команды и префикса обновлены в потоке опроса для вкладки устройства " + clientId);
         }else{
-            log.info("Клиент с вкладкой " + tabNumber + " не найден");
+            log.info("Клиент с вкладкой " + clientId + " не найден");
         }
     }
-    public String getTextToSensByTab(int tabNum){
-        if(containTabDev(tabNum)){
-            return clientsMap.get(tabNum).prefix + clientsMap.get(tabNum).command;
+    public String getTextToSensByTab(int clientId){
+        if(containClientId(clientId)){
+            return clientsMap.get(clientId).prefix + clientsMap.get(clientId).command;
         }
         return  null;
     }
-    public void setNeedLog(boolean bool, int tabNum){
-        if(containTabDev(tabNum)){
-            clientsMap.get(tabNum).needLog = bool;
+    public void setNeedLog(boolean bool, int clientId){
+        if(containClientId(clientId)){
+            clientsMap.get(clientId).needLog = bool;
         }
-        System.out.println("Значение записи в файл изменено на: " + bool + " для подустройства на вкладке " + tabNum);
+        System.out.println("Значение записи в файл изменено на: " + bool + " для клиента " + clientId);
     }
-    public boolean isNeedLog(int tabNum){
-        if(containTabDev(tabNum)){
-            return clientsMap.get(tabNum).needLog;
+    public boolean isNeedLog(int clientId){
+        if(containClientId(clientId)){
+            return clientsMap.get(clientId).needLog;
         }else{
-            log.warn("Подустройство не найдено для вкладки номер при поиске флоага логирования " + tabNum);
+            log.warn("Ошибка в поиске флага логирования для клиента " + clientId);
         }
         return false;
     }
-    public boolean isNeedPool(int tabNum){
-        if(containTabDev(tabNum)){
-            return clientsMap.get(tabNum).needPool;
+    public boolean isNeedPool(int clientId){
+        if(containClientId(clientId)){
+            return clientsMap.get(clientId).needPool;
         }else{
-            log.warn("Подустройство не найдено для вкладки номер при поиске флага опроса " + tabNum);
+            log.warn("Ошибка в поиске флага опроса для клиента " + clientId);
         }
         return false;
     }
-    public boolean containTabDev(int tabNumber){
-        return clientsMap.containsKey(tabNumber);
+    public boolean containClientId(int clientId){
+        return clientsMap.containsKey(clientId);
     }
-    public void addDeviceToService(int tabNumber, String prf, String cmd, boolean needLog, boolean needPoolFlag) {
+    public void addDeviceToService(int clientId, String prf, String cmd, boolean needLog, boolean needPoolFlag) {
         DeviceLogger deviceLogger = null;
         if(needLog){
-            deviceLogger = new DeviceLogger(tabNumber);
+            deviceLogger = new DeviceLogger(clientId);
         }
-        clientsMap.put(tabNumber, new ClientData(tabNumber, needLog, needPoolFlag, prf, cmd, deviceLogger));
+        clientsMap.put(clientId, new ClientData(clientId, needLog, needPoolFlag, prf, cmd, deviceLogger));
     }
-    public void removeDeviceFromComDataCollector(int tabNumber){ //Когда вкладка закрывается
-        log.info("Удаление вкладки из потока " + tabNumber  + Thread.currentThread().getName());
-        if(containTabDev(tabNumber))
-            clientsMap.remove(tabNumber);
+    public void removeDeviceFromComDataCollector(int clientId){ //Когда вкладка закрывается
+        log.info("Удаление вкладки из потока " + clientId  + Thread.currentThread().getName());
+        if(containClientId(clientId))
+            clientsMap.remove(clientId);
     }
     public boolean isEmpty(){
         return clientsMap.isEmpty();
     }
-    public boolean isRootTab(Integer tabNum) {
+
+    public String closePort(int clientId) throws ConnectException {
+        if(this.comPort == null){
+            throw new ConnectException("Нет объекта порта в потоке опроса");
+        }
+        String forReturn = "";
+        if(isRootThread(clientId)){
+            if (this.comPort.isOpen()) {
+                comPort.flushDataListener();
+                comPort.removeDataListener();
+                comPort.flushIOBuffers();
+                comPort.closePort();
+                forReturn = "Порт " + comPort.getSystemPortName() + " закрыт ";
+            }else{
+                forReturn = "Порт " + comPort.getSystemPortName() + " уже был закрыт ранее ";
+            }
+        }else{
+            throw new ConnectException("Порт " + comPort.getSystemPortName() + " занят другими вкладками. В управленеии отказано");
+        }
+        return forReturn;
+    }
+    public String reopenPort(int clientId, int newBaudRate, int newDataBits, int newStopBits, int newParity, boolean useRS485Mode){
+        if(this.comPort == null){
+            return "Нет объекта порта в потоке опроса";
+        }
+        String forReturn = "";
+        if(isRootThread(clientId)){
+            if (this.comPort.isOpen()) {
+                comPort.flushDataListener();
+                comPort.removeDataListener();
+                comPort.flushIOBuffers();
+                this.comPort.closePort();
+                comPort.setComPortParameters(newBaudRate, newDataBits, newStopBits, newParity, useRS485Mode);
+                comPort.openPort();
+                forReturn = "Порт " + comPort.getSystemPortName() + " переоткрыт ";
+            } else {
+                comPort.setComPortParameters(newBaudRate, newDataBits, newStopBits, newParity, useRS485Mode);
+                comPort.openPort();
+                forReturn = "Порт " + comPort.getSystemPortName() + " открыт ";
+            }
+            if (comPort.isOpen()) {
+                forReturn += "успешно";
+            } else {
+                forReturn += "с ошибкой " + comPort.getSystemPortName() + "! Код ошибки: " + comPort.getLastErrorCode();
+            }
+            return forReturn;
+        }else{
+            return "Порт " + comPort.getSystemPortName() + " занят другими вкладками. В управленеии отказано";
+        }
+    }
+    public boolean isRootThread(Integer clientId) {
         for (ClientData client : clientsMap.values()) {
-            if (!Objects.equals(client.tabNumber, tabNum) && client.needPool) {
-                return true;
+            if (!Objects.equals(client.clientId, clientId) && client.needPool) {
+                log.warn("Найден " + client.clientId + " и " + clientId + " при этом у найденого " + client.needLog);
+                return false;
             }
         }
-        return false;
+        return true;
     }
 
     private static class ClientData {
-        int tabNumber;
+        int clientId;
         boolean needLog;
         boolean needPool;
         String prefix;
         String command;
         DeviceLogger logger;
 
-        public ClientData(int tabNumber, boolean needLog, boolean needPool, String prefix, String command, DeviceLogger logger) {
-            this.tabNumber = tabNumber;
+        public ClientData(int clientId, boolean needLog, boolean needPool, String prefix, String command, DeviceLogger logger) {
+            this.clientId = clientId;
             this.needLog = needLog;
             this.needPool = needPool;
             this.prefix = prefix;

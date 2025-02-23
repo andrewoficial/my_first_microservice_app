@@ -28,68 +28,53 @@ import javax.swing.event.DocumentListener;
 import javax.swing.text.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.lang.management.ManagementFactory;
+import java.net.ConnectException;
 import java.net.URL;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class MainWindow extends JFrame implements Rendeble {
-    private AnyPoolService anyPoolService;
+    private final static Logger log = Logger.getLogger(MainWindow.class);//Внешний логгер
 
-    public static MainWindow mainWindow = null;
+    private final ExecutorService uiThPool = Executors.newCachedThreadPool(); //Поток GUI
+    private MainLeftPanelStateCollection leftPanState; // Класс, хранящий состояние клиентов (настройки в памяти)
+    private MyProperties prop; //Файл настроек
+    private AnyPoolService anyPoolService; //Сервис опросов (разных протоколов)
+    private ComPort comPorts; //ToDo убрать работу с портом напрямую из GUI
+
+    private final ConcurrentHashMap<Integer, Integer> lastReceivedPositionFromStorageMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Integer, JTextPane> logDataTransferJtextPanelsMap = new ConcurrentHashMap<>();
+
     private static int currTabCount = 0;
-    private final static Logger log = Logger.getLogger(MainWindow.class);
-
-
+    private int tab = 0; //Текущая активная (выбранная) вкладка
     @Getter
-    private static final ArrayList<ComDataCollector> poolServices1 = new ArrayList<>();
+    private final AtomicInteger currentClientId = new AtomicInteger();
 
     private JPanel contentPane;
-
-
-    private final ExecutorService uiThPool = Executors.newCachedThreadPool();
-
-    //MyProperties prop = Main.prop;
-
-    private MyProperties prop;
-    private ComPort comPorts;
-
-
-    private final ArrayList<String> textToSendValue = new ArrayList<>();
-    private final ArrayList<String> prefToSendValue = new ArrayList<>();
-    private final ArrayList<JTextPane> logDataTransferJtextPanel = new ArrayList<>();
-
-
-    private MainLeftPanelStateCollection leftPanState = new MainLeftPanelStateCollection();
-
-
-    private final ArrayList<Integer> lastGotedValueFromStorage = new ArrayList<>();//Очередь кэша
-
-    private TabAnswerPart an = new TabAnswerPart(null, -1);
-
-    private JComboBox<String> CB_ComPorts = new JComboBox<>();
-    private JComboBox<String> CB_BaudRate = new JComboBox<>();
-    private JComboBox CB_DataBits = new JComboBox<>();
-    private JComboBox CB_Parity = new JComboBox<>();
-    private JComboBox CB_StopBit = new JComboBox<>();
-    private JButton BT_Open = new JButton();
-    private JButton BT_Close = new JButton();
-    private JCheckBox CB_Log = new JCheckBox();
+    private JComboBox<String> CB_ComPorts;
+    private JComboBox<String> CB_BaudRate;
+    private JComboBox<Integer> CB_DataBits;
+    private JComboBox<String> CB_Parity;
+    private JComboBox<Integer> CB_StopBit;
+    private JButton BT_Open;
+    private JButton BT_Close;
+    private JCheckBox CB_Log;
     private JCheckBox CB_Autoconnect;
-    private JButton BT_Update = new JButton();
-    private JTextField textToSend = new JTextField();
-    private JButton BT_Send = new JButton();
-    private JComboBox CB_Protocol = new JComboBox<>();
-    private JCheckBox CB_Pool = new JCheckBox();
-    private JTabbedPane tabbedPane1 = new JTabbedPane();
-    private JButton BT_AddDev = new JButton();
-    private JButton BT_RemoveDev = new JButton();
-    private JTextField IN_PoolDelay = new JTextField();
-    private JButton BT_Search = new JButton();
+    private JButton BT_Update;
+    private JTextField textToSend;
+    private JButton BT_Send;
+    private JComboBox<String> CB_Protocol;
+    private JCheckBox CB_Pool;
+    private JTabbedPane tabbedPane1;
+    private JButton BT_AddDev;
+    private JButton BT_RemoveDev;
+    private JTextField IN_PoolDelay;
+    private JButton BT_Search;
     private JPanel addRemove;
     private JPanel portSetup;
     private JPanel Terminal;
@@ -97,11 +82,6 @@ public class MainWindow extends JFrame implements Rendeble {
     private JPanel spacer_middle;
     private JPanel right_spacer;
     private JPanel left_spacer;
-
-    /**
-     * Current tab
-     **/
-    private int tab = 0; //Текущая вкладка
 
 
     private void initUI() {
@@ -113,69 +93,57 @@ public class MainWindow extends JFrame implements Rendeble {
             this.setIconImage(pic.getImage());
             log.debug("Установка картинки");
         }
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         super.setVisible(true);
         super.pack();
     }
 
+    private void createMenu() {
+        JMenuBar menuBar = new JMenuBar();
+        JmenuFile menu = new JmenuFile(prop, anyPoolService);
+        menuBar.add(menu.createFileMenu());
+        menuBar.add(menu.createSettingsMenu());
+        menuBar.add(menu.createViewMenu(uiThPool));
+        menuBar.add(menu.createUtilitiesMenu(uiThPool));
+        menuBar.add(menu.createSystemParametrs(uiThPool));
+        menuBar.add(menu.createInfo(uiThPool));
+        setJMenuBar(menuBar);
+        setContentPane(contentPane);
+        log.debug("Инициализация панели и меню завершена");
+    }
+
+    private int restoreParameters() {
+        log.info("Восстанвливаю параметры");
+        MainLeftPanelStateCollection restoredFromFile = prop.getLeftPanelStateCollection();
+        if (restoredFromFile == null) {//Если в настройках ничего нет
+            log.warn(" В настрйоках нету состояний. Создаю с нуля");
+            this.prop = MyProperties.getInstance();
+            checkAndCreateGuiStateClass();
+            restoredFromFile = leftPanState;
+        }
+        leftPanState = restoredFromFile;
+        return leftPanState.getClientIdByTabNumber(0);
+    }
+
 
     public MainWindow(MyProperties myProperties, ComPort comPorts, AnyPoolService anyPoolService) {
-        logStartupInfo();
-        if (anyPoolService == null) {
-            log.warn("В конструктор MainWindow передан null anyPoolService");
+        log.debug("Подготовка к рендеру окна....");
+        if (anyPoolService == null || comPorts == null || myProperties == null) {
+            log.warn("В конструктор MainWindow передан null anyPoolService/comPorts/myProperties");
         }
 
-        if (comPorts == null) {
-            log.warn("В конструктор MainWindow передан null comPorts");
-        }
-
-        if (comPorts == null) {
-            log.warn("В конструктор MainWindow передан null myProperties");
-        }
         this.anyPoolService = anyPoolService;
         this.prop = myProperties;
         this.comPorts = comPorts;
 
+        createMenu();
+        int clientId = restoreParameters();
 
-        MainWindow.mainWindow = this;
-
-        log.debug("Подготовка к рендеру окна....");
-        log.debug(Thread.currentThread().getName());
-        log.debug("Получено имя окна " + contentPane.getName());
-
-        JmenuFile jmenu = new JmenuFile(prop, anyPoolService);
-        log.info("В меню программы переданы восстановленные параметры");
-        // Создание строки главного меню
-        JMenuBar menuBar = new JMenuBar();
-
-        // Добавление в главное меню выпадающих пунктов меню
-        menuBar.add(jmenu.createFileMenu());
-        menuBar.add(jmenu.createSettingsMenu());
-        menuBar.add(jmenu.createViewMenu(uiThPool));
-        menuBar.add(jmenu.createUtilitiesMenu(uiThPool));
-        menuBar.add(jmenu.createSystemParametrs(uiThPool));
-        menuBar.add(jmenu.createInfo(uiThPool));
-        log.debug("Завершено создание элементов меню");
-        setJMenuBar(menuBar);
-        setContentPane(contentPane);
-        log.debug("Инициализация панели и меню завершена");
-        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        MainLeftPanelStateCollection restoredFromFile = prop.getLeftPanelStateCollection();
-        if (prop.getLeftPanelStateCollection() == null) {//Пришлось добавить костыль
-            try {
-
-                log.info("Строки найдены" + this.prop.getCommands().length);
-            } catch (RuntimeException e) {
-                //
-            }
-            this.prop = MyProperties.getInstance();
-            restoredFromFile = prop.getLeftPanelStateCollection();
-        }
-
-        log.warn(" Размер restoredFromFile" + restoredFromFile.getAllAsList().size());
         BaudRatesList[] baudRate = BaudRatesList.values();
+        currentClientId.set(clientId);
         for (int i = 0; i < baudRate.length; i++) {
             CB_BaudRate.addItem(baudRate[i].getValue() + "");
-            if (restoredFromFile.getBaudRate(0) == baudRate[i].getValue()) {
+            if (leftPanState.getBaudRate(clientId) == baudRate[i].getValue()) {
                 CB_BaudRate.setSelectedIndex(i);
             }
         }
@@ -183,7 +151,7 @@ public class MainWindow extends JFrame implements Rendeble {
         DataBitsList[] dataBits = DataBitsList.values();
         for (int i = 0; i < dataBits.length; i++) {
             CB_DataBits.addItem(dataBits[i].getValue());
-            if (restoredFromFile.getDataBits(0) == dataBits[i].getValue()) {
+            if (leftPanState.getDataBits(clientId) == i) {
                 CB_DataBits.setSelectedIndex(i);
             }
         }
@@ -191,7 +159,7 @@ public class MainWindow extends JFrame implements Rendeble {
         ParityList[] parityLists = ParityList.values();
         for (int i = 0; i < parityLists.length; i++) {
             CB_Parity.addItem(parityLists[i].getName());
-            if (restoredFromFile.getParityBits(0) == i) {
+            if (leftPanState.getParityBits(clientId) == i) {
                 CB_Parity.setSelectedIndex(i);
             }
         }
@@ -199,7 +167,7 @@ public class MainWindow extends JFrame implements Rendeble {
         StopBitsList[] stopBitsLists = StopBitsList.values();
         for (int i = 0; i < stopBitsLists.length; i++) {
             CB_StopBit.addItem(stopBitsLists[i].getValue());
-            if (restoredFromFile.getStopBits(0) == i) {
+            if (leftPanState.getStopBits(clientId) == i) {
                 CB_StopBit.setSelectedIndex(i);
             }
         }
@@ -213,23 +181,11 @@ public class MainWindow extends JFrame implements Rendeble {
             }
         }
 
-        //Восстановление выбранных ранее (до закрытия программы) портов
-        //poolComConnections.clear();
-        for (int i = 0; i < prop.getPorts().length; i++) { //Перебор по вкладкам из файла с настройками
-            for (SerialPort somePort : comPorts.getAllPorts()) { //Перебор по доступным портам
-                if (prop.getPorts()[i] != null)
-                    if (prop.getPorts()[i].equals(somePort.getSystemPortName())) {
-                        //что-то надо делать
-                    }
-                //poolComConnections.add(tmpComPorts);
-            }
-        }
-
 
         ProtocolsList[] protocolsLists = ProtocolsList.values();
         for (int i = 0; i < protocolsLists.length; i++) {
             CB_Protocol.addItem(protocolsLists[i].getValue());
-            if (restoredFromFile.getProtocol(0) == i) {
+            if (leftPanState.getProtocol(clientId) == i) {
                 CB_Protocol.setSelectedIndex(i);
             }
         }
@@ -238,7 +194,7 @@ public class MainWindow extends JFrame implements Rendeble {
         BT_Update.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                log.info("Нажата кнопка обновления списка ком-портов" + tab);
+                log.info("Нажата кнопка обновления списка ком-портов на вкладке" + tab + " с ИД клиента " + currentClientId.get());
                 comPorts.updatePorts();
                 CB_ComPorts.removeAllItems();
                 for (SerialPort serialPort : comPorts.getAllPorts()) {
@@ -251,8 +207,7 @@ public class MainWindow extends JFrame implements Rendeble {
             @Override
             public void windowClosed(WindowEvent windowEvent) {
                 saveParameters();
-                log.info("Выход из программы" + tab);
-
+                log.info("Выход из программы при активной вкладке:" + tab);
                 anyPoolService.shutDownComDataCollectorThreadPool();
                 uiThPool.shutdownNow();
                 System.exit(0);
@@ -263,55 +218,32 @@ public class MainWindow extends JFrame implements Rendeble {
             @Override
             public void actionPerformed(ActionEvent e) {
                 log.info("Нажата кнопка открытия ком-порта на вкладке " + tab);
-                SerialPort editedPort = null;
-                ComDataCollector ps = anyPoolService.findComDataCollectorByTabNumber(tab);
-
+                updateClassFromGui();
+                ComDataCollector ps = anyPoolService.findComDataCollectorByClientId(currentClientId.get());
                 if (ps == null) {
-                    log.info("Для вкладки " + tab + " не найден сервис опроса");
-                    anyPoolService.createOrUpdateComDataCollector(tab, getCurrComSelection(), CB_Protocol.getSelectedIndex(), false, false, 1200, prepareTextToSend(tab));
-                    ps = anyPoolService.findComDataCollectorByTabNumber(tab);
-                    if (ps == null) {
-                        log.warn("Для вкладки " + tab + " не найден сервис опроса даже после его создания");
-                    } else {
-                        editedPort = ps.getComPort();
+                    log.info("Для вкладки " + tab + " с ИД клиента " + currentClientId.get() + "не найден сервис опроса");
+                    try {
+
+                        addCustomMessage(anyPoolService.createOrUpdateComDataCollector(leftPanState, currentClientId.get(), getCurrComSelection(), CB_Protocol.getSelectedIndex(), false, false, 1200));
+                        ps = anyPoolService.findComDataCollectorByClientId(currentClientId.get());
+                    } catch (ConnectException exc) {
+                        log.error("Ошибка при открытии порта на вкладке " + tab + ". Поток не создан. Проброс сообщения: " + exc);
+                        addCustomMessage("Ошибка при открытии порта на вкладке " + tab + ". Поток не создан. Проброс сообщения: " + exc);
+                        return;
                     }
 
+                    addCustomMessage("Работа с портом " + ps.getComPort().getSystemPortName() + " завершена.");
                 } else {
-                    log.info("Для вкладки " + tab + " найден сервис опроса");
+                    String answer = ps.reopenPort(currentClientId.get(), BaudRatesList.getNameLikeArray(CB_BaudRate.getSelectedIndex()), DataBitsList.getNameLikeArray(CB_DataBits.getSelectedIndex()),
+                            StopBitsList.getNameLikeArray(CB_StopBit.getSelectedIndex()), ParityList.values()[CB_Parity.getSelectedIndex()].getValue(),
+                            false);
+                    addCustomMessage(answer);
                 }
-
-
-                if (editedPort == null && ps != null) {
-                    log.warn("Для вкладки " + tab + " найден сервис опроса, но в нём нет объекта ком-порта ");
-                    //ps.setupComConnection(selectedCom.activePort);
-                }
-
-
-                if (editedPort != null) {
-                    if (editedPort.isOpen()) {
-                        editedPort.closePort();
-                        configureComPort(editedPort);
-                        saveParameters();
-                        editedPort.openPort();
-                        addCustomMessage("Порт переоткрыт с новыми параметрами");
-                    } else {
-                        configureComPort(editedPort);
-                        saveParameters();
-                        editedPort.openPort();
-                        addCustomMessage("Порт сконфигурирован и открыт");
-                    }
-                    if (editedPort.isOpen()) {
-                        addCustomMessage("Порт " + editedPort.getSystemPortName() + " открыт успешно! ");
-                        prop.setPortForTab(editedPort.getSystemPortName(), tab);
-                    } else {
-                        addCustomMessage("Ошибка открытия порта " + editedPort.getSystemPortName() + "! Код ошибки: " + editedPort.getLastErrorCode());
-                    }
-
-                } else {
-                    log.info("Для вкладки " + tab + " найден сервис опроса даже после принудительного создания сервиса опроса");
-                }
+                configureComPort(null);
+                prop.setPortForTab(ps.getComPort().getSystemPortName(), tab);
 
                 checkIsUsedPort(); //Выставляет блокировки кнопки открыть/закрыть
+                saveParameters();
             }
         });
 
@@ -319,33 +251,20 @@ public class MainWindow extends JFrame implements Rendeble {
             @Override
             public void actionPerformed(ActionEvent e) {
                 log.info("Нажата кнопка закрытия ком-порта" + tab);
-                ComDataCollector ps = anyPoolService.findComDataCollectorByTabNumber(tab);
+                ComDataCollector ps = anyPoolService.findComDataCollectorByClientId(currentClientId.get());
                 if (ps != null) {
                     log.info("Для вкладки " + tab + " найден сервис опроса");
-                }
-
-
-                if (ps == null) {
-                    addCustomMessage("Попытка закрыть ком-порт у несуществующего потока опроса");
-                    return;
-                }
-                log.info("На вкладке " + tab + " попытка закрыть ком порт" + ps.getComPort().getSystemPortName());
-
-                ps.getComPort().flushDataListener();
-                ps.getComPort().removeDataListener();
-                ps.getComPort().flushIOBuffers();
-                ps.getComPort().closePort();
-
-                if (!ps.getComPort().isOpen()) {
-                    addCustomMessage("Порт " + ps.getComPort().getSystemPortName() + " закрыт.");
-                    BT_Close.setEnabled(false);
-                    BT_Open.setEnabled(true);
+                    try {
+                        addCustomMessage(ps.closePort(currentClientId.get()));
+                    } catch (ConnectException exception) {
+                        addCustomMessage(exception.getMessage());
+                        return;
+                    }
+                    anyPoolService.shutDownComDataCollectorsThreadByClientId(currentClientId.get());
                 } else {
-                    addCustomMessage("Ошибка обращения к порту");
-                    log.warn("Ошибка обращения к порту");
+                    addCustomMessage("Попытка закрыть ком-порт у несуществующего потока опроса");
                 }
-
-                anyPoolService.shutDownComDataCollectorsThreadByTab(tab);
+                checkIsUsedPort(); //Блокировка кнопок
             }
         });
 
@@ -367,10 +286,10 @@ public class MainWindow extends JFrame implements Rendeble {
         CB_Log.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                ComDataCollector ps = anyPoolService.findComDataCollectorByTabNumber(tab);
-                ;
+                ComDataCollector ps = anyPoolService.findComDataCollectorByClientId(currentClientId.get());
+
                 if (ps != null) {
-                    ps.setNeedLog(CB_Log.isSelected(), tab);
+                    ps.setNeedLog(CB_Log.isSelected(), currentClientId.get());
                 } else {
                     log.info("Для текущей влкадки потока опроса не существует");
                 }
@@ -381,106 +300,93 @@ public class MainWindow extends JFrame implements Rendeble {
         CB_BaudRate.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                leftPanState.setBaudRate(tab, CB_BaudRate.getSelectedIndex());
+                leftPanState.setBaudRate(currentClientId.get(), CB_BaudRate.getSelectedIndex());
+                leftPanState.setBaudRateValue(currentClientId.get(), BaudRatesList.getNameLikeArray(CB_BaudRate.getSelectedIndex()));
             }
         });
         CB_StopBit.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                leftPanState.setStopBits(tab, CB_StopBit.getSelectedIndex());
+                leftPanState.setStopBits(currentClientId.get(), CB_StopBit.getSelectedIndex());
+                leftPanState.setStopBitsValue(currentClientId.get(), StopBitsList.getNameLikeArray(CB_StopBit.getSelectedIndex()));
             }
         });
         CB_DataBits.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                leftPanState.setDataBits(tab, CB_DataBits.getSelectedIndex());
+                leftPanState.setDataBits(currentClientId.get(), CB_DataBits.getSelectedIndex());
+                leftPanState.setDataBitsValue(currentClientId.get(), DataBitsList.getNameLikeArray(CB_DataBits.getSelectedIndex()));
             }
         });
         CB_Parity.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                leftPanState.setParityBits(tab, CB_Parity.getSelectedIndex());
+                leftPanState.setParityBits(currentClientId.get(), CB_Parity.getSelectedIndex());
+                leftPanState.setParityBitsValue(currentClientId.get(), CB_Parity.getSelectedIndex());
             }
         });
         CB_Protocol.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                leftPanState.setProtocol(tab, CB_Protocol.getSelectedIndex());
+                leftPanState.setProtocol(currentClientId.get(), CB_Protocol.getSelectedIndex());
             }
         });
 
         BT_AddDev.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                //log.info("Нажата кнопка добавить устройство");
-
-                tab = tabbedPane1.getTabCount();
-                leftPanState.addEntry();
-                textToSendValue.add(textToSend.getText());
-                prefToSendValue.add(prefOneToSend.getText());
-                updateLeftPaneStateClassFromUI();
-
-                lastGotedValueFromStorage.add(tab, 0);//инициализация очереди
-
-                JTextPane logDataTransferJtextPanelForAdd = new JTextPane();
-                JScrollPane logDataTransferJscrollPanelForAdd = new JScrollPane();
-                JPanel panelForAdd = new JPanel();
-
-                logDataTransferJtextPanelForAdd.setName("Jtext dev" + tab);
-                logDataTransferJscrollPanelForAdd.setName("Jscroll dev" + tab);
-                panelForAdd.setName("JPanel dev" + tab);
-
-                panelForAdd.setLayout(new BorderLayout());
-
-                int numForAdd = logDataTransferJtextPanel.size();
-                logDataTransferJtextPanel.add(logDataTransferJtextPanelForAdd);
-                logDataTransferJtextPanelForAdd.setEditable(false);
-                logDataTransferJtextPanelForAdd.setDoubleBuffered(true);
-                logDataTransferJtextPanelForAdd.setText("dev " + (tabbedPane1.getTabCount() + 1) + "\n sample string \n");
-
-                logDataTransferJscrollPanelForAdd.setViewportView(logDataTransferJtextPanel.get(numForAdd));
-                logDataTransferJscrollPanelForAdd.setPreferredSize(new Dimension(400, 400));
-                logDataTransferJscrollPanelForAdd.setName("dev " + (tabbedPane1.getTabCount() + 1));
-
-                panelForAdd.add(logDataTransferJscrollPanelForAdd, BorderLayout.CENTER);
-
-                panelForAdd.setEnabled(false);
-
-
-                StringBuilder sb = new StringBuilder();
-                sb.append("dev");
-                sb.append((tabbedPane1.getTabCount() + 1));
-                boolean needRename = false;
-                for (int i = 0; i < currTabCount; i++) {
-                    if (tabbedPane1.getTabCount() > i) {
-                        if (tabbedPane1.getTitleAt(i).equalsIgnoreCase(sb.toString())) {
-                            needRename = true;
-                        }
-                    }
+                int newTabIndex = tabbedPane1.getTabCount();
+                int newClientId = leftPanState.getClientIdByTabNumber(newTabIndex);
+                if (newClientId == -1) {
+                    newClientId = leftPanState.getNewRandomId();
+                    leftPanState.addPairClientIdTabNumber(clientId, newTabIndex);
+                    MainLeftPanelState state = new MainLeftPanelState();
+                    state.setTabNumber(newTabIndex);
+                    state.setClientId(newClientId);
+                    leftPanState.addOrUpdateIdState(newClientId, state);
                 }
-                if (needRename) {
+                // Создание компонентов вкладки
+                JTextPane logPanel = createLogPanel(newClientId);
+                JPanel tabPanel = createTabPanel(logPanel);
 
-                    for (int i = 0; i < tabbedPane1.getTabCount(); i++) {
-                        tabbedPane1.setSelectedIndex(i);
-                        tab = i;
-                        try {
-                            Thread.sleep(200);
-                        } catch (InterruptedException ex) {
-                            //throw new RuntimeException(ex);
-                        }
-                        log.info("Изменена нумерация вкладки с " + tabbedPane1.getTitleAt(i) + " на dev" + (i + 1));
-                        addCustomMessage("Изменена нумерация вкладки с " + tabbedPane1.getTitleAt(i) + " на dev" + (i + 1));
-                        tabbedPane1.setTitleAt(i, "dev" + (i + 1));
-                    }
-                }
-                tabbedPane1.addTab(sb.toString(), panelForAdd);
 
-                //poolComConnections.add(new ComPort());
+                initializeMaps(newClientId, logPanel);
 
+                // Добавление вкладки
+                tabbedPane1.addTab("dev" + (newTabIndex + 1), tabPanel);
+                updateUIAfterAdd(newTabIndex);
+            }
+
+            private JTextPane createLogPanel(int clientId) {
+                JTextPane panel = new JTextPane();
+                panel.setText("Лог для клиента " + clientId);
+                return panel;
+            }
+
+            private JPanel createTabPanel(JTextPane logPanel) {
+                JScrollPane scrollPane = new JScrollPane(logPanel);
+                scrollPane.setPreferredSize(new Dimension(400, 400));
+
+                JPanel panel = new JPanel(new BorderLayout());
+                panel.add(scrollPane, BorderLayout.CENTER);
+                return panel;
+            }
+
+            private void initializeMaps(int clientId, JTextPane panel) {
+                lastReceivedPositionFromStorageMap.put(clientId, 0);
+                logDataTransferJtextPanelsMap.put(clientId, panel);
+            }
+
+            private void updateUIAfterAdd(int tabIndex) {
                 currTabCount = tabbedPane1.getTabCount();
-                checkIsUsedPort();
-                if (tabbedPane1.getTabCount() > 0) {
-                    BT_RemoveDev.setEnabled(true);
+                BT_RemoveDev.setEnabled(true);
+                tabbedPane1.setSelectedIndex(tabIndex);
+                updateTabTitles();
+            }
+
+            public void updateTabTitles() {
+                for (int i = 0; i < tabbedPane1.getTabCount(); i++) {
+                    tabbedPane1.setTitleAt(i, "dev" + (i + 1));
                 }
             }
 
@@ -489,51 +395,73 @@ public class MainWindow extends JFrame implements Rendeble {
         BT_RemoveDev.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                tab = tabbedPane1.getSelectedIndex();
-                log.info("Нажата кнопка удалить устройство на вкладке " + tab);
-                if (tab == 0 && currTabCount == 1) {
-                    addCustomMessage("Хотя бы одна вкладка должна быть открыта для работы приложения");
-                    return;
-                }
-                if (anyPoolService.getRootTabForComConnection(getCurrComSelection()) == tab) {
-                    addCustomMessage("Текущая вкладка является корневой. Необходимо закрыть все зависимые вкладки и закрыть ком-порт");
-                    BT_Close.setEnabled(true);
-                    return;
-                }
-                textToSendValue.remove(tab);
-                prefToSendValue.remove(tab);
-                lastGotedValueFromStorage.remove(tab);
-                logDataTransferJtextPanel.remove(tab);
-                leftPanState.removeEntry(tab);
+                int tabToRemove = tabbedPane1.getSelectedIndex();
+                if (tabToRemove < 0) return;
+
+                Integer clientId = leftPanState.getClientIdByTabNumber(tabToRemove);
+                if (clientId == null) return;
+
+                // Удаление данных
+                removeClientData(clientId);
+                tabbedPane1.removeTabAt(tabToRemove);
+
+                // Перестройка маппингов
+                rebuildMappings(tabToRemove);
+                updateUIAfterRemove();
+            }
+
+            private void removeClientData(int clientId) {
+                leftPanState.removeEntryByClientId(clientId);
+                lastReceivedPositionFromStorageMap.remove(clientId);
+                logDataTransferJtextPanelsMap.remove(clientId);
+                AnswerStorage.removeAnswersForTab(clientId);
+            }
 
 
-                ComDataCollector ps = anyPoolService.findComDataCollector(tab, getCurrComSelection());
-                if (ps != null) {
-                    if (ps.containTabDev(tab)) {
-                        ps.removeDeviceFromComDataCollector(tab);
-                        anyPoolService.shutdownEmptyComDataCollectorThreads();
-                        log.info("Задача была удалена");
-                    } else {
-                        log.info("Выбранная вкладка не найдена в потоке");
+                private void rebuildMappings(int removedTab) {
+                    Map<Integer, Integer> clientIdToOldTab = new LinkedHashMap<>();
+                    Map<Integer, JTextPane> updatedLogPanelsMap = new HashMap<>();
+
+                    for (int i = 0; i < tabbedPane1.getTabCount() + 1; i++) {
+                        Integer clientId = leftPanState.getClientIdByTabNumber(i);
+                        if (clientId != null && clientId != -1) {
+                            clientIdToOldTab.put(clientId, i);
+                        }
                     }
-                }
 
-                tabbedPane1.removeTabAt(tab);
-                AnswerStorage.removeAnswersForTab(tab);
+                    clientIdToOldTab.forEach((clientId, oldTab) -> {
+                        if (oldTab < removedTab) {
+                            leftPanState.addOrUpdateClientIdTabNumber(clientId, oldTab);
+                            updatedLogPanelsMap.put(clientId, logDataTransferJtextPanelsMap.get(clientId));
+                        } else if (oldTab > removedTab) {
+                            leftPanState.addOrUpdateClientIdTabNumber(clientId, oldTab - 1);
+                            updatedLogPanelsMap.put(clientId, logDataTransferJtextPanelsMap.get(clientId));
+                        }
+                    });
 
+                    logDataTransferJtextPanelsMap.clear();
+                    logDataTransferJtextPanelsMap.putAll(updatedLogPanelsMap);
 
+            }
+
+            private void updateUIAfterRemove() {
                 currTabCount = tabbedPane1.getTabCount();
+                BT_RemoveDev.setEnabled(currTabCount > 0);
+                updateTabTitles();
+            }
 
-                if (currTabCount == 0) {
-                    BT_RemoveDev.setEnabled(false);
+            public void updateTabTitles() {
+                for (int i = 0; i < tabbedPane1.getTabCount(); i++) {
+                    tabbedPane1.setTitleAt(i, "dev" + (i + 1));
                 }
-                anyPoolService.closeUnusedComConnection(currTabCount);
-                saveParameters();
             }
         });
+
+
         textToSend.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                updateClassFromGui();
                 readAndUpdateInputPrefAndCommandValues();
             }
         });
@@ -548,6 +476,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 // Проверяем, была ли нажата клавиша Enter
                 if (e.getKeyCode() == KeyEvent.VK_ENTER) {
                     // Вызываем нужный метод
+                    updateClassFromGui();
                     readAndUpdateInputPrefAndCommandValues();
                     startSend(true);
                     renderData();
@@ -564,6 +493,7 @@ public class MainWindow extends JFrame implements Rendeble {
         prefOneToSend.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                updateClassFromGui();
                 readAndUpdateInputPrefAndCommandValues();
             }
 
@@ -580,6 +510,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 // Проверяем, была ли нажата клавиша Enter
                 if (e.getKeyCode() == KeyEvent.VK_ENTER) {
                     // Вызываем нужный метод
+                    updateClassFromGui();
                     readAndUpdateInputPrefAndCommandValues();
                     startSend(true);
                     renderData();
@@ -615,14 +546,16 @@ public class MainWindow extends JFrame implements Rendeble {
             public void stateChanged(ChangeEvent e) {
                 tab = tabbedPane1.getSelectedIndex();
                 log.info("Фокус установлен на вкладку " + tab); //активна вкладка, выбрана вкладка
+                currentClientId.set(leftPanState.getClientIdByTabNumber(tab));
+                if (currentClientId.get() == -1) {
+                    currentClientId.set(checkAndCreateGuiStateClass());
+                }
                 //textToSend.setText(textToSendValue.get(tab));
-                CB_Pool.setSelected(anyPoolService.isComDataCollectorByTabNumberActiveDataSurvey(tab));
-                CB_Log.setSelected(anyPoolService.isComDataCollectorByTabNumberLogged(tab));
-                textToSend.setText(textToSendValue.get(tab));
-                prefOneToSend.setText(prefToSendValue.get(tab));
-                updateLeftPaneFromClass();
+                CB_Pool.setSelected(anyPoolService.isComDataCollectorByClientIdActiveDataSurvey(tab));
+                CB_Log.setSelected(anyPoolService.isComDataCollectorByClientIdLogged(tab));
+                updateGuiFromClass();
 
-                ComDataCollector ps = anyPoolService.findComDataCollectorByTabNumber(tab);
+                ComDataCollector ps = anyPoolService.findComDataCollectorByClientId(tab);
 
                 if (ps == null) {
                     //log.info("Для выбранной вкладки нет сервиса опроса");
@@ -636,11 +569,12 @@ public class MainWindow extends JFrame implements Rendeble {
                 checkIsUsedPort();
             }
         });
-
-        prefToSendValue.add(prefOneToSend.getText());
-        textToSendValue.add(textToSend.getText());
-        lastGotedValueFromStorage.add(tab, 0);
-
+        tab = 0;
+        currentClientId.set(leftPanState.getClientIdByTabNumber(tab));
+        if (currentClientId.get() == -1) {
+            currentClientId.set(checkAndCreateGuiStateClass());
+        }
+        lastReceivedPositionFromStorageMap.put(currentClientId.get(), 0);
 
         int tabCount = Math.max(0, prop.getTabCounter());
         for (int i = 0; i < tabCount; i++) {
@@ -648,32 +582,7 @@ public class MainWindow extends JFrame implements Rendeble {
         }
 
 
-        if (prop.getCommands() != null && prop.getCommands().length > 0) {
-            textToSendValue.clear();
-            for (int i = 0; i < prop.getCommands().length; i++) {
-                textToSendValue.add(prop.getCommands()[i]);
-                if (tab == i) {
-                    textToSend.setText(prop.getCommands()[i]);
-                }
-            }
-        }
-        if (prop.getPrefixes() != null && prop.getPrefixes().length > 0) {
-            prefToSendValue.clear();
-            for (int i = 0; i < prop.getPrefixes().length; i++) {
-                prefToSendValue.add(prop.getPrefixes()[i]);
-                if (tab == i) {
-                    prefOneToSend.setText(prop.getPrefixes()[i]);
-                }
-            }
-        }
-
-
-        leftPanState = prop.getLeftPanelStateCollection();
-
-        tab = 0;
-        textToSend.setText(textToSendValue.get(tab));
-        prefOneToSend.setText(prefToSendValue.get(tab));
-        updateLeftPaneFromClass();
+        updateGuiFromClass();
         this.renderData();
 
         uiThPool.submit(new RenderThread(this));
@@ -692,8 +601,8 @@ public class MainWindow extends JFrame implements Rendeble {
             }
 
             public void update() {
-                if (tab < prefToSendValue.size()) {
-                    ComDataCollector ps = anyPoolService.findComDataCollectorByTabNumber(tab);
+                if (tab < leftPanState.getSize()) {
+                    ComDataCollector ps = anyPoolService.findComDataCollectorByClientId(tab);
                     if (ps != null)
                         ps.setTextToSendString(prefOneToSend.getText(), textToSend.getText(), tab);
                 }
@@ -713,9 +622,10 @@ public class MainWindow extends JFrame implements Rendeble {
                 update();
             }
 
+            //ToDo убрать повтор, это убого
             public void update() {
-                if (tab < textToSendValue.size()) { //ToDo убрать повтор, это убого
-                    ComDataCollector ps = anyPoolService.findComDataCollectorByTabNumber(tab);
+                if (tab < leftPanState.getSize()) {
+                    ComDataCollector ps = anyPoolService.findComDataCollectorByClientId(tab);
                     if (ps != null)
                         ps.setTextToSendString(prefOneToSend.getText(), textToSend.getText(), tab);
                 }
@@ -755,6 +665,7 @@ public class MainWindow extends JFrame implements Rendeble {
         });
 
         initUI();
+        tabbedPane1.setSelectedIndex(0);
     }
 
     private int getPoolDelayFromGui() {
@@ -773,132 +684,39 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
     private void configureComPort(SerialPort serialPort) {
-        if (serialPort == null) {
-            log.warn("Для настройки с параметрами из GUI передан null");
-            return;
-        }
-        serialPort.setComPortParameters(BaudRatesList.getNameLikeArray(CB_BaudRate.getSelectedIndex()), 8, 1, SerialPort.NO_PARITY, false);
-        serialPort.setBaudRate(BaudRatesList.getNameLikeArray(CB_BaudRate.getSelectedIndex()));
-        serialPort.setNumDataBits(DataBitsList.getNameLikeArray(CB_DataBits.getSelectedIndex()));
-        serialPort.setParity(ParityList.values()[CB_Parity.getSelectedIndex()].getValue()); //Работает за счет совпадения индексов с библиотечными
-        serialPort.setNumStopBits(StopBitsList.getNameLikeArray(CB_StopBit.getSelectedIndex()));
-        serialPort.removeDataListener();
+
     }
 
     public static void waitTab(int tabNumber) {
         /*
-        int mySuperWatchdog = 0;
-        while (MainWindow.isBusy(tabNumber)) {
-            mySuperWatchdog++;
-            try {
-                System.out.println("Ожидаю освобождение вкладки...");
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                //throw new RuntimeException(e);
-            }
-            if (mySuperWatchdog > 1000) {
-                log.error("Выход из ожидания выполнения отправки через web-интерфейс по вачдогу!");
-                break;
-            }
-        }
-
+            Будет создан отдельный класс для выполнения команд чере Web-UI
          */
     }
 
     public static void webSend(int tabSend, String command) {
         /*
-        MainWindow.mainWindow.setCurrentTab(tabSend);
-        System.out.println("Установил активную вкладку " + tabSend);
-        MainWindow.waitTab(tabSend);
-        // MainWindow.mainWindow.addCustomMessage("Команда из web-интерфейса не была отправлена. Метод не реализован. Текст команды." + command);
-        String prevCommand = MainWindow.mainWindow.getTextToSendValue(tabSend);
-        System.out.println("Предыдущая команда была " + prevCommand);
-
-
-        MainWindow.mainWindow.setTextToSendValue(tabSend, command);
-        MainWindow.mainWindow.startSend(true);
-        System.out.println("Установил новую команду " + command);
-        System.out.println("Инициировал отправку");
-        MainWindow.waitTab(tabSend);
-        //Возможно нужно ждать
-        MainWindow.mainWindow.setCurrentTab(tabSend);
-        System.out.println("Установил активную вкладку " + tabSend);
-        MainWindow.mainWindow.setTextToSendValue(tabSend, prevCommand);
-        System.out.println("Установил новую команду " + prevCommand);
-
-        MainWindow.mainWindow.startSend(true);
-        System.out.println("Инициировал отправку");
-
+            Будет создан отдельный класс для выполнения команд чере Web-UI
          */
     }
-
-    public void setTextToSendValue(int tabInp, String text) {
-        textToSendValue.set(tab, textToSend.getText());
-        if (tabbedPane1.getTabCount() > tabInp && tab == tabInp) {
-            if (text == null || text.isEmpty()) {
-
-            } else {
-                textToSend.setText(text);
-                textToSendValue.set(tabInp, text);
-            }
-        }
-    }
-
-    public String getTextToSendValue(int tabInp) {
-        if (tabbedPane1.getTabCount() > tabInp && tab == tabInp) {
-            return textToSendValue.get(tabInp);
-        } else {
-            return null;
-        }
-
-    }
-
-    public void setCurrentTab(int tabInp) {
-        if (tabbedPane1.getTabCount() > tabInp) {
-            this.tab = tabInp;
-            tabbedPane1.setSelectedIndex(tabInp);
-        }
-    }
-
 
     public static boolean isBusy(int tabNumber) {
-
         return true;
         /*
-        if (tabNumber < 0 || tabNumber >= MainWindow.getCurrTabCount()) {
-            log.warn("Обращение с неверным номером вкладки. Возвращаю статус свободна.");
-            return false;
-        }
-        ArrayList<PoolService> poolServices = MainWindow.getPoolServices();
-        for (PoolService poolService : poolServices) {
-            if (poolService.containTabDev(tabNumber)) {
-                return poolService.isComBusy();
-            }
-        }
-        log.warn("Для указанной вкладки не найден сервис опроса. предпологается, что ком-порт свободен.");
-        return false;
-
+            Будет создан отдельный класс для выполнения команд чере Web-UI
          */
     }
 
-
     public void startSend(boolean isBtn) {
-        //isBtn - вызов по кнопке / pool - вызов про чекбоксу
         saveParameters();
-
-        anyPoolService.createOrUpdateComDataCollector(tab, getCurrComSelection(), getCurrProtocolSelection(),
-                getNeedPoolState(), isBtn, getCurrPoolDelay(), prepareTextToSend(tab));
+        try {
+            //isBtn - вызов по кнопке / pool - вызов про чекбоксу
+            anyPoolService.createOrUpdateComDataCollector(leftPanState, currentClientId.get(), getCurrComSelection(), getCurrProtocolSelection(),
+                    getNeedPoolState(), isBtn, getCurrPoolDelay());
+        } catch (ConnectException e) {
+            addCustomMessage(" Ошибка начала отправки " + e.getMessage());
+        }
     }
 
-    private void updateLeftPaneFromClass() {
-        CB_DataBits.setSelectedIndex(leftPanState.getDataBits(tab));
-        CB_Parity.setSelectedIndex(leftPanState.getParityBits(tab));
-        CB_StopBit.setSelectedIndex(leftPanState.getStopBits(tab));
-        CB_BaudRate.setSelectedIndex(leftPanState.getBaudRate(tab));
-        CB_Protocol.setSelectedIndex(leftPanState.getProtocol(tab));
-        updateComPortSelectorFromProp();
-
-    }
 
     private void updateComPortSelectorFromProp() {
         if (prop != null && prop.getPorts() != null && prop.getPorts().length > tab && prop.getPorts()[tab] != null) {
@@ -917,22 +735,59 @@ public class MainWindow extends JFrame implements Rendeble {
         return -1;
     }
 
-    private void updateLeftPaneStateClassFromUI() {
-        leftPanState.setParityBits(tab, CB_Parity.getSelectedIndex());
-        leftPanState.setDataBits(tab, CB_DataBits.getSelectedIndex());
-        leftPanState.setStopBits(tab, CB_StopBit.getSelectedIndex());
-        leftPanState.setBaudRate(tab, CB_BaudRate.getSelectedIndex());
-        leftPanState.setProtocol(tab, CB_Protocol.getSelectedIndex());
+    private int checkAndCreateGuiStateClass() {
+        int clientId = leftPanState.getClientIdByTabNumber(tab);
+        if (clientId == -1) {
+            log.warn(" Для вкладки " + tab + " clientId получился " + clientId + " создаю объект состояния");
+            clientId = leftPanState.getNewRandomId();
+            leftPanState.addPairClientIdTabNumber(clientId, tab);
+            MainLeftPanelState state = new MainLeftPanelState();
+            state.setTabNumber(tab);
+            state.setClientId(clientId);
+            leftPanState.addOrUpdateIdState(clientId, state);
+            return clientId;
+        }
+        return clientId;
+    }
+
+    private void updateGuiFromClass() {
+
+        int clientId = checkAndCreateGuiStateClass();
+        log.warn("Привожу вид вкладки к состоянию класса " + clientId);
+        CB_DataBits.setSelectedIndex(leftPanState.getDataBits(clientId));
+        CB_Parity.setSelectedIndex(leftPanState.getParityBits(clientId));
+        CB_StopBit.setSelectedIndex(leftPanState.getStopBits(clientId));
+        CB_BaudRate.setSelectedIndex(leftPanState.getBaudRate(clientId));
+        CB_Protocol.setSelectedIndex(leftPanState.getProtocol(clientId));
+        textToSend.setText(leftPanState.getCommand(clientId));
+        prefOneToSend.setText(leftPanState.getPrefix(clientId));
+        updateComPortSelectorFromProp();
+    }
+
+
+    private void updateClassFromGui() {
+        log.warn("Привожу состояние класса  к виду вкладки " + tab);
+        int clientId = checkAndCreateGuiStateClass();
+        log.warn("К ней относится clientId " + clientId);
+        log.warn("Параметр  getCommand до изменения" + leftPanState.getCommand(clientId));
+        leftPanState.setParityBits(clientId, CB_Parity.getSelectedIndex());
+        leftPanState.setDataBits(clientId, CB_DataBits.getSelectedIndex());
+        leftPanState.setStopBits(clientId, CB_StopBit.getSelectedIndex());
+        leftPanState.setBaudRate(clientId, CB_BaudRate.getSelectedIndex());
+        leftPanState.setProtocol(clientId, CB_Protocol.getSelectedIndex());
+        leftPanState.setCommandToSend(clientId, textToSend.getText());
+        leftPanState.setPrefixToSend(clientId, prefOneToSend.getText());
+        log.warn("Параметр  getCommand после изменения" + leftPanState.getCommand(clientId));
     }
 
     private void readAndUpdateInputPrefAndCommandValues() {
-        log.info("Изменение в поле ввода префикса");
-        if (textToSendValue.size() > tab && prefToSendValue.size() > tab) {
+        log.info("Изменение в поле ввода префикса или команды");
+        if (leftPanState.getClientIdByTabNumber(tab) != -1) {
             log.info("Обновление в массивах");
             ComDataCollector ps = anyPoolService.getComDataCollectors().get(tab);
             if (ps != null) {
                 log.info("Попытка обновить команды опроса в найденом потоке");
-                anyPoolService.findComDataCollectorByTabNumber(tab).setTextToSendString(prepareTextToSend(tab)[0], prepareTextToSend(tab)[1], tab);
+                anyPoolService.findComDataCollectorByClientId(currentClientId.get()).setTextToSendString(prepareTextToSend(tab)[0], prepareTextToSend(tab)[1], tab);
             } else {
                 log.info("поток для обновления префикса и команды пуст");
             }
@@ -943,64 +798,53 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
     private String[] prepareTextToSend(int tab) {
-
-        if (prefOneToSend.getText() != null && !prefOneToSend.getText().isEmpty()) {
-            prefToSendValue.set(tab, prefOneToSend.getText());
-        } else {
-            prefToSendValue.set(tab, "");
+        int id = leftPanState.getClientIdByTabNumber(tab);
+        if (id != -1) {
+            leftPanState.setCommandToSend(id, textToSend.getText());
+            leftPanState.setPrefixToSend(id, prefOneToSend.getText());
+            String str[] = new String[2];
+            str[0] = leftPanState.getPrefix(id);
+            str[1] = leftPanState.getCommand(id);
+            return str;
         }
+        log.error("Не найдено состояние вкладки " + tab + " при попытки преобразовать пару префикс/команда в массив");
+        return new String[2];
 
-        if (textToSend.getText() != null && !textToSend.getText().isEmpty()) {
-            textToSendValue.set(tab, textToSend.getText());
-        } else {
-            textToSendValue.set(tab, "");
-        }
-
-        String str[] = new String[2];
-        str[0] = prefToSendValue.get(tab);
-        str[1] = textToSendValue.get(tab);
-        return str;
     }
 
 
     private void checkIsUsedPort() {
-        currTabCount = getCurrTabCount();
-        anyPoolService.closeUnusedComConnection(getCurrTabCount());
-
-        int targetComNum = CB_ComPorts.getSelectedIndex();
-
-
-        //Проверка, что порт уже открыт (блокировка кнопки ОТКРЫТЬ)
-        boolean alreadyOpen = anyPoolService.isComPortInUse(targetComNum);
-
-        if (alreadyOpen) {
-            BT_Open.setEnabled(false);
-            CB_Protocol.setEnabled(false);
-            BT_Close.setEnabled(true);
-        } else {
-            BT_Open.setEnabled(true);
-            CB_Protocol.setEnabled(true);
-            BT_Close.setEnabled(false);
-        }
-        int rootTab = -1;
-
-        rootTab = anyPoolService.getRootTabForComConnection(targetComNum);
-        //log.info("Просмотр для вкладки  " + tab);
-        //log.info("Найденная корневая " + rootTab);
-        if (rootTab > -1) {
-            if (rootTab != tab) {
-                addCustomMessage("Управление выбранным ком-портом возможно на вкладке 'dev" + (rootTab + 1) + "' ");
-                log.info("Управление выбранным ком-портом возможно на вкладке 'dev" + (rootTab + 1) + "' Просматриваемая вкладка " + tab);
-                BT_Close.setEnabled(false);
-                BT_Open.setEnabled(false);
-                CB_Protocol.setEnabled(false);
-
-            } else {
-                log.info("Это и есть корневая вкладка для вкладки " + rootTab);
-            }
-        }
-
-
+//        currTabCount = leftPanState.getSize();
+//        anyPoolService.closeUnusedComConnection(currTabCount);
+//        int targetComNum = CB_ComPorts.getSelectedIndex();
+//
+//        //Проверка, что порт уже открыт (блокировка кнопки ОТКРЫТЬ)
+//        boolean alreadyOpen = anyPoolService.isComPortInUse(targetComNum);
+//
+//        if (alreadyOpen) {
+//            BT_Open.setEnabled(false);
+//            CB_Protocol.setEnabled(false);
+//            BT_Close.setEnabled(true);
+//        } else {
+//            BT_Open.setEnabled(true);
+//            CB_Protocol.setEnabled(true);
+//            BT_Close.setEnabled(false);
+//        }
+//        int rootTab = -1;
+//
+//        rootTab = anyPoolService.getRootTabForComConnection(targetComNum);
+//
+//        if (rootTab > -1) {
+//            if (rootTab != tab && alreadyOpen) {
+////                addCustomMessage("Управление выбранным ком-портом возможно на вкладке 'dev" + (rootTab + 1) + "' ");
+////                log.info("Управление выбранным ком-портом возможно на вкладке 'dev" + (rootTab + 1) + "' Просматриваемая вкладка " + tab);
+////                BT_Close.setEnabled(false);
+////                BT_Open.setEnabled(false);
+////                CB_Protocol.setEnabled(false);
+//            } else {
+//                log.info("Это и есть корневая вкладка для вкладки " + rootTab);
+//            }
+//        }
     }
 
 
@@ -1027,54 +871,47 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
 
-    private String getPoolText() {
-        ComDataCollector ps = anyPoolService.findComDataCollectorByTabNumber(tab);
-        if (ps != null) {
-            return ps.getTextToSensByTab(tab);
-        }
-        return "";
-    }
-
-    private boolean havePoolService() {
-        for (ComDataCollector poolService : anyPoolService.getComDataCollectors()) {
-            if (poolService.containTabDev(tab)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-
     //Добавить сообщение в терминал GUI на выбранную вкладку. Не сохраняется в истории.
     public void addCustomMessage(String str) {
-        Document doc = logDataTransferJtextPanel.get(tab).getDocument();
+        JTextPane editedPane = logDataTransferJtextPanelsMap.get(currentClientId.get());
+
+        Document doc = editedPane.getDocument();
         str = MyUtilities.CUSTOM_FORMATTER.format(LocalDateTime.now()) + ":\t" + str + "\n";
         try {
             doc.insertString(doc.getLength(), str, null);
         } catch (BadLocationException ex) {
             //throw new RuntimeException(ex);
         }
-        logDataTransferJtextPanel.get(tab).setCaretPosition(doc.getLength());
+        editedPane.setCaretPosition(doc.getLength());
     }
 
     public void renderData() {
         tab = tabbedPane1.getSelectedIndex();
-        Document doc = logDataTransferJtextPanel.get(tab).getDocument();
+        currentClientId.set(leftPanState.getClientIdByTabNumber(tab));
+        if (currentClientId.get() == -1) {
+            currentClientId.set(checkAndCreateGuiStateClass());
+        }
+        Document doc = logDataTransferJtextPanelsMap.get(currentClientId.get()).getDocument();
         //final int maxLength = 25_000_000; // Примерно 50 МБ (25 млн символов)
         final int maxLength = 10_000; // Примерно 20 МБ (25 млн символов)
-        //final int maxLength = 2000; // Проверка на коротком тексте
 
-
+//        try {
+//            log.info("Text " + doc.getText(0, doc.getLength() - 1));
+//        } catch (BadLocationException e) {
+//            //throw new RuntimeException(e);
+//        }
+        //log.info("Ищу для клиента " + currentClientId.get());
         try {
-            an = AnswerStorage.getAnswersQueForTab(lastGotedValueFromStorage.get(tab), tab, true);
-            lastGotedValueFromStorage.set(tab, an.getPosition());
-            String newText = an.getAnswerPart();
-            if (newText.isEmpty()) {
-                return;
+            // Объект этого кеша, для которого хранится последнее считанное значение из хранилища
+            TabAnswerPart an = AnswerStorage.getAnswersQueForTab(lastReceivedPositionFromStorageMap.get(currentClientId.get()), currentClientId.get(), true);
+            //log.info("part position " + an.getPosition());
+            lastReceivedPositionFromStorageMap.put(currentClientId.get(), an.getPosition());
+            if (an.getAnswerPart().isEmpty()) {
+                //return;
             }
-
+            //log.info("continue " + an.getAnswerPart());
             int currentLength = doc.getLength();
-            int newTextLength = newText.length();
+            int newTextLength = an.getAnswerPart().length();
 
             // Проверяем, не превысит ли общая длина максимальный размер
             if (currentLength + newTextLength > maxLength) {
@@ -1084,8 +921,10 @@ public class MainWindow extends JFrame implements Rendeble {
                 doc.remove(0, removeCount);
             }
             // Вставляем новый текст
-            doc.insertString(doc.getLength(), newText, null);
-            logDataTransferJtextPanel.get(tab).setCaretPosition(doc.getLength());
+            doc.insertString(doc.getLength(), an.getAnswerPart(), null);
+            //log.info("Текст  " + an.getAnswerPart() + " будет добавлен для клиента " + currentClientId.get());
+            logDataTransferJtextPanelsMap.get(currentClientId.get()).setCaretPosition(doc.getLength());
+            //logDataTransferJtextPanelsMap.get(currentClientId.get()).setText("dev " + an.getAnswerPart());
         } catch (BadLocationException ex) {
             //ex.printStackTrace(); // Лучше залогировать ошибку
             log.warn("Произошло исключение в ходе рендера окна с историей данных:" + ex.getMessage());
@@ -1099,79 +938,20 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
 
-    public int getCurrTabCount() {
-        //Отладка
-        if (anyPoolService.getCurrentComClientsQuantity() != tabbedPane1.getTabCount()) {
-            //log.error("Несовпадение количества вкладок и клиентов в классе anyPoolService " + tabbedPane1.getTabCount() + " и " + anyPoolService.getCurrentComClientsQuantity());
-
-        }
-        return tabbedPane1.getTabCount();
-    }
-
+    //Типа смена контекста
     public void updateServices(MyProperties newProps, ComPort newComPort, AnyPoolService newService) {
         this.prop = newProps;
         this.comPorts = newComPort;
         this.anyPoolService = newService;
-
-        // Если необходимо, перезапусти логику (например, обнови UI)
-        renderData();
     }
 
     private void saveParameters() {
-        log.debug("Обновление файла настроек со вкладки" + tab);
-
-        /*if (poolComConnections.get(tab).activePort != null) {
-            prop.setLastPorts(poolComConnections, currTabCount);
-        }
-         */
+        log.debug("Обновление файла настроек со вкладки" + tab + " и ИД клиента " + currentClientId.get());
         prop.setLastLeftPanel(leftPanState);
         Logger root = Logger.getRootLogger();
         prop.setLogLevel(root.getLevel());
         prop.setTabCounter(currTabCount);
-        prop.setLastCommands(textToSendValue);
-        prop.setLastPrefixes(prefToSendValue);
-
         prop.setIdentAndTabBounding(AnswerStorage.getDeviceTabPair());
-
-
-    }
-
-
-    public static void logStartupInfo() {
-        // Логируем версию JDK
-        String jdkVersion = System.getProperty("java.version");
-        String jdkVendor = System.getProperty("java.vendor");
-
-        // Логируем папку запуска
-        String workingDir = Paths.get("").toAbsolutePath().toString();
-
-        // Логируем битность системы и JDK
-        String osArch = System.getProperty("os.arch"); // x86 или amd64
-        String osName = System.getProperty("os.name");
-        String javaArch = System.getProperty("sun.arch.data.model") + "-bit";
-
-        // Логируем подключённые библиотеки
-        String libraries = ManagementFactory.getRuntimeMXBean().getClassPath();
-
-        // Формируем лог
-        log.info("Application Startup Info:");
-        log.info("JDK Version: " + jdkVersion + " (" + jdkVendor + ")");
-        log.info("Working Directory: " + workingDir);
-        log.info("OS: " + osName + " (" + osArch + ")");
-        log.info("JDK Architecture: " + javaArch);
-        //log.info("Loaded Libraries:");
-        for (String lib : libraries.split(";")) {
-            //log.info(" - " + lib);
-        }
-//            System.out.println("Application Startup Info:");
-//            System.out.println("JDK Version: " + jdkVersion + " (" + jdkVendor + ")");
-//            System.out.println("Working Directory: " + workingDir);
-//            System.out.println("OS: " + osName + " (" + osArch + ")");
-//            System.out.println("JDK Architecture: " + javaArch);
-//            System.out.println("Loaded Libraries:");
-//            for (String lib : libraries.split(";")) {
-//                System.out.println(" - " + lib);
-//            }
     }
 
 

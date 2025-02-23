@@ -90,7 +90,7 @@ public class GPS_Loger {
                 DeviceAnswer deviceAnswer = AnswerStorage.getAnswersForGraph(dev_ident).get(i);
                 if(deviceAnswer != null && deviceAnswer.getAnswerReceivedValues() != null
                         && deviceAnswer.getAnswerReceivedValues().getValues().length > 5
-                        && deviceAnswer.getTabNumber() == dev_ident){
+                        && deviceAnswer.getClientId() == dev_ident){
                     line.append("[");
                     line.append(deviceAnswer.getAnswerReceivedValues().getValues()[1]);
                     line.append(", ");

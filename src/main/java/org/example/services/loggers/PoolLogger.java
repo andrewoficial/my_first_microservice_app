@@ -76,8 +76,39 @@ public class PoolLogger {
             return;
         }
 
-        if(answer.getTabNumber() < 0){
-            log.warn("Для логирования передан ответ с отрицательным номером");
+        // Блок базовых проверок
+        if (answer == null) {
+            log.error("Отклонено логирование ответа [ объект ответа null ]");
+            return;
+        }
+
+        Integer clientId = answer.getClientId();
+        if (clientId == null) {
+            log.error("Отклонено логирование ответа [ ClientId: null ]");
+            return;
+        }
+        if (clientId < 0) {
+            log.error("Отклонено логирование ответа [ ClientId: "+clientId+" < 0 ]");
+            return;
+        }
+
+        // Проверки временных меток
+        if (answer.getRequestSendTime() == null) {
+            log.error("Отклонено логирование ответа ["+clientId+"] - не указано время отправки");
+            return;
+        }
+        if (answer.getAnswerReceivedTime() == null) {
+            log.error("Отклонено логирование ответа ["+clientId+"] - не указано время получения");
+            return;
+        }
+        if (answer.getAnswerReceivedTime().isBefore(answer.getRequestSendTime())) {
+            log.error("Отклонено логирование ответа ["+clientId+"] - ответ получен до отправки запроса ({} < {})");
+            return;
+        }
+
+        // Проверки строковых данных
+        if (answer.getAnswerReceivedString() == null || answer.getAnswerReceivedString().trim().isEmpty()) {
+            log.error("Отклонено логирование ответа ["+clientId+"] - пустая строка ответа");
             return;
         }
         StringBuilder line = new StringBuilder(answer.getAnswerReceivedTime().format(MyUtilities.CUSTOM_FORMATTER));
@@ -116,7 +147,7 @@ public class PoolLogger {
                 }
             }
         }
-        log.info("Завершено логирование в общий файл с ответами для клиента " + answer.getTabNumber());
+        log.info("Завершено логирование в общий файл с ответами для клиента " + answer.getClientId());
 
     }
 

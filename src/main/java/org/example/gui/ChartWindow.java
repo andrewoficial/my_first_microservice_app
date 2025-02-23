@@ -254,7 +254,7 @@ public class ChartWindow extends JFrame implements Rendeble {
         DeviceAnswer selectedAnswer = AnswerStorage.getAnswersForGraph(tab).get(index);
 
 
-        if (Objects.equals(selectedAnswer.getTabNumber(), tab)) {
+        if (Objects.equals(selectedAnswer.getClientId(), tab)) {
             if (tab == 0 && selectedAnswer.getFieldCount() == 0) {
                 unitsInAnswer.add(" ");
                 return unitsInAnswer;

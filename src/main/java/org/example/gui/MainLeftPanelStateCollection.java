@@ -1,94 +1,321 @@
 package org.example.gui;
 
-
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class MainLeftPanelStateCollection {
-    private ArrayList<MainLeftPanelState> st = new ArrayList<>();
+    private final ConcurrentHashMap<Integer, Integer> clientIdTab = new ConcurrentHashMap<>(); // <RandomID, TabNumber>
+    private final ConcurrentHashMap<Integer, MainLeftPanelState> clientIdTabState = new ConcurrentHashMap<>();
 
 
+    public boolean isCollectionEmpty(){
+        return clientIdTab.isEmpty() || clientIdTabState.isEmpty();
+    }
 
-    public void setDataBits(int tab, int state){
-        if(st.size() <= tab){
-            throw new IndexOutOfBoundsException("Для указаной вкладки " + tab + " не найдено в листе параметров, размером " + st.size());
+    public int getSize(){
+        return Math.max(clientIdTab.size(), clientIdTabState.size());
+    }
+
+    public void clearCollection(){
+        clientIdTabState.clear();
+        clientIdTab.clear();
+    }
+    public ArrayList <MainLeftPanelState> getIdTabStateAsList(){
+        ArrayList<MainLeftPanelState> forReturn = new ArrayList<>();
+        for (Map.Entry<Integer, MainLeftPanelState> entry : clientIdTabState.entrySet()) {
+            entry.getValue().setClientId(entry.getKey());
+            entry.getValue().setTabNumber(entry.getValue().getTabNumber());
+            forReturn.add(entry.getValue());
         }
-        st.get(tab).setDataBits(state);
+        return forReturn;
     }
-    public void setParityBits(int tab, int state){
-        if(st.size() <= tab){
-            throw new IndexOutOfBoundsException("Для указаной вкладки " + tab + " не найдено в листе параметров, размером " + st.size());
+    public boolean removeEntryByClientId(Integer clientId){
+        if (clientId != null && clientId >= 0 && getTabNumberByClientId(clientId) != -1) {
+            clientIdTab.remove(clientId);
+            clientIdTabState.remove(clientId);
+            return true;
         }
-        st.get(tab).setParityBit(state);
+        return false;
     }
-
-    public void setStopBits(int tab, int state){
-        if(st.size() <= tab){
-            throw new IndexOutOfBoundsException("Для указаной вкладки " + tab + " не найдено в листе параметров, размером " + st.size());
+    public boolean addOrUpdateIdState(Integer clientId, MainLeftPanelState paneState){
+        if (clientId != null && paneState != null && clientId >= 0) {
+            clientIdTabState.put(clientId, paneState);
+            System.out.println(" Выполнил clientIdTabState.put(clientId, paneState)" + clientId + " paneState tab " + paneState.getTabNumber() + " paneState id " + paneState.getClientId());
+            return true;
         }
-        st.get(tab).setStopBits(state);
+        return false;
     }
-
-    public void setBaudRate(int tab, int state){
-        if(st.size() <= tab){
-            throw new IndexOutOfBoundsException("Для указаной вкладки " + tab + " не найдено в листе параметров, размером " + st.size());
+    public Integer getTabNumberByClientId(Integer clientId){
+        if (clientId != null && clientId >= 0 && !clientIdTab.isEmpty()) {
+            for (Map.Entry<Integer, Integer> integerIntegerEntry : clientIdTab.entrySet()) {
+                if (Objects.equals(integerIntegerEntry.getKey(), clientId)) {
+                    return integerIntegerEntry.getKey();
+                }
+            }
         }
-        st.get(tab).setBaudRate(state);
+        return -1;
     }
 
-    public void setProtocol(int tab, int state){
-        if(st.size() <= tab){
-            throw new IndexOutOfBoundsException("Для указаной вкладки " + tab + " не найдено в листе параметров, размером " + st.size());
+    public Integer getClientIdByTabNumber(Integer tabNumber){
+        if (tabNumber != null && tabNumber >= 0 && !clientIdTab.isEmpty()) {
+            for (Map.Entry<Integer, Integer> integerIntegerEntry : clientIdTab.entrySet()) {
+                if (Objects.equals(integerIntegerEntry.getValue(), tabNumber)) {
+                    return integerIntegerEntry.getKey();
+                }
+            }
         }
-        st.get(tab).setProtocol(state);
+        System.out.println("Не найдена связка вкладка/клиент для tabNumber [" + tabNumber + "] clientIdTab.isEmpty()" + clientIdTab.isEmpty() + " clientIdTab" + clientIdTab.size());
+        return -1;
     }
 
-    public int getParityBits(int tab){
-        if(st.size() <= tab){
-            throw new IndexOutOfBoundsException("Для указаной вкладки " + tab + " не найдено в листе параметров, размером " + st.size());
+    public boolean addPairClientIdTabNumber(Integer clientId, Integer tabNumber){
+        if (clientId != null && tabNumber != null && clientId >= 0 && tabNumber >= 0) {
+            if(getTabNumberByClientId(clientId) == -1 && getClientIdByTabNumber(tabNumber) == -1){
+                clientIdTab.put(clientId, tabNumber);
+                System.out.println("Выполнил  clientIdTab.put(clientId, tabNumber) ");
+                return true;
+            }else{
+                System.out.println("Уже существует ключ или вкладка");
+            }
         }
-        return st.get(tab).getParityBit();
+        return false;
     }
 
-    public int getDataBits(int tab){
-        if(st.size() <= tab){
-            throw new IndexOutOfBoundsException("Для указаной вкладки " + tab + " не найдено в листе параметров, размером " + st.size());
+    public boolean addOrUpdateClientIdTabNumber(Integer clientId, Integer tabNumber){
+        if (clientId != null && tabNumber != null && clientId >= 0 && tabNumber >= 0) {
+            if(getTabNumberByClientId(clientId) == -1 && getClientIdByTabNumber(tabNumber) == -1){
+                clientIdTab.put(clientId, tabNumber);
+                clientIdTabState.putIfAbsent(clientId, new MainLeftPanelState());
+                return true;
+            }else{
+                if(getClientIdByTabNumber(tabNumber) != -1){
+                    clientIdTab.remove(getClientIdByTabNumber(tabNumber));
+                }
+                if(getTabNumberByClientId(clientId) != -1){
+                    clientIdTab.remove(getTabNumberByClientId(clientId));
+                }
+                clientIdTab.put(clientId, tabNumber);
+                clientIdTabState.putIfAbsent(clientId, new MainLeftPanelState());
+                return true;
+            }
         }
-        return st.get(tab).getDataBits();
+        return false;
     }
-
-    public int getStopBits(int tab){
-        if(st.size() <= tab){
-            throw new IndexOutOfBoundsException("Для указаной вкладки " + tab + " не найдено в листе параметров, размером " + st.size());
+    public void setDataBits(int clientId, int state){
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
         }
-        return st.get(tab).getStopBits();
+        //System.out.println("Для клиента " + clientId + " был вызван setDataBits " + state);
+        stateObj.setDataBits(state);
     }
 
-    public int getBaudRate(int tab){
-        if(st.size() <= tab){
-            throw new IndexOutOfBoundsException("Для указаной вкладки " + tab + " не найдено в листе параметров, размером " + st.size());
+    public void setDataBitsValue(int clientId, int state){
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
         }
-        return st.get(tab).getBaudRate();
+        //System.out.println("Для клиента " + clientId + " был вызван setDataBits " + state);
+        stateObj.setDataBitsValue(state);
     }
 
-    public int getProtocol(int tab){
-        if(st.size() <= tab){
-            throw new IndexOutOfBoundsException("Для указаной вкладки " + tab + " не найдено в листе параметров, размером " + st.size());
+    public void setClientId(int clientId, int clientIdForSet){
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
         }
-        return st.get(tab).getProtocol();
+        stateObj.setClientId(clientIdForSet);
     }
 
-    public void addEntry(){
-        st.add(new MainLeftPanelState());
-    }
-
-    public void removeEntry(int tab){
-        if(st.size() <= tab){
-            throw new IndexOutOfBoundsException("Для указаной вкладки " + tab + " не найдено в листе параметров, размером " + st.size());
+    public void setTabNumber(int clientId, int tabNumber){
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
         }
-        st.remove(tab);
+        stateObj.setClientId(tabNumber);
     }
 
-    public ArrayList<MainLeftPanelState> getAllAsList(){
-        return this.st;
+    public void setParityBits(int clientId, int state){
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        stateObj.setParityBit(state);
     }
+
+    public void setParityBitsValue(int clientId, int state){
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        stateObj.setParityBitValue(state);
+    }
+
+    public void setStopBits(int clientId, int state) {
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        stateObj.setStopBits(state);
+    }
+
+    public void setStopBitsValue(int clientId, int state) {
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        stateObj.setStopBitsValue(state);
+    }
+
+
+
+    public void setBaudRate(int clientId, int state) {
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        stateObj.setBaudRate(state);
+    }
+
+    public void setBaudRateValue(int clientId, int state) {
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        stateObj.setBaudRateValue(state);
+    }
+
+    public void setCommandToSend(int clientId, String command) {
+        System.out.println(" Вызвано сохранение строки для отправки " +  clientId + " строка " + command);
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        if(command == null || command.isEmpty()){
+            System.out.println("В сохранение состояния передана пустая команда");
+            command = "";
+        }
+        stateObj.setCommand(command);
+    }
+
+    public void setPrefixToSend(int clientId, String prefix) {
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        if(prefix == null ){
+            System.out.println("В сохранение состояния передан пустой префикс");
+            prefix = "";
+        }
+        stateObj.setPrefix(prefix);
+    }
+    public void setProtocol(int clientId, int state) {
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        stateObj.setProtocol(state);
+    }
+
+    public int getNewRandomId(){
+        int candidate = (int) (500000 + Math.random() * 10000 + Math.random() * 10);
+        while(clientIdTab.containsKey(candidate)){
+            candidate = (int) (500000 + Math.random() * 10000 + Math.random() * 10);
+        }
+        return candidate;
+    }
+
+    public int getParityBits(int clientId) {
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        return stateObj.getParityBit();
+    }
+
+    public int getParityBitsValue(int clientId) {
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        return stateObj.getParityBitValue();
+    }
+
+    public int getDataBits(int clientId) {
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        //System.out.println("По запрсу с ИД " + clientId + " внутри найденого объекта данные getClientId " + stateObj.getClientId() + " getTabNumber " + stateObj.getTabNumber() + " getDataBits " + stateObj.getDataBits());
+        return stateObj.getDataBits();
+    }
+
+    public int getDataBitsValue(int clientId) {
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        //System.out.println("По запрсу с ИД " + clientId + " внутри найденого объекта данные getClientId " + stateObj.getClientId() + " getTabNumber " + stateObj.getTabNumber() + " getDataBits " + stateObj.getDataBits());
+        return stateObj.getDataBitsValue();
+    }
+
+    public int getStopBits(int clientId) {
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        return stateObj.getStopBits();
+    }
+
+    public int getStopBitsValue(int clientId) {
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        return stateObj.getStopBitsValue();
+    }
+
+    public int getBaudRate(int clientId) {
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        return stateObj.getBaudRate();
+    }
+
+    public int getBaudRateValue(int clientId) {
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        return stateObj.getBaudRateValue();
+    }
+
+    public int getProtocol(int clientId) {
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        return stateObj.getProtocol();
+    }
+
+    public String getCommand(int clientId){
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        return stateObj.getCommand();
+    }
+
+    public String getPrefix(int clientId){
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        return stateObj.getPrefix();
+    }
+
+
 }

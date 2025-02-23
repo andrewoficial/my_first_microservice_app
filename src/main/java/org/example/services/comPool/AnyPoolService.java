@@ -4,6 +4,7 @@ import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
 import org.apache.log4j.Logger;
 import org.example.device.ProtocolsList;
+import org.example.gui.MainLeftPanelStateCollection;
 import org.example.services.AnswerSaverLogger;
 import org.example.services.AnswerStorage;
 import org.example.services.comPort.ComPort;
@@ -11,6 +12,7 @@ import org.example.utilites.properties.MyProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -41,96 +43,97 @@ public class AnyPoolService {
         answerSaverLogger = new AnswerSaverLogger(properties);
     }
 
-    public void createOrUpdateComDataCollector(int tab, int selectedComPort, int selectedProtocol, boolean pool, boolean isBtn, int poolDelay, String[] prefixAndCmd) {
-        ComDataCollector psSearch = findComDataCollector(tab, selectedComPort);
-        if(prefixAndCmd == null){
-            prefixAndCmd = new String[2];
-            prefixAndCmd [0] = "";
-            prefixAndCmd [1] = "";
+    public String createOrUpdateComDataCollector(MainLeftPanelStateCollection state, int clientId, int selectedComPort, int selectedProtocol, boolean pool, boolean isBtn, int poolDelay) throws ConnectException {
+        if(state.getTabNumberByClientId(clientId) == -1){
+            log.error(" В AnyPoolService передан ИД клиента, для которого нет сохранённого состояния");
+            return " В AnyPoolService передан ИД клиента, для которого нет сохранённого состояния";
         }
+        ComDataCollector psSearch = findComDataCollector(clientId, selectedComPort);
+
 
         if (psSearch != null) {
-            log.info("Изменение существующего потока. Отправка префикса "  + prefixAndCmd[0] + " и команды " + prefixAndCmd[1]);
-            processExistingComDataCollector(psSearch, tab, prefixAndCmd, pool, isBtn, poolDelay);
+            log.info("Изменение существующего потока. Отправка префикса "  + state.getPrefix(clientId) + " и команды " + state.getCommand(clientId));
+            processExistingComDataCollector(state, psSearch, clientId, pool, isBtn, poolDelay);
+            return " Добавление вкладки к существующему потоку ";
+
         } else {
             log.info("Создание нового потока");
-            createNewComDataCollector(tab, pool, isBtn, poolDelay, prefixAndCmd, selectedComPort, selectedProtocol);
+            createNewComDataCollector(state, clientId, pool, isBtn, poolDelay, selectedComPort, selectedProtocol);
+            return " Был создан новый поток.(Порт " + findComDataCollectorByClientId(clientId).getComPort().getSystemPortName() + " ранее был закрыт) ";
         }
     }
 
-    private void handleTabInExistingCollector(ComDataCollector psSearch, int tab, String [] prefixAndCmd, boolean pool, boolean isBtn, int poolDelay) {
+    private void handleTabInExistingCollector(ComDataCollector psSearch, int clientId, MainLeftPanelStateCollection state, boolean pool, boolean isBtn, int poolDelay) {
         if (pool || isBtn) {
             if (isBtn) {
                 //log.info("Разовая отправка");
-                psSearch.sendOnce(prefixAndCmd[0], prefixAndCmd[1], tab, false);
+                psSearch.sendOnce(state.getPrefix(clientId), state.getCommand(clientId), clientId, false);
             } else {
                 log.info("Команда к запуску");
-                psSearch.setNeedPool(tab, true);
+                psSearch.setNeedPool(clientId, true);
                 psSearch.setPoolDelay(poolDelay);
-                psSearch.setTextToSendString(prefixAndCmd[0], prefixAndCmd[1], tab);
+                psSearch.setTextToSendString(state.getPrefix(clientId), state.getCommand(clientId), clientId);
                 //thPool.submit(psSearch);
                 sleepFor(60);
             }
         } else {
             log.info("Команда к остановке опроса");
-            psSearch.setNeedPool(tab, false);
-            if (psSearch.isRootTab(tab)) {
-                log.info("Текущий поток является корневым для других");
-            } else {
-                log.info("Вкладка одинока. Но поток не будет завершен. Ожидание входящих сообщений.");
-            }
+            psSearch.setNeedPool(clientId, false);
         }
     }
 
 
-    private void processExistingComDataCollector(ComDataCollector psSearch, int tab, String [] prefixAndCmd, boolean pool, boolean isBtn, int poolDelay) {
+    private void processExistingComDataCollector(MainLeftPanelStateCollection state, ComDataCollector psSearch, int clientId, boolean pool, boolean isBtn, int poolDelay) {
         //log.info("Порт уже используется, проверка среди запущенных потоков");
-        if (psSearch.containTabDev(tab)) {
+        if (psSearch.containClientId(clientId)) {
             log.info("Клинет уже содержится в потоке отправка префикса и команды");
-            handleTabInExistingCollector(psSearch, tab, prefixAndCmd, pool, isBtn, poolDelay);
+            handleTabInExistingCollector(psSearch, clientId, state, pool, isBtn, poolDelay);
         } else {
             log.info("Клинет не содержится в потоке");
-            addDeviceToCollector(psSearch, tab, prefixAndCmd, isBtn, pool);
+            addDeviceToCollector(psSearch, clientId, state, isBtn, pool);
         }
     }
 
-    private void createNewComDataCollector(int tab, boolean pool, boolean isBtn, int poolDelay, String [] prefixAndCmd , int comPortNumber, int protocolIndex) {
+    private void createNewComDataCollector(MainLeftPanelStateCollection state, int clientId, boolean pool, boolean isBtn, int poolDelay, int comPortNumber, int protocolIndex) throws ConnectException {
         log.info("Порт не используется, создание нового потока");
 
         ComPort avaComPorts = new ComPort();
         avaComPorts.setPort(comPortNumber);
         ProtocolsList protocol = ProtocolsList.getLikeArrayEnum(protocolIndex);
-        ComDataCollector toAdd = new ComDataCollector(protocol,prefixAndCmd[0],prefixAndCmd[1],avaComPorts.activePort,poolDelay,false,tab, this);
+        try {
+            ComDataCollector toAdd = new ComDataCollector(state, protocol, state.getPrefix(clientId), state.getCommand(clientId), avaComPorts.activePort, poolDelay, false, clientId, this);
+            this.addComDataCollector(toAdd);
+            setupNewCollector(clientId, pool, isBtn, state);
+        }catch (ConnectException exp){
+            throw new ConnectException("Ошибка в AnyPoolService при создании ComDataCollector " + exp.getMessage());
+        }
 
-        this.addComDataCollector(toAdd);
-
-        setupNewCollector(tab, pool, isBtn, prefixAndCmd);
     }
 
-    private void setupNewCollector(int tab, boolean pool, boolean isBtn, String[] prefixAndCmd) {
+    private void setupNewCollector(int clientId, boolean pool, boolean isBtn, MainLeftPanelStateCollection state) {
         ComDataCollector lastAdded = getComDataCollectors().get(getComDataCollectors().size() - 1);
 
         if (isBtn) {
-            lastAdded.setNeedPool(tab, false);
-            lastAdded.sendOnce(prefixAndCmd[0], prefixAndCmd[1], tab, false);
+            lastAdded.setNeedPool(clientId, false);
+            lastAdded.sendOnce(state.getPrefix(clientId), state.getCommand(clientId), clientId, false);
             log.info("Поток создан и запущен один раз");
             sleepFor(60);
         } else if (pool) {
-            lastAdded.setNeedPool(tab, true);
+            lastAdded.setNeedPool(clientId, true);
             log.info("Параметры добавленного потока установлены в режим с опросом");
         } else {
-            lastAdded.setNeedPool(tab, false);
+            lastAdded.setNeedPool(clientId, false);
             log.info("Поток создан и запущен для Event (без опроса)");
         }
     }
 
-    private void addDeviceToCollector(ComDataCollector psSearch, int tab, String[] prefixAndCmd, boolean isBtn, boolean pool) {
+    private void addDeviceToCollector(ComDataCollector psSearch, int clientId, MainLeftPanelStateCollection state, boolean isBtn, boolean pool) {
         if (!isBtn) {
             log.info("Для текущей вкладки устройство не существует в потоке опроса (по чек-боксу)");
-            psSearch.addDeviceToService(tab, prefixAndCmd[0], prefixAndCmd [1], false, true);
+            psSearch.addDeviceToService(clientId, state.getPrefix(clientId), state.getCommand(clientId), false, true);
         } else {
             log.info("Для текущей вкладки устройство не существует в потоке опроса (по кнопке)");
-            psSearch.addDeviceToService(tab, prefixAndCmd[0], prefixAndCmd [1], false, false);
+            psSearch.addDeviceToService(clientId, state.getPrefix(clientId), state.getCommand(clientId), false, false);
         }
     }
 
@@ -144,9 +147,9 @@ public class AnyPoolService {
     }
 
 
-    public ComDataCollector findComDataCollectorByTabNumber(int number) {
+    public ComDataCollector findComDataCollectorByClientId(int clientId) {
         for (ComDataCollector comDataCollector : comDataCollectors) {
-            if (comDataCollector.containTabDev(number)) {
+            if (comDataCollector.containClientId(clientId)) {
                 return comDataCollector;
             }
         }
@@ -163,7 +166,7 @@ public class AnyPoolService {
     }
 
     public ComDataCollector findComDataCollector(int tab, int comNumber) {
-        ComDataCollector psSearch = this.findComDataCollectorByTabNumber(tab);
+        ComDataCollector psSearch = this.findComDataCollectorByClientId(tab);
         if (psSearch == null) {
             psSearch = findComDataCollectorByOpenedPort(comNumber);
             if(psSearch != null) {
@@ -178,18 +181,18 @@ public class AnyPoolService {
     }
 
 
-    public boolean isComDataCollectorByTabNumberActiveDataSurvey(int number) {
-        ComDataCollector ps = this.findComDataCollectorByTabNumber(number);
+    public boolean isComDataCollectorByClientIdActiveDataSurvey(int clientId) {
+        ComDataCollector ps = this.findComDataCollectorByClientId(clientId);
         if (ps != null) {
-            return ps.isNeedPool(number);
+            return ps.isNeedPool(clientId);
         }
         return false;
     }
 
-    public boolean isComDataCollectorByTabNumberLogged(int number) {
-        ComDataCollector ps = this.findComDataCollectorByTabNumber(number);
+    public boolean isComDataCollectorByClientIdLogged(int clientId) {
+        ComDataCollector ps = this.findComDataCollectorByClientId(clientId);
         if (ps != null) {
-            return ps.isNeedLog(number);
+            return ps.isNeedLog(clientId);
         }
         return false;
     }
@@ -254,13 +257,13 @@ public class AnyPoolService {
                     //log.info("      В просматриваемом comDataCollector существует ком-порт");
                     if (comDataCollector.getComPortForJCombo() == portNumber) {//Выбранный порт был выбран ранее
                         //log.info("          В просматриваемом comDataCollector ком-порт по номеру совпал с требуемым");
-                        if (comDataCollector.isRootTab(i)) {//Просматриваемая вкладка корневая для опроса
+                        if (comDataCollector.isRootThread(i)) {//Просматриваемая вкладка корневая для опроса
                             //log.info("              В просматриваемом comDataCollector проверяемый клиент (вкладка) " + i + " является КОРНЕВОЙ");
                             //rootTab = i;
                             //log.info("Нашел корневую");
                             //rootTab = i;
                             return j;
-                        } else if (comDataCollector.containTabDev(i)) {//просматриваемая вкладка виртуальная, но содержится
+                        } else if (comDataCollector.containClientId(i)) {//просматриваемая вкладка виртуальная, но содержится
                             //log.info("              В просматриваемом comDataCollector проверяемый клиент (вкладка) " + i + " просто найдена");
                             forReturnFix = j;
                         }
@@ -302,10 +305,10 @@ public class AnyPoolService {
         }
     }
 
-    public void shutDownComDataCollectorsThreadByTab(int number) {
-        ComDataCollector ps = this.findComDataCollectorByTabNumber(number);
+    public void shutDownComDataCollectorsThreadByClientId(int clientId) {
+        ComDataCollector ps = this.findComDataCollectorByClientId(clientId);
         if(ps != null) {
-            ps.removeDeviceFromComDataCollector(number);
+            ps.removeDeviceFromComDataCollector(clientId);
             ps.shutdown();
             for (int i = 0; i < comDataCollectors.size(); i++) {
                 if(comDataCollectors.get(i) != null && comDataCollectors.get(i).isAlive() == false){

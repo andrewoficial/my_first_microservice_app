@@ -82,20 +82,13 @@ public class MyProperties {
 
     private String [] clientAssociationMarkers = new String[2];//Получается в результате атомизации полученных сообщений (например ответ содержит информацию о двух независимых параметрах)
     private Integer [] clientAssociationID = new Integer[2];//Он же Гоша, он же Гоги, он же Жора, он же TabDev, tabN, номер вкладки
-
+    private Integer [] tabNumber = new Integer[2];//Массив ( в той же последоватльности что и все массивы MainLeftPane) номеров вкладок
 
     @Getter
     private String[] ports = new String[2];
 
     private String logLevel;
 
-
-
-    @Getter
-    private String[] commands = new String[0];
-
-    @Getter
-    private String[] prefixes = new String[0];
 
     @Getter
     private boolean needSyncSavingAnswer = true;
@@ -241,11 +234,10 @@ public class MyProperties {
         prt = settingsLoader.getString("prt", "8075");
         url = settingsLoader.getString("url", "127.0.0.1");
         drv = settingsLoader.getString("drv", "jdbc:postgresql://");
-        commands = settingsLoader.getStringArray("commands", "", tabCounter);
-        prefixes = settingsLoader.getStringArray("prefixes", "", tabCounter);
         ports = settingsLoader.getStringArray("ports", "", tabCounter);
         clientAssociationMarkers = settingsLoader.getStringArray("clientAssociationMarkers", "", tabCounter);
         clientAssociationID = settingsLoader.getIntegerArray("clientAssociationID", 0, tabCounter);
+        tabNumber = settingsLoader.getIntegerArray("tabNumber", 0, tabCounter);
         updatePairsState();
 
         // Load CSV settings
@@ -263,6 +255,8 @@ public class MyProperties {
         dbgLogInputASCII = settingsLoader.getBoolean("dbgLogInputASCII", false);
         dbgLogInputHEX = settingsLoader.getBoolean("dbgLogInputHEX", false);
         dbgLogInputParsed = settingsLoader.getBoolean("dbgLogInputParsed", false);
+
+        // Load Clients States
         updateLeftPanelStateCollectionClass();
     }
 
@@ -317,13 +311,6 @@ public class MyProperties {
         }
         setSyncSavingAnswerWindowMS(val);
     }
-    public void setLastCommands(ArrayList<String> commands) {
-        settingsLoader.setStringArray("commands", commands.toArray(new String[0]), true);
-    }
-
-    public void setLastPrefixes(ArrayList<String> prefixesInp) {
-        settingsLoader.setStringArray("prefixes", prefixesInp.toArray(new String[0]), true);
-    }
 
     public void setIdentAndTabBounding(HashMap<String, Integer> pairs) {
         StringBuilder sbTabs = new StringBuilder();
@@ -338,57 +325,6 @@ public class MyProperties {
         log.debug("Обновлено значение ассоциаций идентификаторов и вкладок... ");
     }
 
-    public void setLastLeftPanel(MainLeftPanelStateCollection leftPanStateInp) {
-        if (leftPanStateInp == null) {
-            throw new IllegalArgumentException("Переданный объект состояния левой панели не может быть null");
-        }
-
-        if (leftPanStateInp.getAllAsList().isEmpty()) {
-            throw new IllegalArgumentException("Переданный объект состояния левой панели должен содержать описание хотя бы одной вкладки");
-        }
-
-        this.leftPanelStateCollection = leftPanStateInp;
-
-        // Создаем Map для хранения всех параметров
-        Map<String, StringBuilder> propertyBuilders = new HashMap<>();
-        String[] propertyKeys = {
-                "protocol", "protocolCode", "baudRate", "baudRateCode",
-                "stopBits", "stopBitsCode", "dataBits", "dataBitsCode",
-                "parityBit", "parityBitCode"
-        };
-        for (String key : propertyKeys) {
-            propertyBuilders.put(key, new StringBuilder());
-        }
-
-        // Заполняем StringBuilder'ы
-        for (MainLeftPanelState state : leftPanStateInp.getAllAsList()) {
-            propertyBuilders.get("protocol").append(ProtocolsList.getLikeArray(state.getProtocol())).append(", ");
-            propertyBuilders.get("protocolCode").append(state.getProtocol()).append(", ");
-
-            propertyBuilders.get("baudRate").append(BaudRatesList.getNameLikeArray(state.getBaudRate())).append(", ");
-            propertyBuilders.get("baudRateCode").append(state.getBaudRate()).append(", ");
-
-            propertyBuilders.get("stopBits").append(StopBitsList.getNameLikeArray(state.getStopBits())).append(", ");
-            propertyBuilders.get("stopBitsCode").append(state.getStopBits()).append(", ");
-
-            propertyBuilders.get("dataBits").append(DataBitsList.getNameLikeArray(state.getDataBits())).append(", ");
-            propertyBuilders.get("dataBitsCode").append(state.getDataBits()).append(", ");
-
-            propertyBuilders.get("parityBit").append(ParityList.getNameLikeArray(state.getParityBit())).append(", ");
-            propertyBuilders.get("parityBitCode").append(state.getParityBit()).append(", ");
-        }
-
-        // Удаляем лишние запятые и сохраняем в свойства
-        propertyBuilders.forEach((key, sb) -> {
-            if (sb.length() > 2) {
-                sb.setLength(sb.length() - 2); // Убираем последнюю запятую и пробел
-            }
-            properties.setProperty(key, sb.toString());
-        });
-
-        fileHandler.updateFileFromProperties(properties);
-        log.debug("Обновлено значение класса левой вкладки... ");
-    }
 
     public void setPortForTab(String portName, int tabNumber) {
         if (portName == null || portName.isEmpty()) {
@@ -536,62 +472,147 @@ public class MyProperties {
         }
     }
 
-    private void updateLeftPanelStateCollectionClass(){
+    private void updateLeftPanelStateCollectionClass() {
         leftPanelStateCollection = new MainLeftPanelStateCollection();
-        //Создаем структуру, храняющую (названиеПарметра, функцияЕгоОбновления
-        Map<String, BiConsumer<Integer, Integer>> parameterSetters = new LinkedHashMap<>();
 
-        parameterSetters.put("baudRateCode", (index, value) -> leftPanelStateCollection.setBaudRate(index, value));
-        parameterSetters.put("stopBitsCode", (index, value) -> leftPanelStateCollection.setStopBits(index, value));
-        parameterSetters.put("protocolCode", (index, value) -> leftPanelStateCollection.setProtocol(index, value));
-        parameterSetters.put("dataBitsCode", (index, value) -> leftPanelStateCollection.setDataBits(index, value));
-        parameterSetters.put("parityBitCode", (index, value) -> leftPanelStateCollection.setParityBits(index, value));
+        // Integer параметры
+        Map<String, BiConsumer<Integer, Integer>> intSetters = Map.of(
+                "baudRateCode", leftPanelStateCollection::setBaudRate,
+                "stopBitsCode", leftPanelStateCollection::setStopBits,
+                "protocolCode", leftPanelStateCollection::setProtocol,
+                "dataBitsCode", leftPanelStateCollection::setDataBits,
+                "parityBitCode", leftPanelStateCollection::setParityBits
+        );
 
-        //Создаем структуру, храняющую (названиеПараметра, массивЗначенийДляКлиентов)
-        Map<String, Integer[]> parameterValues = new LinkedHashMap<>();
-        for (String parameterName : parameterSetters.keySet()) {
+        // String параметры
+        Map<String, BiConsumer<Integer, String>> stringSetters = Map.of(
+                "command", leftPanelStateCollection::setCommandToSend,
+                "prefix", leftPanelStateCollection::setPrefixToSend
+        );
 
-            Integer[] arr = settingsLoader.getIntegerArray(parameterName, 0, tabCounter);
-            //log.info("Создаю структуру  ключ-массив параметров" + parameterName + " полученный массив " + Arrays.toString(arr) + " желаемый размер массива " + tabCounter);
-            parameterValues.put(parameterName, arr);
+        // Чтение параметров из настроек
+        Map<String, Integer[]> intParams = loadIntegerParams(intSetters.keySet());
+        Map<String, String[]> stringParams = loadStringParams(stringSetters.keySet());
+
+        // Обработка параметров
+        processParameters(intSetters, intParams);
+        processParameters(stringSetters, stringParams);
+    }
+
+    private Map<String, Integer[]> loadIntegerParams(Set<String> keys) {
+        Map<String, Integer[]> params = new LinkedHashMap<>();
+        for (String key : keys) {
+            params.put(key, settingsLoader.getIntegerArray(key, 0, tabCounter));
         }
+        return params;
+    }
 
-        // Определяем необходимое количество элементов
-        int maxElementCount = parameterValues.values().stream()
-                .mapToInt(array -> array != null ? array.length : 0)
-                .max()
-                .orElse(0);
-        int needElementCount = Math.min(maxElementCount, tabCounter);
-        // Очищаем и заполняем коллекцию
-        leftPanelStateCollection.getAllAsList().clear();
-        while (leftPanelStateCollection.getAllAsList().size() < needElementCount) {
-            leftPanelStateCollection.addEntry();
+    private Map<String, String[]> loadStringParams(Set<String> keys) {
+        Map<String, String[]> params = new LinkedHashMap<>();
+        for (String key : keys) {
+            params.put(key, settingsLoader.getStringArray(key, "", tabCounter));
         }
-        log.warn("Было создано " + leftPanelStateCollection.getAllAsList().size() + " наборов параметров leftPanelStateCollection");
+        return params;
+    }
 
-        // Применяем значения к `leftPanelStateCollection`
-        for (Map.Entry<String, BiConsumer<Integer, Integer>> entry : parameterSetters.entrySet()) {
-            String parameterName = entry.getKey();
-
-            BiConsumer<Integer, Integer> setter = entry.getValue();
-            Integer[] values = parameterValues.get(parameterName);
+    private <T> void processParameters(Map<String, BiConsumer<Integer, T>> setters, Map<String, T[]> params) {
+        for (Map.Entry<String, BiConsumer<Integer, T>> entry : setters.entrySet()) {
+            String paramName = entry.getKey();
+            BiConsumer<Integer, T> setter = entry.getValue();
+            T[] values = params.get(paramName);
 
             if (values != null) {
-                for (int i = 0; i < needElementCount; i++) {
-                    if (i < values.length && values[i] != null) {
-                        try {
-                            setter.accept(i, values[i]);
-                            //System.out.println("Задаю параметр " + parameterName + " на позиции " + i + " в значение " + values[i]);
-                        } catch (NumberFormatException e) {
-                            log.warn("Параметр " + parameterName + " на позиции " + i + " не был конвертирован корректно.", e);
+                for (int i = 0; i < values.length; i++) {
+                    if (values[i] != null) {
+                        int clientId = leftPanelStateCollection.getClientIdByTabNumber(tabNumber[i]);
+
+                        if (clientId == -1) {
+                            // Создаем новый клиент, если не найден
+                            clientId = leftPanelStateCollection.getNewRandomId();
+                            MainLeftPanelState state = new MainLeftPanelState();
+                            state.setClientId(clientId);
+                            state.setTabNumber(tabNumber[i]);
+                            leftPanelStateCollection.addPairClientIdTabNumber(clientId, tabNumber[i]);
+                            leftPanelStateCollection.addOrUpdateIdState(clientId, state);
                         }
+
+                        setter.accept(clientId, values[i]);
                     }
                 }
             }
         }
-
-        leftPanelStateCollection.getBaudRate(0);
     }
+
+
+
+    public void setLastLeftPanel(MainLeftPanelStateCollection leftPanStateInp) {
+        if (leftPanStateInp == null) {
+            throw new IllegalArgumentException("Переданный объект состояния левой панели не может быть null");
+        }
+
+        if (leftPanStateInp.isCollectionEmpty()) {
+            throw new IllegalArgumentException("Переданный объект состояния левой панели должен содержать описание хотя бы одной вкладки");
+        }
+
+        this.leftPanelStateCollection = leftPanStateInp;
+
+        // Создаем Map для хранения всех параметров
+        Map<String, StringBuilder> propertyBuilders = new HashMap<>();
+        String[] propertyKeys = {
+                "clientId", "tabNumber", "protocol", "protocolCode", "baudRate", "baudRateCode",
+                "stopBits", "stopBitsCode", "dataBits", "dataBitsCode",
+                "parityBit", "parityBitCode", "command", "prefix"
+        };
+        for (String key : propertyKeys) {
+            propertyBuilders.put(key, new StringBuilder());
+        }
+
+        // Заполняем StringBuilder'ы
+        for (MainLeftPanelState state : leftPanStateInp.getIdTabStateAsList()) {
+            propertyBuilders.get("clientId").append(state.getClientId()).append(", ");
+            propertyBuilders.get("tabNumber").append(state.getTabNumber()).append(", ");
+            propertyBuilders.get("protocol").append(ProtocolsList.getLikeArray(state.getProtocol())).append(", ");
+            propertyBuilders.get("protocolCode").append(state.getProtocol()).append(", ");
+
+            propertyBuilders.get("baudRate").append(BaudRatesList.getNameLikeArray(state.getBaudRate())).append(", ");
+            propertyBuilders.get("baudRateCode").append(state.getBaudRate()).append(", ");
+
+            propertyBuilders.get("stopBits").append(StopBitsList.getNameLikeArray(state.getStopBits())).append(", ");
+            propertyBuilders.get("stopBitsCode").append(state.getStopBits()).append(", ");
+
+            propertyBuilders.get("dataBits").append(DataBitsList.getNameLikeArray(state.getDataBits())).append(", ");
+            propertyBuilders.get("dataBitsCode").append(state.getDataBits()).append(", ");
+
+            propertyBuilders.get("parityBit").append(ParityList.getNameLikeArray(state.getParityBit())).append(", ");
+            propertyBuilders.get("parityBitCode").append(state.getParityBit()).append(", ");
+
+            propertyBuilders.get("command").append(state.getCommand()).append(", ");
+            propertyBuilders.get("prefix").append(state.getPrefix()).append(", ");
+        }
+
+        // Удаляем лишние запятые и пробелы, экранируем специальные символы
+        propertyBuilders.forEach((key, sb) -> {
+            if (sb.length() > 2) {
+                sb.setLength(sb.length() - 2); // Убираем последнюю запятую и пробел
+            }
+            String escapedValue = escapePropertyValue(sb.toString());
+            //log.warn(key + " : " + escapedValue);
+            properties.setProperty(key, escapedValue);
+        });
+
+        fileHandler.updateFileFromProperties(properties);
+        log.debug("Обновлено значение класса левой вкладки... ");
+    }
+
+    private String escapePropertyValue(String value) {
+        return value.replace("\\", "\\\\")  // Экранируем \
+                .replace("\n", "\\n")   // Экранируем перевод строки
+                .replace("\r", "\\r")   // Экранируем возврат каретки
+                .replace("\t", "\\t")   // Экранируем табуляцию
+                .replace("=", "\\=")    // Экранируем =
+                .replace(":", "\\:");   // Экранируем :
+    }
+
 
     private void updatePairsState(){
         if (clientAssociationMarkers.length != clientAssociationID.length) {
