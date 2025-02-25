@@ -63,7 +63,7 @@ public class StateMeasureController {
     public String sendCommand(@PathVariable Integer tabNumber, @PathVariable String command) {
         System.out.println("Try send " + command);
         // Выполняем отправку команды
-        MainWindow.webSend(tabNumber, command);
+        //MainWindow.webSend(tabNumber, command);
         return "OK";
     }
 }

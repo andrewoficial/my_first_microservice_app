@@ -79,7 +79,7 @@
                 <properties/>
                 <border type="none"/>
                 <children>
-                  <component id="25f9" class="javax.swing.JTextField" binding="textToSend">
+                  <component id="25f9" class="javax.swing.JTextField" binding="textField_textToSend">
                     <constraints>
                       <grid row="0" column="3" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="8" fill="1" indent="0" use-parent-layout="false">
                         <minimum-size width="25" height="25"/>
@@ -92,7 +92,7 @@
                       <text value="M^"/>
                     </properties>
                   </component>
-                  <component id="7fef2" class="javax.swing.JButton" binding="BT_Send">
+                  <component id="7fef2" class="javax.swing.JButton" binding="button_Send">
                     <constraints>
                       <grid row="0" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                     </constraints>
@@ -139,7 +139,7 @@
                     <border type="none"/>
                     <children/>
                   </grid>
-                  <component id="d7ebc" class="javax.swing.JTextField" binding="prefOneToSend">
+                  <component id="d7ebc" class="javax.swing.JTextField" binding="textField_prefToSend">
                     <constraints>
                       <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="7" hsize-policy="6" anchor="4" fill="0" indent="0" use-parent-layout="false">
                         <minimum-size width="10" height="25"/>
@@ -203,7 +203,7 @@
                           <text value="Биты данных"/>
                         </properties>
                       </component>
-                      <component id="433c" class="javax.swing.JComboBox" binding="CB_DataBits">
+                      <component id="433c" class="javax.swing.JComboBox" binding="comboBox_DataBits">
                         <constraints>
                           <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
                             <minimum-size width="160" height="-1"/>
@@ -243,7 +243,7 @@
                           <text value="Чётность"/>
                         </properties>
                       </component>
-                      <component id="28d3a" class="javax.swing.JComboBox" binding="CB_Parity">
+                      <component id="28d3a" class="javax.swing.JComboBox" binding="comboBox_Parity">
                         <constraints>
                           <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
                             <minimum-size width="160" height="-1"/>
@@ -285,7 +285,7 @@
                           <text value="Стоп бит"/>
                         </properties>
                       </component>
-                      <component id="5969e" class="javax.swing.JComboBox" binding="CB_StopBit">
+                      <component id="5969e" class="javax.swing.JComboBox" binding="comboBox_StopBit">
                         <constraints>
                           <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
                             <minimum-size width="160" height="-1"/>
@@ -316,7 +316,7 @@
                     </properties>
                     <border type="none"/>
                     <children>
-                      <component id="77ec1" class="javax.swing.JButton" binding="BT_Open">
+                      <component id="77ec1" class="javax.swing.JButton" binding="button_Open">
                         <constraints>
                           <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                         </constraints>
@@ -326,7 +326,7 @@
                           <text value="Открыть"/>
                         </properties>
                       </component>
-                      <component id="2eab5" class="javax.swing.JButton" binding="BT_Close">
+                      <component id="2eab5" class="javax.swing.JButton" binding="button_Close">
                         <constraints>
                           <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                         </constraints>
@@ -359,7 +359,7 @@
                           <text value="Порт"/>
                         </properties>
                       </component>
-                      <component id="9415b" class="javax.swing.JComboBox" binding="CB_ComPorts">
+                      <component id="9415b" class="javax.swing.JComboBox" binding="comboBox_ComPorts">
                         <constraints>
                           <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
                             <minimum-size width="160" height="-1"/>
@@ -401,7 +401,7 @@
                           <text value="Протокол"/>
                         </properties>
                       </component>
-                      <component id="e34a9" class="javax.swing.JComboBox" binding="CB_Protocol">
+                      <component id="e34a9" class="javax.swing.JComboBox" binding="comboBox_Protocol">
                         <constraints>
                           <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
                             <minimum-size width="160" height="-1"/>
@@ -433,7 +433,7 @@
                     </properties>
                     <border type="none"/>
                     <children>
-                      <component id="e638d" class="javax.swing.JCheckBox" binding="CB_Pool">
+                      <component id="e638d" class="javax.swing.JCheckBox" binding="checkBox_Pool">
                         <constraints>
                           <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                         </constraints>
@@ -443,7 +443,7 @@
                           <text value="Опрос  "/>
                         </properties>
                       </component>
-                      <component id="94d33" class="javax.swing.JTextField" binding="IN_PoolDelay">
+                      <component id="94d33" class="javax.swing.JTextField" binding="textField_poolDelay">
                         <constraints>
                           <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
                             <preferred-size width="150" height="-1"/>
@@ -466,7 +466,7 @@
                     </properties>
                     <border type="none"/>
                     <children>
-                      <component id="dfd93" class="javax.swing.JButton" binding="BT_AddDev">
+                      <component id="dfd93" class="javax.swing.JButton" binding="button_AddDev">
                         <constraints>
                           <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                         </constraints>
@@ -476,7 +476,7 @@
                           <text value="Добавить у-во"/>
                         </properties>
                       </component>
-                      <component id="bb745" class="javax.swing.JButton" binding="BT_RemoveDev">
+                      <component id="bb745" class="javax.swing.JButton" binding="button_RemoveDev">
                         <constraints>
                           <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                         </constraints>
@@ -499,7 +499,7 @@
                     </properties>
                     <border type="none"/>
                     <children>
-                      <component id="44c3" class="javax.swing.JButton" binding="BT_Update">
+                      <component id="44c3" class="javax.swing.JButton" binding="button_Update">
                         <constraints>
                           <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                         </constraints>
@@ -522,7 +522,7 @@
                     </properties>
                     <border type="none"/>
                     <children>
-                      <component id="2110a" class="javax.swing.JButton" binding="BT_Search">
+                      <component id="2110a" class="javax.swing.JButton" binding="button_Search">
                         <constraints>
                           <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                         </constraints>
@@ -558,7 +558,7 @@
                           <text value="Скорость   "/>
                         </properties>
                       </component>
-                      <component id="9f396" class="javax.swing.JComboBox" binding="CB_BaudRate">
+                      <component id="9f396" class="javax.swing.JComboBox" binding="comboBox_BaudRate">
                         <constraints>
                           <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
                             <minimum-size width="160" height="-1"/>
@@ -590,7 +590,7 @@
                     </properties>
                     <border type="none"/>
                     <children>
-                      <component id="8fb5" class="javax.swing.JCheckBox" binding="CB_Log">
+                      <component id="8fb5" class="javax.swing.JCheckBox" binding="checkBox_Log">
                         <constraints>
                           <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                         </constraints>
@@ -601,7 +601,7 @@
                           <text value="Лог"/>
                         </properties>
                       </component>
-                      <component id="62ff4" class="javax.swing.JCheckBox" binding="CB_Autoconnect">
+                      <component id="62ff4" class="javax.swing.JCheckBox" binding="checkBox_Autoconnect">
                         <constraints>
                           <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                         </constraints>

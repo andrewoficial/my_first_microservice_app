@@ -110,12 +110,12 @@ public class IGM_10 implements SomeDevice {
 
     @Override
     public int getMillisReadLimit() {
-        return 150;
+        return 700;
     }
 
     @Override
     public int getMillisWriteLimit() {
-        return 1024;
+        return 400;
     }
 
     @Override
@@ -348,8 +348,8 @@ public class IGM_10 implements SomeDevice {
                             System.out.println("Got string (array) [" + Arrays.toString(response) + "]");
                             //System.out.println("Got string (string) [" + MyUtilities.byteArrayToString(response) + "] ");
 
-                            if (response.length >= 68) {
-                                if (response[71] != 13) {
+                            if (response.length >= 72) {
+                                if (response[72] != 13) {
                                     System.out.println("Не найден CR");
                                     //resetAnswerValues();
                                     //return null;
@@ -391,7 +391,7 @@ public class IGM_10 implements SomeDevice {
                                 }
                                 value = 0.0;
 
-                                subResponse = Arrays.copyOfRange(response, 6, 11);
+                                subResponse = Arrays.copyOfRange(response, 7, 12);
                                 if (isCorrectNumberF(subResponse)) {
                                     boolean success = true;
                                     // Преобразуем байты ASCII-чисел вручную
@@ -422,7 +422,7 @@ public class IGM_10 implements SomeDevice {
                                 }
                                 value = 0.0;
 
-                                subResponse = Arrays.copyOfRange(response, 12, 17);
+                                subResponse = Arrays.copyOfRange(response, 13, 18);
                                 if (isCorrectNumberF(subResponse)) {
                                     boolean success = true;
                                     for (int i = 0; i < subResponse.length; i++) {
@@ -449,7 +449,7 @@ public class IGM_10 implements SomeDevice {
                                 }
                                 value = 0.0;
 
-                                subResponse = Arrays.copyOfRange(response, 18, 23);  //Напряжение питания
+                                subResponse = Arrays.copyOfRange(response, 19, 24);  //Напряжение питания
                                 if (isCorrectNumberF(subResponse)) {
                                     boolean success = true;
                                     for (int i = 0; i < subResponse.length; i++) {
@@ -476,7 +476,7 @@ public class IGM_10 implements SomeDevice {
                                 }
                                 value = 0.0;
 
-                                subResponse = Arrays.copyOfRange(response, 24, 29);  //Сила тока шунт один до полинома
+                                subResponse = Arrays.copyOfRange(response, 25, 30);  //Сила тока шунт один до полинома
                                 if (isCorrectNumberF(subResponse)) {
                                     boolean success = true;
                                     for (int i = 0; i < subResponse.length; i++) {
@@ -503,8 +503,8 @@ public class IGM_10 implements SomeDevice {
                                 }
                                 value = 0.0;
 
-                                subResponse = Arrays.copyOfRange(response, 30, 35);  // Сила тока шунт два до полинома
-                                byte[]  subResponse_short = Arrays.copyOfRange(response, 31, 35);  // Сила тока шунт два до полинома
+                                subResponse = Arrays.copyOfRange(response, 31, 36);  // Сила тока шунт два до полинома
+                                byte[]  subResponse_short = Arrays.copyOfRange(response, 32, 36);  // Сила тока шунт два до полинома
                                 if (isCorrectNumberF(subResponse_short)) {
                                     boolean success = true;
                                     int sign = 1; // По умолчанию знак положительный
@@ -542,8 +542,8 @@ public class IGM_10 implements SomeDevice {
                                 }
                                 value = 0.0;
 
-                                subResponse = Arrays.copyOfRange(response, 36, 41);  // Сила тока шунт два до полинома
-                                subResponse_short = Arrays.copyOfRange(response, 37, 41);  // Сила тока шунт два до полинома
+                                subResponse = Arrays.copyOfRange(response, 37, 42);  // Сила тока шунт два до полинома
+                                subResponse_short = Arrays.copyOfRange(response, 38, 42);  // Сила тока шунт два до полинома
                                 if (isCorrectNumberF(subResponse_short)) {
                                     boolean success = true;
                                     int sign = 1; // По умолчанию знак положительный
@@ -581,7 +581,7 @@ public class IGM_10 implements SomeDevice {
                                 }
                                 value = 0.0;
 
-                                subResponse = Arrays.copyOfRange(response, 42, 47);  //Сила тока шунт два после полинома
+                                subResponse = Arrays.copyOfRange(response, 43, 48);  //Сила тока шунт два после полинома
                                 if (isCorrectNumberFExceptMinus(subResponse)) {
                                     boolean success = true;
                                     boolean isNegative = false;
@@ -613,7 +613,7 @@ public class IGM_10 implements SomeDevice {
                                 }
                                 value = 0.0;
 
-                                subResponse = Arrays.copyOfRange(response, 48, 53);  //Сила тока выбранный результат (ардуиной)
+                                subResponse = Arrays.copyOfRange(response, 49, 54);  //Сила тока выбранный результат (ардуиной)
                                 if (isCorrectNumberFExceptMinus(subResponse)) {
                                     boolean success = true;
                                     for (int i = 0; i < subResponse.length; i++) {
@@ -637,7 +637,7 @@ public class IGM_10 implements SomeDevice {
                                 }
                                 value = 0.0;
 
-                                subResponse = Arrays.copyOfRange(response, 54, 59);  //Статус
+                                subResponse = Arrays.copyOfRange(response, 55, 60);  //Статус
                                 if (isCorrectNumberF(subResponse)) {
                                     boolean success = true;
                                     for (int i = 0; i < subResponse.length; i++) {
@@ -664,7 +664,7 @@ public class IGM_10 implements SomeDevice {
                                 }
                                 value = 0.0;
 
-                                subResponse = Arrays.copyOfRange(response, 60, 68);  //Серийный номер
+                                subResponse = Arrays.copyOfRange(response, 61, 69);  //Серийный номер
                                 if (isCorrectNumberF(subResponse)) {
                                     boolean isNegative = false;
                                     boolean success = true;

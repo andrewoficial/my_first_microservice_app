@@ -21,9 +21,6 @@ public class ComPort {
     public  SerialPort activePort;
     private SerialPort[] ports = SerialPort.getCommPorts();
 
-
-
-
     @Getter
     private int comNumber = 0;
 

@@ -74,7 +74,7 @@ public class ComDataCollector implements Runnable{
         this.clientId = clientId;
         log.warn("getBaudRateValue " + state.getBaudRateValue(clientId) + "getDataBitsValue " +  state.getDataBitsValue(clientId)+ "getStopBitsValue " + state.getStopBitsValue(clientId)+ "getParityBitsValue " + state.getParityBitsValue(clientId));
         comPort.setComPortParameters(state.getBaudRateValue(clientId), state.getDataBitsValue(clientId), state.getStopBitsValue(clientId), state.getParityBitsValue(clientId));
-        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 600, 600);
+        comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, device.getMillisReadLimit(), device.getMillisWriteLimit());
         comPort.openPort(device.getMillisReadLimit());
         if ( ! comPort.isOpen()) {
             throw new ConnectException("Порт: " + comPort.getSystemPortName() + ". Код ошибки: " + comPort.getLastErrorCode() + ". Системное положение порта:" + comPort.getPortLocation() + ". VendorID:" + comPort.getVendorID());
@@ -124,13 +124,16 @@ public class ComDataCollector implements Runnable{
         //int sizeLimit = device == null ? 150 : device.getExpectedBytes();
         int sizeLimit = 200;
         try {
-            while (comPort.bytesAvailable() > 0) {
-                int bytesRead = comPort.readBytes(chunk, Math.min(chunk.length, comPort.bytesAvailable()));
-                buffer.write(chunk, buffer.size(), bytesRead);
+            int dataAvailable = comPort.bytesAvailable();
+            while (dataAvailable > 0) {
+                int bytesRead = comPort.readBytes(chunk, Math.min(chunk.length, dataAvailable));
+                //buffer.write(chunk, buffer.size(), bytesRead);
+                buffer.write(chunk, 0, bytesRead);
                 if(buffer.size() >= sizeLimit){
                     return;
                 }
                 sleepSafely(delay);
+                dataAvailable = comPort.bytesAvailable();
             }
             //String receivedData = buffer.toString("UTF-8"); // Учитывайте кодировку устройства
             String receivedData = buffer.toString(); // Учитывайте кодировку устройства
@@ -196,6 +199,7 @@ public class ComDataCollector implements Runnable{
         if(((System.currentTimeMillis() - requestTimestamp) > RESPONSE_TIMEOUT_MS) || ((System.currentTimeMillis() - requestTimestamp) < 0)){
             responseRequested = false;
             comDataCollectorBusy.set(false);
+            comPort.addDataListener(serialPortDataListener);
         }
     }
     private void pollCommands() {
@@ -450,7 +454,7 @@ public class ComDataCollector implements Runnable{
         }
         return forReturn;
     }
-    public String reopenPort(int clientId, int newBaudRate, int newDataBits, int newStopBits, int newParity, boolean useRS485Mode){
+    public String reopenPort(int clientId, MainLeftPanelStateCollection stateCollection){
         if(this.comPort == null){
             return "Нет объекта порта в потоке опроса";
         }
@@ -461,11 +465,11 @@ public class ComDataCollector implements Runnable{
                 comPort.removeDataListener();
                 comPort.flushIOBuffers();
                 this.comPort.closePort();
-                comPort.setComPortParameters(newBaudRate, newDataBits, newStopBits, newParity, useRS485Mode);
+                comPort.setComPortParameters(stateCollection.getBaudRateValue(clientId), stateCollection.getDataBits(clientId), stateCollection.getStopBits(clientId), stateCollection.getParityBitsValue(clientId), false);
                 comPort.openPort();
                 forReturn = "Порт " + comPort.getSystemPortName() + " переоткрыт ";
             } else {
-                comPort.setComPortParameters(newBaudRate, newDataBits, newStopBits, newParity, useRS485Mode);
+                comPort.setComPortParameters(stateCollection.getBaudRateValue(clientId), stateCollection.getDataBits(clientId), stateCollection.getStopBits(clientId), stateCollection.getParityBitsValue(clientId), false);
                 comPort.openPort();
                 forReturn = "Порт " + comPort.getSystemPortName() + " открыт ";
             }

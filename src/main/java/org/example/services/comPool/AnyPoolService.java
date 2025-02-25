@@ -16,6 +16,7 @@ import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.IntStream;
 
 
 
@@ -283,6 +284,17 @@ public class AnyPoolService {
         return forReturnFix;
     }
 
+    public int searchComPortNumberByName(String name) {
+        return IntStream.range(0, comPort.getAllPorts().size())
+                .filter(i -> comPort.getAllPorts().get(i).getSystemPortName().equalsIgnoreCase(name))
+                .findFirst()
+                .orElse(-1);
+    }
+
+    public void updateComPortList(){
+        comPort.updatePorts();
+
+    }
     public void closeUnusedComConnection(int quantityTabs){
 
         //Если в ArrayList больше объектов, чем открыто вкладок - позакрывать лишнее

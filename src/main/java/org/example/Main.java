@@ -29,12 +29,9 @@ public class Main {
         String confName = context.getEnvironment().getProperty("spring.config.name", "dunno");
         System.out.println("Параметр confName: " + confName);
         SwingUtilities.invokeLater(() -> {
-            ComPort comPorts = context.getBean(ComPort.class);
             AnyPoolService anyPoolService = context.getBean(AnyPoolService.class);
             MyProperties myProperties = context.getBean(MyProperties.class);
-            mainWindow = new MainWindow(myProperties, comPorts, anyPoolService);
-
-            //mainWindow.setVisible(true);
+            mainWindow = new MainWindow(myProperties, anyPoolService);
         });
 
     }
@@ -63,12 +60,10 @@ public class Main {
         if (mainWindow != null) {
             SwingUtilities.invokeLater(() -> {
                 MyProperties myProperties = context.getBean(MyProperties.class);
-                ComPort comPorts = context.getBean(ComPort.class);
                 AnyPoolService anyPoolService = context.getBean(AnyPoolService.class);
 
-
                 // Передаём новые бины в уже созданное окно
-                mainWindow.updateServices(myProperties, comPorts, anyPoolService);
+                mainWindow.updateServices(myProperties, anyPoolService);
             });
         }
     }
