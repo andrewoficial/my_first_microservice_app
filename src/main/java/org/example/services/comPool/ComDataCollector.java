@@ -8,6 +8,7 @@ import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.gui.MainLeftPanelStateCollection;
 import org.example.services.AnswerStorage;
+import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 import org.example.services.DeviceAnswer;
 import org.example.services.loggers.DeviceLogger;
@@ -45,6 +46,7 @@ public class ComDataCollector implements Runnable{
     private long poolDelay = 2000;//Задает переодичность отправки запросов в мс.
     private long millisPrev = System.currentTimeMillis() - (poolDelay * 100);//Обслуживание таймера в миллисекундах (основная переменная poolDelay).
     private final ConcurrentHashMap<Integer, ClientData> clientsMap = new ConcurrentHashMap<>();
+    private volatile DeviceAnswer deviceAnswer;
 
 
     private volatile boolean responseRequested = false;
@@ -139,12 +141,12 @@ public class ComDataCollector implements Runnable{
             String receivedData = buffer.toString(); // Учитывайте кодировку устройства
             if (responseRequested && (System.currentTimeMillis() - requestTimestamp) < RESPONSE_TIMEOUT_MS) {
                 log.info("Получен ожидаемый ответ");
-                saveReceivedByEvent(receivedData, currentClientId, true);
+                saveReceivedByEvent(receivedData, true);
                 responseRequested = false;
                 log.info("Завершена обработка ожидаемых данных (ответа)");
             } else {
                 log.info("Получены неожиданные данные: " + receivedData);
-                saveReceivedByEvent(receivedData, currentClientId, false);
+                saveReceivedByEvent(receivedData, false);
                 log.info("Завершена обработка неожиданных данных. responseRequested " + responseRequested + " requestTimestamp " + requestTimestamp);
             }
         }finally {
@@ -275,9 +277,10 @@ public class ComDataCollector implements Runnable{
         device.sendData(collection.getPrefix(clientId)+collection.getCommand(clientId), device.getStrEndian(), comPort, true, 0, device);
         //device.setCmdToSend(collection.getPrefix(clientId)+collection.getCommand(clientId));
         log.info("Команда отправлена: " + collection.getPrefix(clientId)+collection.getCommand(clientId));
+        deviceAnswer = new DeviceAnswer(LocalDateTime.now(),collection.getCommand(clientId),clientId);
     }
 
-    public void saveReceivedByEvent(String msg, int tabN, boolean responseRequested) {
+    public void saveReceivedByEvent(String msg, boolean responseRequested) {
         byte [] received = new byte[msg.length()];
         char [] receivedChar = msg.toCharArray();
         for (int i = 0; i < received.length; i++) {
@@ -287,10 +290,17 @@ public class ComDataCollector implements Runnable{
             log.error("Устройство не инициализировано при попытке saveReceivedByEvent");
             return;
         }
+
         if(responseRequested) {
-            device.setCmdToSend(collection.getCommand(clientId));
+            try{
+                device.setCmdToSend(collection.getCommand(clientId));
+            }catch (IndexOutOfBoundsException exception){
+                log.warn("Исключение " + exception.getMessage());
+                device.setCmdToSend(null);
+            }
         }else{
             device.setCmdToSend(null);
+            deviceAnswer.setRequestSendTime(LocalDateTime.now());
         }
 
         device.setLastAnswer(received);
@@ -300,13 +310,23 @@ public class ComDataCollector implements Runnable{
         if(device.getTabForAnswer() != null) {
             tabDirection = device.getTabForAnswer();
         }
+        deviceAnswer.changeTabNum(tabDirection);
+        deviceAnswer.setDeviceType(device);
+        deviceAnswer.setAnswerReceivedTime(LocalDateTime.now());
+        String answer = device.getAnswer();
+        if(answer != null){
+            deviceAnswer.setAnswerReceivedString(answer);
+        }else{
+            deviceAnswer.setAnswerReceivedString("");
+        }
 
-        DeviceAnswer answer = new DeviceAnswer(LocalDateTime.now(),collection.getCommand(clientId),tabDirection);
-        answer.setDeviceType(device);
-        answer.setAnswerReceivedTime(LocalDateTime.now());
-        answer.setAnswerReceivedString(device.getAnswer());
-        answer.setAnswerReceivedValues(device.getValues());
-        saveAndLogSome(answer, tabDirection);
+        if(device.getValues() != null){
+            deviceAnswer.setAnswerReceivedValues(device.getValues());
+        }else{
+            deviceAnswer.setAnswerReceivedValues(new AnswerValues(0));
+        }
+
+        saveAndLogSome(deviceAnswer, tabDirection);
     }
 
     public void setNeedPool (int clientId, boolean needStatePool){
@@ -419,6 +439,7 @@ public class ComDataCollector implements Runnable{
         return clientsMap.containsKey(clientId);
     }
     public void addDeviceToService(int clientId, String prf, String cmd, boolean needLog, boolean needPoolFlag) {
+        log.info("Добавление клиента в поток " + clientId  + Thread.currentThread().getName());
         DeviceLogger deviceLogger = null;
         if(needLog){
             deviceLogger = new DeviceLogger(clientId);
@@ -426,7 +447,7 @@ public class ComDataCollector implements Runnable{
         clientsMap.put(clientId, new ClientData(clientId, needLog, needPoolFlag, prf, cmd, deviceLogger));
     }
     public void removeDeviceFromComDataCollector(int clientId){ //Когда вкладка закрывается
-        log.info("Удаление вкладки из потока " + clientId  + Thread.currentThread().getName());
+        log.info("Удаление клиента из потока " + clientId  + Thread.currentThread().getName());
         if(containClientId(clientId))
             clientsMap.remove(clientId);
     }

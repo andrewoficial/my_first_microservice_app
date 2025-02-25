@@ -1,7 +1,11 @@
 package org.example.gui.mainWindowUtilites;
 
+import org.example.device.ProtocolsList;
 import org.example.gui.MainLeftPanelState;
 import org.example.gui.MainLeftPanelStateCollection;
+import org.example.services.comPort.BaudRatesList;
+import org.example.services.comPort.DataBitsList;
+import org.example.services.comPort.StopBitsList;
 
 import javax.swing.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -45,11 +49,21 @@ public class GuiStateManager {
                                    JTextField prefix) {
         int clientId = ensureClientId();
         state.setParityBits(clientId, parity.getSelectedIndex());
+        state.setParityBitsValue(clientId, parity.getSelectedIndex());
+
         state.setDataBits(clientId, dataBits.getSelectedIndex());
+        state.setDataBitsValue(clientId, DataBitsList.getNameLikeArray(dataBits.getSelectedIndex()));
+
         state.setStopBits(clientId, stopBit.getSelectedIndex());
+        state.setStopBitsValue(clientId, StopBitsList.getNameLikeArray(stopBit.getSelectedIndex()));
+
         state.setBaudRate(clientId, baudRate.getSelectedIndex());
+        state.setBaudRateValue(clientId, BaudRatesList.getNameLikeArray(baudRate.getSelectedIndex()));
+
         state.setProtocol(clientId, protocol.getSelectedIndex());
+
         state.setCommandToSend(clientId, command.getText());
+
         state.setPrefixToSend(clientId, prefix.getText());
     }
 

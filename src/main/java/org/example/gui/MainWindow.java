@@ -42,7 +42,7 @@ import java.util.function.IntSupplier;
 
 public class MainWindow extends JFrame implements Rendeble {
     private final static Logger log = Logger.getLogger(MainWindow.class);//Внешний логгер
-    private final ExecutorService uiThPool = Executors.newCachedThreadPool(); //Поток GUI
+    private ExecutorService uiThPool = Executors.newCachedThreadPool(); //Поток GUI
     private MainLeftPanelStateCollection leftPanState; // Класс, хранящий состояние клиентов (настройки в памяти)
     private MyProperties prop; //Файл настроек
     private AnyPoolService anyPoolService; //Сервис опросов (разных протоколов)
@@ -224,9 +224,9 @@ public class MainWindow extends JFrame implements Rendeble {
             addTab();
         }
 
-        updateGuiFromClass();
+
         //this.renderData();
-        uiThPool.submit(new RenderThread(this));
+
 
         addWindowListener(new WindowAdapter() {
             @Override
@@ -238,7 +238,10 @@ public class MainWindow extends JFrame implements Rendeble {
 
         initUI();
         initDocumentListeners();
+        //updateGuiFromClass();
+        updateClassFromGui();
         tabbedPane1.setSelectedIndex(0);
+        uiThPool.submit(new RenderThread(this));
     }
 
     private void updateComPortList() {
@@ -285,18 +288,26 @@ public class MainWindow extends JFrame implements Rendeble {
 
     private void removeTab() {
         tabManager.removeTab();
+        currentTabCount.set(tabbedPane1.getTabCount());
     }
 
     private void addTab() {
         tabManager.addTab();
+        currentTabCount.set(tabbedPane1.getTabCount());
     }
 
 
     private void openComPort() {
         updateClassFromGui();
-        checkIsUsedPort(); //Выставляет блокировки кнопки открыть/закрыть
+        log.info(leftPanState.getBaudRateValue(currentActiveClientId.get()));
+
+
         addCustomMessage(portManager.openPort(currentActiveClientId.get(), getCurrComSelection(), getCurrProtocolSelection()));
-        prop.setPortForTab(anyPoolService.findComDataCollectorByClientId(currentActiveClientId.get()).getComPort().getSystemPortName(), currentActiveTab.get());
+        checkIsUsedPort(); //Выставляет блокировки кнопки открыть/закрыть
+        if (anyPoolService.findComDataCollectorByClientId(currentActiveClientId.get()) != null) {
+            prop.setPortForTab(anyPoolService.findComDataCollectorByClientId(currentActiveClientId.get()).getComPort().getSystemPortName(), currentActiveTab.get());
+
+        }
         saveParameters();
     }
 
@@ -345,7 +356,14 @@ public class MainWindow extends JFrame implements Rendeble {
     private void updateTextAndSendFromEnter() {
         updateTextToSend();
         startSend(true);
-        renderData();
+
+        if (uiThPool.isShutdown() || uiThPool.isTerminated()) {
+            log.info("Перезапуск пула потоков рендера...");
+            uiThPool = Executors.newSingleThreadExecutor(); // Создаём новый пул
+            uiThPool.submit(new RenderThread(this));
+        }
+
+
     }
 
     private void updateTextAndSendFromCheckBox() {
@@ -447,7 +465,7 @@ public class MainWindow extends JFrame implements Rendeble {
             if (!anyPoolService.getComDataCollectors().isEmpty()) {
                 ComDataCollector ps = anyPoolService.getComDataCollectors().get(currentActiveTab.get());
                 if (ps != null)
-                    anyPoolService.findComDataCollectorByClientId(currentActiveClientId.get()).setTextToSendString(leftPanState.getPrefix(currentActiveClientId.get()), leftPanState.getCommand(currentActiveClientId.get()), currentActiveTab.get());
+                    anyPoolService.findComDataCollectorByClientId(currentActiveClientId.get()).setTextToSendString(leftPanState.getPrefix(currentActiveClientId.get()), leftPanState.getCommand(currentActiveClientId.get()), currentActiveClientId.get());
                 saveParameters();
             }
         }
@@ -508,28 +526,46 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
     public void renderData() {
-        Document doc = logDataTransferJtextPanelsMap.get(currentActiveClientId.get()).getDocument();
-        //final int maxLength = 25_000_000; // Примерно 50 МБ (25 млн символов)
-        final int maxLength = 10_000; // Примерно 20 МБ (25 млн символов)
-        try {
-            TabAnswerPart an = AnswerStorage.getAnswersQueForTab(lastReceivedPositionFromStorageMap.get(currentActiveClientId.get()), currentActiveClientId.get(), true);
-            lastReceivedPositionFromStorageMap.put(currentActiveClientId.get(), an.getPosition());
-            int currentLength = doc.getLength();
-            int newTextLength = an.getAnswerPart().length();
+        Integer clientId = currentActiveClientId.get();
+        Document doc = logDataTransferJtextPanelsMap.get(clientId).getDocument();
+        final int maxLength = 10_000;
 
-            if (currentLength + newTextLength > maxLength) {
-                int overflow = (currentLength + newTextLength) - maxLength;
-                int removeCount = Math.min(currentLength, overflow + 1024); // Удаляем с запасом
-                doc.remove(0, removeCount);
+        try {
+            int lastPosition = lastReceivedPositionFromStorageMap.getOrDefault(clientId, 0);
+            int queueOffsetInt = AnswerStorage.queueOffset.getOrDefault(clientId, 0);
+
+            // Синхронизация доступа к позиции
+            synchronized (lastReceivedPositionFromStorageMap) {
+                if (lastPosition < queueOffsetInt) {
+                    lastPosition = queueOffsetInt;
+                    lastReceivedPositionFromStorageMap.put(clientId, lastPosition);
+                }
+            }
+
+            TabAnswerPart an = AnswerStorage.getAnswersQueForTab(lastPosition, clientId, true);
+
+            if (an.getAnswerPart() == null || an.getAnswerPart().isEmpty()) {
+                log.info("Нет новых данных для клиента [" + clientId + "]");
+                return;
+            }
+            // Обновляем позицию атомарно
+            synchronized (lastReceivedPositionFromStorageMap) {
+                lastReceivedPositionFromStorageMap.put(clientId, an.getPosition());
+            }
+
+            // Очистка и добавление новых данных
+            if (doc.getLength() + an.getAnswerPart().length() > maxLength) {
+                doc.remove(0, doc.getLength());
             }
             doc.insertString(doc.getLength(), an.getAnswerPart(), null);
-            //log.info("Текст  " + an.getAnswerPart() + " будет добавлен для клиента " + currentClientId.get());
-            logDataTransferJtextPanelsMap.get(currentActiveClientId.get()).setCaretPosition(doc.getLength());
+
+            // Автоскролл к новому содержимому
+            logDataTransferJtextPanelsMap.get(clientId).setCaretPosition(doc.getLength());
+
         } catch (BadLocationException ex) {
-            log.warn("Произошло исключение в ходе рендера окна с историей данных:" + ex.getMessage());
+            log.warn("Произошло исключение при рендере окна: " + ex.getMessage());
         }
     }
-
     @Override
     public boolean isEnable() {
         return true;
@@ -542,6 +578,7 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
     private void saveParameters() {
+        log.debug("Обновление файла настроек со вкладки" + currentActiveTab + " и ИД клиента " + currentActiveClientId.get());
         log.debug("Обновление файла настроек со вкладки" + currentActiveTab + " и ИД клиента " + currentActiveClientId.get());
         prop.setLastLeftPanel(leftPanState);
         prop.setLogLevel(Logger.getRootLogger().getLevel());
