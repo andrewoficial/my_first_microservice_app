@@ -290,6 +290,9 @@ public class ComDataCollector implements Runnable{
             log.error("Устройство не инициализировано при попытке saveReceivedByEvent");
             return;
         }
+        if(deviceAnswer == null){
+            deviceAnswer = new DeviceAnswer(LocalDateTime.now(), "", currentDirection.get());
+        }
 
         if(responseRequested) {
             try{
@@ -506,7 +509,7 @@ public class ComDataCollector implements Runnable{
     }
     public boolean isRootThread(Integer clientId) {
         for (ClientData client : clientsMap.values()) {
-            if (!Objects.equals(client.clientId, clientId) && client.needPool) {
+            if (!Objects.equals(client.clientId, clientId) && client.needPool) { //Если найден другой клиент с активным опросом
                 log.warn("Найден " + client.clientId + " и " + clientId + " при этом у найденого " + client.needLog);
                 return false;
             }

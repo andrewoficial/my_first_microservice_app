@@ -27,6 +27,10 @@ public class PortManager {
     }
 
     public String openPort(int clientId, int comIndex, int protocolIndex) {
+        if(leftPanelStateCollection.containClientId(clientId)){
+            leftPanelStateCollection.setComPortComboNumber(clientId, comIndex);
+        }
+
         ComDataCollector ps = anyPoolService.findComDataCollectorByClientId(clientId);
         String resultCreating = "";
         if (ps == null) {

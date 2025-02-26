@@ -1,10 +1,14 @@
 package org.example.gui;
 
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Component
 public class MainLeftPanelStateCollection {
     private final ConcurrentHashMap<Integer, Integer> clientIdTab = new ConcurrentHashMap<>(); // <RandomID, TabNumber>
     private final ConcurrentHashMap<Integer, MainLeftPanelState> clientIdTabState = new ConcurrentHashMap<>();
@@ -70,6 +74,14 @@ public class MainLeftPanelStateCollection {
         return -1;
     }
 
+    public boolean containClientId(Integer clientId){
+        if (clientId != null && clientId >= 0 && !clientIdTab.isEmpty()) {
+            return clientIdTab.containsKey(clientId);
+        }
+        return false;
+    }
+
+
     public boolean addPairClientIdTabNumber(Integer clientId, Integer tabNumber){
         if (clientId != null && tabNumber != null && clientId >= 0 && tabNumber >= 0) {
             if(getTabNumberByClientId(clientId) == -1 && getClientIdByTabNumber(tabNumber) == -1){
@@ -110,6 +122,15 @@ public class MainLeftPanelStateCollection {
         }
         //System.out.println("Для клиента " + clientId + " был вызван setDataBits " + state);
         stateObj.setDataBits(state);
+    }
+
+    public void setComPortComboNumber(int clientId, int state){
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        //System.out.println("Для клиента " + clientId + " был вызван setDataBits " + state);
+        stateObj.setComPortComboNumber(state);
     }
 
     public void setDataBitsValue(int clientId, int state){
@@ -267,6 +288,14 @@ public class MainLeftPanelStateCollection {
             throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
         }
         return stateObj.getStopBits();
+    }
+
+    public int getComPortComboNumber(int clientId) {
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        return stateObj.getComPortComboNumber();
     }
 
     public int getStopBitsValue(int clientId) {

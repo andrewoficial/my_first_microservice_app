@@ -332,7 +332,7 @@ public class ARD_TERM implements SomeDevice {
 
                                 if(isOk){
                                     tmpSb.setLength(0);
-                                    for (int i = 60; i < 67; i++) {
+                                    for (int i = 60; i < 68; i++) {
                                         if(sb.charAt(i) > 47 && sb.charAt(i) < 58) {
                                             tmpSb.append(sb.charAt(i));
                                         }

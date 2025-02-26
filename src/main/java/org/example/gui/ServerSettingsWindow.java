@@ -19,7 +19,6 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class ServerSettingsWindow extends JDialog {
-    private ApplicationContext applicationContext;
     private MyProperties myProperties = MyProperties.getInstance();
     private String driver;
     private JPanel serverParametersPanel;

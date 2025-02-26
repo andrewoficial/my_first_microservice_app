@@ -140,7 +140,7 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
 
-    public MainWindow(MyProperties myProperties, AnyPoolService anyPoolService) {
+    public MainWindow(MyProperties myProperties, AnyPoolService anyPoolService, MainLeftPanelStateCollection leftPanelStateCollection) {
         log.debug("Подготовка к рендеру окна....");
         if (anyPoolService == null || myProperties == null) {
             log.warn("В конструктор MainWindow передан null anyPoolService/comPorts/myProperties");
@@ -173,6 +173,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 DataBitsList::getNameLikeArray,
                 () -> leftPanState.getDataBits(currentActiveClientId.get()));
 
+
         guiStateManager = new GuiStateManager(leftPanState, currentActiveClientId, currentActiveTab);
         tabManager = new TabManager(tabbedPane1, leftPanState, logDataTransferJtextPanelsMap, lastReceivedPositionFromStorageMap, button_RemoveDev);
         portManager = new PortManager(anyPoolService, prop, guiStateManager, leftPanState);
@@ -199,15 +200,10 @@ public class MainWindow extends JFrame implements Rendeble {
                 if (currentActiveClientId.get() == -1) {
                     currentActiveClientId.set(checkAndCreateGuiStateClass());
                 }
-                checkBox_Pool.setSelected(anyPoolService.isComDataCollectorByClientIdActiveDataSurvey(currentActiveTab.get()));
-                checkBox_Log.setSelected(anyPoolService.isComDataCollectorByClientIdLogged(currentActiveTab.get()));
+                checkBox_Pool.setSelected(anyPoolService.isComDataCollectorByClientIdActiveDataSurvey(currentActiveClientId.get()));
+                checkBox_Log.setSelected(anyPoolService.isComDataCollectorByClientIdLogged(currentActiveClientId.get()));
                 updateGuiFromClass();
-                ComDataCollector ps = anyPoolService.findComDataCollectorByClientId(currentActiveTab.get());
-                if (ps != null) {
-                    if (ps.getComPort() != null) {
-                        updateComPortSelectorFromProp();
-                    }
-                }
+                updateComPortSelectorFromProp();
                 checkIsUsedPort();
             }
         });
@@ -245,6 +241,7 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
     private void updateComPortList() {
+        comboBox_ComPorts.removeAllItems();
         for (int i = 0; i < SerialPort.getCommPorts().length; i++) {
             SerialPort currentPort = SerialPort.getCommPorts()[i];
             comboBox_ComPorts.addItem(currentPort.getSystemPortName() + " (" + MyUtilities.removeComWord(currentPort.getPortDescription()) + ")");
@@ -422,7 +419,17 @@ public class MainWindow extends JFrame implements Rendeble {
 
     private void updateComPortSelectorFromProp() {
         if (prop != null && prop.getPorts() != null && prop.getPorts().length > currentActiveTab.get() && prop.getPorts()[currentActiveTab.get()] != null) {
-            comboBox_ComPorts.setSelectedIndex(anyPoolService.searchComPortNumberByName(prop.getPorts()[currentActiveTab.get()]));
+            int portNumber = -1;
+            if (anyPoolService.findComDataCollectorByClientId(currentActiveClientId.get()) != null) {
+                portNumber = anyPoolService.findComDataCollectorByClientId(currentActiveClientId.get()).getComPortForJCombo();
+            } else if (leftPanState.getComPortComboNumber(currentActiveClientId.get()) != 0) {
+                portNumber = leftPanState.getComPortComboNumber(currentActiveClientId.get());
+            } else {
+                if (prop != null && prop.getPorts() != null && prop.getPorts().length > currentActiveTab.get() && prop.getPorts()[currentActiveTab.get()] != null) {
+                    portNumber = anyPoolService.searchComPortNumberByName(prop.getPorts()[currentActiveTab.get()]);
+                }
+            }
+            comboBox_ComPorts.setSelectedIndex(portNumber);
         }
     }
 
@@ -461,13 +468,11 @@ public class MainWindow extends JFrame implements Rendeble {
 
     private void readAndUpdateInputPrefAndCommandValues() {
         log.info("Изменение в поле ввода префикса или команды");
-        if (leftPanState.getClientIdByTabNumber(currentActiveTab.get()) != -1) {
-            if (!anyPoolService.getComDataCollectors().isEmpty()) {
-                ComDataCollector ps = anyPoolService.getComDataCollectors().get(currentActiveTab.get());
-                if (ps != null)
-                    anyPoolService.findComDataCollectorByClientId(currentActiveClientId.get()).setTextToSendString(leftPanState.getPrefix(currentActiveClientId.get()), leftPanState.getCommand(currentActiveClientId.get()), currentActiveClientId.get());
-                saveParameters();
-            }
+        if (leftPanState.containClientId(currentActiveTab.get())) {
+            ComDataCollector ps = anyPoolService.getComDataCollectors().get(currentActiveTab.get());
+            if (ps != null)
+                anyPoolService.findComDataCollectorByClientId(currentActiveClientId.get()).setTextToSendString(leftPanState.getPrefix(currentActiveClientId.get()), leftPanState.getCommand(currentActiveClientId.get()), currentActiveClientId.get());
+            saveParameters();
         }
     }
 
@@ -480,7 +485,7 @@ public class MainWindow extends JFrame implements Rendeble {
         button_Close.setEnabled(alreadyOpen);
 
         int rootTab = anyPoolService.getRootTabForComConnection(getCurrComSelection());
-        if (rootTab > -1)
+        if (rootTab >= -1)
             return;
         if (rootTab != currentActiveTab.get() && alreadyOpen) {
             addCustomMessage("Управление выбранным ком-портом возможно на вкладке 'dev" + (rootTab + 1) + "' ");
@@ -545,7 +550,7 @@ public class MainWindow extends JFrame implements Rendeble {
             TabAnswerPart an = AnswerStorage.getAnswersQueForTab(lastPosition, clientId, true);
 
             if (an.getAnswerPart() == null || an.getAnswerPart().isEmpty()) {
-                log.info("Нет новых данных для клиента [" + clientId + "]");
+                //log.info("Нет новых данных для клиента [" + clientId + "]");
                 return;
             }
             // Обновляем позицию атомарно
@@ -566,15 +571,17 @@ public class MainWindow extends JFrame implements Rendeble {
             log.warn("Произошло исключение при рендере окна: " + ex.getMessage());
         }
     }
+
     @Override
     public boolean isEnable() {
         return true;
     }
 
     //Типа смена контекста
-    public void updateServices(MyProperties newProps, AnyPoolService newService) {
+    public void updateServices(MyProperties newProps, AnyPoolService newService, MainLeftPanelStateCollection leftPanelStateCollection) {
         this.prop = newProps;
         this.anyPoolService = newService;
+        this.leftPanState = leftPanelStateCollection;
     }
 
     private void saveParameters() {

@@ -165,26 +165,28 @@ public class MyProperties {
 
     // Приватный конструктор для Singleton
     private MyProperties() {
-            log.info("Вызван приватный конструктор");
-            initializeProperties();
+        log.info("Вызван приватный конструктор");
+        initializeProperties();
     }
 
     // Конструктор для Spring
-    public MyProperties(boolean fromSpringContext) {
+    public MyProperties(boolean fromSpringContext, MainLeftPanelStateCollection mainLeftPanelStateCollection) {
         log.info("Вызван публичный конструтор с параметром fromSpringContext " + fromSpringContext);
         if (fromSpringContext) {
             synchronized (MyProperties.class) {
                 if (INSTANCE == null) {
+                    leftPanelStateCollection = mainLeftPanelStateCollection;
                     log.info("Задаю инстанс при запуске спринга");
                     initializeProperties();
                     INSTANCE = this;
                     log.info("Количество вкладок " + INSTANCE.getTabCounter());
                     log.info("activeProfile при запуске спринга" + this.activeProfile);
+
                 }else{
                     log.warn("Инстанс уже существует (динамический перезапуск?) ");
                     log.info("Количество вкладок " + INSTANCE.getTabCounter());
                     log.info("activeProfile (динамический перезапуск?)" + this.activeProfile);
-
+                    leftPanelStateCollection = mainLeftPanelStateCollection;
                 }
             }
         } else {
@@ -473,7 +475,11 @@ public class MyProperties {
     }
 
     private void updateLeftPanelStateCollectionClass() {
-        leftPanelStateCollection = new MainLeftPanelStateCollection();
+        if(leftPanelStateCollection == null){
+            log.error("Пересоздаю leftPanelStateCollection");
+            leftPanelStateCollection = new MainLeftPanelStateCollection();
+        }
+
 
         // Integer параметры
         Map<String, BiConsumer<Integer, Integer>> intSetters = Map.of(
@@ -637,4 +643,3 @@ public class MyProperties {
 
     }
 }
-

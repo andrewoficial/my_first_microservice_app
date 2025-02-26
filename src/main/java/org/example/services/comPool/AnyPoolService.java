@@ -224,17 +224,6 @@ public class AnyPoolService {
     }
 
     public int getRootTabForComConnection(int portNumber) {
-        ArrayList<SerialPort> ports = comPort.getAllPorts();
-        int counter = 0;
-//        for (SerialPort port : ports) {
-//            //System.out.println(port.getSystemPortName());
-//            if(counter == portNumber){
-//                //System.out.println(" Это был нужный порт");
-//            }
-//            counter = counter + 1;
-//        }
-
-
         if(portNumber < 0){
             log.info("В поиск корневой вкладки был передан неправильный номер порта ");
             return -1;
@@ -247,9 +236,10 @@ public class AnyPoolService {
             log.info("Начинаю поиск корневой вкладки для порта номер: " + portNumber + " В системе этот " + comPort.getAllPorts().get(portNumber).getSystemPortName() + " Порт закрыт.");
             return -1;
         }
+
+
         int forReturnFix = -1;
         for (int i = 0; i < getCurrentComClientsQuantity(); i++) { //Перебираю всех клиентов
-            //log.info("Просматриваю клиента " + i);
             int j = 0;
              //Если среди всех поисков она была найдена только как клиент, то пусть будет управляющей чем никакой
             for (ComDataCollector comDataCollector : comDataCollectors) {
@@ -258,7 +248,8 @@ public class AnyPoolService {
                     //log.info("      В просматриваемом comDataCollector существует ком-порт");
                     if (comDataCollector.getComPortForJCombo() == portNumber) {//Выбранный порт был выбран ранее
                         //log.info("          В просматриваемом comDataCollector ком-порт по номеру совпал с требуемым");
-                        if (comDataCollector.isRootThread(i)) {//Просматриваемая вкладка корневая для опроса
+
+                        if (comDataCollector.isRootThread( i)) {//Просматриваемая вкладка корневая для опроса
                             //log.info("              В просматриваемом comDataCollector проверяемый клиент (вкладка) " + i + " является КОРНЕВОЙ");
                             //rootTab = i;
                             //log.info("Нашел корневую");
@@ -271,8 +262,6 @@ public class AnyPoolService {
                     }else{
                         //log.info("          В просматриваемом comDataCollector ком-порт по номеру не совпал с требуемым");
                     }
-                }else{
-                    //log.info("      В просматриваемом comDataCollector не существует ком-порт");
                 }
                 j++;
             }

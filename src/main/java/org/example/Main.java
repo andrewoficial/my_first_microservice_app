@@ -1,5 +1,6 @@
 package org.example;
 
+import org.example.gui.MainLeftPanelStateCollection;
 import org.example.gui.MainWindow;
 import org.example.services.comPool.AnyPoolService;
 import org.example.services.comPort.ComPort;
@@ -31,7 +32,8 @@ public class Main {
         SwingUtilities.invokeLater(() -> {
             AnyPoolService anyPoolService = context.getBean(AnyPoolService.class);
             MyProperties myProperties = context.getBean(MyProperties.class);
-            mainWindow = new MainWindow(myProperties, anyPoolService);
+            MainLeftPanelStateCollection leftPanelStateCollection = context.getBean(MainLeftPanelStateCollection.class);
+            mainWindow = new MainWindow(myProperties, anyPoolService, leftPanelStateCollection);
         });
 
     }
@@ -61,9 +63,9 @@ public class Main {
             SwingUtilities.invokeLater(() -> {
                 MyProperties myProperties = context.getBean(MyProperties.class);
                 AnyPoolService anyPoolService = context.getBean(AnyPoolService.class);
-
+                MainLeftPanelStateCollection leftPanelStateCollection = context.getBean(MainLeftPanelStateCollection.class);
                 // Передаём новые бины в уже созданное окно
-                mainWindow.updateServices(myProperties, anyPoolService);
+                mainWindow.updateServices(myProperties, anyPoolService, leftPanelStateCollection);
             });
         }
     }

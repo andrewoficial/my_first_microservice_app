@@ -14,16 +14,17 @@
         <margin top="0" left="0" bottom="0" right="0"/>
         <constraints>
           <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false">
-            <minimum-size width="400" height="60"/>
-            <maximum-size width="-1" height="100"/>
+            <minimum-size width="-1" height="60"/>
+            <preferred-size width="-1" height="90"/>
           </grid>
         </constraints>
         <properties>
           <background color="-1"/>
+          <enabled value="true"/>
         </properties>
         <border type="none"/>
         <children>
-          <scrollpane id="a4fca">
+          <scrollpane id="a4fca" binding="scrollPane1">
             <constraints>
               <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
             </constraints>
@@ -103,16 +104,26 @@
         <properties/>
         <border type="none"/>
         <children>
-          <component id="38ca4" class="javax.swing.JTextPane" binding="TP_WhatsNews">
+          <scrollpane id="89b43" binding="scrollPaneWhatsNews" custom-create="true">
             <constraints>
-              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="6" hsize-policy="6" anchor="0" fill="3" indent="0" use-parent-layout="false">
-                <preferred-size width="150" height="50"/>
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false">
+                <minimum-size width="-1" height="60"/>
+                <preferred-size width="-1" height="80"/>
               </grid>
             </constraints>
             <properties>
               <background color="-1"/>
             </properties>
-          </component>
+            <border type="none"/>
+            <children>
+              <component id="38ca4" class="javax.swing.JTextPane" binding="TP_WhatsNews">
+                <constraints/>
+                <properties>
+                  <background color="-1"/>
+                </properties>
+              </component>
+            </children>
+          </scrollpane>
         </children>
       </grid>
       <vspacer id="f49bc">

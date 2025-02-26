@@ -56,6 +56,8 @@ public class MainLeftPanelState {
     @Getter
     private int tabNumber = 0;
 
-
+    @Setter
+    @Getter
+    private int comPortComboNumber = 0;
 
 }
