@@ -121,22 +121,25 @@ public class ComDataCollector implements Runnable{
 
     private void handleDataAvailableEvent(int currentClientId) {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        byte[] chunk = new byte[1024];
+        byte[] chunk = new byte[2048];
         long delay = device == null ? 150L : device.getMillisReadLimit();
         //int sizeLimit = device == null ? 150 : device.getExpectedBytes();
-        int sizeLimit = 200;
+        int sizeLimit = 2048;//Увеличил тут размер
+
         try {
             int dataAvailable = comPort.bytesAvailable();
+
             while (dataAvailable > 0) {
                 int bytesRead = comPort.readBytes(chunk, Math.min(chunk.length, dataAvailable));
                 //buffer.write(chunk, buffer.size(), bytesRead);
                 buffer.write(chunk, 0, bytesRead);
-                if(buffer.size() >= sizeLimit){
+                if(buffer.size() >= sizeLimit){//Вызывало падение
                     return;
                 }
                 sleepSafely(delay);
                 dataAvailable = comPort.bytesAvailable();
             }
+
             //String receivedData = buffer.toString("UTF-8"); // Учитывайте кодировку устройства
             String receivedData = buffer.toString(); // Учитывайте кодировку устройства
             if (responseRequested && (System.currentTimeMillis() - requestTimestamp) < RESPONSE_TIMEOUT_MS) {
@@ -367,7 +370,7 @@ public class ComDataCollector implements Runnable{
         }
 
         AnswerStorage.addAnswer(answer);//Answer Storage
-        PoolLogger.writeLine(answer); //Sum log
+        PoolLogger.getInstance().writeLine(answer); //Sum log
 
         DeviceLogger deviceLogger;
         if(clientsMap.get(clientId).needLog) {

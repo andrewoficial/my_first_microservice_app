@@ -1,11 +1,10 @@
 package org.example.services.comPool;
 
-import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
 import org.apache.log4j.Logger;
 import org.example.device.ProtocolsList;
 import org.example.gui.MainLeftPanelStateCollection;
-import org.example.services.AnswerSaverLogger;
+import org.example.services.AnswerSaverSync;
 import org.example.services.AnswerStorage;
 import org.example.services.comPort.ComPort;
 import org.example.utilites.properties.MyProperties;
@@ -35,13 +34,13 @@ public class AnyPoolService {
     private final ComPort comPort;
     private MyProperties properties;
     @Getter
-    private final AnswerSaverLogger answerSaverLogger;
+    private final AnswerSaverSync answerSaverLogger;
 
     @Autowired
     public AnyPoolService(ComPort comPort, MyProperties properties1) {
         this.comPort = comPort;
         this.properties = properties1;
-        answerSaverLogger = new AnswerSaverLogger(properties);
+        answerSaverLogger = new AnswerSaverSync(properties);
     }
 
     public String createOrUpdateComDataCollector(MainLeftPanelStateCollection state, int clientId, int selectedComPort, int selectedProtocol, boolean pool, boolean isBtn, int poolDelay) throws ConnectException {

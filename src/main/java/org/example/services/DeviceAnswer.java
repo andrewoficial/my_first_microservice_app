@@ -89,7 +89,7 @@ public class DeviceAnswer {
             }
             formattedString.append("\n");
         }
-        return formattedString.toString();
+        return formattedString.toString().substring(0,formattedString.toString().length()-2);
     }
 
     public String toStringDBG(){
@@ -137,7 +137,7 @@ public class DeviceAnswer {
             }
             formattedString.append("\n");
         }
-        return formattedString.toString();
+        return formattedString.toString().substring(0,formattedString.toString().length()-2);
     }
 
     public String stringToHexArray(String input) {
@@ -148,7 +148,7 @@ public class DeviceAnswer {
         for (int i = 0; i < input.length(); i++) {
             hexArray.append((int) input.charAt(i));
             if (i < input.length() - 1) {
-                hexArray.append(", ");
+                hexArray.append(" ");
             }
         }
         hexArray.append("}");

@@ -95,6 +95,7 @@ public class MyUtilities {
             case DEMO_PROTOCOL -> device = new DEMO_PROTOCOL(comPort);
             case GPS_Test -> device = new GPS_Test(comPort);
             case OWON_SPE3051 -> device = new OWON_SPE3051(comPort);
+            case LORADIF -> device = new LORADIF(comPort);
             default -> device = new DEMO_PROTOCOL(comPort);
         }
         return device;

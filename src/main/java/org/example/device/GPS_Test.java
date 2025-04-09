@@ -272,13 +272,21 @@ public class GPS_Test implements SomeDevice {
                 answerValues = new AnswerValues(4);
                 answerValues.addValue(rssi, "RSSI");
                 answerValues.addValue(snr, "SNR");
-                System.out.println("      MSG: " + dataPart);
+                System.out.println("      MSG: [ " + dataPart + "]");
 
-                System.out.println("      CRC: " + crcPart);
-                if (MyUtilities.checkCRC16(dataPart, crcPart)) {
-                    System.out.println("        CRC OK");
+                System.out.println("      CRC: [ " + crcPart + "]" );
+                Integer calculatedCRC16Gps = MyUtilities.calculateCRC16_GPS(dataPart.getBytes());
+                int crcReceived = 0;
+                try{
+                    crcReceived = Integer.parseInt(crcPart, 16);
+                }catch (NumberFormatException e){
+                    //Ignore
+                }
+                System.out.println("      crcString: " + crcPart + " calculatedCRC16Gps: " + calculatedCRC16Gps + " crcReceived: " + crcReceived);
+                if (calculatedCRC16Gps == crcReceived) {
+                    System.out.println("        CRC correct");
                     answerValues = new AnswerValues(11);
-                    System.out.println("Run proceed " + inputString + " length " + inputString.length());
+                    System.out.println("        Run proceed " + inputString + " length " + inputString.length());
 
 
                                 /*
@@ -292,14 +300,14 @@ public class GPS_Test implements SomeDevice {
                 } else {
                     System.out.print("        CRC check failed for RAK");
                     System.out.print("calculate: " + MyUtilities.calculateCRC16_GPS(dataPart.getBytes()));
-                    int crcReceived = 0;
+                    int crcReceivedInt = 0;
                     try{
-                        crcReceived = Integer.parseInt(crcPart, 16);
+                        crcReceivedInt = Integer.parseInt(crcPart, 16);
                     }catch (NumberFormatException e){
                         System.out.println(e.getMessage());
                     }
 
-                    System.out.println(" receive: " + crcReceived);
+                    System.out.println(" receive: " + crcReceivedInt);
                     showReceived();
                 }
             }else{

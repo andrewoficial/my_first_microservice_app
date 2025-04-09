@@ -13,143 +13,119 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
 
 import static org.example.device.SomeDevice.log;
 
 public class PoolLogger {
-    public static final Logger log = Logger.getLogger(PoolLogger.class);
-    private static final String fileName = (new SimpleDateFormat("yyyy.MM.dd HH-mm-ss").format(Calendar.getInstance().getTime())) + " SumLog.txt";
-    private static File logFile;
-    private static Long dateTimeLastWrite = System.currentTimeMillis();
-    private static final ArrayList<String> stringsBuffer = new ArrayList<>();
-    public static class SingletonHolder {
-        public static final PoolLogger HOLDER_INSTANCE = new PoolLogger();
+    private static final Logger log = Logger.getLogger(PoolLogger.class);
+    private static final long LOG_WRITE_INTERVAL = 100L;
+
+    private static class SingletonHolder {
+        static final PoolLogger INSTANCE = new PoolLogger();
     }
 
     public static PoolLogger getInstance() {
-        return SingletonHolder.HOLDER_INSTANCE;
+        return SingletonHolder.INSTANCE;
     }
 
-    public static FileWriter fw = null;
+    private final Path logFile;
+    private final List<String> buffer = new ArrayList<>();
+    private long lastWriteTime = System.currentTimeMillis();
 
-    private PoolLogger(){
-        File logFile = null;
-        try{
-            logFile = new File("logs"+fileName);
-            if(logFile.exists() && !logFile.isDirectory()) {
-                // do something
-            }else {
-                new File("logs").mkdirs();
-            }
-        } catch (Exception e) {
-            //throw new RuntimeException(e);
-        }
+    private PoolLogger() {
+        this.logFile = createLogFile();
+    }
+
+    private Path createLogFile() {
+        String fileName = new SimpleDateFormat("yyyy.MM.dd HH-mm-ss").format(new Date()) + " SumLog.txt";
+        Path path = Paths.get("logs", fileName);
 
         try {
-            logFile = new File("logs/"+fileName);
-            if (logFile.createNewFile()) {
-                //System.out.println("File created: " + myObj.getName());
-                System.out.println("File created: " + logFile.getAbsolutePath());
-            } else {
-                System.out.println("File already exists.");
-                System.out.println(logFile.getAbsolutePath());
+            Files.createDirectories(path.getParent());
+            if (Files.notExists(path)) {
+                Files.createFile(path);
+                log.info("Created log file: " + path);
             }
+            return path;
         } catch (IOException e) {
-            System.out.println("An error occurred.");
-            //e.printStackTrace();
-        }
-        PoolLogger.logFile = logFile;
-        try {
-            PoolLogger.fw = new FileWriter(logFile, true);
-        } catch (IOException e) {
-            //throw new RuntimeException(e);
-            System.out.println("Ошибка создания FileWriter");
+            log.error("Failed to create log file", e);
+            return null;
         }
     }
 
-    public static void writeLine(DeviceAnswer answer){
-        if(answer == null){
-            log.warn("Для логирования передан ответ null");
+    public void writeLine(DeviceAnswer answer) {
+        if (!validateAnswer(answer)) {
             return;
         }
 
-        // Блок базовых проверок
+        String logLine = formatLogLine(answer);
+        synchronized (buffer) {
+            buffer.add(logLine);
+            tryWriteBuffer();
+        }
+    }
+
+    private boolean validateAnswer(DeviceAnswer answer) {
         if (answer == null) {
-            log.error("Отклонено логирование ответа [ объект ответа null ]");
-            return;
+            log.warn("Attempted to log null answer");
+            return false;
         }
 
         Integer clientId = answer.getClientId();
-        if (clientId == null) {
-            log.error("Отклонено логирование ответа [ ClientId: null ]");
-            return;
-        }
-        if (clientId < 0) {
-            log.error("Отклонено логирование ответа [ ClientId: "+clientId+" < 0 ]");
-            return;
+        if (clientId == null || clientId < 0) {
+            log.error(String.format("Invalid client ID: %s", clientId));
+            return false;
         }
 
-        // Проверки временных меток
-        if (answer.getRequestSendTime() == null) {
-            log.error("Отклонено логирование ответа ["+clientId+"] - не указано время отправки");
-            return;
-        }
-        if (answer.getAnswerReceivedTime() == null) {
-            log.error("Отклонено логирование ответа ["+clientId+"] - не указано время получения");
-            return;
-        }
-        if (answer.getAnswerReceivedTime().isBefore(answer.getRequestSendTime())) {
-            log.error("Отклонено логирование ответа ["+clientId+"] - ответ получен до отправки запроса ({} < {})");
-            return;
+        if (answer.getRequestSendTime() == null
+                || answer.getAnswerReceivedTime() == null
+                || answer.getAnswerReceivedTime().isBefore(answer.getRequestSendTime())) {
+            log.error(String.format("Invalid timestamps for client %d", clientId));
+            return false;
         }
 
-        // Проверки строковых данных
-        if (answer.getAnswerReceivedString() == null || answer.getAnswerReceivedString().trim().isEmpty()) {
-            log.error("Отклонено логирование ответа ["+clientId+"] - пустая строка ответа");
-            return;
+        if (answer.getAnswerReceivedString() == null
+                || answer.getAnswerReceivedString().trim().isEmpty()) {
+            log.error(String.format("Empty answer for client %d", clientId));
+            return false;
         }
-        StringBuilder line = new StringBuilder(answer.getAnswerReceivedTime().format(MyUtilities.CUSTOM_FORMATTER));
-        line.append("\t");
-        line.append(answer.getDeviceType().getClass().toString().replace("class org.example.device.", ""));
-        line.append("\t");
-        line.append(answer.getAnswerReceivedString());
-        line.append("\n");
 
-
-        if((System.currentTimeMillis() - dateTimeLastWrite ) < 100L ){
-            stringsBuffer.add(line.toString());
-            //System.out.println("Log buffered");
-        }else {
-            dateTimeLastWrite = System.currentTimeMillis();
-            stringsBuffer.add(line.toString());
-            StringBuilder stringBuilder = new StringBuilder();
-            for (String s : stringsBuffer) {
-                stringBuilder.append(s);
-            }
-            stringsBuffer.clear();
-
-
-            if(PoolLogger.fw != null) {
-                BufferedWriter bw = new BufferedWriter(PoolLogger.fw);
-                try {
-
-                    bw.write(stringBuilder.toString());
-                    bw.flush();
-                } catch (IOException e) {
-                    //throw new RuntimeException(e);
-                    System.out.println("Ошибка выполнения  write " + e.getMessage());
-                } finally {
-                    line = null;
-                    bw = null;
-                }
-            }
-        }
-        log.info("Завершено логирование в общий файл с ответами для клиента " + answer.getClientId());
-
+        return true;
     }
 
+    private String formatLogLine(DeviceAnswer answer) {
+        return String.format("%s\t%s\t%s%n",
+                answer.getAnswerReceivedTime().format(MyUtilities.CUSTOM_FORMATTER),
+                answer.getDeviceType().getClass().getSimpleName().replace("Device", ""),
+                answer.getAnswerReceivedString());
+    }
 
+    private void tryWriteBuffer() {
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastWriteTime < LOG_WRITE_INTERVAL) {
+            return;
+        }
+
+        if (logFile == null || buffer.isEmpty()) {
+            return;
+        }
+
+        try {
+            Files.write(logFile, buffer, StandardOpenOption.APPEND);
+            buffer.clear();
+            lastWriteTime = currentTime;
+            log.info("Successfully wrote " + buffer.size() + " log entries");
+        } catch (IOException e) {
+            log.error("Failed to write log entries: " + e.getMessage());
+        }
+    }
 }

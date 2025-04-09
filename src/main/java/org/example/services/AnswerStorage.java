@@ -127,6 +127,20 @@ public class AnswerStorage {
         return new TabAnswerPart(sb.toString(), queueOffsetInt + size);
     }
 
+    public static TabAnswerPart getAnswersQueForWeb(Integer lastPosition, Integer clientId, boolean showCommands) {
+        ConcurrentLinkedQueue<DeviceAnswer> queue = answersByTab.getOrDefault(clientId, new ConcurrentLinkedQueue<>());
+        List<DeviceAnswer> tabAnswers = new ArrayList<>(queue);
+        int size = tabAnswers.size();
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = lastPosition; i < size; i++) {
+            appendAnswer(sb, tabAnswers.get(i), showCommands);
+        }
+
+        // Возвращаем новую позицию как смещение + текущий размер
+        return new TabAnswerPart(sb.toString(), size);
+    }
+
 
     public static String getAnswersForTab(Integer tabNumber, boolean showCommands) {
         StringBuilder sb = sbAnswer.get();

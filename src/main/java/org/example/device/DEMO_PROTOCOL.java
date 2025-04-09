@@ -23,7 +23,7 @@ public class DEMO_PROTOCOL implements SomeDevice {
     private volatile String lastValue;
 
     @Setter
-    private byte [] strEndian = {13, 10};//CR + LF
+    private byte [] strEndian = {13};//CR + LF
     private boolean knownCommand = false;
 
     private StringBuilder emulatedAnswer;
@@ -166,72 +166,30 @@ public class DEMO_PROTOCOL implements SomeDevice {
         this.received = answer.length();
         deviceAnswer = answer;
         this.parseData();
+        
     }
 
     public void parseData() {
 
-            if(knownCommand && isCorrectAnswer() && hasAnswer){
-                log.trace("Ответ правильный " + lastAnswer.toString());
-                System.out.println("Ответ правильный " + lastAnswer.toString());
-                value = 0.0;
-                degree = 0;
-                try{
-                    hasValue = true;
-                    //int firstPart = lastAnswer.indexOf("M") + 1;
-                    //System.out.println(firstPart);
-                    value = Double.parseDouble(lastAnswer.toString());
-                    //degree = Integer.parseInt(lastAnswer.substring(firstPart+5, firstPart+6));
-                } catch (NumberFormatException e) {
-                    //System.out.println("Parse error");
-                    //throw new RuntimeException(e);
-                    hasValue = false;
-                    return;
-                }
 
-
-                val = value;
-                //val /= 10000.0;
-                System.out.println(val);
-                if(hasAnswer){
+            if(hasAnswer){
                     DEMO_PROTOCOL.CommandList cmd = DEMO_PROTOCOL.CommandList.getCommandByName(cmdToSend);
-                    if (cmd != null) {
-                        Double [] answer = cmd.parseAnswer(lastAnswer.toString());
-                        if(answer.length > 0){
-                            answerValues = new AnswerValues(answer.length);
-                            for (int i = 0; i < answer.length; i++) {
-                                answerValues.addValue(answer[i], " unit");
-                                System.out.println(answerValues.getValues()[i]);
-                            }
-                        }
-                    }
-                }
-                //System.out.println(lastAnswer.toString());
-                //lastValue = String.valueOf(val);
-            }else{
-                log.trace("Ответ с ошибкой " + lastAnswer.toString());
-                System.out.println("Ответ с ошибкой " + lastAnswer.toString());
-                hasValue = false;
             }
 
     }
 
 
-    private boolean isCorrectAnswer(){
-        if((lastAnswer.length() == 7 || lastAnswer.length() == 6 || lastAnswer.length() == 8)){
-            //ToDo add CRC
-            return true;
-        }
-        return false;
-    }
+
     public String getAnswer(){
     if(! hasValue){
+        //Добавление вывода в HEX находится тут
         lastAnswer.setLength(0);
         for (int i = 0; i < lastAnswerBytes.length; i++) {
             lastAnswer.append( (char) lastAnswerBytes[i]);
         }
 
-        lastAnswer.append("\n");
-        lastAnswer.append(Arrays.toString(lastAnswerBytes));
+        //lastAnswer.append("\n");
+        //lastAnswer.append(Arrays.toString(lastAnswerBytes));
     }
 
         String forReturn = new String(lastAnswer);
@@ -258,53 +216,8 @@ public class DEMO_PROTOCOL implements SomeDevice {
     private enum CommandList{
 
 
-        TERM("TERM?", (response) -> {
+        TERM("AM_I_DEMO", (response) -> {
             // Ваш алгоритм проверки для TERM?
-            Double [] anAr = new Double[0];
-            if(response.length() == 7 && response.contains("\n")){
-                try{
-                    Double answer = Double.parseDouble(response);
-                    anAr = new Double[1];
-                    anAr [0] = answer;
-                }catch (NumberFormatException e){
-                    anAr = new Double[0];
-                }
-                return anAr;
-            }
-            return anAr;
-        }),
-        FF("F", (response) -> {
-            // Ваш алгоритм проверки для F
-            Double [] anAr = new Double[0];
-            if(response.length() == 7 && response.contains("\n")){
-                try{
-                    Double answer = Double.parseDouble(response);
-                    anAr = new Double[1];
-                    anAr [0] = answer;
-                }catch (NumberFormatException e){
-                    anAr = new Double[0];
-                }
-                return anAr;
-            }
-            return anAr;
-        }),
-        SREV("SREV?", (response) -> {
-            // Ваш алгоритм проверки для SREV?
-            Double [] anAr = new Double[0];
-            if(response.length() == 7 && response.contains("\n")){
-                try{
-                    Double answer = Double.parseDouble(response);
-                    anAr = new Double[1];
-                    anAr [0] = answer;
-                }catch (NumberFormatException e){
-                    anAr = new Double[0];
-                }
-                return anAr;
-            }
-            return anAr;
-        }),
-        SRAL("SRAL?", (response) -> {
-            // Ваш алгоритм проверки для SRAL?
             Double [] anAr = new Double[0];
             if(response.length() == 7 && response.contains("\n")){
                 try{

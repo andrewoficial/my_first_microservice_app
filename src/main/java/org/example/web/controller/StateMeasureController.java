@@ -9,11 +9,13 @@
 package org.example.web.controller;
 
 
+import org.example.gui.MainLeftPanelStateCollection;
 import org.example.gui.MainWindow;
 import org.example.services.AnswerStorage;
 import org.example.services.TabAnswerPart;
 import org.example.web.entity.MyUser;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.validation.annotation.Validated;
@@ -28,7 +30,8 @@ import java.util.Map;
 @RequestMapping("/api/v1/apps") // обработка запросов, начинающихся с ./genre
 public class StateMeasureController {
 
-
+    @Autowired
+    private MainLeftPanelStateCollection leftPanelStateCollection;
 
 
     @GetMapping("/welcome")
@@ -49,8 +52,11 @@ public class StateMeasureController {
 
     @GetMapping("/state/pool/{tabNumber}")
     public Map<String, Object> getCurrentData(@PathVariable Integer tabNumber, @RequestParam Integer lastPosition) {
-        // Получаем данные начиная с позиции lastPosition
-        TabAnswerPart tabAnswerPart = AnswerStorage.getAnswersQueForTab(lastPosition, tabNumber, true);
+        int clientId = 0;
+        if(leftPanelStateCollection != null){
+            clientId = leftPanelStateCollection.getClientIdByTabNumber(tabNumber);
+        }
+        TabAnswerPart tabAnswerPart = AnswerStorage.getAnswersQueForWeb(lastPosition, clientId, true);
 
         Map<String, Object> response = new HashMap<>();
         response.put("answerPart", tabAnswerPart.getAnswerPart());

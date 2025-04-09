@@ -1,75 +1,61 @@
 package org.example.services.loggers;
 
 import org.apache.log4j.Logger;
-import org.example.device.SomeDevice;
 import org.example.services.DeviceAnswer;
 import org.example.utilites.MyUtilities;
-import org.example.utilites.ProgramUpdater;
 import org.example.utilites.properties.MyProperties;
-import org.hibernate.engine.spi.IdentifierValue;
-
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
 
 public class DeviceLogger {
-
-    private String fileName = (java.time.LocalDateTime.now().format(MyUtilities.CUSTOM_FORMATTER_FILES));
-    private String fileNameCSV = (java.time.LocalDateTime.now().format(MyUtilities.CUSTOM_FORMATTER_FILES));
-    private File logFile;
-    private File logFileCSV;
-    private MyProperties properties = MyProperties.getInstance();
     private static final Logger log = Logger.getLogger(DeviceLogger.class);
+    private static final long LOG_WRITE_INTERVAL = 300L;
+    private final File logFile;
+    private final File logFileCSV;
+    private final MyProperties properties = MyProperties.getInstance();
+
     private Long dateTimeLastWrite = System.currentTimeMillis();
     private final ArrayList<String> stringsBuffer = new ArrayList<>();
     private final ArrayList<String> stringsBufferCSV = new ArrayList<>();
 
-    public DeviceLogger(String name) {
-        if(properties.isCsvLogState()){
-            this.fileNameCSV = this.fileNameCSV + " " + "tab_" + name + ".csv";
-            this.logFileCSV = createLogFile("logs", this.fileNameCSV);
-        }
+    public DeviceLogger(Object name) {
+        this.logFileCSV = properties.isCsvLogState()
+                ? createLogFile("logs", buildFileName("tab", "csv", name))
+                : null;
 
-        if(properties.isDbgLogState()){
-            this.fileName = this.fileName + " " + "tab_" + name + ".txt";
-            this.logFile = createLogFile("logs", this.fileName);
-        }
+        this.logFile = properties.isDbgLogState()
+                ? createLogFile("logs", buildFileName("tab", "txt", name))
+                : null;
     }
 
-    public DeviceLogger(Integer name) {
-        if(properties.isCsvLogState()){
-            this.fileNameCSV = this.fileNameCSV + " " + "tab_" + name + ".csv";
-            this.logFileCSV = createLogFile("logs", this.fileNameCSV);
-        }
-
-        if(properties.isDbgLogState()){
-            this.fileName = this.fileName + " " + "tab_" + name + ".txt";
-            this.logFile = createLogFile("logs", this.fileName);
-        }
+    private String buildFileName(String prefix, String extension, Object name) {
+        return String.format("%s tab_%s.%s",
+                LocalDateTime.now().format(MyUtilities.CUSTOM_FORMATTER_FILES),
+                name.toString(),
+                extension);
     }
 
     private File createLogFile(String directory, String fileName) {
-        File logFile = null;
         try {
-            logFile = new File(directory + "/" + fileName);
-            if (!logFile.exists()) {
-                new File(directory).mkdirs();
-                if (logFile.createNewFile()) {
-                    // Log file creation success if needed
-                } else {
-                    // Log file already exists
-                }
+            Path path = Paths.get(directory, fileName);
+            Files.createDirectories(path.getParent());
+
+            if(Files.notExists(path)) {
+                Files.createFile(path);
+                log.info("Создан новый лог-файл: " + path);
             }
+            return path.toFile();
+
         } catch (IOException e) {
-            // Handle exception for file creation
-            log.warn("Проблема при создании файла лога" + e.getMessage());
-        } catch (Exception e) {
-            // Handle other exceptions
-            log.warn("Проблема при создании файла лога" + e.getMessage());
+            log.warn("Фатальная ошибка при создании файла " + fileName, e);
+            return null;
         }
-        return logFile;
     }
 
     public void writeLine (DeviceAnswer answer){
@@ -88,66 +74,39 @@ public class DeviceLogger {
             line.append(answer.toStringDBG());
         }
 
-        // Check buffering conditions
-        if ((System.currentTimeMillis() - dateTimeLastWrite) < 300L) {
-            if (line != null) {
-                stringsBuffer.add(line.toString());
-            }
-            if (lineCSV != null) {
-                stringsBufferCSV.add(lineCSV.toString());
-            }
+        if ((System.currentTimeMillis() - dateTimeLastWrite) < LOG_WRITE_INTERVAL) {
+            addToBuffer(line, stringsBuffer);
+            addToBuffer(lineCSV, stringsBufferCSV);
         } else {
             dateTimeLastWrite = System.currentTimeMillis();
-            if (line != null) {
-                stringsBuffer.add(line.toString());
-            }
-            if (lineCSV != null) {
-                stringsBufferCSV.add(lineCSV.toString());
-            }
+            addToBuffer(line, stringsBuffer);
+            addToBuffer(lineCSV, stringsBufferCSV);
 
-            // Combine buffered lines for writing
-            StringBuilder stringBuilder = new StringBuilder();
-            for (String s : stringsBuffer) {
-                stringBuilder.append(s);
-            }
+            writeBufferedData(stringsBuffer, logFile, properties.isDbgLogState());
+            writeBufferedData(stringsBufferCSV, logFileCSV, properties.isCsvLogState());
 
-            StringBuilder stringBuilderCSV = new StringBuilder();
-            for (String s : stringsBufferCSV) {
-                stringBuilderCSV.append(s);
-            }
-
-            // Clear buffers after writing
-            stringsBuffer.clear();
-            stringsBufferCSV.clear();
-
-            // Write to files
-            if (properties.isDbgLogState() && logFile != null) {
-                writeFile(stringBuilder, logFile);
-            }
-            if (properties.isCsvLogState() && logFileCSV != null) {
-                writeFile(stringBuilderCSV, logFileCSV);
-            }
+            log.info("Завершено ведение лога...");
         }
-        log.info("Завершено ведение лога согласно настройками для clientId " + answer.getClientId());
     }
 
-    private void writeFile(StringBuilder sbToWrite, File file){
-        FileWriter fw = null;
-        try {
-            fw = new FileWriter(file, true);
-        } catch (IOException e) {
-            //throw new RuntimeException(e);
-            System.out.println("Ошибка создания FileWriter" + file.getName());
-        }
-        assert fw != null;
-        BufferedWriter bw = new BufferedWriter(fw);
-        try {
-            bw.write(sbToWrite.toString());
 
-            bw.close();
+
+    private void addToBuffer(StringBuilder source, List<String> target) {
+        if(source != null && !source.isEmpty()) {
+            target.add(source.toString());
+        }
+    }
+
+    private void writeBufferedData(List<String> buffer, File file, boolean isEnabled) {
+        if(!isEnabled || buffer.isEmpty()) return;
+
+        try {
+            Files.write(file.toPath(), buffer,
+                    StandardOpenOption.APPEND,
+                    StandardOpenOption.CREATE);
+            buffer.clear();
         } catch (IOException e) {
-            //throw new RuntimeException(e);
-            System.out.println("Ошибка выполнения  write ");
+            log.error( "Ошибка записи буфера в файл" + e.getMessage());
         }
     }
 }

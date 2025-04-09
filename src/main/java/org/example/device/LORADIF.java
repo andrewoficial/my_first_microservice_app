@@ -17,21 +17,21 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
-public class IGM_10LORA_P2P implements SomeDevice {
-    private volatile boolean busy = false;
-    private static final Logger log = Logger.getLogger(IGM_10LORA_P2P.class);
+public class LORADIF implements SomeDevice {
+    private volatile boolean bisy = false;
+    private static final Logger log = Logger.getLogger(LORADIF.class);
     private final SerialPort comPort;
     private byte [ ] lastAnswerBytes;
     private StringBuilder lastAnswer = new StringBuilder();
     private final StringBuilder emulatedAnswer = new StringBuilder();
     private final boolean knownCommand = false;
     private volatile boolean hasAnswer = false;
-
+    private  volatile boolean hasValue = false;
     @Setter
     private byte [] strEndian = {13, 10};//CR, LF
     private int received = 0;
-    private final long millisLimit = 30;
-    private final long repeatWaitTime = 10;
+    private final long millisLimit = 110;
+    private final long repeatWaitTime = 50;
     private final long millisPrev = System.currentTimeMillis();
     private final static Charset charset = Charset.forName("Cp1251");
     private static final CharsetDecoder decoder = charset.newDecoder();
@@ -39,14 +39,15 @@ public class IGM_10LORA_P2P implements SomeDevice {
     private boolean needRemoveDataListener = true;
     String cmdToSend;
     Integer TabForAnswer;
-
-    public IGM_10LORA_P2P(SerialPort port){
-        System.out.println("Создан объект протокола ИГМ-10 LoRa P2P");
+    Integer rssi = 0;
+    Integer snr = 0;
+    public LORADIF(SerialPort port){
+        System.out.println("Создан объект протокола LoraDifferent");
         this.comPort = port;
         this.enable();
     }
-    public IGM_10LORA_P2P(){
-        System.out.println("Создан объект протокола IGM_10LORA_P2P эмуляция");
+    public LORADIF(){
+        System.out.println("Создан объект протокола LoraDifferent эмуляция");
         this.comPort = null;
     }
     @Override
@@ -125,18 +126,16 @@ public class IGM_10LORA_P2P implements SomeDevice {
         emulatedAnswer.append(sb);
     }
 
-
     @Override
     public void setHasAnswer(boolean hasAnswer) {
         this.hasAnswer = hasAnswer;
     }
 
     private CommandListClass commands = new CommandListClass();
-    public boolean enable() {
-        setReceiveMode();
-        return false;
-    }
 
+    public boolean enable() {
+        return true;
+    }
 
     public void setReceived(String answer){
         this.received = answer.length();
@@ -145,188 +144,256 @@ public class IGM_10LORA_P2P implements SomeDevice {
 
     @Override
     public void parseData() {
-        //System.out.println("Start parse... IGM10 LoRa P2P");
-            if(lastAnswerBytes.length > 0) {
-                        String inputString = new String(lastAnswerBytes);
-                        inputString = inputString.replace("\r", "");
-                        inputString = inputString.replace("\n", "");
-                        inputString = inputString.replace("+", "");
-                        String[] lines = inputString.split("EV");
-                        if(inputString.contains("EVT:RXP2P") || inputString.contains("CEIVE TIME")) {
-                            setReceiveMode();
-                        }
+        System.out.println("Start parse... LORADIF");
+        if (lastAnswerBytes.length > 0) {
+            System.out.println("Run Parser: " + lastAnswerBytes.length);
+            answerValues = null;
+            String inputString = new String(lastAnswerBytes);
+            inputString = inputString.replaceAll("[\\r\\n+]", "").trim();
 
-
-                        int rssi = 0;
-                        int snr = 0;
-                        answerValues = null;
-                        for (String line : lines) {
-                            if (line.startsWith("T:RXP2P")) {
-                                String[] parts = line.split(",");
-                                if (parts.length < 3) {
-                                    showReceived();
-                                    System.out.println("        Invalid format RXP2P not found");
-                                    return;
-                                }
-
-                                String rssiPart = parts[1].trim();
-                                String snrPart = parts[2].trim();
-
-                                if (!rssiPart.startsWith("RSSI") || !snrPart.startsWith("SNR")) {
-                                    showReceived();
-                                    System.out.println("        Invalid format RSSI or SNR not found");
-                                    return;
-                                }
-
-                                try {
-                                    rssi = Integer.parseInt(rssiPart.split(" ")[1]);
-                                }catch (NumberFormatException e){
-                                    showReceived();
-                                    System.out.println("         Exception:" + e.getMessage());
-                                }
-
-                                try {
-                                    snr = Integer.parseInt(snrPart.split(" ")[1]);
-                                }catch (NumberFormatException e){
-                                    showReceived();
-                                    System.out.println("         Exception:" + e.getMessage());
-                                }
-
-                                //System.out.println("        RSSI: " + rssi);
-                                //System.out.println("        SNR: " + snr);
-                            } else if (line.startsWith("T:")) {
-                                //System.out.println("    Found T:");
-                                String payload = line.substring(line.indexOf("T:")+2);
-                                if (payload.length() < 30) {
-                                    System.out.println("        Payload length is incorrect wrong Length payload");
-                                    showReceived();
-                                    return;
-                                }
-
-                                String dataPart = payload.substring(0, 28);
-                                //System.out.println("      MSG: " + dataPart);
-                                String crcPart = payload.substring(28, 32);
-                                //System.out.println("      CRC: " + crcPart);
-                                answerValues = new AnswerValues(4);
-                                answerValues.addValue(rssi, "RSSI");
-                                answerValues.addValue(snr, "SNR");
-                                if (MyUtilities.checkCRC16(dataPart, crcPart)) {
-                                    String ident = parsePayload(dataPart, answerValues);
-                                    TabForAnswer = AnswerStorage.getTabByIdent(ident);
-                                    //System.out.println("        Will be out in " + TabForAnswer + " serial is " + ident);
-                                } else {
-                                    System.out.println("        CRC check failed");
-                                }
-                            }
-                        }
-
-                lastAnswer.setLength(0);
-                if(answerValues != null){
-                    hasAnswer = true;
-                    for (int i = 0; i < answerValues.getValues().length; i++) {
-                        lastAnswer.append(answerValues.getValues()[i]);
-                        lastAnswer.append(" ");
-                        lastAnswer.append(answerValues.getUnits()[i]);
-                        lastAnswer.append("  ");
-                    }
-                    //System.out.println("done correct...");
-
-                }else{
-                    showReceived();
-                    hasAnswer = true;
+            if (inputString.length() > 20 && inputString.length() < 150) {
+                if (inputString.contains("EVT:RXP2P") || inputString.contains("CEIVE TIME")) {
+                    parseRak(inputString);
+                } else if (inputString.contains("BYTE:")) {
+                    parseEbyte(inputString);
+                } else {
+                    //parseUnknown(inputString);
                 }
-            }else {
-                showReceived();
-                //System.out.println("done empty...");
-                hasAnswer = false;
             }
 
-
+            lastAnswer.setLength(0);
+            if (answerValues != null) {
+                hasAnswer = true;
+                for (int i = 0; i < answerValues.getValues().length; i++) {
+                    lastAnswer.append(answerValues.getValues()[i])
+                            .append(" ")
+                            .append(answerValues.getUnits()[i])
+                            .append("  ");
+                }
+                System.out.println("ok..");
+            } else {
+                appendRawDataToAnswer();
+                System.out.println("unkn..");
+                hasAnswer = true;
+            }
+        } else {
+            System.out.println("empty..");
+            hasAnswer = false;
+        }
     }
 
-    private void setReceiveMode(){
-        //System.out.println("Send AT+PRECV=65535");
-        boolean flipFlopBusy  = this.isBusy();
-        byte [] tmpLastAnswer = lastAnswerBytes;
+    private void parseRak(String inputString) {
+        String[] lines = inputString.split("EV");
+        rssi = 0;
+        snr = 0;
+        for (String line : lines) {
+            if (line.isEmpty()) continue;
 
-        needRemoveDataListener = false;
-        this.setBusy(false);
-        this.sendData("AT+PRECV=65535", strEndian, this.comPort, true, 5, this);
-        this.receiveData(this);
-        this.setBusy(flipFlopBusy);
-        needRemoveDataListener = true;
+            if (line.contains("T:RXP2P")) {
+                parseSignalParams(line);
+            } else if (line.startsWith("T:")) {
+                parsePayloadData(line, "_RAK");
+            }
+        }
+    }
 
-        //StringBuilder sb = new StringBuilder();
-        //for (int i = 0; i < lastAnswerBytes.length; i++) {
-        //    sb.append( (char) lastAnswerBytes[i]);
-        //}
-        //System.out.println("Answer:" + sb.toString());
+    private void parseEbyte(String inputString) {
+        String payload = inputString.replace("EBYTE:", "").trim();
+        rssi = 0;
+        snr = 0;
+        parsePayloadData(payload, "_EBYTE");
+    }
 
-        lastAnswerBytes = tmpLastAnswer;
+    private void parseSignalParams(String line) {
+        String[] parts = line.split(", ");
+        if (parts.length < 3) {
+            System.out.println("Invalid RXP2P format");
+            return;
+        }
+
+        try {
+            // Обрабатываем RSSI
+            String rssiStr = parts[1].replace("RSSI", "").trim();
+            rssi = Integer.parseInt(rssiStr.split(" ")[0]);
+
+            // Обрабатываем SNR
+            String snrStr = parts[2].replace("SNR", "").trim();
+            snr = Integer.parseInt(snrStr.split(" ")[0]);
+
+        } catch (Exception e) {
+            System.out.println("Error parsing signal params: " + e.getMessage());
+        }finally {
+            System.out.println("rssi "+ rssi + " snr" + snr);
+        }
+    }
+
+    private void parsePayloadData(String dataLine, String suffix) {
+        // Ищем начало payload после префиксов
+        int payloadStart = dataLine.indexOf("EVT:") + 4;
+        if (payloadStart < 4) payloadStart = 0;
+
+        String payload = dataLine.substring(payloadStart);
+        if (payload.length() < 34) {
+            System.out.println("Invalid payload length: " + payload.length());
+            return;
+        }
+        payload = payload.replaceAll("EVT:", "");
+        payload = payload.replaceAll(":","");
+        payload = payload.replaceAll("T","");
+        payload = payload.trim();
+
+        // Берем данные и CRC со смещением
+        System.out.println(" PayLoad" + payload);
+        String dataPart = payload.substring(0, 28);
+        String crcPart = payload.substring(28, 32); // Смещение CRC на 2 символа
+
+        try {
+            int receivedCRC = Integer.parseInt(crcPart, 16);
+            System.out.println(dataPart);
+            System.out.println(crcPart);
+            int calculatedCRC = MyUtilities.calculateCRC16(dataPart.getBytes());
+            if (calculatedCRC != receivedCRC) {
+                System.out.println("CRC mismatch ca");
+                return;
+            }
+            System.out.println("CRC OK" + " transfered RSSI" + rssi + " transfered SNR" + snr + "dataPart" + dataPart);
+            answerValues = new AnswerValues(5);
+            answerValues.addValue(rssi, "RSSI");
+            answerValues.addValue(snr, "SNR");
+
+            String ident = IGM_10LORA_P2P.parsePayload(dataPart, answerValues) + suffix;
+            //TabForAnswer = AnswerStorage.getTabByIdent(ident);
+
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid CRC format: " + e.getMessage());
+        }
+    }
+    private void appendRawDataToAnswer() {
+        for (byte b : lastAnswerBytes) {
+            lastAnswer.append((char) b);
+        }
     }
     private void showReceived(){
         lastAnswer.setLength(0);
         hasAnswer = true;
+        hasValue = false;
         for (int i = 0; i < lastAnswerBytes.length; i++) {
             lastAnswer.append( (char) lastAnswerBytes[i]);
         }
     }
 
-    //Метод парсинга посылки после проверки СRC сделан публичным и статическим....
-    public static String parsePayload(String dataPart, AnswerValues ans) {
-        int temperature = 0, gasNumber = 0, measurementResult = 0, units = 0, flags = 0, serialNumber = 0;
+    @Override
+    public void sendData(String data, byte [] strEndian, SerialPort comPort, boolean knownCommand, int buffClearTimeLimit, SomeDevice device){
 
-        try {
-            temperature = parseHex(dataPart, 0, 4);
-            if (temperature > 32767) temperature -= 65536;
-            ans.addValue(temperature / 100.0, "°C"); //TODO ВНЁС ПРАВКУ В СПЕШКЕ!
-        } catch (IllegalArgumentException e) {
-            System.err.println("Temperature error: " + e.getMessage());
+        setCmdToSend(data);
+        comPort.flushDataListener();
+        //log.info("  Выполнено flushDataListener ");
+
+        if(needRemoveDataListener) {
+            comPort.removeDataListener();
         }
-
-        try {
-            gasNumber = parseHex(dataPart, 4, 6);
-        } catch (IllegalArgumentException e) {
-            System.err.println("Gas number error: " + e.getMessage());
+        //log.info("  Выполнено removeDataListener ");
+        setCmdToSend(data);
+        byte[] buffer = new byte[data.length() + strEndian.length];
+        for (int i = 0; i < data.length(); i++) {
+            buffer[i] = (byte) data.charAt(i);
         }
+        //buffer [data.length()] = 13;//CR
+        System.arraycopy(strEndian, 0, buffer, data.length() , strEndian.length);
 
-        try {
-            measurementResult = parseHex(dataPart, 6, 10);
-            ans.addValue(measurementResult / 10.0, " GAS: " + gasNumber);
-        } catch (IllegalArgumentException e) {
-            System.err.println("Measurement error: " + e.getMessage());
+        if(log.isInfoEnabled()){
+            //System.out.println("Логирование ответа в файл...");
+            StringBuilder sb = new StringBuilder();
+            for (byte b : buffer) {
+                sb.append((char)b);
+            }
+            log.info("Parse request ASCII [" + sb.toString().trim() + "] ");
+            log.info("Parse request HEX [" + buffer.toString() + "] ");
+            sb = null;
         }
-
-        try {
-            units = parseHex(dataPart, 10, 12);
-        } catch (IllegalArgumentException e) {
-            System.err.println("Units error: " + e.getMessage());
-        }
-
-        try {
-            flags = parseHex(dataPart, 12, 20);
-        } catch (IllegalArgumentException e) {
-            System.err.println("Flags error: " + e.getMessage());
-        }
-
-        try {
-            serialNumber = parseHex(dataPart, 20, 28);
-            ans.addValue(units, "UNITS:" + units + " SERIAL:" + serialNumber);
-        } catch (IllegalArgumentException e) {
-            System.err.println("Serial error: " + e.getMessage());
-            return null;
-        }
-
-        return String.valueOf(serialNumber);
+        comPort.flushIOBuffers();
+        log.info("  Выполнено flushIOBuffers и теперь bytesAvailable " + comPort.bytesAvailable());
+        comPort.writeBytes(buffer, buffer.length);
+        log.info("  Завершена отправка данных");
+        device.setBusy(false);
     }
 
-    private static int parseHex(String data, int start, int end) throws IllegalArgumentException {
-        try {
-            return Integer.parseInt(data.substring(start, end), 16);
-        } catch (NumberFormatException | StringIndexOutOfBoundsException e) {
-            throw new IllegalArgumentException("Invalid hex at [" + start + "-" + end + "]: " +
-                    data.substring(start, Math.min(end, data.length())));
+    private static String parsePayload(String dataPart, AnswerValues ans) {
+        // Longitude
+        long longitude = Long.parseLong(dataPart.substring(0, 8), 16);
+        if ((longitude & 0x80000000) != 0) {
+            longitude = -(longitude & 0x7FFFFFFF);
         }
+        double longitudeValue = longitude / 100000.0;
+        ans.addValue(longitudeValue, "LON");
+        //System.out.println(" LON: " + longitudeValue);
+
+        // Latitude
+        long latitude = Long.parseLong(dataPart.substring(8, 16), 16);
+        System.out.println(" LAT STR: " + dataPart.substring(8, 16));
+        System.out.println(" LAT LONG: " + latitude);
+        if ((latitude & 0x80000000) != 0) {
+            latitude = -(latitude & 0x7FFFFFFF);
+        }
+        double latitudeValue = latitude / 100000.0;
+        ans.addValue(latitudeValue, "LAT");
+        //System.out.println(" LAT: " + latitudeValue);
+
+        // Accuracy X
+        //int accuracyX = Integer.parseInt(dataPart.substring(16, 18), 16);
+        //ans.addValue(accuracyX, "prX");
+        //System.out.println("AccuracyX: " + accuracyX);
+
+        // Accuracy Z
+        //int accuracyZ = Integer.parseInt(dataPart.substring(18, 20), 16);
+        //ans.addValue(accuracyZ, "prZ");
+        //System.out.println("AccuracyZ: " + accuracyZ);
+
+        // Accuracy Y
+        //int accuracyY = Integer.parseInt(dataPart.substring(20, 22), 16);
+        //ans.addValue(accuracyY, "prY");
+        //System.out.println("AccuracyY: " + accuracyY);
+
+        // Active Satellites
+        int activeSatellites = Integer.parseInt(dataPart.substring(16, 18), 16);
+        ans.addValue(activeSatellites, "act Sat");
+        //System.out.println("ActiveSatellites: " + activeSatellites);
+
+        // Observed Satellites
+        //int observedSatellites = Integer.parseInt(dataPart.substring(24, 26), 16);
+        //ans.addValue(observedSatellites, "obs Sat");
+        //System.out.println("ObservedSatellites: " + observedSatellites);
+
+        // Current Message Number
+        int currentMessageNumber = Integer.parseInt(dataPart.substring(18, 20), 16);
+        ans.addValue(currentMessageNumber, "msg num");
+        //System.out.println("CurrentMessageNumber: " + currentMessageNumber);
+
+        // Total Messages
+        int totalMessages = Integer.parseInt(dataPart.substring(20, 22), 16);
+        ans.addValue(totalMessages, "tot msg");
+        //System.out.println("TotalMessages: " + totalMessages);
+
+        // Serial Number
+        int serialNumber = Integer.parseInt(dataPart.substring(22, 26), 16);
+        ans.addValue(serialNumber, "s.n.");
+        //System.out.println("SerialNumber: " + serialNumber);
+
+        // Battery Level
+        String tmp = dataPart.substring(26, 30);
+        //System.out.println("HEX battery " + tmp);
+        double batteryLevel = 0;
+        try{
+            batteryLevel = Integer.parseInt(tmp,16);
+        } catch (NumberFormatException e) {
+            System.out.println(e.getMessage());
+            //throw new RuntimeException(e);
+        }
+        batteryLevel /= 100;
+        ans.addValue(batteryLevel, "batt, V");
+        //System.out.println("BatteryLevel: " + batteryLevel);
+
+        return String.valueOf(serialNumber);
     }
 
     private static void parseFlags(int flags) {
@@ -370,50 +437,13 @@ public class IGM_10LORA_P2P implements SomeDevice {
         System.out.println("  Relay 1 Error: " + relay1Error);
     }
 
-    @Override
-    public void sendData(String data, byte [] strEndian, SerialPort comPort, boolean knownCommand, int buffClearTimeLimit, SomeDevice device){
-
-        setCmdToSend(data);
-        comPort.flushDataListener();
-        //log.info("  Выполнено flushDataListener ");
-
-        if(needRemoveDataListener) {
-            comPort.removeDataListener();
-        }
-        //log.info("  Выполнено removeDataListener ");
-        setCmdToSend(data);
-        byte[] buffer = new byte[data.length() + strEndian.length];
-        for (int i = 0; i < data.length(); i++) {
-            buffer[i] = (byte) data.charAt(i);
-        }
-        //buffer [data.length()] = 13;//CR
-        System.arraycopy(strEndian, 0, buffer, data.length() , strEndian.length);
-
-        if(log.isInfoEnabled()){
-            //System.out.println("Логирование ответа в файл...");
-            StringBuilder sb = new StringBuilder();
-            for (byte b : buffer) {
-                sb.append((char)b);
-            }
-            log.info("Parse request ASCII [" + sb.toString().trim() + "] ");
-            log.info("Parse request HEX [" + buffer.toString() + "] ");
-            sb = null;
-        }
-        comPort.flushIOBuffers();
-        log.info("  Выполнено flushIOBuffers и теперь bytesAvailable " + comPort.bytesAvailable());
-        comPort.writeBytes(buffer, buffer.length);
-        log.info("  Завершена отправка данных");
-        device.setBusy(false);
-    }
-
-
     public boolean isBusy(){
-        return busy;
+        return bisy;
     }
 
     @Override
     public void setBusy(boolean busy){
-        this.busy = busy;
+        this.bisy = busy;
     }
     public String getAnswer(){
         if(hasAnswer) {
