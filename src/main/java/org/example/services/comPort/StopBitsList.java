@@ -14,6 +14,7 @@ public enum StopBitsList {
             VALUES.add(someEnum.value);
         }
     }
+
     StopBitsList(int value) {
         this.value = value;
     }

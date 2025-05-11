@@ -1,4 +1,4 @@
-package org.example.services.comPool;
+package org.example.services.connectionPool;
 
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
@@ -94,17 +94,17 @@ public class ComDataCollector implements Runnable{
 
             final Map<Integer, String> eventTypes = new HashMap<>();
             {
-                eventTypes.put(SerialPort.LISTENING_EVENT_PORT_DISCONNECTED, "Найдено событие для слушателя порта LISTENING_EVENT_PORT_DISCONNECTED");
-                eventTypes.put(SerialPort.LISTENING_EVENT_BREAK_INTERRUPT, "Найдено событие для слушателя порта LISTENING_EVENT_BREAK_INTERRUPT");
-                eventTypes.put(SerialPort.LISTENING_EVENT_CARRIER_DETECT, "Найдено событие для слушателя порта LISTENING_EVENT_CARRIER_DETECT");
-                eventTypes.put(SerialPort.LISTENING_EVENT_FIRMWARE_OVERRUN_ERROR, "Найдено событие для слушателя порта LISTENING_EVENT_FIRMWARE_OVERRUN_ERROR");
-                eventTypes.put(SerialPort.LISTENING_EVENT_FRAMING_ERROR, "Найдено событие для слушателя порта LISTENING_EVENT_FRAMING_ERROR");
-                eventTypes.put(SerialPort.LISTENING_EVENT_PARITY_ERROR, "Найдено событие для слушателя порта LISTENING_EVENT_PARITY_ERROR");
-                eventTypes.put(SerialPort.LISTENING_EVENT_SOFTWARE_OVERRUN_ERROR, "Найдено событие для слушателя порта LISTENING_EVENT_SOFTWARE_OVERRUN_ERROR");
-                eventTypes.put(SerialPort.LISTENING_EVENT_TIMED_OUT, "Найдено событие для слушателя порта LISTENING_EVENT_TIMED_OUT");
-                eventTypes.put(SerialPort.LISTENING_EVENT_RING_INDICATOR, "Найдено событие для слушателя порта LISTENING_EVENT_RING_INDICATOR");
-                eventTypes.put(SerialPort.LISTENING_EVENT_DATA_AVAILABLE, "Найдено событие для слушателя порта LISTENING_EVENT_DATA_AVAILABLE");
-                eventTypes.put(SerialPort.LISTENING_EVENT_DATA_RECEIVED, "Найдено событие для слушателя порта LISTENING_EVENT_DATA_RECEIVED");
+                eventTypes.put(SerialPort.LISTENING_EVENT_PORT_DISCONNECTED, "LISTENING_EVENT_PORT_DISCONNECTED");
+                eventTypes.put(SerialPort.LISTENING_EVENT_BREAK_INTERRUPT, "LISTENING_EVENT_BREAK_INTERRUPT");
+                eventTypes.put(SerialPort.LISTENING_EVENT_CARRIER_DETECT, "LISTENING_EVENT_CARRIER_DETECT");
+                eventTypes.put(SerialPort.LISTENING_EVENT_FIRMWARE_OVERRUN_ERROR, "LISTENING_EVENT_FIRMWARE_OVERRUN_ERROR");
+                eventTypes.put(SerialPort.LISTENING_EVENT_FRAMING_ERROR, "LISTENING_EVENT_FRAMING_ERROR");
+                eventTypes.put(SerialPort.LISTENING_EVENT_PARITY_ERROR, "LISTENING_EVENT_PARITY_ERROR");
+                eventTypes.put(SerialPort.LISTENING_EVENT_SOFTWARE_OVERRUN_ERROR, "LISTENING_EVENT_SOFTWARE_OVERRUN_ERROR");
+                eventTypes.put(SerialPort.LISTENING_EVENT_TIMED_OUT, "LISTENING_EVENT_TIMED_OUT");
+                eventTypes.put(SerialPort.LISTENING_EVENT_RING_INDICATOR, "LISTENING_EVENT_RING_INDICATOR");
+                eventTypes.put(SerialPort.LISTENING_EVENT_DATA_AVAILABLE, "LISTENING_EVENT_DATA_AVAILABLE");
+                eventTypes.put(SerialPort.LISTENING_EVENT_DATA_RECEIVED, "LISTENING_EVENT_DATA_RECEIVED");
             }
             @Override
             public void serialEvent(SerialPortEvent event) {
@@ -113,13 +113,13 @@ public class ComDataCollector implements Runnable{
                 if (event.getEventType() == SerialPort.LISTENING_EVENT_PORT_DISCONNECTED) {
                     comPort.closePort();
                 } else if (event.getEventType() == SerialPort.LISTENING_EVENT_DATA_AVAILABLE || event.getEventType() == SerialPort.LISTENING_EVENT_DATA_RECEIVED) {
-                    handleDataAvailableEvent(currentDirection.get());
+                    handleDataAvailableEvent();
                 }
             }
         };
     }
 
-    private void handleDataAvailableEvent(int currentClientId) {
+    private void handleDataAvailableEvent() {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         byte[] chunk = new byte[2048];
         long delay = device == null ? 150L : device.getMillisReadLimit();
@@ -183,7 +183,7 @@ public class ComDataCollector implements Runnable{
                 pollCommands();
                 if(counter < limit) {
                     if(comPort.bytesAvailable() > 0){
-                        handleDataAvailableEvent(0);
+                        handleDataAvailableEvent();
                         comPort.flushIOBuffers();
                     }
                     log.info("Слушатель будет добавлен еще " + (limit - counter) + " раз");
@@ -234,7 +234,7 @@ public class ComDataCollector implements Runnable{
             log.warn("Произошла ошибка при попытке сна" + e.getMessage());
         }
     }
-    public void sendOnce(String pref, String arg,int clientId, boolean internal) {
+    public void sendOnce(String pref, String cmd,int clientId, boolean internal) {
         log.info(" Начал отправку " + Thread.currentThread().getName() + " для клиента " + clientId);
 
         if( ! internal){
@@ -244,14 +244,20 @@ public class ComDataCollector implements Runnable{
             }
         }
         currentDirection.set(clientId);
-        waitForComDataCollectorBusy(40);
+
+        if(internal){
+            waitForComDataCollectorBusy(40);
+        }else {
+            waitForComDataCollectorBusy(60);
+        }
+
 
         if (comDataCollectorBusy.get()) {
             log.info("Прервал отправку. Слишком долгое ожидание освобождения порта") ;
             return;
         }
 
-        if (arg == null || arg.isEmpty()) {
+        if (cmd == null || cmd.isEmpty()) {
             log.info("Прервал отправку. Нет текста команды");
             comDataCollectorBusy.set(false);
             return;
@@ -277,18 +283,33 @@ public class ComDataCollector implements Runnable{
         responseRequested = true;
         requestTimestamp = System.currentTimeMillis();
 
-        device.sendData(collection.getPrefix(clientId)+collection.getCommand(clientId), device.getStrEndian(), comPort, true, 0, device);
-        //device.setCmdToSend(collection.getPrefix(clientId)+collection.getCommand(clientId));
+        String textToSend = pref+cmd;
+        device.setCmdToSend(pref+cmd);
+        byte[] buffer = new byte[textToSend.length() + device.getStrEndian().length];
+        for (int i = 0; i < textToSend.length(); i++) {
+            buffer[i] = (byte) textToSend.charAt(i);
+        }
+        System.arraycopy(device.getStrEndian(), 0, buffer, textToSend.length() , device.getStrEndian().length);
+        comPort.writeBytes(buffer, buffer.length);
+
+
+
         log.info("Команда отправлена: " + collection.getPrefix(clientId)+collection.getCommand(clientId));
         deviceAnswer = new DeviceAnswer(LocalDateTime.now(),collection.getCommand(clientId),clientId);
+        log.info("Заготовка ответа создана ");
     }
 
     public void saveReceivedByEvent(String msg, boolean responseRequested) {
+        if(msg == null || msg.isEmpty()){
+            log.warn("Пустое сообщение при попытке saveReceivedByEvent");
+            return;
+        }
         byte [] received = new byte[msg.length()];
         char [] receivedChar = msg.toCharArray();
         for (int i = 0; i < received.length; i++) {
             received [i] = (byte) receivedChar[i];
         }
+        log.info("Конвертация в массив завершена");
         if (device == null) {
             log.error("Устройство не инициализировано при попытке saveReceivedByEvent");
             return;
@@ -309,24 +330,36 @@ public class ComDataCollector implements Runnable{
             deviceAnswer.setRequestSendTime(LocalDateTime.now());
         }
 
-        device.setLastAnswer(received);
-        device.parseData();
 
         int tabDirection = clientId;
-        if(device.getTabForAnswer() != null) {
-            tabDirection = device.getTabForAnswer();
-        }
+        device.setLastAnswer(received);
         deviceAnswer.changeTabNum(tabDirection);
         deviceAnswer.setDeviceType(device);
         deviceAnswer.setAnswerReceivedTime(LocalDateTime.now());
-        String answer = device.getAnswer();
+        String answer = null;
+        try{
+            device.parseData();
+            answer = device.getAnswer();
+        }catch (Exception e){
+            log.warn("Исключение во время разбора ответа внутри класса прибора" + e.getMessage());
+            answer = "Исключение во время разбора ответа внутри класса прибора";
+        }
+
+
+
+
+
+
         if(answer != null){
             deviceAnswer.setAnswerReceivedString(answer);
         }else{
-            deviceAnswer.setAnswerReceivedString("");
+            deviceAnswer.setAnswerReceivedString("Ошибка при разборе ответа");
         }
 
         if(device.getValues() != null){
+            if(device.getValues().getDirection() > 0)
+                tabDirection = device.getValues().getDirection();
+
             deviceAnswer.setAnswerReceivedValues(device.getValues());
         }else{
             deviceAnswer.setAnswerReceivedValues(new AnswerValues(0));
@@ -465,7 +498,7 @@ public class ComDataCollector implements Runnable{
         if(this.comPort == null){
             throw new ConnectException("Нет объекта порта в потоке опроса");
         }
-        String forReturn = "";
+        String forReturn;
         if(isRootThread(clientId)){
             if (this.comPort.isOpen()) {
                 comPort.flushDataListener();
@@ -485,7 +518,7 @@ public class ComDataCollector implements Runnable{
         if(this.comPort == null){
             return "Нет объекта порта в потоке опроса";
         }
-        String forReturn = "";
+        String forReturn;
         if(isRootThread(clientId)){
             if (this.comPort.isOpen()) {
                 comPort.flushDataListener();

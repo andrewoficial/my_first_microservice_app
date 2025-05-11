@@ -1,6 +1,7 @@
 package org.example.services;
 
 import lombok.Getter;
+import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.gui.ChartWindow;
 
@@ -15,6 +16,9 @@ public class AnswerValues {
     private final String [] units;
 
     private int counter = 0;
+
+    @Getter @Setter
+    private int direction = -1;
 
     public AnswerValues(int quantity) {
         values = new double[quantity];

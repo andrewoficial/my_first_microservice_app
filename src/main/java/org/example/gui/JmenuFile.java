@@ -13,10 +13,9 @@ import java.util.HashSet;
 import java.util.concurrent.ExecutorService;
 
 import org.example.services.AnswerStorage;
-import org.example.services.comPool.AnyPoolService;
+import org.example.services.connectionPool.AnyPoolService;
 import org.example.utilites.properties.MyProperties;
 
-import static org.example.device.SomeDevice.log;
 import static org.example.gui.ChartWindow.getFieldsCountForTab;
 
 public class JmenuFile {

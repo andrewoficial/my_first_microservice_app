@@ -5,6 +5,17 @@ package org.example.utilites;
 
 import com.fazecast.jSerialComm.SerialPort;
 import org.example.device.*;
+import org.example.device.protArdBadVlt.ARD_BAD_VLT;
+import org.example.device.protArdFeeBrdMeter.ARD_FEE_BRD_METER;
+import org.example.device.protArdTerm.ARD_TERM;
+import org.example.device.protDemo.DEMO_PROTOCOL;
+import org.example.device.protDvk4rd.DVK_4RD;
+import org.example.device.protEctTc290.ECT_TC290;
+import org.example.device.protEdwardsD397.EDWARDS_D397_00_000;
+import org.example.device.protErstevakMtp4d.ERSTEVAK_MTP4D;
+import org.example.device.protGpsTest.GPS_Test;
+import org.example.device.protIgm10.IGM_10;
+import org.example.device.protOwonSpe3051.OWON_SPE3051;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -91,11 +102,11 @@ public class MyUtilities {
             case EDWARDS_D397_00_000 -> device = new EDWARDS_D397_00_000(comPort);
             case ECT_TC290 -> device = new ECT_TC290(comPort);
             case DVK_4RD -> device = new DVK_4RD(comPort);
-            case IGM10LORA_P2P -> device = new IGM_10LORA_P2P(comPort);
+            //case IGM10LORA_P2P -> device = new IGM_10LORA_P2P(comPort);
             case DEMO_PROTOCOL -> device = new DEMO_PROTOCOL(comPort);
             case GPS_Test -> device = new GPS_Test(comPort);
             case OWON_SPE3051 -> device = new OWON_SPE3051(comPort);
-            case LORADIF -> device = new LORADIF(comPort);
+            //case LORADIF -> device = new LORADIF(comPort);
             default -> device = new DEMO_PROTOCOL(comPort);
         }
         return device;
@@ -111,7 +122,7 @@ public class MyUtilities {
             case ERSTEVAK_MTP4D -> device = new ERSTEVAK_MTP4D();
             case EDWARDS_D397_00_000 -> device = new EDWARDS_D397_00_000();
             case ECT_TC290 -> device = new ECT_TC290();
-            case IGM10LORA_P2P -> device = new IGM_10LORA_P2P();
+            //case IGM10LORA_P2P -> device = new IGM_10LORA_P2P();
             case DEMO_PROTOCOL -> device = new DEMO_PROTOCOL();
             case OWON_SPE3051 -> device = new OWON_SPE3051();
             case GPS_Test -> device = new GPS_Test();

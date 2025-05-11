@@ -1,4 +1,4 @@
-package org.example.services.comPool;
+package org.example.services.connectionPool;
 
 import lombok.Getter;
 import org.apache.log4j.Logger;

@@ -2,16 +2,12 @@ package org.example;
 
 import org.example.gui.MainLeftPanelStateCollection;
 import org.example.gui.MainWindow;
-import org.example.services.comPool.AnyPoolService;
-import org.example.services.comPort.ComPort;
+import org.example.services.connectionPool.AnyPoolService;
 import org.example.utilites.properties.MyProperties;
-import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
-import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.env.Environment;
 
 import javax.swing.*;
 import java.util.Arrays;

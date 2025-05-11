@@ -3,7 +3,7 @@ package org.example.gui;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import org.example.device.SomeDevice;
-import org.example.device.CommandListClass;
+import org.example.device.DeviceCommandListClass;
 import org.example.device.ProtocolsList;
 import org.example.device.SingleCommand;
 
@@ -41,12 +41,12 @@ public class CommandsWindow extends JDialog {
                             System.out.println("Found protocol" + protocolsList.getValue());
 
                             SomeDevice someDevice = createDeviceByProtocol(protocolsList);
-                            CommandListClass commandListClass = someDevice.getCommandListClass();
+                            DeviceCommandListClass deviceCommandListClass = someDevice.getCommandListClass();
                             if (someDevice.getCommandListClass() == null) {
                                 TP_Field.setText("Класс с командами не определен для протокола " + protocolsList.getValue());
                                 return;
                             }
-                            HashMap<String, SingleCommand> commandHashMap = commandListClass.getCommandPool();
+                            HashMap<String, SingleCommand> commandHashMap = deviceCommandListClass.getCommandPool();
                             if (commandHashMap == null || commandHashMap.isEmpty()) {
                                 TP_Field.setText("В классе с командами для протокола " + protocolsList.getValue() + " список команд пуст");
                                 System.out.println("В классе с командами для протокола " + protocolsList.getValue() + " список команд пуст");

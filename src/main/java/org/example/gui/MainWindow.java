@@ -11,14 +11,14 @@ import org.example.gui.mainWindowUtilites.GuiStateManager;
 import org.example.gui.mainWindowUtilites.PortManager;
 import org.example.gui.mainWindowUtilites.TabManager;
 import org.example.services.AnswerStorage;
-import org.example.services.comPool.AnyPoolService;
+import org.example.services.connectionPool.AnyPoolService;
 import org.example.services.TabAnswerPart;
 import org.example.services.comPort.BaudRatesList;
 import org.example.services.comPort.DataBitsList;
 import org.example.services.comPort.ParityList;
 import org.example.services.comPort.StopBitsList;
 import org.example.utilites.*;
-import org.example.services.comPool.ComDataCollector;
+import org.example.services.connectionPool.ComDataCollector;
 import org.example.utilites.properties.MyProperties;
 
 import javax.swing.*;
