@@ -3,9 +3,15 @@ package org.example.gui;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
+import lombok.Getter;
+import lombok.Setter;
+import org.example.services.AnswerValues;
+import org.example.services.DeviceAnswer;
+import org.example.services.loggers.DeviceLogger;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.WebSocketSession;
@@ -23,9 +29,13 @@ import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.net.URI;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Date;
 
 public class WebSocketWindow extends JDialog implements Rendeble {
+    private DeviceLogger deviceLogger;
+    boolean needLog;
     private JPanel panel1;
     private JTextField addressField;
     private JTextField login;
@@ -45,6 +55,9 @@ public class WebSocketWindow extends JDialog implements Rendeble {
     private JTable gatewaysTable;
     private JTable devicesTable;
     private JButton addDeviceButton;
+    private JButton removeDeviceButton;
+    private Checkbox needLogCheckbox;
+    JComboBox<String> groupComboBox;
 
     public WebSocketWindow() {
         setModal(false);
@@ -125,34 +138,42 @@ public class WebSocketWindow extends JDialog implements Rendeble {
 
         // Таблица для устройств
         devicesTableModel = new DefaultTableModel();
+        devicesTableModel.addColumn("Device name");
         devicesTableModel.addColumn("DevEUI");
-        devicesTableModel.addColumn("Имя");
-        devicesTableModel.addColumn("Последние данные");
-        devicesTableModel.addColumn("Класс");
+        devicesTableModel.addColumn("Last connection");
+        devicesTableModel.addColumn("Group");
+        devicesTableModel.addColumn("Class");
         devicesTable = new JTable(devicesTableModel);
 
         // Панель с кнопкой добавления
+        //Панель с таблицей
         JPanel devicesPanel = new JPanel(new BorderLayout());
         devicesPanel.add(new JScrollPane(devicesTable), BorderLayout.CENTER);
-
+        //Панель с кнопками
         JPanel buttonPanel = new JPanel();
         addDeviceButton = new JButton("Добавить устройство");
-        buttonPanel.add(devicesTable);
+        removeDeviceButton = new JButton("Удалить устройство");
+        needLogCheckbox = new Checkbox("Сохранять логи");
         buttonPanel.add(addDeviceButton);
-        devicesPanel.add(buttonPanel, BorderLayout.SOUTH);
-        // Панель с вкладками
+        buttonPanel.add(removeDeviceButton);
+        buttonPanel.add(needLogCheckbox);
+        //Панель с панелями (лол)
+        JPanel devAndBtnPane = new JPanel(new BorderLayout());
+        devAndBtnPane.add(devicesPanel, BorderLayout.CENTER);
+        devAndBtnPane.add(buttonPanel, BorderLayout.SOUTH);
+
+        // Панель со вкладками
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.addTab("Параметры", new JScrollPane(settingsPane));
         tabbedPane.addTab("Шлюзы", new JScrollPane(gatewaysTable));
-        tabbedPane.addTab("Устройства", new JScrollPane(buttonPanel));
-
-
-
+        tabbedPane.addTab("Устройства", new JScrollPane(devAndBtnPane));
 
         add(tabbedPane, BorderLayout.CENTER);
 
         // Обработчик кнопки
         addDeviceButton.addActionListener(e -> showAddDeviceDialog());
+        removeDeviceButton.addActionListener(e -> showDeleteDevicesDialog());
+        needLogCheckbox.addItemListener(e -> setNeedLog(needLogCheckbox.getState()));
     }
 
     public void sendJsonRequest(ObjectNode request) {
@@ -180,7 +201,7 @@ public class WebSocketWindow extends JDialog implements Rendeble {
         }
     }
 
-    private void sendMessage(String message) {
+    public void sendMessage(String message) {
         try {
             if (webSocketSession != null && webSocketSession.isOpen()) {
                 webSocketSession.sendMessage(new TextMessage(message));
@@ -199,6 +220,17 @@ public class WebSocketWindow extends JDialog implements Rendeble {
             // Получаем ответ от сервера
             String payload = message.getPayload();
             updateTextInPane1("Ответ от сервера: " + payload);
+            if (needLog) {
+                if (deviceLogger == null) {
+                    deviceLogger = new DeviceLogger("LoRa_server_log.txt");
+                }
+                DeviceAnswer deviceAnswer = new DeviceAnswer(LocalDateTime.now(), "received", 0);
+                deviceAnswer.setAnswerReceivedTime(LocalDateTime.now());
+                deviceAnswer.setAnswerReceivedString(payload);
+                deviceAnswer.setAnswerReceivedValues(new AnswerValues(0));
+
+                deviceLogger.writeLine(deviceAnswer);
+            }
             SwingUtilities.invokeLater(() -> {
                 try {
                     ObjectMapper mapper = new ObjectMapper();
@@ -213,6 +245,8 @@ public class WebSocketWindow extends JDialog implements Rendeble {
                         processGatewaysResponse(rootNode);
                     } else if ("get_devices_resp".equals(cmd)) {
                         processDevicesResponse(rootNode);
+                    } else if ("delete_devices_resp".equals(cmd)) {
+                        handleDeleteResponse(rootNode);
                     } else if ("manage_devices_resp".equals(cmd)) {
                         if (rootNode.get("status").asBoolean()) {
                             sendGetDevicesRequest(); // Обновляем список после добавления
@@ -234,19 +268,18 @@ public class WebSocketWindow extends JDialog implements Rendeble {
             sendJsonRequest(request);
         }
 
-        private void sendGetDevicesRequest() {
-            ObjectMapper mapper = new ObjectMapper();
-            ObjectNode request = mapper.createObjectNode();
-            request.put("cmd", "get_devices_req");
-            if (currentToken != null) {
-                request.put("token", currentToken);
-            }
-            sendJsonRequest(request);
-        }
-
 
     }
 
+    public void sendGetDevicesRequest() {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode request = mapper.createObjectNode();
+        request.put("cmd", "get_devices_req");
+        if (currentToken != null) {
+            request.put("token", currentToken);
+        }
+        sendJsonRequest(request);
+    }
 
     private void processGatewaysResponse(JsonNode rootNode) {
         gatewaysTableModel.setRowCount(0);
@@ -271,15 +304,49 @@ public class WebSocketWindow extends JDialog implements Rendeble {
             for (JsonNode dev : devices) {
                 String devEui = dev.get("devEui").asText();
                 String name = dev.get("devName").asText();
+                String group = "N/A";
+                if (dev.has("attributes") && dev.get("attributes").has("group")) {
+                    group = dev.get("attributes").get("group").asText();
+                }
                 String lastData = dev.has("last_data_ts") ?
                         formatTimestamp(dev.get("last_data_ts").asLong()) : "N/A";
                 String deviceClass = dev.get("class").asText();
 
-                devicesTableModel.addRow(new Object[]{devEui, name, lastData, deviceClass});
+                devicesTableModel.addRow(new Object[]{name, devEui, lastData, deviceClass});
             }
         }
     }
 
+    private void handleDeleteResponse(JsonNode rootNode) {
+        if (rootNode.get("status").asBoolean()) {
+            JsonNode statusList = rootNode.get("device_delete_status");
+            statusList.forEach(status -> {
+                String devEui = status.get("devEui").asText();
+                String result = status.get("status").asText();
+                updateTextInPane1("Устройство " + devEui + ": " + result);
+            });
+            sendGetDevicesRequest(); // Обновляем список
+        } else {
+            JOptionPane.showMessageDialog(this, "Ошибка удаления: " + rootNode.get("err_string").asText());
+        }
+    }
+
+    private void showDeleteDevicesDialog() {
+        ArrayList<DeviceInfo> devices = new ArrayList<>();
+        for (int i = 0; i < devicesTableModel.getRowCount(); i++) {
+            devices.add(new DeviceInfo(
+                    (String) devicesTableModel.getValueAt(i, 1),
+                    (String) devicesTableModel.getValueAt(i, 0),
+                    (String) devicesTableModel.getValueAt(i, 2)
+            ));
+        }
+
+        new DeleteDevicesDialog(this, devices).setVisible(true);
+    }
+
+    private void setNeedLog(boolean needLog) {
+        this.needLog = needLog;
+    }
     private String formatTimestamp(long timestamp) {
         return new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(new Date(timestamp));
     }
@@ -333,6 +400,105 @@ public class WebSocketWindow extends JDialog implements Rendeble {
 
     }
 
+
+    class DeleteDevicesDialog extends JDialog {
+        private JTable devicesTable;
+        private DefaultTableModel model;
+        private WebSocketWindow parent;
+
+        DeleteDevicesDialog(WebSocketWindow parent, ArrayList<DeviceInfo> devices) {
+            super(parent, "Удаление устройств", true);
+            setupUI(devices);
+            pack();
+            setLocationRelativeTo(parent);
+            this.parent = parent;
+        }
+
+        private void setupUI(ArrayList<DeviceInfo> devices) {
+            JPanel mainPanel = new JPanel(new BorderLayout());
+
+            // Модель таблицы
+            model = new DefaultTableModel() {
+                @Override
+                public Class<?> getColumnClass(int column) {
+                    return column == 0 ? Boolean.class : String.class;
+                }
+            };
+            model.addColumn("Выбрать");
+            model.addColumn("DevEUI");
+            model.addColumn("Имя");
+            model.addColumn("Последняя активность");
+
+            // Заполняем данными
+            for (DeviceInfo device : devices) {
+                model.addRow(new Object[]{false, device.getDevEui(), device.getName(), device.getLastActivity()});
+            }
+
+            devicesTable = new JTable(model);
+            devicesTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+            // Кнопка удаления
+            JButton deleteButton = new JButton("Удалить выбранные");
+            deleteButton.addActionListener(e -> deleteSelectedDevices());
+
+            mainPanel.add(new JScrollPane(devicesTable), BorderLayout.CENTER);
+            mainPanel.add(deleteButton, BorderLayout.SOUTH);
+
+            add(mainPanel);
+        }
+
+        private void deleteSelectedDevices() {
+            ArrayList<String> selectedDevEuis = new ArrayList<String>();
+            for (int i = 0; i < model.getRowCount(); i++) {
+                if ((Boolean) model.getValueAt(i, 0)) {
+                    selectedDevEuis.add((String) model.getValueAt(i, 1));
+                }
+            }
+
+            if (selectedDevEuis.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Выберите хотя бы одно устройство!");
+                return;
+            }
+
+            sendDeleteRequest(selectedDevEuis);
+            dispose();
+        }
+
+        private void sendDeleteRequest(ArrayList<String> devEuis) {
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode request = mapper.createObjectNode();
+            request.put("cmd", "delete_devices_req");
+            request.put("token", (String) getCurrentToken());
+
+            ArrayNode devicesArray = mapper.createArrayNode();
+            devEuis.forEach(devicesArray::add);
+            request.set("devices_list", devicesArray);
+
+            parent.sendJsonRequest(request);
+        }
+
+    }
+
+    // 3. Добавим класс-модель для устройств
+    class DeviceInfo {
+        @Getter
+        @Setter
+        private String devEui;
+        @Getter
+        @Setter
+        private String name;
+        @Getter
+        @Setter
+        private String lastActivity;
+
+        public DeviceInfo(String devEui, String name, String lastActivity) {
+            this.devEui = devEui;
+            this.name = name;
+            this.lastActivity = lastActivity;
+        }
+
+    }
+
     class AddDeviceDialog extends JDialog {
         private JTextField devEuiField;
         private JTextField otaaAppEuiField;
@@ -341,6 +507,8 @@ public class WebSocketWindow extends JDialog implements Rendeble {
         private JTextField abpAppsKeyField;
         private JTextField abpNwksKeyField;
         private JTabbedPane tabbedPane;
+        private JComboBox<String> groupComboBox;
+        private JTextField devNameField;
 
         AddDeviceDialog(WebSocketWindow parent) {
             super(parent, "Добавить устройство", true);
@@ -364,7 +532,26 @@ public class WebSocketWindow extends JDialog implements Rendeble {
             mainPanel.add(tabbedPane, BorderLayout.CENTER);
             mainPanel.add(submitButton, BorderLayout.SOUTH);
 
+            mainPanel.add(createGeneralPanel(), BorderLayout.NORTH);
+            mainPanel.add(tabbedPane, BorderLayout.CENTER);
+
             add(mainPanel);
+        }
+
+        private JPanel createGeneralPanel() {
+            JPanel panel = new JPanel(new GridLayout(0, 2));
+
+            // Существующие поля
+            devNameField = new JTextField(32);
+            groupComboBox = new JComboBox<>(
+                    new String[]{"Группа 1", "Группа 2", "Другая"});
+
+            panel.add(new JLabel("Имя устройства:"));
+            panel.add(devNameField);
+            panel.add(new JLabel("Группа:"));
+            panel.add(groupComboBox);
+
+            return panel;
         }
 
         private JPanel createOtaaPanel() {
@@ -408,6 +595,12 @@ public class WebSocketWindow extends JDialog implements Rendeble {
             // Общие поля
             deviceNode.put("devEui", devEuiField.getText().trim());
 
+            deviceNode.put("devName", devNameField.getText().trim());
+
+            // Группа (добавляем как атрибут)
+            ObjectNode attributes = mapper.createObjectNode();
+            attributes.put("group", groupComboBox.getSelectedItem().toString());
+            deviceNode.set("attributes", attributes);
             // Параметры активации
             if (tabbedPane.getSelectedIndex() == 0) { // OTAA
                 ObjectNode otaaNode = mapper.createObjectNode();
@@ -433,7 +626,6 @@ public class WebSocketWindow extends JDialog implements Rendeble {
             dispose();
         }
     }
-
 
 
     {
