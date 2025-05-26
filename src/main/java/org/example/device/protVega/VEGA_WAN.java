@@ -1,4 +1,4 @@
-package org.example.device.protEdwardsD397;
+package org.example.device.protVega;
 
 
 import com.fazecast.jSerialComm.SerialPort;
@@ -7,20 +7,18 @@ import org.apache.log4j.Logger;
 import org.example.device.DeviceCommandListClass;
 import org.example.device.SomeDevice;
 import org.example.device.connectParameters.ComConnectParameters;
-import org.example.device.protArdTerm.ArdTermCommandRegistry;
-import org.example.device.protEctTc290.EctTc290CommandRegistry;
 import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 
 
-public class EDWARDS_D397_00_000 implements SomeDevice {
-    private static final Logger log = Logger.getLogger(EDWARDS_D397_00_000.class);
+public class VEGA_WAN implements SomeDevice {
+    private static final Logger log = Logger.getLogger(VEGA_WAN.class);
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора
     private final SerialPort comPort;
 
     private final DeviceCommandListClass commands;
-    private final EdwardsD397CommandRegistry commandRegistry;
+    private final WegaWanCommandRegistry commandRegistry;
 
     private volatile byte [] lastAnswerBytes = new byte[1];
     private StringBuilder lastAnswer = new StringBuilder();
@@ -30,27 +28,27 @@ public class EDWARDS_D397_00_000 implements SomeDevice {
     private String cmdToSend;
     private int expectedBytes = 0;
 
-    private String devIdent = "EDWARDS_D397_00_000";
+    private String devIdent = "VEGA_WAN";
 
-    public EDWARDS_D397_00_000(){
-        log.info("Создан объект протокола EDWARDS_D397_00_000 эмуляция");
+    public VEGA_WAN(){
+        log.info("Создан объект протокола VEGA_WAN эмуляция");
         this.comPort = null;
-        this.commandRegistry = new EdwardsD397CommandRegistry();
+        this.commandRegistry = new WegaWanCommandRegistry();
         this.commands = commandRegistry.getCommandList();
     }
 
-    public EDWARDS_D397_00_000(SerialPort port){
-        log.info("Создан объект протокола EDWARDS_D397_00_000");
+    public VEGA_WAN(SerialPort port){
+        log.info("Создан объект протокола VEGA_WAN");
         this.comPort = port;
-        this.commandRegistry = new EdwardsD397CommandRegistry();
+        this.commandRegistry = new WegaWanCommandRegistry();
         this.commands = commandRegistry.getCommandList();
         comParameters.setDataBits(DataBitsList.B8);
         comParameters.setParity(ParityList.P_EV);
         comParameters.setBaudRate(BaudRatesList.B9600);
         comParameters.setStopBits(StopBitsList.S1);
         comParameters.setStringEndian(StringEndianList.CR);
-        comParameters.setMillisLimit(300);
-        comParameters.setRepeatWaitTime(100);
+        comParameters.setMillisLimit(150);
+        comParameters.setRepeatWaitTime(60);
         this.enable();
     }
 
@@ -138,7 +136,7 @@ public class EDWARDS_D397_00_000 implements SomeDevice {
 
     @Override
     public void parseData() {
-        //System.out.println("EDWARDS_D397_00_000 run parse");
+        //System.out.println("VEGA_WAN run parse");
         if(lastAnswerBytes != null && lastAnswerBytes.length > 0) {
             lastAnswer.setLength(0); //Очистка строкового представления ответа
             if (commands.isKnownCommand(cmdToSend)) { //Проверка наличия команды в реестре команд
@@ -147,23 +145,21 @@ public class EDWARDS_D397_00_000 implements SomeDevice {
                     for (int i = 0; i < answerValues.getValues().length; i++) {
                         lastAnswer.append(answerValues.getValues()[i]);
                         lastAnswer.append(" ");
-                        lastAnswer.append(answerValues.getUnits()[i]);
-                        lastAnswer.append("  ");
                     }
                 }else{
                     for (byte lastAnswerByte : lastAnswerBytes) {
                         lastAnswer.append((char) lastAnswerByte);
                     }
-                    log.info("EDWARDS_D397_00_000 Cant create answers obj (error in answer)");
+                    log.info("VEGA_WAN Cant create answers obj (error in answer)");
                 }
             }else {
                 for (byte lastAnswerByte : lastAnswerBytes) {
                     lastAnswer.append((char) lastAnswerByte);
                 }
-                log.info("EDWARDS_D397_00_000 Cant create answers obj (unknown command)");
+                log.info("VEGA_WAN Cant create answers obj (unknown command)");
             }
         }else{
-            log.info("EDWARDS_D397_00_000 empty received");
+            log.info("VEGA_WAN empty received");
         }
     }
 

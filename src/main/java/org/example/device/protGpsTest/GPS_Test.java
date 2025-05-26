@@ -11,7 +11,7 @@ import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 import org.example.services.connectionPool.AnyPoolService;
 
-//ToDo не работает. Необходима реализация ответов со стороны компьютера
+
 public class GPS_Test implements SomeDevice {
     private static final Logger log = Logger.getLogger(GPS_Test.class);
     @Getter
@@ -23,7 +23,7 @@ public class GPS_Test implements SomeDevice {
     private final GpsTestCommandRegistry commandRegistry;
 
     private volatile byte [] lastAnswerBytes = new byte[1];
-    private StringBuilder lastAnswer = new StringBuilder();
+    private final StringBuilder lastAnswer = new StringBuilder();
     private AnswerValues answerValues = null;
     private int received = 0;
 
@@ -49,8 +49,8 @@ public class GPS_Test implements SomeDevice {
         comParameters.setBaudRate(BaudRatesList.B9600);
         comParameters.setStopBits(StopBitsList.S1);
         comParameters.setStringEndian(StringEndianList.CR_LF);
-        comParameters.setMillisLimit(110);
-        comParameters.setRepeatWaitTime(50);
+        comParameters.setMillisLimit(250);
+        comParameters.setRepeatWaitTime(70);
         this.enable();
     }
 
@@ -61,9 +61,15 @@ public class GPS_Test implements SomeDevice {
 
     @Override
     public void setCmdToSend(String str) {
-        //Получает количесвто одидаемых байт
-        expectedBytes = commands.getExpectedBytes(str); //ToDo распространить на сотальные девайсы
-        cmdToSend = str;
+        if(str == null || str.isEmpty()){
+            expectedBytes = 500;
+            cmdToSend = null;
+        }else{
+            //Получает количесвто одидаемых байт
+            expectedBytes = commands.getExpectedBytes(str); //ToDo распространить на сотальные девайсы
+            cmdToSend = str;
+        }
+
     }
 
 
@@ -124,6 +130,9 @@ public class GPS_Test implements SomeDevice {
 
     @Override
     public void setLastAnswer(byte[] sb) {
+        if(sb == null || sb.length < 1){
+            log.error("Попытка задать в протокол пустой массив ответа");
+        }
         lastAnswerBytes = sb;
     }
 
@@ -133,40 +142,53 @@ public class GPS_Test implements SomeDevice {
 
     @Override
     public void parseData() {
-        //System.out.println("GPS_Test run parse");
-        log.info("GPS_Test start parse");
+        //log.info("GPS_Test start parse");
         if(lastAnswerBytes != null && lastAnswerBytes.length > 0) {
-                log.info("GPS_Test run parse " + lastAnswerBytes.length);
+                //log.info("GPS_Test run parse " + lastAnswerBytes.length);
                 answerValues = null; // Сброс предыдущих значений ответов
                 lastAnswer.setLength(0); //Очистка строкового представления ответа
                 String inputString = new String(lastAnswerBytes);
-                inputString = inputString.replace("\r", "");
-                inputString = inputString.replace("\n", "");
-                inputString = inputString.replace("+", "");
-                inputString = inputString.trim();
-                if(commands.isKnownCommand(inputString)){// Проверка что в принятой строке есть нужный паттерн
-                    log.info("GPS_Test run parse known pattern " + inputString);
-                    answerValues = commands.getCommand(inputString).getResult(lastAnswerBytes); //Получение значений в ответе
-                } else if(cmdToSend != null && commands.isKnownCommand(cmdToSend)) { //Проверка что была какая-то команда
-                    log.info("GPS_Test run parse known command " + cmdToSend);
-                    answerValues = commands.getCommand(cmdToSend).getResult(lastAnswerBytes); //Получение значений в ответе по команде
-                } else if(commands.isKnownCommand("UNKNOWN")){
-                    log.info("GPS_Test run parse unknown command / unknown pattern");
-                    answerValues = commands.getCommand("UNKNOWN").getResult(lastAnswerBytes);
+                //log.info("Run search pattern in string " + inputString);
+                //Костыль
+                boolean skipped = false;
+                if( ! inputString.isEmpty()){
+                    if(inputString.indexOf("RXP2P") > -1){
+                        //log.info("Через костыль нашли паттерн для RAK");
+                        answerValues = commands.getCommand("CEIVE TIME").getResult(lastAnswerBytes);
+                    }else if(inputString.indexOf("BYTE:") > -1){
+                        //log.info("Через костыль нашли паттерн для EBYTE");
+                        answerValues = commands.getCommand("BYTE:").getResult(lastAnswerBytes);
+                    }else if(inputString.indexOf("AK:OK") > -1 && inputString.indexOf("AK:OK") < 5){//Сообщение началось с "RAK:OK♥"
+                        //return;
+                        lastAnswer.setLength(0);
+                        lastAnswer.append(inputString.trim());
+                        log.info("GPS_Test [OK] пропущено: " + lastAnswer);
+                        answerValues = null;
+                        lastAnswer.setLength(0);
+                        return;
+                        //skipped = true;
+                    }
                 }
 
+
                 if(answerValues == null) {
-                    for (byte lastAnswerByte : lastAnswerBytes) {
-                        lastAnswer.append((char) lastAnswerByte);
+                    lastAnswer.setLength(0);
+                    lastAnswer.append(clearMessage(inputString));
+
+                    if(skipped){
+
+                    }else{
+                        log.info("GPS_Test Cant create answers obj (error in answer) " + lastAnswer);
                     }
-                    log.info("GPS_Test Cant create answers obj (error in answer) " + lastAnswer);
+
                 }else{
                     if(answerValues.getDirection() == -55) { // Магическое число, обозначающее необходимость ответа
                         answerValues = new AnswerValues(1);
                         answerValues.setDirection(-55);
                         answerValues.addValue(-55, "NeedetString");
                     }
-                    for (int i = 0; i < answerValues.getValues().length; i++) {
+                    int countLimit =Math.min(answerValues.getValues().length, answerValues.getUnits().length);
+                    for (int i = 0; i < countLimit; i++) {
                         lastAnswer.append(answerValues.getValues()[i]);
                         lastAnswer.append(" ");
                         lastAnswer.append(answerValues.getUnits()[i]);
@@ -175,16 +197,28 @@ public class GPS_Test implements SomeDevice {
                     log.info("GPS_Test OK: " + lastAnswer);
                 }
             }else {
-                log.info("GPS_Test empty received");
+                log.error("GPS_Test попытка обработки пустого ответа");
             }
     }
 
-
+    public String clearMessage(String message){
+        if(message == null){
+            return "";
+        }
+        String forReturn = message.replace("\r", "");
+        forReturn = forReturn.replace("\n", "");
+        forReturn = forReturn.replace("+", "");
+        forReturn = forReturn.trim();
+        return forReturn;
+    }
     public String getAnswer(){
+
         if(hasAnswer()) {
+            String forReturn = lastAnswer.toString();
             received = 0;
-            lastAnswerBytes = null;
-            return lastAnswer.toString();
+            lastAnswerBytes = new byte[0];
+            lastAnswer.setLength(0);
+            return forReturn;
         }else {
             return null;
         }

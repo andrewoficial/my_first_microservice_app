@@ -319,7 +319,6 @@ public class AnyPoolService {
         }else{
             log.error("Попытка остановки потока с неассоциированного клиента (вкладки)");
         }
-
     }
 
     public void shutDownComDataCollectorThreadPool() {

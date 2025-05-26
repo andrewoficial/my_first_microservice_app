@@ -20,13 +20,13 @@ import static org.example.gui.ChartWindow.getFieldsCountForTab;
 
 public class JmenuFile {
     private static final Logger logger = Logger.getLogger(JmenuFile.class);
-    private final MyProperties prop;
+    private MyProperties prop;
     private final AnyPoolService anyPoolService;
 
 
-    public JmenuFile (MyProperties prop, AnyPoolService anyPoolService){
+    public JmenuFile (MyProperties extProp, AnyPoolService anyPoolService){
         super();
-        this.prop = prop;
+        this.prop = extProp;
         this.anyPoolService = anyPoolService;
         if(anyPoolService == null){
             logger.warn("В конструктор JmenuFile передан null anyPoolService");
@@ -357,7 +357,7 @@ public class JmenuFile {
             @Override
             public void actionPerformed(ActionEvent arg0) {
                 System.out.println("webSocketWindow Window");
-                WebSocketWindow webSocketWindow = new WebSocketWindow();
+                WebSocketWindow webSocketWindow = new WebSocketWindow(prop);
                 webSocketWindow.setName("webSocketWindow Window");
                 webSocketWindow.setTitle("webSocketWindow Window");
                 webSocketWindow.pack();

@@ -12,6 +12,7 @@ import org.example.gui.MainLeftPanelStateCollection;
 import org.example.services.AnswerStorage;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 
 import org.example.services.comPort.BaudRatesList;
@@ -78,7 +79,14 @@ public class MyProperties {
     @Getter
     private String prt = "";
 
+    @Getter
+    private String vegaAddress;
 
+    @Getter
+    private String vegaPassword;
+
+    @Getter
+    private String vegaLogin;
 
     private String [] clientAssociationMarkers = new String[2];//Получается в результате атомизации полученных сообщений (например ответ содержит информацию о двух независимых параметрах)
     private Integer [] clientAssociationID = new Integer[2];//Он же Гоша, он же Гоги, он же Жора, он же TabDev, tabN, номер вкладки
@@ -236,6 +244,9 @@ public class MyProperties {
         prt = settingsLoader.getString("prt", "8075");
         url = settingsLoader.getString("url", "127.0.0.1");
         drv = settingsLoader.getString("drv", "jdbc:postgresql://");
+        vegaLogin = settingsLoader.getString("vegaLogin", "root");
+        vegaPassword = settingsLoader.getString("vegaPassword", "123");
+        vegaAddress = settingsLoader.getString("vegaAddress", "ws://127.0.0.1:8002");
         ports = settingsLoader.getStringArray("ports", "", tabCounter);
         clientAssociationMarkers = settingsLoader.getStringArray("clientAssociationMarkers", "", tabCounter);
         clientAssociationID = settingsLoader.getIntegerArray("clientAssociationID", 0, tabCounter);
@@ -314,10 +325,10 @@ public class MyProperties {
         setSyncSavingAnswerWindowMS(val);
     }
 
-    public void setIdentAndTabBounding(HashMap<String, Integer> pairs) {
+    public void setIdentAndTabBounding(ConcurrentHashMap<Integer, String> pairs) {
         StringBuilder sbTabs = new StringBuilder();
         StringBuilder sbIdents = new StringBuilder();
-        for (Map.Entry<String, Integer> stringIntegerEntry : pairs.entrySet()) {
+        for (Map.Entry<Integer, String> stringIntegerEntry : pairs.entrySet()) {
             sbTabs.append(stringIntegerEntry.getValue()).append(", ");
             sbIdents.append(stringIntegerEntry.getKey()).append(", ");
         }
@@ -450,6 +461,33 @@ public class MyProperties {
     public void setDbgLogInputParsed(boolean state) {
         settingsLoader.setBoolean("dbgLogInputParsed", state);
         this.dbgLogInputParsed = state;
+    }
+
+    public void setVegaAddress(String adr){
+        if (adr == null || adr.isEmpty()) {
+            log.warn("в setVegaAddress не передан адрес");
+            return;
+        }
+        this.vegaAddress = adr;
+        settingsLoader.setString("vegaAddress", adr);
+    }
+
+    public void setVegaPassword(String password){
+        if (password == null || password.isEmpty()) {
+            log.warn("в setVegaPassword не передан пароль");
+            return;
+        }
+        this.vegaPassword = password;
+        settingsLoader.setString("vegaPassword", password);
+    }
+
+    public void setVegaLogin(String login){
+        if (login == null || login.isEmpty()) {
+            log.warn("в setVegaPassword не передан пароль");
+            return;
+        }
+        this.vegaLogin = login;
+        settingsLoader.setString("vegaLogin", login);
     }
 
 

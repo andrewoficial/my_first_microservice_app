@@ -26,6 +26,7 @@ public class MainLeftPanelStateCollection {
         clientIdTabState.clear();
         clientIdTab.clear();
     }
+
     public ArrayList <MainLeftPanelState> getIdTabStateAsList(){
         ArrayList<MainLeftPanelState> forReturn = new ArrayList<>();
         for (Map.Entry<Integer, MainLeftPanelState> entry : clientIdTabState.entrySet()) {

@@ -9,9 +9,14 @@ import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.log4j.Logger;
+import org.example.device.protVega.VEGA_WAN;
 import org.example.services.AnswerValues;
 import org.example.services.DeviceAnswer;
+import org.example.services.connectionPool.AnyPoolService;
+import org.example.services.connectionPool.WebSocketDataCollector;
 import org.example.services.loggers.DeviceLogger;
+import org.example.utilites.properties.MyProperties;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.WebSocketSession;
@@ -27,6 +32,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
@@ -34,6 +40,11 @@ import java.util.ArrayList;
 import java.util.Date;
 
 public class WebSocketWindow extends JDialog implements Rendeble {
+    private final static Logger log = Logger.getLogger(WebSocketWindow.class);//Внешний логгер
+    private MyProperties prop; //Файл настроек
+    private AnyPoolService anyPoolService; //Сервис опросов (разных протоколов)
+    private WebSocketDataCollector webSocketDataCollector;
+
     private DeviceLogger deviceLogger;
     boolean needLog;
     private JPanel panel1;
@@ -58,27 +69,27 @@ public class WebSocketWindow extends JDialog implements Rendeble {
     private JButton removeDeviceButton;
     private Checkbox needLogCheckbox;
     JComboBox<String> groupComboBox;
+    StringBuilder history = new StringBuilder(); //ToDo переделать
 
-    public WebSocketWindow() {
+    public WebSocketWindow(MyProperties myProperties) {
+
         setModal(false);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setContentPane(panel1);
+        prop = myProperties;
+        restoreParameters();
 
         connectButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // Путь к WebSocket
-                String url = "ws://127.0.0.1:8002";
-                if (addressField.getText() != null) {
-                    url = addressField.getText();
-                }
-                connectWebSocket(url);
+                webSocketDataCollector.reopenPort(99, null);
             }
         });
 
         loginButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+
                 // Создаем JSON команду
                 ObjectMapper mapper = new ObjectMapper();
                 ObjectNode rootNode = mapper.createObjectNode();
@@ -89,12 +100,14 @@ public class WebSocketWindow extends JDialog implements Rendeble {
                     sb.append(passwordField.getPassword()[i]);
                 }
                 rootNode.put("password", sb.toString());
+                prop.setVegaPassword(sb.toString());
+                prop.setVegaLogin(login.getText());
 
                 String jsonString;
                 try {
                     jsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode);
                     updateTextInPane1("Отправляем команду: " + jsonString);
-                    sendMessage(jsonString);  // Отправляем команду
+                    webSocketDataCollector.sendOnce(jsonString, 99, true);
                 } catch (JsonProcessingException exp) {
                     throw new RuntimeException(exp);
                 }
@@ -104,27 +117,70 @@ public class WebSocketWindow extends JDialog implements Rendeble {
         closeButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+
                 try {
-                    if (webSocketSession != null && webSocketSession.isOpen()) {
-                        webSocketSession.close();  // Закрываем соединение
-                        updateTextInPane1("Соединение закрыто");
-                    } else {
-                        updateTextInPane1("Нет активных соединений");
-                    }
+                    webSocketDataCollector.closeSession(99);
                 } catch (IOException ioException) {
                     updateTextInPane1("Ошибка при закрытии соединения к сокету" + ioException.getMessage());
                 }
             }
         });
 
+        try {
+            VEGA_WAN vegaWan = new VEGA_WAN();
+            webSocketDataCollector = new WebSocketDataCollector(vegaWan, prop.getVegaAddress(), 1000, true, 99, (clientId, action, data, cmd, payload) -> handleDataUpdate(clientId, action, data, cmd, payload));
+            new Thread(webSocketDataCollector).start();
+        } catch (ConnectException e) {
+            log.warn("Ошибка создания подключение" + e.getMessage());
+        }
         // Создаем таблицы
         createTables();
         renderData();
     }
 
-    public String getCurrentToken() {
-        return currentToken;
+
+    public void handleDataUpdate(String clientId, String action, String data, String cmd, JsonNode payload) {
+        // Прямое обновление UI компонентов
+        log.warn("Событие в соединении!");
+        if (clientId == null || clientId.isEmpty()) {
+            clientId = "null";
+        }
+
+        if (action == null || action.isEmpty()) {
+            action = "null";
+        }
+
+        if (data == null || data.isEmpty()) {
+            data = "null";
+        }
+        history.append("Event: ").append(new Date()).append(" : [").append(clientId).append("] ").append(" action: [").append(action).append("] data [").
+                append(data).append("] ").append(" cmd [").append(cmd).append("] \n");
+        textPane1.setText(history.toString());
+        //dataTableModel.updateData(clientId, data);
+
+        //String payload = message.getPayload();
+
+
+        JsonNode rootNode = payload;
+
+
+        if ("auth_resp".equals(cmd) && rootNode.get("status").asBoolean()) {
+            currentToken = rootNode.get("token").asText();
+            sendGetGatewaysRequest();
+            sendGetDevicesRequest();
+        } else if ("get_gateways_resp".equals(cmd)) {
+            processGatewaysResponse(rootNode);
+        } else if ("get_devices_resp".equals(cmd)) {
+            processDevicesResponse(rootNode);
+        } else if ("delete_devices_resp".equals(cmd)) {
+            handleDeleteResponse(rootNode);
+        } else if ("manage_devices_resp".equals(cmd)) {
+            if (rootNode.get("status").asBoolean()) {
+                sendGetDevicesRequest(); // Обновляем список после добавления
+            }
+        }
     }
+
 
     private void createTables() {
         setLayout(new BorderLayout());
@@ -176,98 +232,30 @@ public class WebSocketWindow extends JDialog implements Rendeble {
         needLogCheckbox.addItemListener(e -> setNeedLog(needLogCheckbox.getState()));
     }
 
-    public void sendJsonRequest(ObjectNode request) {
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
-            sendMessage(json);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
-    }
 
     public void showAddDeviceDialog() {
         new AddDeviceDialog(this).setVisible(true);
     }
 
-    private void connectWebSocket(String url) {
+
+    //=====================Должно быть в зоне ответственности протокола
+    private void sendGetGatewaysRequest() {
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode request = mapper.createObjectNode();
+        request.put("cmd", "get_gateways_req");
+        if (webSocketDataCollector.getToken() != null) {
+            request.put("token", webSocketDataCollector.getToken());
+        }
+
+
+        String jsonString;
         try {
-            WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
-            webSocketSession = client.doHandshake(new MyTextWebSocketHandler(), headers, URI.create(url)).get();
-            updateTextInPane1("Подключение установлено");
-        } catch (Exception e) {
-            updateTextInPane1("Ошибка при подключении к сокету" + e.getMessage());
-            //e.printStackTrace();
+            jsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
+            updateTextInPane1("Отправляем команду: " + jsonString);
+            webSocketDataCollector.sendOnce(jsonString, 99, true);
+        } catch (JsonProcessingException exp) {
+            throw new RuntimeException(exp);
         }
-    }
-
-    public void sendMessage(String message) {
-        try {
-            if (webSocketSession != null && webSocketSession.isOpen()) {
-                webSocketSession.sendMessage(new TextMessage(message));
-            } else {
-                updateTextInPane1("Соединение не установлено!");
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-
-    private class MyTextWebSocketHandler extends TextWebSocketHandler {
-        @Override
-        protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-            // Получаем ответ от сервера
-            String payload = message.getPayload();
-            updateTextInPane1("Ответ от сервера: " + payload);
-            if (needLog) {
-                if (deviceLogger == null) {
-                    deviceLogger = new DeviceLogger("LoRa_server_log.txt");
-                }
-                DeviceAnswer deviceAnswer = new DeviceAnswer(LocalDateTime.now(), "received", 0);
-                deviceAnswer.setAnswerReceivedTime(LocalDateTime.now());
-                deviceAnswer.setAnswerReceivedString(payload);
-                deviceAnswer.setAnswerReceivedValues(new AnswerValues(0));
-
-                deviceLogger.writeLine(deviceAnswer);
-            }
-            SwingUtilities.invokeLater(() -> {
-                try {
-                    ObjectMapper mapper = new ObjectMapper();
-                    JsonNode rootNode = mapper.readTree(payload);
-                    String cmd = rootNode.get("cmd").asText();
-
-                    if ("auth_resp".equals(cmd) && rootNode.get("status").asBoolean()) {
-                        currentToken = rootNode.get("token").asText();
-                        sendGetGatewaysRequest();
-                        sendGetDevicesRequest();
-                    } else if ("get_gateways_resp".equals(cmd)) {
-                        processGatewaysResponse(rootNode);
-                    } else if ("get_devices_resp".equals(cmd)) {
-                        processDevicesResponse(rootNode);
-                    } else if ("delete_devices_resp".equals(cmd)) {
-                        handleDeleteResponse(rootNode);
-                    } else if ("manage_devices_resp".equals(cmd)) {
-                        if (rootNode.get("status").asBoolean()) {
-                            sendGetDevicesRequest(); // Обновляем список после добавления
-                        }
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
-        }
-
-        private void sendGetGatewaysRequest() {
-            ObjectMapper mapper = new ObjectMapper();
-            ObjectNode request = mapper.createObjectNode();
-            request.put("cmd", "get_gateways_req");
-            if (currentToken != null) {
-                request.put("token", currentToken);
-            }
-            sendJsonRequest(request);
-        }
-
 
     }
 
@@ -276,12 +264,21 @@ public class WebSocketWindow extends JDialog implements Rendeble {
         ObjectNode request = mapper.createObjectNode();
         request.put("cmd", "get_devices_req");
         if (currentToken != null) {
-            request.put("token", currentToken);
+            request.put("token", webSocketDataCollector.getToken());
         }
-        sendJsonRequest(request);
+
+        String jsonString;
+        try {
+            jsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
+            updateTextInPane1("Отправляем команду: " + jsonString);
+            webSocketDataCollector.sendOnce(jsonString, 99, true);
+        } catch (JsonProcessingException exp) {
+            throw new RuntimeException(exp);
+        }
     }
 
     private void processGatewaysResponse(JsonNode rootNode) {
+        log.info("Run process  GatewaysResponse");
         gatewaysTableModel.setRowCount(0);
         JsonNode gateways = rootNode.get("gateway_list");
         if (gateways != null && gateways.isArray()) {
@@ -347,6 +344,7 @@ public class WebSocketWindow extends JDialog implements Rendeble {
     private void setNeedLog(boolean needLog) {
         this.needLog = needLog;
     }
+
     private String formatTimestamp(long timestamp) {
         return new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(new Date(timestamp));
     }
@@ -354,17 +352,19 @@ public class WebSocketWindow extends JDialog implements Rendeble {
     @Override
     public void renderData() {
         // Обновляем таблицы при необходимости
-
-        if (currentToken != null && (!currentToken.isEmpty())) {
+        if (webSocketDataCollector.getToken() != null && (!webSocketDataCollector.getToken().isEmpty())) {
+            //log.warn("Render with token:");
+            //log.warn(webSocketDataCollector.getToken());
             gatewaysTable.repaint();
             devicesTable.repaint();
         }
+
 
     }
 
     @Override
     public boolean isEnable() {
-        return false;
+        return true;
     }
 
     private void updateTextInPane1(String text) {
@@ -468,13 +468,12 @@ public class WebSocketWindow extends JDialog implements Rendeble {
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode request = mapper.createObjectNode();
             request.put("cmd", "delete_devices_req");
-            request.put("token", (String) getCurrentToken());
+            request.put("token", (String) webSocketDataCollector.getToken());
 
             ArrayNode devicesArray = mapper.createArrayNode();
             devEuis.forEach(devicesArray::add);
             request.set("devices_list", devicesArray);
-
-            parent.sendJsonRequest(request);
+            webSocketDataCollector.sendOnce(request.asText(), 99, true);
         }
 
     }
@@ -618,15 +617,28 @@ public class WebSocketWindow extends JDialog implements Rendeble {
             // Формируем полный запрос
             ObjectNode request = mapper.createObjectNode();
             request.put("cmd", "manage_devices_req");
-            request.put("token", currentToken);
+            request.put("token", webSocketDataCollector.getToken());
             request.set("devices_list", mapper.createArrayNode().add(deviceNode));
 
-            // Отправляем запрос
-            sendJsonRequest(request);
+            String jsonString;
+            try {
+                jsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
+                updateTextInPane1("Отправляем команду: " + jsonString);
+                webSocketDataCollector.sendOnce(jsonString, 99, true);
+            } catch (JsonProcessingException exp) {
+                throw new RuntimeException(exp);
+            }
+
             dispose();
         }
     }
 
+    private void restoreParameters() {
+        log.info("Восстанвливаю параметры");
+        this.login.setText(prop.getVegaLogin());
+        this.passwordField.setText(prop.getVegaPassword());
+        this.addressField.setText(prop.getVegaAddress());
+    }
 
     {
 // GUI initializer generated by IntelliJ IDEA GUI Designer

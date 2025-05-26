@@ -1,6 +1,7 @@
 package org.example.services.loggers;
 
 import org.example.services.AnswerStorage;
+import org.example.services.AnswerValues;
 import org.example.services.DeviceAnswer;
 
 import java.io.*;
@@ -8,136 +9,128 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 
+import java.io.*;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Calendar;
+
 public class GPS_Loger {
-    private String fileName = (new SimpleDateFormat("yyyy.MM.dd HH-mm-ss").format(Calendar.getInstance().getTime()));
+    private final String fileName;
     private File logFile;
     private Long dateTimeLastWrite = System.currentTimeMillis();
     private final ArrayList<String> stringsBuffer = new ArrayList<>();
-    private int dev_ident = 0;
-    private StringBuilder line = new StringBuilder();
-    public GPS_Loger(String name,int  dev_ident){
-        this.fileName = "" + name + ".js";
-        File logFile = null;
-        this.dev_ident = dev_ident;
-        try{
-            logFile = new File("logs"+fileName);
-            if(logFile.exists() && !logFile.isDirectory()) {
-                // do something
-            }else {
-                new File("logs").mkdirs();
-            }
-        } catch (Exception e) {
-            //throw new RuntimeException(e);
-        }
+    private final int dev_ident;
+    private final String deviceName;
+    private boolean isFileInitialized = false;
 
+    public GPS_Loger(String name, int dev_ident) {
+        this.deviceName = name;
+        this.dev_ident = dev_ident;
+        this.fileName = "GPS_" + name + ".js";
+
+        // Создание директории и файла
         try {
-            logFile = new File("logs/"+fileName);
-            if (logFile.createNewFile()) {
-                //System.out.println("File created: " + myObj.getName());
-                //System.out.println("File created: " + logFile.getAbsolutePath());
+            File logsDir = new File("logs");
+            if (!logsDir.exists()) {
+                logsDir.mkdirs();
+            }
+            logFile = new File("logs/" + fileName);
+            if (!logFile.exists()) {
+                if (logFile.createNewFile()) {
+                    // Записываем шапку при создании файла
+                    initializeFile();
+                    isFileInitialized = true;
+                }
             } else {
-                //System.out.println("File already exists.");
-                //System.out.println(logFile.getAbsolutePath());
+                isFileInitialized = true; // Файл уже существует
             }
         } catch (IOException e) {
-            //System.out.println("An error occurred.");
-            //e.printStackTrace();
-        }
-        this.logFile = logFile;
-
-
-        //First string
-        StringBuilder line = new StringBuilder();
-        //line.append("var addressPoints = [\n");
-
-        if((System.currentTimeMillis() - dateTimeLastWrite ) < 300L ){
-            stringsBuffer.add(line.toString());
-            //System.out.println("Log buffered");
-        }else {
-            dateTimeLastWrite = System.currentTimeMillis();
-            stringsBuffer.add(line.toString());
-            StringBuilder stringBuilder = new StringBuilder();
-            for (String s : stringsBuffer) {
-                stringBuilder.append(s);
-            }
-            stringsBuffer.clear();
-            FileWriter fw = null;
-            try {
-                fw = new FileWriter(logFile, true);
-            } catch (IOException e) {
-                //throw new RuntimeException(e);
-                System.out.println("Ошибка создания FileWriter");
-            }
-            assert fw != null;
-            BufferedWriter bw = new BufferedWriter(fw);
-            try {
-                bw.write(stringBuilder.toString());
-
-                bw.close();
-            } catch (IOException e) {
-                //throw new RuntimeException(e);
-                System.out.println("Ошибка выполнения  write ");
-            }
+            System.err.println("Ошибка создания файла: " + e.getMessage());
         }
     }
 
-    public void writeLine (DeviceAnswer answer){
-        line.setLength(0);
-        if(answer != null && answer.getAnswerReceivedValues() != null
-                && answer.getAnswerReceivedValues().getValues().length > 5){
-            line.append("var data_"+ AnswerStorage.getIdentByTab(dev_ident)+" = [\n");
-            for (int i = 0; i < AnswerStorage.getAnswersForGraph(dev_ident).size(); i++) {
-                DeviceAnswer deviceAnswer = AnswerStorage.getAnswersForGraph(dev_ident).get(i);
-                if(deviceAnswer != null && deviceAnswer.getAnswerReceivedValues() != null
-                        && deviceAnswer.getAnswerReceivedValues().getValues().length > 5
-                        && deviceAnswer.getClientId() == dev_ident){
-                    line.append("[");
-                    line.append(deviceAnswer.getAnswerReceivedValues().getValues()[1]);
-                    line.append(", ");
-                    line.append(deviceAnswer.getAnswerReceivedValues().getValues()[0]);
-                    line.append(", ");
-                    line.append("\"1\"");
-                    if(i == AnswerStorage.getAnswersForGraph(dev_ident).size() - 1){
-                        line.append("]");
-                    }else{
-                        line.append("],");
-                    }
-                    line.append("\n");
-                }
-            }
-            line.append("];\n");
+    private void initializeFile() throws IOException {
+        try (FileWriter fw = new FileWriter(logFile, false);
+             BufferedWriter bw = new BufferedWriter(fw)) {
+            bw.write("var data_" + deviceName + " = [];\n");
+        }
+    }
 
-        }else {
+    public void writeLine(AnswerValues answer) {
+        if (answer == null || answer.getValues() == null || answer.getUnits() == null || answer.getValues().length < 2) {
+            System.err.println("Некорректные данные AnswerValues");
             return;
         }
 
+        // Формируем строку для записи: [lon, lat, "1"]
+        StringBuilder line = new StringBuilder();
+        double lon = answer.getValues()[3]; // LON
+        double lat = answer.getValues()[2]; // LAT
+        line.append("[")
+                .append(lon)
+                .append(", ")
+                .append(lat)
+                .append(", \"1\"]");
 
-        if((System.currentTimeMillis() - dateTimeLastWrite ) < 300L ){
+        // Буферизация
+        if ((System.currentTimeMillis() - dateTimeLastWrite) < 300L) {
             stringsBuffer.add(line.toString());
-            //System.out.println("Log buffered");
-        }else {
+        } else {
             dateTimeLastWrite = System.currentTimeMillis();
             stringsBuffer.add(line.toString());
-            StringBuilder stringBuilder = new StringBuilder();
-            for (String s : stringsBuffer) {
-                stringBuilder.append(s);
-            }
-            stringsBuffer.clear();
-            FileWriter fw = null;
-            try {
-                fw = new FileWriter(logFile, false);
-            } catch (IOException e) {
-                //throw new RuntimeException(e);
-                System.out.println("Ошибка создания FileWriter");
-            }
-            assert fw != null;
-            PrintWriter pw = new PrintWriter(fw);
+            appendToFile();
+        }
+    }
 
-            pw.print(stringBuilder.toString());
-            pw.close();
-
+    private void appendToFile() {
+        if (stringsBuffer.isEmpty()) {
+            return;
         }
 
+        try {
+            // Читаем текущее содержимое файла
+            StringBuilder fileContent = new StringBuilder();
+            if (logFile.exists()) {
+                try (BufferedReader br = new BufferedReader(new FileReader(logFile))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        fileContent.append(line).append("\n");
+                    }
+                }
+            }
 
+            // Модифицируем содержимое: добавляем новые записи в массив
+            String content = fileContent.toString();
+            int arrayStart = content.indexOf("[");
+            int arrayEnd = content.lastIndexOf("]");
+            if (arrayStart == -1 || arrayEnd == -1) {
+                // Если массив поврежден, перезаписываем шапку
+                initializeFile();
+                content = "var data_" + deviceName + " = [];\n";
+                arrayStart = content.indexOf("[");
+                arrayEnd = content.lastIndexOf("]");
+            }
+
+            StringBuilder newContent = new StringBuilder();
+            newContent.append(content, 0, arrayEnd); // До конца массива
+
+            // Добавляем новые записи
+            if (arrayEnd > arrayStart + 1) {
+                newContent.append(", "); // Если массив не пустой, добавляем запятую
+            }
+            newContent.append(String.join(", ", stringsBuffer));
+            newContent.append("];\n"); // Закрываем массив
+
+            // Записываем обновленное содержимое
+            try (FileWriter fw = new FileWriter(logFile, false);
+                 BufferedWriter bw = new BufferedWriter(fw)) {
+                bw.write(newContent.toString());
+            }
+
+            stringsBuffer.clear();
+        } catch (IOException e) {
+            System.err.println("Ошибка записи в файл: " + e.getMessage());
+        }
     }
 }

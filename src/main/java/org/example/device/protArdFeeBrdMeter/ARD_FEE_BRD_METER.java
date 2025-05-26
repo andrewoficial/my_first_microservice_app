@@ -60,9 +60,14 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
 
     @Override
     public void setCmdToSend(String str) {
-        //Получает количесвто одидаемых байт
-        expectedBytes = commands.getExpectedBytes(str); //ToDo распространить на сотальные девайсы
-        cmdToSend = str;
+        if(str == null || str.isEmpty()){
+            expectedBytes = 500;
+            cmdToSend = null;
+        }else{
+            //Получает количесвто одидаемых байт
+            expectedBytes = commands.getExpectedBytes(str); //ToDo распространить на сотальные девайсы
+            cmdToSend = str;
+        }
     }
 
     @Override

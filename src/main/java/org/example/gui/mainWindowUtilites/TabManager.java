@@ -42,6 +42,7 @@ public class TabManager {
             state.setClientId(newClientId);
             stateCollection.addOrUpdateIdState(newClientId, state);
         }
+        AnswerStorage.addInTabsList(newClientId);
         // Создание компонентов вкладки
         JTextPane logPanel = createLogPanel(newClientId);
         JPanel tabPanel = createTabPanel(logPanel);
@@ -63,7 +64,7 @@ public class TabManager {
         // Удаление данных
         removeClientData(clientId);
         tabbedPane.removeTabAt(tabToRemove);
-
+        AnswerStorage.removeInTabsList(clientId);
         // Перестройка маппингов
         rebuildMappings(tabToRemove);
         updateUIAfterRemove();

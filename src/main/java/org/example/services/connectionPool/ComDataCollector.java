@@ -17,6 +17,10 @@ import org.example.device.ProtocolsList;
 import org.example.device.*;
 import org.example.utilites.properties.MyProperties;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
 import java.io.ByteArrayOutputStream;
 import java.net.ConnectException;
 import java.time.LocalDateTime;
@@ -46,14 +50,27 @@ public class ComDataCollector implements Runnable{
     private long poolDelay = 2000;//Задает переодичность отправки запросов в мс.
     private long millisPrev = System.currentTimeMillis() - (poolDelay * 100);//Обслуживание таймера в миллисекундах (основная переменная poolDelay).
     private final ConcurrentHashMap<Integer, ClientData> clientsMap = new ConcurrentHashMap<>();
-    private volatile DeviceAnswer deviceAnswer;
-
-
+    private final ConcurrentLinkedQueue<ReceivedData> incomingMessages = new ConcurrentLinkedQueue<>();
     private volatile boolean responseRequested = false;
     private volatile long requestTimestamp = 0;
-    private final long RESPONSE_TIMEOUT_MS = 3000;  // Таймаут ожидания ответа
+    private final long RESPONSE_TIMEOUT_MS = 3000; // Таймаут ожидания ответа
+    private volatile DeviceAnswer deviceAnswer;
+
     private MainLeftPanelStateCollection collection;
     private int clientId;
+
+    // Вспомогательный класс для хранения входящих данных
+    private static class ReceivedData {
+        String message;
+        boolean isResponseRequested;
+        long timestamp;
+
+        ReceivedData(String message, boolean isResponseRequested, long timestamp) {
+            this.message = message;
+            this.isResponseRequested = isResponseRequested;
+            this.timestamp = timestamp;
+        }
+    }
 
     public ComDataCollector(MainLeftPanelStateCollection state, ProtocolsList protocol, String prefix, String command, SerialPort comPort, int poolDelay, boolean needLog, Integer clientId, AnyPoolService parentService) throws ConnectException {
         super();
@@ -109,10 +126,13 @@ public class ComDataCollector implements Runnable{
             @Override
             public void serialEvent(SerialPortEvent event) {
                 String eventName = eventTypes.getOrDefault(event.getEventType(), "UNKNOWN_EVENT");
-                log.warn("Найдено событие для слушателя порта " + eventName + " " + comPort.getSystemPortName());
+                if(eventName != null && ! "LISTENING_EVENT_DATA_AVAILABLE".equalsIgnoreCase(eventName)){
+                    log.warn("Найдено событие для слушателя порта " + eventName + " " + comPort.getSystemPortName());
+                }
+
                 if (event.getEventType() == SerialPort.LISTENING_EVENT_PORT_DISCONNECTED) {
                     comPort.closePort();
-                } else if (event.getEventType() == SerialPort.LISTENING_EVENT_DATA_AVAILABLE || event.getEventType() == SerialPort.LISTENING_EVENT_DATA_RECEIVED) {
+                } else if (event.getEventType() == SerialPort.LISTENING_EVENT_DATA_AVAILABLE) { // || event.getEventType() == SerialPort.LISTENING_EVENT_DATA_RECEIVED
                     handleDataAvailableEvent();
                 }
             }
@@ -128,10 +148,8 @@ public class ComDataCollector implements Runnable{
 
         try {
             int dataAvailable = comPort.bytesAvailable();
-
             while (dataAvailable > 0) {
                 int bytesRead = comPort.readBytes(chunk, Math.min(chunk.length, dataAvailable));
-                //buffer.write(chunk, buffer.size(), bytesRead);
                 buffer.write(chunk, 0, bytesRead);
                 if(buffer.size() >= sizeLimit){//Вызывало падение
                     return;
@@ -140,22 +158,37 @@ public class ComDataCollector implements Runnable{
                 dataAvailable = comPort.bytesAvailable();
             }
 
-            //String receivedData = buffer.toString("UTF-8"); // Учитывайте кодировку устройства
-            String receivedData = buffer.toString(); // Учитывайте кодировку устройства
-            if (responseRequested && (System.currentTimeMillis() - requestTimestamp) < RESPONSE_TIMEOUT_MS) {
-                log.info("Получен ожидаемый ответ");
-                saveReceivedByEvent(receivedData, true);
-                responseRequested = false;
-                log.info("Завершена обработка ожидаемых данных (ответа)");
-            } else {
-                log.info("Получены неожиданные данные: " + receivedData);
-                saveReceivedByEvent(receivedData, false);
-                log.info("Завершена обработка неожиданных данных. responseRequested " + responseRequested + " requestTimestamp " + requestTimestamp);
+            String receivedData = buffer.toString();
+            if (!receivedData.isEmpty()) {
+                incomingMessages.add(new ReceivedData(receivedData, responseRequested, System.currentTimeMillis()));
+                log.info("Добавлено сообщение в очередь: " + receivedData.trim());
             }
         }finally {
+            //Пояснения: скорее всего создаётся объект DeviceAnswer в контексте слушателя несколько раз и перезаписывается
+            //sleepSafely(800);//ToDo при быстро поступающих данных, видимо из-за addDataListener пока не завершилась обработка предыдущего происходит накладывание и проблема с таймингами потоков
             comDataCollectorBusy.set(false);
+            comPort.addDataListener(serialPortDataListener);
             log.info(" Завершил получение данных");
-            //Thread.currentThread().interrupt();
+        }
+    }
+/*
+            if (responseRequested && (System.currentTimeMillis() - requestTimestamp) < RESPONSE_TIMEOUT_MS) {
+                //log.info("Получен ожидаемый ответ" + receivedData.trim());
+                saveReceivedByEvent(receivedData, true);
+                responseRequested = false;
+                //log.info("Завершена обработка ожидаемых данных (ответа)");
+            } else {
+                //log.info("Получены неожиданные данные: " + receivedData.trim());
+                saveReceivedByEvent(receivedData, false);
+                //log.info("Завершена обработка неожиданных данных. responseRequested " + responseRequested + " requestTimestamp " + requestTimestamp);
+            }
+*/
+    private void processIncomingMessages() {
+        while (!incomingMessages.isEmpty()) {
+            ReceivedData data = incomingMessages.poll();
+            if (data != null) {
+                saveReceivedByEvent(data.message, data.isResponseRequested, data.timestamp);
+            }
         }
     }
 
@@ -181,17 +214,19 @@ public class ComDataCollector implements Runnable{
             if ( ! clientsMap.isEmpty() && shouldPollBecauseTimer()) {
                 millisPrev = System.currentTimeMillis();
                 pollCommands();
+                processIncomingMessages();
                 if(counter < limit) {
                     if(comPort.bytesAvailable() > 0){
                         handleDataAvailableEvent();
                         comPort.flushIOBuffers();
                     }
-                    log.info("Слушатель будет добавлен еще " + (limit - counter) + " раз");
+                    log.info("Слушатель будет добавлен еще " + (limit - counter) + " раз (отключено)");
                     counter++;
-                    comPort.addDataListener(serialPortDataListener);
+                    //comPort.addDataListener(serialPortDataListener);
                 }
                 flopBusyFlag();
             } else {
+                processIncomingMessages();
                 sleepSafely(Math.min(poolDelay / 5, 100L));
             }
         }
@@ -204,7 +239,7 @@ public class ComDataCollector implements Runnable{
         if(((System.currentTimeMillis() - requestTimestamp) > RESPONSE_TIMEOUT_MS) || ((System.currentTimeMillis() - requestTimestamp) < 0)){
             responseRequested = false;
             comDataCollectorBusy.set(false);
-            comPort.addDataListener(serialPortDataListener);
+
         }
     }
     private void pollCommands() {
@@ -299,7 +334,7 @@ public class ComDataCollector implements Runnable{
         log.info("Заготовка ответа создана ");
     }
 
-    public void saveReceivedByEvent(String msg, boolean responseRequested) {
+    public void saveReceivedByEvent(String msg, boolean responseRequested, long receiveTimestamp) {
         if(msg == null || msg.isEmpty()){
             log.warn("Пустое сообщение при попытке saveReceivedByEvent");
             return;
@@ -309,52 +344,59 @@ public class ComDataCollector implements Runnable{
         for (int i = 0; i < received.length; i++) {
             received [i] = (byte) receivedChar[i];
         }
-        log.info("Конвертация в массив завершена");
+        //log.info("Конвертация в массив завершена");
         if (device == null) {
             log.error("Устройство не инициализировано при попытке saveReceivedByEvent");
             return;
         }
-        if(deviceAnswer == null){
+        if(deviceAnswer == null || responseRequested != true){
             deviceAnswer = new DeviceAnswer(LocalDateTime.now(), "", currentDirection.get());
         }
 
         if(responseRequested) {
-            try{
+            if(collection.containClientId(clientId)){
                 device.setCmdToSend(collection.getCommand(clientId));
-            }catch (IndexOutOfBoundsException exception){
-                log.warn("Исключение " + exception.getMessage());
-                device.setCmdToSend(null);
             }
         }else{
             device.setCmdToSend(null);
             deviceAnswer.setRequestSendTime(LocalDateTime.now());
         }
 
-
         int tabDirection = clientId;
         device.setLastAnswer(received);
         deviceAnswer.changeTabNum(tabDirection);
-        deviceAnswer.setDeviceType(device);
-        deviceAnswer.setAnswerReceivedTime(LocalDateTime.now());
+
+        try{
+            deviceAnswer.setDeviceType(device);
+        }catch (Exception e){
+            log.error("deviceAnswer.setDeviceType Exception" + e.getMessage());
+        }
+
+        deviceAnswer.setAnswerReceivedTime(LocalDateTime.ofInstant(Instant.ofEpochMilli(receiveTimestamp), ZoneId.systemDefault()));
+
+
         String answer = null;
         try{
             device.parseData();
             answer = device.getAnswer();
+            if(answer == null || answer.isEmpty()){
+                log.warn("ПУСТАЯ СТРОКА ОТВЕТА  ПЕРЕДАНА В ОБЪЕКТ ОТВЕТА метка времени в ответе" + deviceAnswer.getAnswerReceivedTime() +
+                        " количество полей в ответе " + deviceAnswer.getFieldCount() +
+                        " для строки от устройства [" + Arrays.toString(received) + "] ");
+                StringBuilder sb = new StringBuilder();
+                for (byte b : received) {
+                    sb.append((char) b);
+                }
+                answer = sb.toString();
+                log.info("После коррекции " + answer);
+            }
         }catch (Exception e){
             log.warn("Исключение во время разбора ответа внутри класса прибора" + e.getMessage());
             answer = "Исключение во время разбора ответа внутри класса прибора";
         }
 
 
-
-
-
-
-        if(answer != null){
-            deviceAnswer.setAnswerReceivedString(answer);
-        }else{
-            deviceAnswer.setAnswerReceivedString("Ошибка при разборе ответа");
-        }
+        deviceAnswer.setAnswerReceivedString(answer);
 
         if(device.getValues() != null){
             if(device.getValues().getDirection() > 0)
@@ -406,15 +448,15 @@ public class ComDataCollector implements Runnable{
         PoolLogger.getInstance().writeLine(answer); //Sum log
 
         DeviceLogger deviceLogger;
-        if(clientsMap.get(clientId).needLog) {
+        if(clientsMap.containsKey(clientId) && clientsMap.get(clientId).needLog) {
             deviceLogger = clientsMap.get(clientId).logger;
             if(deviceLogger == null){
                 log.info("Логгер не был инициализирован ранее");
                 clientsMap.get(clientId).logger = new DeviceLogger(clientsMap.get(clientId).clientId);
                 deviceLogger = clientsMap.get(clientId).logger;
             }
-            assert myProperties != null;
-            if(myProperties.getNeedSyncSavingAnswer()){
+
+            if(myProperties != null && myProperties.getNeedSyncSavingAnswer()){
                 parentService.getAnswerSaverLogger().doLog(answer, clientId, PoolLogger.getInstance(), deviceLogger);
             }else{
                 if(deviceLogger != null){
@@ -422,6 +464,7 @@ public class ComDataCollector implements Runnable{
                 }
             }
         }
+        //log.info("Завершены все процессы логирования");
     }
 
     public void setPoolDelay(int poolDelay) {

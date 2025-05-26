@@ -95,7 +95,7 @@ public class PoolLogger {
 
         if (answer.getAnswerReceivedString() == null
                 || answer.getAnswerReceivedString().trim().isEmpty()) {
-            log.error(String.format("Empty answer for client %d", clientId));
+            log.error(String.format("Отклонено логирование для клиента [%d] - пустая строка ответа", clientId));
             return false;
         }
 
@@ -121,9 +121,9 @@ public class PoolLogger {
 
         try {
             Files.write(logFile, buffer, StandardOpenOption.APPEND);
+            //log.info("Successfully wrote " + buffer.size() + " log entries");
             buffer.clear();
             lastWriteTime = currentTime;
-            log.info("Successfully wrote " + buffer.size() + " log entries");
         } catch (IOException e) {
             log.error("Failed to write log entries: " + e.getMessage());
         }

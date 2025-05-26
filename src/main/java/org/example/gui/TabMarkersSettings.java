@@ -8,8 +8,11 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.example.services.AnswerStorage;
 import org.example.services.connectionPool.AnyPoolService;
@@ -22,7 +25,6 @@ import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 public class TabMarkersSettings extends JDialog {
     private static final Logger log = Logger.getLogger(TabMarkersSettings.class);
     private final AnyPoolService anyPoolService;
-    HashMap<String, Integer> pairs = AnswerStorage.getDeviceTabPair();
     private JTextField TF_marker;
     private JComboBox CB_tabsList;
     private JButton BT_addPair;
@@ -40,6 +42,7 @@ public class TabMarkersSettings extends JDialog {
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setContentPane(mainPanel);
         this.anyPoolService = anyPoolService;
+
         updateList();
         updateTabList();
         properties = prop;
@@ -48,8 +51,12 @@ public class TabMarkersSettings extends JDialog {
             public void actionPerformed(ActionEvent e) {
                 log.info("Нажата кнопка добавления пары 'адрес' - 'вкладка'");
                 String ident = TF_marker.getText();
+                ArrayList<Integer> clientsIdArray = new ArrayList<>();
+                ConcurrentLinkedQueue<Integer> clientsId = AnswerStorage.getClientsList();
+                clientsIdArray.addAll(clientsId);
+                log.info("ident " + ident + " clientId " + clientsIdArray.get(CB_tabsList.getSelectedIndex()));
                 if (ident.length() > 1)
-                    AnswerStorage.registerDeviceTabPair(ident, CB_tabsList.getSelectedIndex());
+                    AnswerStorage.registerDeviceTabPair(ident, clientsIdArray.get(CB_tabsList.getSelectedIndex()));
 
                 updateList();
                 updateTabList();
@@ -60,19 +67,32 @@ public class TabMarkersSettings extends JDialog {
 
     private void updateTabList() {
         CB_tabsList.removeAllItems();
-
-        for (int i = 0; i < anyPoolService.getCurrentComClientsQuantity(); i++) {
-            CB_tabsList.addItem("dev" + (i + 1));
+        ConcurrentLinkedQueue<Integer> clientsId = AnswerStorage.getClientsList();
+        int count = 0;
+        for (Integer id : clientsId) {
+            CB_tabsList.addItem("dev" + (count + 1) + " (id:" + id + ")");
+            count++;
         }
     }
 
     private void updateList() {
+        log.info("Вызвано обновление списка ассоциаций");
         sb.setLength(0);
-        for (Map.Entry<String, Integer> stringIntegerEntry : pairs.entrySet()) {
-            sb.append(stringIntegerEntry.getKey()).append(" перенаправляется на вкладку ").append(stringIntegerEntry.getValue()).
-                    append(" (dev").append(stringIntegerEntry.getValue() + 1).append(")\r\n");
+        ConcurrentHashMap<Integer, String> pairs = AnswerStorage.getDeviceTabPair();
+        log.info("Количество ассоциаций в хранилище " + pairs.size());
+        int probablyTabId = 1;
+        for (Map.Entry<Integer, String> stringIntegerEntry : pairs.entrySet()) {
+            sb.append(stringIntegerEntry.getKey()).
+                    append(" приписано внутреннему клиенту ").
+                    append(stringIntegerEntry.getValue()).
+                    append(" (вероятная вкладка dev").
+                    append(probablyTabId).
+                    append(")\r\n");
+            probablyTabId++;
         }
+
         currList.setText(sb.toString());
+
     }
 
     {

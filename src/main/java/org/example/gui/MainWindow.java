@@ -87,6 +87,15 @@ public class MainWindow extends JFrame implements Rendeble {
     private JTextField textField_poolDelay;
     private JTextField textField_textToSend;
     private JTextField textField_prefToSend;
+    private JPanel connectionType;
+    private JLabel LableComPorts;
+    private JLabel LableComDataBits;
+    private JLabel LableComParity;
+    private JLabel LableComStopBit;
+    private JLabel LableComBaudRate;
+    private JLabel LableComProtocol;
+    private JLabel LableConnectionType;
+    private JComboBox comboBox_ConnectionType;
 
 
     private void initUI() {
@@ -104,6 +113,8 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
     private void createMenu() {
+        assert prop != null;
+        log.info("prop driver " + prop.getDrv());
         JMenuBar menuBar = new JMenuBar();
         JmenuFile menu = new JmenuFile(prop, anyPoolService);
         menuBar.add(menu.createFileMenu());
@@ -531,20 +542,23 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
     public void renderData() {
+        if (!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(this::renderData);
+            return;
+        }
+
         Integer clientId = currentActiveClientId.get();
         Document doc = logDataTransferJtextPanelsMap.get(clientId).getDocument();
         final int maxLength = 10_000;
 
         try {
-            int lastPosition = lastReceivedPositionFromStorageMap.getOrDefault(clientId, 0);
+            int lastPosition = lastReceivedPositionFromStorageMap.getOrDefault(clientId, 0); //  ConcurrentHashMap<Integer, Integer>
             int queueOffsetInt = AnswerStorage.queueOffset.getOrDefault(clientId, 0);
 
             // Синхронизация доступа к позиции
-            synchronized (lastReceivedPositionFromStorageMap) {
-                if (lastPosition < queueOffsetInt) {
-                    lastPosition = queueOffsetInt;
-                    lastReceivedPositionFromStorageMap.put(clientId, lastPosition);
-                }
+            if (lastPosition < queueOffsetInt) {
+                lastPosition = queueOffsetInt;
+                lastReceivedPositionFromStorageMap.put(clientId, lastPosition);
             }
 
             TabAnswerPart an = AnswerStorage.getAnswersQueForTab(lastPosition, clientId, true);
@@ -553,10 +567,11 @@ public class MainWindow extends JFrame implements Rendeble {
                 //log.info("Нет новых данных для клиента [" + clientId + "]");
                 return;
             }
+            log.info("Будут отображены новые данные для клиента [" + clientId + "], позиция: " + an.getPosition());
+
             // Обновляем позицию атомарно
-            synchronized (lastReceivedPositionFromStorageMap) {
-                lastReceivedPositionFromStorageMap.put(clientId, an.getPosition());
-            }
+            lastReceivedPositionFromStorageMap.put(clientId, an.getPosition());
+
 
             // Очистка и добавление новых данных
             if (doc.getLength() + an.getAnswerPart().length() > maxLength) {
@@ -658,23 +673,25 @@ public class MainWindow extends JFrame implements Rendeble {
         textField_prefToSend.setText("");
         panel3.add(textField_prefToSend, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(10, 25), new Dimension(40, 25), new Dimension(80, 25), 0, false));
         final JPanel panel4 = new JPanel();
-        panel4.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        panel1.add(panel4, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, 1, 1, new Dimension(250, 390), new Dimension(250, 390), new Dimension(250, 390), 0, false));
+        panel4.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
+        panel4.setBackground(new Color(-16777216));
+        panel1.add(panel4, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, 1, 1, new Dimension(250, 450), new Dimension(255, 450), new Dimension(255, 450), 0, false));
         portSetup = new JPanel();
         portSetup.setLayout(new GridLayoutManager(12, 1, new Insets(0, 0, 0, 0), -1, -1));
         portSetup.setBackground(new Color(-16777216));
+        portSetup.setEnabled(true);
         portSetup.setForeground(new Color(-16777216));
-        panel4.add(portSetup, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(250, 390), new Dimension(250, 390), new Dimension(250, 390), 0, false));
+        panel4.add(portSetup, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(250, 390), new Dimension(250, 450), new Dimension(250, 500), 0, false));
         final JPanel panel5 = new JPanel();
         panel5.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
         panel5.setBackground(new Color(-16777216));
         panel5.setForeground(new Color(-16777216));
         portSetup.add(panel5, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
-        final JLabel label1 = new JLabel();
-        label1.setBackground(new Color(-16777216));
-        label1.setForeground(new Color(-1));
-        label1.setText("Биты данных");
-        panel5.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        LableComDataBits = new JLabel();
+        LableComDataBits.setBackground(new Color(-16777216));
+        LableComDataBits.setForeground(new Color(-1));
+        LableComDataBits.setText("Биты данных");
+        panel5.add(LableComDataBits, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         comboBox_DataBits = new JComboBox();
         comboBox_DataBits.setBackground(new Color(-11513259));
         comboBox_DataBits.setForeground(new Color(-16777216));
@@ -686,10 +703,10 @@ public class MainWindow extends JFrame implements Rendeble {
         panel6.setBackground(new Color(-16777216));
         panel6.setForeground(new Color(-16777216));
         portSetup.add(panel6, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
-        final JLabel label2 = new JLabel();
-        label2.setForeground(new Color(-1));
-        label2.setText("Чётность");
-        panel6.add(label2, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        LableComParity = new JLabel();
+        LableComParity.setForeground(new Color(-1));
+        LableComParity.setText("Чётность");
+        panel6.add(LableComParity, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         comboBox_Parity = new JComboBox();
         comboBox_Parity.setBackground(new Color(-11513259));
         comboBox_Parity.setForeground(new Color(-16777216));
@@ -703,11 +720,11 @@ public class MainWindow extends JFrame implements Rendeble {
         panel7.setBackground(new Color(-16777216));
         panel7.setForeground(new Color(-16777216));
         portSetup.add(panel7, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
-        final JLabel label3 = new JLabel();
-        label3.setBackground(new Color(-16777216));
-        label3.setForeground(new Color(-1));
-        label3.setText("Стоп бит");
-        panel7.add(label3, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        LableComStopBit = new JLabel();
+        LableComStopBit.setBackground(new Color(-16777216));
+        LableComStopBit.setForeground(new Color(-1));
+        LableComStopBit.setText("Стоп бит");
+        panel7.add(LableComStopBit, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         comboBox_StopBit = new JComboBox();
         comboBox_StopBit.setBackground(new Color(-11513259));
         comboBox_StopBit.setForeground(new Color(-16777216));
@@ -734,11 +751,11 @@ public class MainWindow extends JFrame implements Rendeble {
         panel9.setBackground(new Color(-16777216));
         panel9.setForeground(new Color(-16777216));
         portSetup.add(panel9, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
-        final JLabel label4 = new JLabel();
-        label4.setBackground(new Color(-1));
-        label4.setForeground(new Color(-1));
-        label4.setText("Порт");
-        panel9.add(label4, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        LableComPorts = new JLabel();
+        LableComPorts.setBackground(new Color(-1));
+        LableComPorts.setForeground(new Color(-1));
+        LableComPorts.setText("Порт");
+        panel9.add(LableComPorts, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         comboBox_ComPorts = new JComboBox();
         comboBox_ComPorts.setBackground(new Color(-11513259));
         comboBox_ComPorts.setForeground(new Color(-16777216));
@@ -752,11 +769,11 @@ public class MainWindow extends JFrame implements Rendeble {
         panel10.setBackground(new Color(-16777216));
         panel10.setForeground(new Color(-16777216));
         portSetup.add(panel10, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
-        final JLabel label5 = new JLabel();
-        label5.setBackground(new Color(-16777216));
-        label5.setForeground(new Color(-1));
-        label5.setText("Протокол");
-        panel10.add(label5, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        LableComProtocol = new JLabel();
+        LableComProtocol.setBackground(new Color(-16777216));
+        LableComProtocol.setForeground(new Color(-1));
+        LableComProtocol.setText("Протокол");
+        panel10.add(LableComProtocol, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         comboBox_Protocol = new JComboBox();
         comboBox_Protocol.setBackground(new Color(-11513259));
         comboBox_Protocol.setForeground(new Color(-16777216));
@@ -821,11 +838,11 @@ public class MainWindow extends JFrame implements Rendeble {
         panel14.setEnabled(true);
         panel14.setForeground(new Color(-16777216));
         portSetup.add(panel14, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, 1, 1, null, null, null, 0, false));
-        final JLabel label6 = new JLabel();
-        label6.setBackground(new Color(-16777216));
-        label6.setForeground(new Color(-1));
-        label6.setText("Скорость   ");
-        panel14.add(label6, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        LableComBaudRate = new JLabel();
+        LableComBaudRate.setBackground(new Color(-16777216));
+        LableComBaudRate.setForeground(new Color(-1));
+        LableComBaudRate.setText("Скорость   ");
+        panel14.add(LableComBaudRate, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         comboBox_BaudRate = new JComboBox();
         comboBox_BaudRate.setBackground(new Color(-11513259));
         comboBox_BaudRate.setEnabled(true);
@@ -852,6 +869,24 @@ public class MainWindow extends JFrame implements Rendeble {
         panel15.add(checkBox_Autoconnect, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final Spacer spacer7 = new Spacer();
         panel15.add(spacer7, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        connectionType = new JPanel();
+        connectionType.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        connectionType.setBackground(new Color(-16777216));
+        connectionType.setEnabled(true);
+        panel4.add(connectionType, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(250, 35), new Dimension(250, 38), new Dimension(250, 40), 0, false));
+        LableConnectionType = new JLabel();
+        LableConnectionType.setBackground(new Color(-1));
+        LableConnectionType.setForeground(new Color(-1));
+        LableConnectionType.setText("Тип соединения");
+        connectionType.add(LableConnectionType, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        comboBox_ConnectionType = new JComboBox();
+        comboBox_ConnectionType.setBackground(new Color(-11513259));
+        comboBox_ConnectionType.setForeground(new Color(-16777216));
+        final DefaultComboBoxModel defaultComboBoxModel4 = new DefaultComboBoxModel();
+        comboBox_ConnectionType.setModel(defaultComboBoxModel4);
+        connectionType.add(comboBox_ConnectionType, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(120, -1), new Dimension(120, -1), new Dimension(120, -1), 0, false));
+        final Spacer spacer8 = new Spacer();
+        connectionType.add(spacer8, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
     }
 
     /**
