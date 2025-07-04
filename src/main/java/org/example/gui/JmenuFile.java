@@ -309,6 +309,7 @@ public class JmenuFile {
         JMenuItem commandList  = new JMenuItem("Список команд");
         JMenuItem tabMarkersSetting  = new JMenuItem("Переадресация вкладок");
         JMenuItem webSocket  = new JMenuItem("webSocket");
+        JMenuItem bleScan  = new JMenuItem("bleScan");
 
 
 
@@ -318,6 +319,7 @@ public class JmenuFile {
         utilitiesMenu.add(commandList);
         utilitiesMenu.add(tabMarkersSetting);
         utilitiesMenu.add(webSocket);
+        utilitiesMenu.add(bleScan);
 
 
         grabber.addActionListener(new ActionListener()
@@ -384,10 +386,27 @@ public class JmenuFile {
                 //thPool.submit(new RenderThread(commandsWindow));
             }
         });
+        bleScan.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                System.out.println("BLE_SCAN Window");
+                BlueScanWindow blueScanWindow = new BlueScanWindow();
+                blueScanWindow.setName("BLE List");
+                blueScanWindow.setTitle("BLE List");
+                blueScanWindow.pack();
+                blueScanWindow.setVisible(true);
+                //commandsWindow.renderData();
+                System.out.println(blueScanWindow.isShowing());
+                //chartWindow.isEnabled();
+                //thPool.submit(new RenderThread(commandsWindow));
+            }
+        });
         tabMarkersSetting.addActionListener(new ActionListener()
         {
             @Override
             public void actionPerformed(ActionEvent arg0) {
+                System.out.println("asdfasdf" + arg0.toString() + "sdfsdf");
                 System.out.println("Tab Marker Setting");
                 TabMarkersSettings tabMarkersSettings = new TabMarkersSettings(prop, anyPoolService);
                 tabMarkersSettings.setName("Tab Marker Setting");

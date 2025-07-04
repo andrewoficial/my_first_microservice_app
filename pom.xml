@@ -183,6 +183,18 @@
         </plugins>
     </build>
 
+    <repositories>
+<!--        &lt;!&ndash; Основной репозиторий Eclipse для релизных версий &ndash;&gt;-->
+<!--        <repository>-->
+<!--            <id>eclipse-releases</id>-->
+<!--            <url>https://repo.eclipse.org/content/groups/releases/</url>-->
+<!--        </repository>-->
+<!--        <repository>-->
+<!--            <id>openhab-releases</id>-->
+<!--            <url>https://openhab.jfrog.io/openhab/libs-release/</url>-->
+<!--        </repository>-->
+
+    </repositories>
     <dependencies>
         <!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-deploy-plugin -->
         <dependency>
@@ -333,6 +345,24 @@
             <artifactId>h2</artifactId>
             <version>2.3.232</version>
         </dependency>
+
+        <!-- BLE  -->
+
+
+        <dependency>
+            <groupId>org.sputnikdev</groupId>
+            <artifactId>bluetooth-manager-tinyb</artifactId>
+            <version>1.3.3</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.sputnikdev/bluetooth-manager -->
+        <dependency>
+            <groupId>org.sputnikdev</groupId>
+            <artifactId>bluetooth-manager</artifactId>
+            <version>1.5.3</version>
+        </dependency>
+
+
 
     </dependencies>
 </project>
