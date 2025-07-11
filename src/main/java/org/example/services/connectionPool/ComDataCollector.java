@@ -15,6 +15,8 @@ import org.example.services.loggers.DeviceLogger;
 import org.example.services.loggers.PoolLogger;
 import org.example.device.ProtocolsList;
 import org.example.device.*;
+import org.example.services.rule.RuleStorage;
+import org.example.services.rule.com.ComRule;
 import org.example.utilites.properties.MyProperties;
 
 import java.time.Instant;
@@ -55,6 +57,7 @@ public class ComDataCollector implements Runnable{
     private volatile long requestTimestamp = 0;
     private final long RESPONSE_TIMEOUT_MS = 3000; // Таймаут ожидания ответа
     private volatile DeviceAnswer deviceAnswer;
+    private ComRule currentComRule;
 
     private MainLeftPanelStateCollection collection;
     private int clientId;
@@ -214,6 +217,7 @@ public class ComDataCollector implements Runnable{
             if ( ! clientsMap.isEmpty() && shouldPollBecauseTimer()) {
                 millisPrev = System.currentTimeMillis();
                 pollCommands();
+                poolRules();
                 processIncomingMessages();
                 if(counter < limit) {
                     if(comPort.bytesAvailable() > 0){
@@ -242,12 +246,41 @@ public class ComDataCollector implements Runnable{
 
         }
     }
+    private void poolRules(){
+        for (ClientData client : clientsMap.values()) {
+            log.info("Во внутренней очереди устройств опрос по правилам для устройства clientId " + client.clientId + " командой " + client.command);
+            RuleStorage ruleStorage = RuleStorage.getInstance();
+            List<ComRule> rules = ruleStorage.getRulesForClient(client.clientId);
+            if(rules == null){
+                log.warn("Для пользователя " + client.clientId + " нет правил для опроса");
+                continue;
+            }
+            for (ComRule rule : rules) {
+                if(rule == null) continue;
+                if(rule.isTimeForAction() == false) continue;
+                log.info("Время наступило для правила " + rule.getRuleId() + " (" + rule.getDescription() + ")");
+
+                client.command = rule.generateCommand();
+                log.info("Sending to client {"+client.clientId+"}: {"+client.command+"}");
+                sendOnce(client.prefix, client.command, client.clientId, true);
+
+                if(rule.getNextPoolDelay() == 0){
+                    rule.setWaitingForAnswer(true);
+                    currentComRule = rule;
+                    responseRequested = true;
+                    this.run();//ToDo потенциально кроличья нора. Поправить
+                }else{
+                    currentComRule = null;
+                }
+                comPort.addDataListener(serialPortDataListener);
+            }
+        }
+    }
     private void pollCommands() {
         millisPrev = System.currentTimeMillis();
         for (ClientData client : clientsMap.values()) {
             if(client.needPool){
                 log.info("Во внутренней очереди устройств отправляю для устройства clientId " + client.clientId + " командой " + client.command);
-
                 sendOnce(client.prefix, client.command, client.clientId, true);
                 comPort.addDataListener(serialPortDataListener);
             }
@@ -332,6 +365,9 @@ public class ComDataCollector implements Runnable{
         log.info("Команда отправлена: " + collection.getPrefix(clientId)+collection.getCommand(clientId));
         deviceAnswer = new DeviceAnswer(LocalDateTime.now(),collection.getCommand(clientId),clientId);
         log.info("Заготовка ответа создана ");
+        if(!internal){
+            comPort.addDataListener(serialPortDataListener);
+        }
     }
 
     public void saveReceivedByEvent(String msg, boolean responseRequested, long receiveTimestamp) {
@@ -354,6 +390,12 @@ public class ComDataCollector implements Runnable{
         }
 
         if(responseRequested) {
+            if(currentComRule != null && currentComRule.isWaitingForAnswer()){
+                currentComRule.setWaitingForAnswer(false);
+                currentComRule.processResponse(received); //Передаю ответ от устроиства правилу, завершаю обработку ответа
+                currentComRule.updateState();
+                return;
+            }
             if(collection.containClientId(clientId)){
                 device.setCmdToSend(collection.getCommand(clientId));
             }
@@ -520,6 +562,7 @@ public class ComDataCollector implements Runnable{
     public boolean containClientId(int clientId){
         return clientsMap.containsKey(clientId);
     }
+
     public void addDeviceToService(int clientId, String prf, String cmd, boolean needLog, boolean needPoolFlag) {
         log.info("Добавление клиента в поток " + clientId  + Thread.currentThread().getName());
         DeviceLogger deviceLogger = null;
@@ -528,6 +571,7 @@ public class ComDataCollector implements Runnable{
         }
         clientsMap.put(clientId, new ClientData(clientId, needLog, needPoolFlag, prf, cmd, deviceLogger));
     }
+
     public void removeDeviceFromComDataCollector(int clientId){ //Когда вкладка закрывается
         log.info("Удаление клиента из потока " + clientId  + Thread.currentThread().getName());
         if(containClientId(clientId))

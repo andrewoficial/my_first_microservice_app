@@ -27,7 +27,7 @@ public class BlueScanWindow extends JFrame implements DeviceDiscoveryListener {
         super("BLE Scanner");
         setSize(800, 600);
         manager = new BluetoothManagerBuilder().build();
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         initUI();
         initBluetooth();
     }

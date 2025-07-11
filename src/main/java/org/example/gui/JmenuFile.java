@@ -310,6 +310,7 @@ public class JmenuFile {
         JMenuItem tabMarkersSetting  = new JMenuItem("Переадресация вкладок");
         JMenuItem webSocket  = new JMenuItem("webSocket");
         JMenuItem bleScan  = new JMenuItem("bleScan");
+        JMenuItem customRules = new JMenuItem("Пользовательские правила");
 
 
 
@@ -320,6 +321,7 @@ public class JmenuFile {
         utilitiesMenu.add(tabMarkersSetting);
         utilitiesMenu.add(webSocket);
         utilitiesMenu.add(bleScan);
+        utilitiesMenu.add(customRules);
 
 
         grabber.addActionListener(new ActionListener()
@@ -419,6 +421,24 @@ public class JmenuFile {
                 //thPool.submit(new RenderThread(commandsWindow));
             }
         });
+        customRules.addActionListener(new ActionListener()
+        {
+         @Override
+         public void actionPerformed(ActionEvent arg0) {
+             System.out.println("arguments [" + arg0.toString() + "] ");
+             System.out.println("Custom Rules Setting");
+             RuleManagmentDialog ruleManagmentDialog = new RuleManagmentDialog(prop, anyPoolService);
+             ruleManagmentDialog.setName("Rules Setting");
+             ruleManagmentDialog.setTitle("Rules Setting");
+             ruleManagmentDialog.pack();
+             ruleManagmentDialog.setVisible(true);
+             //commandsWindow.renderData();
+             System.out.println(ruleManagmentDialog.isShowing());
+             //chartWindow.isEnabled();
+             //thPool.submit(new RenderThread(commandsWindow));
+         }
+        });
+
         return utilitiesMenu;
     }
 }
