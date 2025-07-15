@@ -311,6 +311,7 @@ public class JmenuFile {
         JMenuItem webSocket  = new JMenuItem("webSocket");
         JMenuItem bleScan  = new JMenuItem("bleScan");
         JMenuItem customRules = new JMenuItem("Пользовательские правила");
+        JMenuItem curveWindow = new JMenuItem("Полиномы TC290");
 
 
 
@@ -322,6 +323,7 @@ public class JmenuFile {
         utilitiesMenu.add(webSocket);
         utilitiesMenu.add(bleScan);
         utilitiesMenu.add(customRules);
+        utilitiesMenu.add(curveWindow);
 
 
         grabber.addActionListener(new ActionListener()
@@ -434,6 +436,23 @@ public class JmenuFile {
              ruleManagmentDialog.setVisible(true);
              //commandsWindow.renderData();
              System.out.println(ruleManagmentDialog.isShowing());
+             //chartWindow.isEnabled();
+             //thPool.submit(new RenderThread(commandsWindow));
+         }
+        });
+        curveWindow.addActionListener(new ActionListener()
+        {
+         @Override
+         public void actionPerformed(ActionEvent arg0) {
+             System.out.println("arguments [" + arg0.toString() + "] ");
+             System.out.println("Curve Handler Window");
+             CurveHandlerWindow curveHandlerWindow = new CurveHandlerWindow();
+             curveHandlerWindow.setName("Curve Handler Window");
+             curveHandlerWindow.setTitle("Curve Handler Window");
+             curveHandlerWindow.pack();
+             curveHandlerWindow.setVisible(true);
+             //commandsWindow.renderData();
+             System.out.println(curveHandlerWindow.isShowing());
              //chartWindow.isEnabled();
              //thPool.submit(new RenderThread(commandsWindow));
          }
