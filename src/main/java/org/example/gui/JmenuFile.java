@@ -12,6 +12,8 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.concurrent.ExecutorService;
 
+import org.example.gui.curve.CurveHandlerWindow;
+import org.example.gui.mgstest.MgsSimpleTest;
 import org.example.services.AnswerStorage;
 import org.example.services.connectionPool.AnyPoolService;
 import org.example.utilites.properties.MyProperties;
@@ -312,6 +314,7 @@ public class JmenuFile {
         JMenuItem bleScan  = new JMenuItem("bleScan");
         JMenuItem customRules = new JMenuItem("Пользовательские правила");
         JMenuItem curveWindow = new JMenuItem("Полиномы TC290");
+        JMenuItem mgsTest = new JMenuItem("MGSTest");
 
 
 
@@ -324,6 +327,7 @@ public class JmenuFile {
         utilitiesMenu.add(bleScan);
         utilitiesMenu.add(customRules);
         utilitiesMenu.add(curveWindow);
+        utilitiesMenu.add(mgsTest);
 
 
         grabber.addActionListener(new ActionListener()
@@ -448,7 +452,6 @@ public class JmenuFile {
              System.out.println("Curve Handler Window");
              CurveHandlerWindow curveHandlerWindow = new CurveHandlerWindow();
              curveHandlerWindow.setName("Curve Handler Window");
-             curveHandlerWindow.setTitle("Curve Handler Window");
              curveHandlerWindow.pack();
              curveHandlerWindow.setVisible(true);
              //commandsWindow.renderData();
@@ -456,6 +459,22 @@ public class JmenuFile {
              //chartWindow.isEnabled();
              //thPool.submit(new RenderThread(commandsWindow));
          }
+        });
+        mgsTest.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                System.out.println("arguments [" + arg0.toString() + "] ");
+                System.out.println("MGS simple test Window");
+                MgsSimpleTest mgsSimpleTest = new MgsSimpleTest();
+                mgsSimpleTest.setName("MGS simple test Window");
+                mgsSimpleTest.pack();
+                mgsSimpleTest.setVisible(true);
+                //commandsWindow.renderData();
+                System.out.println(mgsSimpleTest.isShowing());
+                //chartWindow.isEnabled();
+                //thPool.submit(new RenderThread(commandsWindow));
+            }
         });
 
         return utilitiesMenu;

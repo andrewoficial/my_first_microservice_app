@@ -1,13 +1,9 @@
-package org.example.gui;
+package org.example.gui.curve;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import org.apache.log4j.Logger;
-import org.example.gui.curve.CurveData;
-import org.example.gui.curve.CurveDataTypes;
-import org.example.gui.curve.CurveMetaData;
-import org.example.gui.curve.CurveStorage;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -28,7 +24,7 @@ import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CurveHandlerWindow extends JDialog {
+public class CurveHandlerWindow extends JWindow {
     private Logger log = null;
 
     private JPanel comConnection;
@@ -101,8 +97,7 @@ public class CurveHandlerWindow extends JDialog {
 
         $$$setupUI$$$();
         log = Logger.getLogger(CurveHandlerWindow.class);
-        setModal(false);
-        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+
         setContentPane(mainPane);
         jbtSelectFile.addActionListener(this::handleFileSelection);
         jbtClearGraph.addActionListener(this::clearGraph);

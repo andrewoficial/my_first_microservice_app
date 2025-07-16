@@ -1,9 +1,6 @@
 package org.example.gui.curve;
 
-import lombok.Getter;
-import lombok.Setter;
 import org.apache.log4j.Logger;
-import org.example.gui.CurveHandlerWindow;
 
 import java.util.HashMap;
 
