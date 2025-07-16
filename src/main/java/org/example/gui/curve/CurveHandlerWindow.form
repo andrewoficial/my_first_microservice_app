@@ -852,7 +852,7 @@
                     <properties/>
                     <border type="none"/>
                     <children>
-                      <component id="82972" class="javax.swing.JTable">
+                      <component id="82972" class="javax.swing.JTable" binding="jtbFilePreviewEdite">
                         <constraints/>
                         <properties/>
                       </component>

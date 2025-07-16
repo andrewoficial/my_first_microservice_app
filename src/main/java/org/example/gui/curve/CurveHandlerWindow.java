@@ -4,6 +4,7 @@ import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import org.apache.log4j.Logger;
+import org.example.gui.Rendeble;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -23,8 +24,9 @@ import java.io.File;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
-public class CurveHandlerWindow extends JWindow {
+public class CurveHandlerWindow extends JFrame implements Rendeble {
     private Logger log = null;
 
     private JPanel comConnection;
@@ -86,13 +88,24 @@ public class CurveHandlerWindow extends JWindow {
     private JTextField jtfTermKoefTypeEdited;
     private JLabel jlbPointsCountEdited;
     private JTextField jtfPointsCountEdited;
+    private JTable jtbFilePreviewEdite;
     private XYSeries readetSeries = new XYSeries("File Data");
-    private XYSeries calculateSeries = new XYSeries("Calculated Data");
-    private XYSeriesCollection dataset = new XYSeriesCollection(readetSeries);
+    private XYSeries editedSeries = new XYSeries("Calculated Data");
+    private XYSeriesCollection dataset = new XYSeriesCollection();
     private JFreeChart chart;
     private ChartPanel chartPanel;
     private CurveStorage curveStorage = new CurveStorage();
+    String filePath;
 
+    /*
+    ToDo
+     1. Изменение параметров редактируемой кривой по изменению в полях ввода
+     2. Сохранение в файл
+     3. Открытие и проверка соединения по ком-порту
+     4. Запись полинома в прибор
+     *5. Запоминание последнего открытого файла
+     *6. Чтение и создание полинома из прибора
+     */
     public CurveHandlerWindow() {
 
         $$$setupUI$$$();
@@ -102,8 +115,11 @@ public class CurveHandlerWindow extends JWindow {
         jbtSelectFile.addActionListener(this::handleFileSelection);
         jbtClearGraph.addActionListener(this::clearGraph);
         jbtAddReadetPoly.addActionListener(this::paintReadetPoly);
-        //jbtAddCalculatedPoly.addActionListener(this::paintCalculatedPoly);
+        jbtAddCalculatedPoly.addActionListener(this::paintEditedPoly);
+        jbtCalculate.addActionListener(this::calculateActionHandler);
 
+        fillCurveFormats();
+        fillSomeGuiElements();
         initChart();
     }
 
@@ -118,12 +134,16 @@ public class CurveHandlerWindow extends JWindow {
 
         fileChooser.setFileFilter(filter);
 
+        if (filePath != null) {
+            fileChooser.setCurrentDirectory(new File(filePath));
+        }
         // Показать диалог выбора
         int result = fileChooser.showOpenDialog(null);
 
         if (result == JFileChooser.APPROVE_OPTION) {
+
             File selectedFile = fileChooser.getSelectedFile();
-            String filePath = selectedFile.getAbsolutePath();
+            filePath = selectedFile.getAbsolutePath();
 
             // 1. Запомнить путь (можно использовать в других частях программы)
             System.out.println("Выбран файл: " + filePath);
@@ -136,12 +156,27 @@ public class CurveHandlerWindow extends JWindow {
 
     public void clearGraph(ActionEvent e) {
         readetSeries.clear();
-        calculateSeries.clear();
+        editedSeries.clear();
         repaintChart();
     }
 
-    public void paintReadetPoly(ActionEvent e) {
+    public void calculateActionHandler(ActionEvent e) {
+        List<Map.Entry<Double, Double>> calculatedRawData = curveStorage.getCurve("Edited").getCurvePoints();
+        for (int i = 0; i < calculatedRawData.size(); i++) {
+            calculatedRawData.get(i).setValue(calculatedRawData.get(i).getValue() * 48);//ToDo just for test
+        }
+        curveStorage.getCurve("Edited").setCurvePoints(calculatedRawData);
 
+        buildEditedData(curveStorage.getCurve("Edited"));
+        updateTableEditedFile(curveStorage.getCurve("Edited"));
+    }
+
+    public void paintReadetPoly(ActionEvent e) {
+        buildReadData(curveStorage.getCurve("Opened"));
+    }
+
+    public void paintEditedPoly(ActionEvent e) {
+        buildEditedData(curveStorage.getCurve("Edited"));
     }
 
     private void processSelectedFile(File file) {
@@ -205,20 +240,34 @@ public class CurveHandlerWindow extends JWindow {
                     System.out.println("Scip: " + parts.length);
                 }
             }
-            CurveMetaData curveMetaData = new CurveMetaData();
+            CurveMetaData curveOpenedMetaData = new CurveMetaData();
+            CurveMetaData curveEditedMetaData = new CurveMetaData();
 
-            curveMetaData = updateCurveMetaDara(sb.toString());
-            updateOpenedCurveInfo(curveMetaData);
-            CurveData curveData = new CurveData();
-            curveData.setCurveMetaData(curveMetaData);
-            fillCurveData(curveData, tableData);
+            curveOpenedMetaData = updateCurveMetaDara(sb.toString());
+            curveEditedMetaData = updateCurveMetaDara(sb.toString());
 
-            curveStorage.addOrUpdateCurve("Opened", curveData);
+            updateOpenedCurveInfo(curveOpenedMetaData);
+            updateEditedCurveInfo(curveEditedMetaData);
+
+            CurveData curveOpenedData = new CurveData();
+            curveOpenedData.setCurveMetaData(curveOpenedMetaData);
+            fillCurveData(curveOpenedData, tableData);
+
+            CurveData curveEditedData = new CurveData();
+            curveEditedData.setCurveMetaData(curveEditedMetaData);
+            fillCurveData(curveEditedData, tableData);
+
+            curveStorage.addOrUpdateCurve("Opened", curveOpenedData);
+            curveStorage.addOrUpdateCurve("Edited", curveEditedData);
+
             // Обновление таблицы
-            updateTableOpenedFile(curveData);
+            updateTableOpenedFile(curveOpenedData);
+            updateTableEditedFile(curveEditedData);
 
-            // Построение графика (ваша реализация)
+
+            // Построение графика
             buildReadData(curveStorage.getCurve("Opened"));
+            buildEditedData(curveStorage.getCurve("Edited"));
 
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(null,
@@ -229,6 +278,9 @@ public class CurveHandlerWindow extends JWindow {
     }
 
     private void initChart() {
+        dataset.removeAllSeries();
+        dataset.addSeries(readetSeries);
+        dataset.addSeries(editedSeries);
         chart = createChart(dataset);
         chartPanel = new ChartPanel(chart);
         chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
@@ -343,13 +395,31 @@ public class CurveHandlerWindow extends JWindow {
 
     private void fillCurveFormats() {
         jcbCurveFormat.removeAllItems();
+        jcbCurveFormatEdited.removeAllItems();
         for (CurveDataTypes dataType : CurveDataTypes.values()) {
             jcbCurveFormat.addItem(dataType);
+            jcbCurveFormatEdited.addItem(dataType);
         }
     }
 
+    private void fillSomeGuiElements() {
+        jcbFileExtension.removeAllItems();
+        jcbFileExtension.addItem("340");
+        jcbFileExtension.addItem("curve");
+
+        jcbNewOrOld.removeAllItems();
+        jcbNewOrOld.addItem("Opened File");
+        jcbNewOrOld.addItem("Edited File");
+
+        //21-64
+        jcbMemoryAddres.removeAllItems();
+        for (int i = 21; i < 65; i++) {
+            jcbMemoryAddres.addItem(i);
+        }
+
+    }
+
     private void updateOpenedCurveInfo(CurveMetaData curveMetaData) {
-        fillCurveFormats();
         if (curveMetaData.getSensorModel() != null)
             jtfCurveName.setText(curveMetaData.getSensorModel());
         if (curveMetaData.getSerialNumber() != null)
@@ -362,6 +432,21 @@ public class CurveHandlerWindow extends JWindow {
             jtfTemperatureCoefficient.setText(curveMetaData.getTemperatureCoefficient());
         if (curveMetaData.getNumberOfBreakpoints() != null)
             jtfNumberOfBreakpoints.setText(curveMetaData.getNumberOfBreakpoints().toString());
+    }
+
+    private void updateEditedCurveInfo(CurveMetaData curveMetaData) {
+        if (curveMetaData.getSensorModel() != null)
+            jtfCurveNameEdited.setText(curveMetaData.getSensorModel());
+        if (curveMetaData.getSerialNumber() != null)
+            jtfSerialNumberEdited.setText(curveMetaData.getSerialNumber());
+        if (curveMetaData.getDataFormat() != null)
+            jcbCurveFormatEdited.setSelectedItem(curveMetaData.getDataFormat());
+        if (curveMetaData.getSetPointLimit() != null)
+            jtfPointsLimitEdited.setText(curveMetaData.getSetPointLimit().toString());
+        if (curveMetaData.getTemperatureCoefficient() != null)
+            jtfTermKoefTypeEdited.setText(curveMetaData.getTemperatureCoefficient());
+        if (curveMetaData.getNumberOfBreakpoints() != null)
+            jtfPointsCountEdited.setText(curveMetaData.getNumberOfBreakpoints().toString());
     }
 
     private void updateTableOpenedFile(CurveData curveData) {
@@ -379,11 +464,29 @@ public class CurveHandlerWindow extends JWindow {
         jtbFilePreviewRead.setModel(new DefaultTableModel(rowsList.toArray(new String[0][0]), header));
     }
 
+    private void updateTableEditedFile(CurveData curveData) {
+        // Заголовки столбцов
+        String[] header = curveData.getCurveMetaData().getDataFormat().getName().split("vs");
+
+        //Заполнение таблицы
+        // Добавляем новые точки данных через лямбдочку
+        ArrayList<String[]> rowsList = new ArrayList<>();
+        curveData.getCurvePoints().forEach(it -> {
+            rowsList.add(new String[]{String.valueOf(it.getKey()), String.valueOf(it.getValue())});
+        });
+
+        // Установка модели таблицы
+        jtbFilePreviewEdite.setModel(new DefaultTableModel(rowsList.toArray(new String[0][0]), header));
+    }
+
 
     private void repaintChart() {
         if (chartPanel == null) {
+            System.out.println("Понадобилась реинциализация графика");
             initChart();
         }
+
+
         // Обновляем график
         chartPanel.repaint();
 
@@ -410,20 +513,14 @@ public class CurveHandlerWindow extends JWindow {
         repaintChart();
     }
 
-    private void buildCalculatedData(List<String[]> data) {
+    private void buildEditedData(CurveData curveData) {
         // Очищаем существующие данные
-        calculateSeries.clear();
-
-        // Добавляем новые точки данных
-        for (String[] row : data) {
-            try {
-                double measurement = Double.parseDouble(row[0]);
-                double temperature = Double.parseDouble(row[1]);
-                calculateSeries.add(measurement, temperature);
-            } catch (NumberFormatException ignored) {
-                // Пропускаем некорректные строки
-            }
-        }
+        editedSeries.clear();
+        // Добавляем новые точки данных через лямбдочку
+        curveData.getCurvePoints().forEach(it -> {
+            editedSeries.add(it.getKey(), it.getValue());
+        });
+        // Перересовываем график
         repaintChart();
     }
 
@@ -689,8 +786,8 @@ public class CurveHandlerWindow extends JWindow {
         panel1.add(panel9, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         final JScrollPane scrollPane1 = new JScrollPane();
         panel9.add(scrollPane1, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(100, 200), new Dimension(200, 350), new Dimension(250, 400), 0, false));
-        final JTable table1 = new JTable();
-        scrollPane1.setViewportView(table1);
+        jtbFilePreviewEdite = new JTable();
+        scrollPane1.setViewportView(jtbFilePreviewEdite);
         final Spacer spacer19 = new Spacer();
         panel9.add(spacer19, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         final Spacer spacer20 = new Spacer();
@@ -710,5 +807,15 @@ public class CurveHandlerWindow extends JWindow {
 
     private void createUIComponents() {
         // TODO: place custom component creation code here
+    }
+
+    @Override
+    public void renderData() {
+        //ToDo придумать что нибудь красивое
+    }
+
+    @Override
+    public boolean isEnable() {
+        return true;
     }
 }

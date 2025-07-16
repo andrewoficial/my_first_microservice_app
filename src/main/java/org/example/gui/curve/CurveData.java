@@ -112,4 +112,9 @@ public class CurveData {
         return true;
     }
 
+    public void setCurvePoints(List<Map.Entry<Double, Double>> calculatedRawData) {
+        if(calculatedRawData == null) return;
+        if(calculatedRawData.isEmpty()) return;
+        this.curvePoints = calculatedRawData;
+    }
 }
