@@ -9,8 +9,8 @@ import java.util.List;
 public enum CurveDataTypes {
 
     MV_V_K(0, "million Volts vs Kelvin"),
-    V_V_K(1, "Volts vs Kelvin"),
-    O_V_K(2, "Ohms vs Kelvin"),
+    O_V_K(1, "Ohms vs Kelvin"),
+    V_V_K(2, "Volts vs Kelvin"),
     LO_V_K(3, "Log Omhs vs Kelvin"),
     sV_V_K(4, "Volts vs Kelvin (spline)"),
     sO_V_K(4, "Ohms vs Kelvin (spline)");

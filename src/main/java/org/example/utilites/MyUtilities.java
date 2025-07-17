@@ -389,4 +389,23 @@ public class MyUtilities {
 
         return sb.toString();
     }
+
+    public static byte[] strToByte(String str, char endian){
+        if(str == null || str.isEmpty())
+            return null;
+        byte[] result = null;
+        if(endian != 0){
+            result = new byte[str.length()+1];
+        }else{
+            result = new byte[str.length()];
+        }
+
+        for (int i = 0; i < str.length(); i++) {
+            result[i] = (byte) str.charAt(i);
+        }
+        if(endian != 0){
+            result[result.length-1] = (byte) endian;
+        }
+        return result;
+    }
 }

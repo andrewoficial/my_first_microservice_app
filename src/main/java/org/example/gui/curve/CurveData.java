@@ -89,7 +89,8 @@ public class CurveData {
     public boolean isTemperatureIncorrect(Double measurement, Double temperature){
         if(curveMetaData.getSetPointLimit() < temperature){
             log.warn("Переданное значение температуры выше допустимого" + curveMetaData.getSetPointLimit());
-            return true;
+            log.error("ПРОВЕРКА ОТКЛЮЧЕНА НА УРОВНЕ ПРОГРАММЫ");
+            return false;//ToDO обсудить с илъёй
         }
         return false;
     }

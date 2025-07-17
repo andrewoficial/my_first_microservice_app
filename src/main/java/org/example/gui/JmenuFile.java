@@ -450,7 +450,7 @@ public class JmenuFile {
          public void actionPerformed(ActionEvent arg0) {
              System.out.println("arguments [" + arg0.toString() + "] ");
              System.out.println("Curve Handler Window");
-             CurveHandlerWindow curveHandlerWindow = new CurveHandlerWindow();
+             CurveHandlerWindow curveHandlerWindow = new CurveHandlerWindow(prop);
              curveHandlerWindow.setName("Curve Handler Window");
              curveHandlerWindow.pack();
              curveHandlerWindow.setVisible(true);

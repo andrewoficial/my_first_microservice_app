@@ -51,5 +51,10 @@ public enum ParityList {
         return parityLists[number].name;
     }
 
+    public static Integer getValueKikeArray(int number){
+        List<Integer> values = ParityList.getValues();
+        return values.get(number);
+    }
+
 
 }
