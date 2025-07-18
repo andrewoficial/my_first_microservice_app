@@ -97,7 +97,7 @@ public class CurveData {
 
     public boolean isAddingDenied(){
         if(curveMetaData.getNumberOfBreakpoints() != null &&   curvePoints.size() > curveMetaData.getNumberOfBreakpoints()){
-            log.warn("Превышен лимит точек для кривой" + curveMetaData);
+            log.error("Превышен лимит точек для кривой" + curveMetaData.getSensorModel() + " ограничение: " + curveMetaData.getNumberOfBreakpoints());
             return true;
         }
         return false;

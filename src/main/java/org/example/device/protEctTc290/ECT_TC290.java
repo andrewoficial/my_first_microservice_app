@@ -46,7 +46,7 @@ public class ECT_TC290 implements SomeDevice {
         this.commands = commandRegistry.getCommandList();
         comParameters.setDataBits(DataBitsList.B8);
         comParameters.setParity(ParityList.P_EV);
-        comParameters.setBaudRate(BaudRatesList.B9600);
+        comParameters.setBaudRate(BaudRatesList.B115200);
         comParameters.setStopBits(StopBitsList.S1);
         comParameters.setStringEndian(StringEndianList.CR);
         comParameters.setMillisLimit(150);

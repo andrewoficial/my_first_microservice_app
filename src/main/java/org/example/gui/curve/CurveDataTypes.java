@@ -8,12 +8,12 @@ import java.util.List;
 
 public enum CurveDataTypes {
 
-    MV_V_K(0, "million Volts vs Kelvin"),
-    O_V_K(1, "Ohms vs Kelvin"),
+    MV_V_K(1, "million Volts vs Kelvin"),
     V_V_K(2, "Volts vs Kelvin"),
-    LO_V_K(3, "Log Omhs vs Kelvin"),
-    sV_V_K(4, "Volts vs Kelvin (spline)"),
-    sO_V_K(4, "Ohms vs Kelvin (spline)");
+    O_V_K(3, "Ohms vs Kelvin"),
+    LO_V_K(4, "Log Omhs vs Kelvin"),
+    sV_V_K(5, "Volts vs Kelvin (spline)"),
+    sO_V_K(6, "Ohms vs Kelvin (spline)");
 
     @Getter
     private final int value;
@@ -57,5 +57,13 @@ public enum CurveDataTypes {
         return curveFormats[number].name;
     }
 
+    public static CurveDataTypes getByValue(int value) {
+        for (CurveDataTypes type : values()) {
+            if (type.getValue() == value) {
+                return type;
+            }
+        }
+        throw new IllegalArgumentException("Unknown format value: " + value);
+    }
 
 }

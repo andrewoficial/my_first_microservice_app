@@ -6,6 +6,10 @@ import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import org.apache.log4j.Logger;
 import org.example.gui.Rendeble;
+import org.example.gui.curve.file.Serialization;
+import org.example.gui.curve.math.CalculatedCurveData;
+import org.example.gui.curve.math.Calculator;
+import org.example.gui.curve.math.CurveCalculationException;
 import org.example.services.comPort.BaudRatesList;
 import org.example.services.comPort.ParityList;
 import org.example.utilites.ListenerUtils;
@@ -36,42 +40,31 @@ import java.util.function.IntFunction;
 public class CurveHandlerWindow extends JFrame implements Rendeble {
     private Logger log = null;
     private final MyProperties prop;
-
+    private final Serialization ser = new Serialization();
+    private final Calculator calc = new Calculator();
     private JPanel comConnection;
     private JComboBox jcbComPortNumber;
     private JComboBox jcbComBarity;
     private JComboBox jcbComSpeed;
     private JButton jbOpenComPort;
-    private JTable jtbFilePreviewRead;
+    private JTable jtbFromFilePreview;
     private JPanel jpnGraph;
     private JButton jbtSelectFile;
     private JPanel mainPane;
     private JPanel fileSelect;
-    private JPanel jpTableRead;
-    private JScrollPane jspForTableRead;
     private JLabel jlbSelectedFile;
-    private JPanel jpOpenedCurvePreview;
-    private JPanel jpCurveInformation;
-    private JPanel jpCurveName;
-    private JTextField jtfCurveName;
-    private JPanel jpSerialNumber;
-    private JTextField jvtSerialNumber;
-    private JPanel jpPointLimit;
-    private JTextField jvtPointLimit;
-    private JPanel jpCurveFormat;
-    private JComboBox jcbCurveFormat;
-    private JPanel jpTemperatCoeff;
-    private JTextField jtfTemperatureCoefficient;
-    private JLabel TermKoefs;
-    private JPanel jpNumberOfBreakpoints;
-    private JLabel jlNumberOfBreakpoints;
-    private JTextField jtfNumberOfBreakpoints;
+    private JTextField jtfFromFileCurveName;
+    private JTextField jtfFromFileSerialNumber;
+    private JTextField jtfFromFilePointLimit;
+    private JComboBox jcbFromFileCurveFormat;
+    private JTextField jtfFromFileTermCoef;
+    private JTextField jtfFromFileNumbeCounts;
     private JButton jbCloseComPort;
     private JPanel jpFileSave;
-    private JComboBox jcbFileExtension;
+    private JComboBox jcbFileExtensionForSave;
     private JButton jbtSaveFile;
     private JComboBox jcbMemoryAddres;
-    private JComboBox jcbNewOrOld;
+    private JComboBox jcbFileSourceForWrite;
     private JButton jbtWrite;
     private JPanel jpFileWrite;
     private JTextField jtfKelvinMeasured;
@@ -80,38 +73,103 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
     private JPanel jpEditGraph;
     private JPanel jpGraphActions;
     private JButton jbtClearGraph;
-    private JButton jbtAddReadetPoly;
-    private JButton jbtAddCalculatedPoly;
-    private JPanel jpEditedCurvePreview;
-    private JLabel jlbCurveNameEdited;
-    private JTextField jtfCurveNameEdited;
-    private JLabel jlbSerialNumberEdited;
-    private JTextField jtfSerialNumberEdited;
-    private JLabel jlpPointsLimitEdited;
-    private JTextField jtfPointsLimitEdited;
-    private JLabel jlbCurveFormatEdited;
-    private JComboBox jcbCurveFormatEdited;
-    private JLabel jlbTermKoefTypeEdited;
-    private JTextField jtfTermKoefTypeEdited;
-    private JLabel jlbPointsCountEdited;
-    private JTextField jtfPointsCountEdited;
-    private JTable jtbFilePreviewEdite;
-    private JLabel jlbSelectedFileEdited;
+    private JButton jbtAddPolyFromFile;
+    private JButton jbtAddPolyCalculated;
+    private JTextField jtfCalculatedCurveName;
+    private JTextField jtfCalculatedSerialNumber;
+    private JLabel jlpCalculatedPointLimit;
+    private JTextField jtfCalculatedPointLimit;
+    private JComboBox jcbCalculatedCurveFormat;
+    private JTextField jtfCalculatedTermCoef;
+    private JTextField jtfCalculatedNumbeCounts;
+    private JTable jtbCalculatedPreview;
+    private JLabel jlbSavedFile;
     private JPanel jpnColorStatus;
     private JLabel jlbStatus;
     private JPanel jpDataTranserProggres;
     private JProgressBar jpbCommandSending;
     private JLabel jlbNearestPoint;
     private JLabel jlbAddingVolts;
-    private JPanel jpCurveInformationEdited;
-    private JPanel jpTableEdite;
-    private XYSeries readetSeries = new XYSeries("File Data");
-    private XYSeries editedSeries = new XYSeries("Calculated Data");
+    private JTabbedPane jtpFilePreview;
+    private JPanel jpFromFileCurvePreview;
+    private JPanel jpFromFileCurveInformation;
+    private JPanel jpFromFileCurveName;
+    private JPanel jpFromFileSerialNumber;
+    private JPanel jpFromFilePointLimit;
+    private JPanel jpFromFileCurveFormat;
+    private JPanel jpFromFileTemperatCoeff;
+    private JLabel jlbFromFileTermCoef;
+    private JPanel jpFromFileNumberOfBreakpoints;
+    private JLabel jlbFromFileNumbeCounts;
+    private JPanel jpFromFileTable;
+    private JScrollPane jspFromFileTable;
+    private JPanel jpCalculatedCurvePreview;
+    private JPanel jpCalculatedCurveInformation;
+    private JLabel jlbCalculatedCurveName;
+    private JLabel jlbCalculatedSerialNumber;
+    private JLabel jlbCalculatedCurveFormat;
+    private JLabel jlbCalculatedTermCoef;
+    private JLabel jlbCalculatedNumbeCounts;
+    private JPanel jpCalculatedTable;
+    private JPanel jpFromDeviceCurvePreview;
+    private JPanel jpCurveInformationSelected;
+    private JPanel jpFromDeviceTable;
+    private JTabbedPane tabbedPane1;
+    private JScrollPane jspReadetNamesStandartCurves;
+    private JScrollPane jspReadetNamesUsersCurves;
+    private JTextField jtfFromDeviceCurveName;
+    private JTextField jtfFromDeviceSerialNumber;
+    private JTextField jtfFromDevicePointLimit;
+    private JComboBox jcbFromDeviceCurveFormat;
+    private JTextField jtfFromDeviceTermCoef;
+    private JTextField jtfFromDeviceNumbeCounts;
+    private JTable jtbFromDevicePreview;
+    private JLabel jlbFromFileCurveName;
+    private JLabel jlbFromFileSerialNumber;
+    private JLabel jlbFromFilePointLimit;
+    private JLabel jlbFromFileCurveFormat;
+    private JPanel jtpFromFileCurvePreview;
+    private JPanel jtpCalculatedCurvePreview;
+    private JPanel jpnCalculatedCurveName;
+    private JPanel jpCalculatedSerialNumber;
+    private JPanel jpCalculatedPointLimit;
+    private JPanel jpCalculatedCurveFormat;
+    private JPanel jpCalculatedTemperatCoeff;
+    private JPanel jpCalculatedNumberOfBreakpoints;
+    private JScrollPane jspCalculatedTable;
+    private JPanel jtpFromDeviceCurvePreview;
+    private JPanel jpFromDeviceCurveName;
+    private JLabel jlbFromDeviceCurveName;
+    private JPanel jpFromDeviceSerialNumber;
+    private JLabel jlbFromDeviceSerialNumber;
+    private JPanel jpFromDevicePointLimit;
+    private JLabel jlbFromDevicePointLimit;
+    private JPanel jpFromDeviceCurveFormat;
+    private JLabel jlbFromDeviceCurveFormat;
+    private JPanel jpFromDeviceTemperatCoeff;
+    private JLabel jlbFromDeviceTermCoef;
+    private JPanel jpFromDeviceNumberOfBreakpoints;
+    private JLabel jlbFromDeviceNumbeCounts;
+    private JScrollPane jspFromDeviceTable;
+    private JPanel jpnSelectedFile;
+    private JScrollPane jspSelectedFile;
+    private JPanel jpnSavedFile;
+    private JScrollPane jspSavedFile;
+    private JComboBox jcbFileSourceForSave;
+    private JComboBox jcbFileSourceForCalc;
+    private JButton jbtAddPolyFromDevice;
+    private XYSeries fromFileSeries = new XYSeries("From File");
+    private XYSeries calculatedSeries = new XYSeries("Calculated");
+    private XYSeries fromDeviceSeries = new XYSeries("From Device");
     private XYSeriesCollection dataset = new XYSeriesCollection();
     private JFreeChart chart;
     private ChartPanel chartPanel;
     private CurveStorage curveStorage = new CurveStorage();
-
+    private ArrayList<CurveMetaData> curveMetaDtataInDeviceList = new ArrayList<>();
+    private final Map<JButton, CurveMetaData> buttonCurveMap = new HashMap<>();
+    private JPanel curvesContainerStandart; // Контейнер для кнопок
+    private JPanel curvesContainerUsers; // Контейнер для кнопок
+    private final ArrayList<CurveMetaData> curveMetaDataInDeviceList = new ArrayList<>();
     private SerialPort comPort = null;
 
     String filePath;
@@ -132,6 +190,14 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         log = Logger.getLogger(CurveHandlerWindow.class);
         this.prop = prop;
         setContentPane(mainPane);
+
+        curvesContainerStandart = new JPanel();
+        curvesContainerStandart.setLayout(new BoxLayout(curvesContainerStandart, BoxLayout.Y_AXIS));
+        jspReadetNamesStandartCurves.setViewportView(curvesContainerStandart);
+
+        curvesContainerUsers = new JPanel();
+        curvesContainerUsers.setLayout(new BoxLayout(curvesContainerUsers, BoxLayout.Y_AXIS));
+        jspReadetNamesUsersCurves.setViewportView(curvesContainerUsers);
         updateComPortList();
         //Заполнение полей комбо-боксов
         initComboBox(jcbComBarity,
@@ -145,28 +211,30 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
 
         jbtSelectFile.addActionListener(this::handleFileSelection);
         jbtClearGraph.addActionListener(this::clearGraph);
-        jbtAddReadetPoly.addActionListener(this::paintReadetPoly);
-        jbtAddCalculatedPoly.addActionListener(this::paintEditedPoly);
+        jbtAddPolyFromFile.addActionListener(this::paintPolyFromFile);
+        jbtAddPolyCalculated.addActionListener(this::paintCalculatedPoly);
+        jbtAddPolyFromDevice.addActionListener(this::paintPolyFromDevice);
+
         jbtCalculate.addActionListener(this::calculateActionHandler);
         jbOpenComPort.addActionListener(this::openPortActionHandler);
         jbtWrite.addActionListener(this::writeInDeviceHandler);
 
-        ListenerUtils.addDocumentListener(jtfCurveNameEdited, this::updateOnEditeCurveName);
-        ListenerUtils.addKeyListener(jtfCurveNameEdited, this::updateOnEnterCurveName);
+        ListenerUtils.addDocumentListener(jtfCalculatedCurveName, this::updateOnEditeCurveName);
+        ListenerUtils.addKeyListener(jtfCalculatedCurveName, this::updateOnEnterCurveName);
 
-        ListenerUtils.addDocumentListener(jtfSerialNumberEdited, this::updateOnEditeCurveSerialNumber);
-        ListenerUtils.addKeyListener(jtfSerialNumberEdited, this::updateOnEnterCurveSerialNumber);
+        ListenerUtils.addDocumentListener(jtfCalculatedSerialNumber, this::updateOnEditeCurveSerialNumber);
+        ListenerUtils.addKeyListener(jtfCalculatedSerialNumber, this::updateOnEnterCurveSerialNumber);
 
-        ListenerUtils.addDocumentListener(jtfPointsLimitEdited, this::updateOnEditeCurvePointsLimit);
-        ListenerUtils.addKeyListener(jtfPointsLimitEdited, this::updateOnEnterCurvePointsLimit);
+        ListenerUtils.addDocumentListener(jtfCalculatedPointLimit, this::updateOnEditeCurvePointsLimit);
+        ListenerUtils.addKeyListener(jtfCalculatedPointLimit, this::updateOnEnterCurvePointsLimit);
 
-        jcbCurveFormatEdited.addActionListener(this::updateOnEditeCurveFormat);
+        jcbCalculatedCurveFormat.addActionListener(this::updateOnEditeCurveFormat);
 
-        ListenerUtils.addDocumentListener(jtfTermKoefTypeEdited, this::updateOnEditeCurveTermKoefType);
-        ListenerUtils.addKeyListener(jtfTermKoefTypeEdited, this::updateOnEnterCurveTermKoefType);
+        ListenerUtils.addDocumentListener(jtfCalculatedTermCoef, this::updateOnEditeCurveTermKoefType);
+        ListenerUtils.addKeyListener(jtfCalculatedTermCoef, this::updateOnEnterCurveTermKoefType);
 
-        ListenerUtils.addDocumentListener(jtfPointsCountEdited, this::updateOnEditeCurvePointsCount);
-        ListenerUtils.addKeyListener(jtfPointsCountEdited, this::updateOnEnterCurvePointsCount);
+        ListenerUtils.addDocumentListener(jtfCalculatedNumbeCounts, this::updateOnEditeCurvePointsCount);
+        ListenerUtils.addKeyListener(jtfCalculatedNumbeCounts, this::updateOnEnterCurvePointsCount);
 
         jbtSaveFile.addActionListener(this::saveFileActionHandler);
         fillCurveFormats();
@@ -229,10 +297,10 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
             );
 
             // Устанавливаем таймауты (значения по умолчанию)
-            int readTimeout = 1000;  // 1 секунда
-            int writeTimeout = 1000;  // 1 секунда
+            int readTimeout = 80;  // 1 секунда
+            int writeTimeout = 120;  // 1 секунда
             comPort.setComPortTimeouts(
-                    SerialPort.TIMEOUT_READ_SEMI_BLOCKING,
+                    SerialPort.TIMEOUT_NONBLOCKING,
                     readTimeout,
                     writeTimeout
             );
@@ -259,6 +327,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
 
 
         jlbStatus.setText(checkDeviceConnection());
+        getListOfCurvesInDevice();
     }
 
     private String checkDeviceConnection() {
@@ -270,6 +339,166 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         } else {
             return "Ошибка 001. Порт не открыт.";
         }
+    }
+
+    private String getListOfCurvesInDevice() {
+        log.error("Начинаю отображение списка кривых");
+
+
+        // Настройка прогресс-бара
+        jpDataTranserProggres.setVisible(true);
+        jpbCommandSending.setValue(0);
+        jpbCommandSending.setStringPainted(true);
+
+        new Thread(() -> {
+            try {
+                CurveDeviceCommander curveDeviceCommander = new CurveDeviceCommander(comPort);
+
+                final ArrayList<CurveMetaData> resultHolder = curveDeviceCommander.getListOfCurvesInDevice(progress -> {
+                    SwingUtilities.invokeLater(() -> {
+                        jpbCommandSending.setValue(progress);
+                        jlbStatus.setText("Чтение... " + progress + "%");
+                        log.error("Чтение... " + progress + "%");
+                    });
+                });
+
+                SwingUtilities.invokeLater(() -> {
+                    jlbStatus.setText("Считывание завершено успешно!");
+                    jpbCommandSending.setValue(100);
+                    log.error("В коллекции " + resultHolder.size());
+
+                    curvesContainerUsers.removeAll();
+                    curvesContainerStandart.removeAll();
+                    // Добавляем кнопки для всех кривых
+                    log.error("Начинаю перебор коллекции");
+                    for (CurveMetaData curve : resultHolder) {
+                        //log.error("Просматриваю кривую " + curve.getSensorModel());
+                        if (curve.getIsUserCurve() != null && curve.getIsUserCurve()) {
+                            curvesContainerUsers.add(createCurveButton(curve));
+                        } else {
+                            curvesContainerStandart.add(createCurveButton(curve));
+                        }
+                    }
+
+                    // Сохраняем результат в основном списке
+                    curveMetaDataInDeviceList.clear();
+                    curveMetaDataInDeviceList.addAll(resultHolder);
+
+                    // Принудительное обновление GUI
+                    curvesContainerUsers.revalidate();
+                    curvesContainerUsers.repaint();
+                    curvesContainerStandart.revalidate();
+                    curvesContainerStandart.repaint();
+
+                    // Убеждаемся, что скроллпейн видим
+                    jspReadetNamesStandartCurves.setVisible(true);
+
+                });
+            } catch (Exception ex) {
+                SwingUtilities.invokeLater(() -> {
+                    jlbStatus.setText("Ошибка записи: " + ex.getMessage());
+                    log.error("Ошибка записи в устройство", ex);
+                });
+            }
+        }).start();
+
+
+        return "Завершено получение списка кривых";
+    }
+
+    private JButton createCurveButton(CurveMetaData curve) {
+        //log.info("Создаю кнопку кривой " + curve.getSensorModel());
+        String buttonText = String.format("%s (SN: %s)",
+                curve.getSensorModel(), curve.getSerialNumber());
+
+        JButton curveButton = new JButton(buttonText);
+        curveButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Выравнивание по левому краю
+        curveButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, curveButton.getPreferredSize().height));
+
+        // Сохраняем связь кнопки с данными кривой
+        buttonCurveMap.put(curveButton, curve);
+
+        // Добавляем всплывающую подсказку с деталями
+        curveButton.setToolTipText(createTooltip(curve));
+
+        // Обработчик клика
+        curveButton.addActionListener(e -> {
+            CurveMetaData selectedCurve = buttonCurveMap.get(e.getSource());
+            if (selectedCurve != null) {
+                loadCurveData(selectedCurve);
+            }
+        });
+
+        return curveButton;
+    }
+
+    private void loadCurveData(CurveMetaData curve) {
+
+        jpDataTranserProggres.setVisible(true);
+        jpbCommandSending.setValue(0);
+        jlbStatus.setText("Начато чтение кривой...");
+        new Thread(() -> {
+            log.warn("Будет отправлена команда CRVPT? " + curve.getNumberInDeviceMemory() + ",1");
+            CurveDeviceCommander curveDeviceCommander = new CurveDeviceCommander(comPort);
+
+            try {
+                List<Map.Entry<Double, Double>> curvePoints = curveDeviceCommander.readCurveFromDevice(
+                        curve.getNumberInDeviceMemory(),
+                        progress -> {
+                            // Обновляем прогресс в потоке GUI
+                            SwingUtilities.invokeLater(() -> {
+                                jpbCommandSending.setValue(progress);
+                                jlbStatus.setText("Чтение полинома... " + progress + "%");
+                                log.info("Прогресс чтения: " + progress + "%");
+                            });
+                        });
+
+                // После успешного чтения
+                SwingUtilities.invokeLater(() -> {
+                    jlbStatus.setText("Считывание завершено успешно! Точек: " + curvePoints.size());
+                    jpbCommandSending.setValue(100);
+                    log.info("Прочитано точек: " + curvePoints.size());
+                    CurveData readetCurveData = new CurveData();
+                    curve.setNumberOfBreakpoints(curvePoints.size());
+                    readetCurveData.setCurveMetaData(curve);
+                    readetCurveData.setCurvePoints(curvePoints);
+                    curveStorage.addOrUpdateCurve("FromDevice", readetCurveData);
+                    // 11. Обновление таблицы и графика
+                    // TODO: Доп. проверки
+                    buildGraph(curveStorage.getCurve("FromDevice"), fromDeviceSeries);
+                    updateDataTableFromFile(curveStorage.getCurve("FromDevice"));
+                    updateCurveInfoFromDevice(curveStorage.getCurve("FromDevice").getCurveMetaData());
+
+                });
+            } catch (Exception e) {
+                SwingUtilities.invokeLater(() -> {
+                    jlbStatus.setText("Ошибка чтения: " + e.getMessage());
+                    log.error("Ошибка чтения кривой", e);
+                    jpDataTranserProggres.setVisible(false);
+                });
+            }
+        }).start(); // Запускаем фоновый поток
+
+
+    }
+
+    private String createTooltip(CurveMetaData curve) {
+        return String.format("<html>Модель: %s<br>С/н: %s<br>Формат: %s<br>Макс.темп.: %dK</html>",
+                curve.getSensorModel(),
+                curve.getSerialNumber(),
+                curve.getDataFormat().getName(),
+                curve.getSetPointLimit());
+    }
+
+
+    // Вспомогательный метод для поиска кривой
+    private CurveMetaData findCurveBySerial(String serial) {
+        for (CurveMetaData curve : curveMetaDtataInDeviceList) {
+            if (curve.getSerialNumber().equals(serial)) {
+                return curve;
+            }
+        }
+        return null;
     }
 
     private void writeInDeviceHandler(ActionEvent actionEvent) {
@@ -289,7 +518,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         // Определение адреса памяти. Доступны адреса с 21 по 64.
         int memoryAddress = jcbMemoryAddres.getSelectedIndex() + 21;
         // Определение кривой для записи
-        String curveType = (jcbNewOrOld.getSelectedIndex() == 0) ? "Opened" : "Edited";
+        String curveType = (jcbFileSourceForWrite.getSelectedIndex() == 0) ? "FromFile" : "FromCalculated";
         log.info("Запись {" + curveType + "} файла");
 
         if (!curveStorage.isContains(curveType)) {
@@ -329,112 +558,112 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
     }
 
     private void updateOnEditeCurveFormat(ActionEvent actionEvent) {
-        System.out.println("Set " + ((CurveDataTypes) jcbCurveFormatEdited.getSelectedItem()));
-        if (curveStorage.isContains("Edited"))
-            curveStorage.getCurve("Edited").getCurveMetaData().setDataFormat((CurveDataTypes) jcbCurveFormatEdited.getSelectedItem());
+        System.out.println("Set " + ((CurveDataTypes) jcbCalculatedCurveFormat.getSelectedItem()));
+        if (curveStorage.isContains("FromCalculated"))
+            curveStorage.getCurve("FromCalculated").getCurveMetaData().setDataFormat((CurveDataTypes) jcbCalculatedCurveFormat.getSelectedItem());
     }
 
     private void updateOnEditeCurvePointsCount() {
         Integer count = null;
         try {
-            count = Integer.parseInt(jtfPointsCountEdited.getText());
+            count = Integer.parseInt(jtfCalculatedNumbeCounts.getText());
         } catch (NumberFormatException e) {
-            jtfPointsCountEdited.setText(String.valueOf(curveStorage.getCurve("Edited").getCurveMetaData().getNumberOfBreakpoints()));
+            jtfCalculatedNumbeCounts.setText(String.valueOf(curveStorage.getCurve("FromCalculated").getCurveMetaData().getNumberOfBreakpoints()));
             log.warn("Исключение во время получения числа из строки CurvePointsCount" + e.getMessage());
             //e.printStackTrace();
         }
         if (count != null) {
-            curveStorage.getCurve("Edited").getCurveMetaData().setNumberOfBreakpoints(Integer.parseInt(jtfPointsCountEdited.getText()));
+            curveStorage.getCurve("FromCalculated").getCurveMetaData().setNumberOfBreakpoints(Integer.parseInt(jtfCalculatedNumbeCounts.getText()));
         }
     }
 
     private void updateOnEnterCurveSerialNumber() {
-        if (jtfSerialNumberEdited.getText() == null || jtfSerialNumberEdited.getText().isEmpty()) {
+        if (jtfCalculatedSerialNumber.getText() == null || jtfCalculatedSerialNumber.getText().isEmpty()) {
             log.warn("Попытка установки null-строки как серийный номер сенсора");
-            jtfSerialNumberEdited.setText(curveStorage.getCurve("Edited").getCurveMetaData().getSerialNumber());
+            jtfCalculatedSerialNumber.setText(curveStorage.getCurve("FromCalculated").getCurveMetaData().getSerialNumber());
         } else {
-            curveStorage.getCurve("Edited").getCurveMetaData().setSerialNumber(jtfSerialNumberEdited.getText());
+            curveStorage.getCurve("FromCalculated").getCurveMetaData().setSerialNumber(jtfCalculatedSerialNumber.getText());
         }
     }
 
     private void updateOnEditeCurveTermKoefType() {
-        if (jtfTermKoefTypeEdited.getText() != null && !jtfTermKoefTypeEdited.getText().isEmpty()) {
-            curveStorage.getCurve("Edited").getCurveMetaData().setTemperatureCoefficient(jtfTermKoefTypeEdited.getText());
+        if (jtfCalculatedTermCoef.getText() != null && !jtfCalculatedTermCoef.getText().isEmpty()) {
+            curveStorage.getCurve("FromCalculated").getCurveMetaData().setTemperatureCoefficient(jtfCalculatedTermCoef.getText());
         }
     }
 
     private void updateOnEnterCurvePointsLimit() {
-        if (jtfPointsLimitEdited.getText() == null || jtfPointsLimitEdited.getText().isEmpty()) {
+        if (jtfCalculatedPointLimit.getText() == null || jtfCalculatedPointLimit.getText().isEmpty()) {
             log.warn("Попытка установки null-строки CurvePointsLimit");
-            jtfPointsLimitEdited.setText(String.valueOf(curveStorage.getCurve("Edited").getCurveMetaData().getSetPointLimit()));
+            jtfCalculatedPointLimit.setText(String.valueOf(curveStorage.getCurve("FromCalculated").getCurveMetaData().getSetPointLimit()));
         } else {
             Integer num = null;
             try {
-                num = Integer.parseInt(jtfPointsLimitEdited.getText());
+                num = Integer.parseInt(jtfCalculatedPointLimit.getText());
             } catch (NumberFormatException ex) {
-                jtfPointsLimitEdited.setText(String.valueOf(curveStorage.getCurve("Edited").getCurveMetaData().getSetPointLimit()));
+                jtfCalculatedPointLimit.setText(String.valueOf(curveStorage.getCurve("FromCalculated").getCurveMetaData().getSetPointLimit()));
                 log.warn("Исключение во время получения числа из строки OnEnterCurvePointsLimit" + ex.getMessage());
                 //ex.printStackTrace();
             }
             if (num != null) {
-                curveStorage.getCurve("Edited").getCurveMetaData().setSetPointLimit(num);
+                curveStorage.getCurve("FromCalculated").getCurveMetaData().setSetPointLimit(num);
             }
         }
     }
 
     private void updateOnEnterCurvePointsCount() {
-        if (jtfPointsCountEdited.getText() == null || jtfPointsCountEdited.getText().isEmpty()) {
+        if (jtfCalculatedNumbeCounts.getText() == null || jtfCalculatedNumbeCounts.getText().isEmpty()) {
             log.warn("Попытка установки null-строки CountEdited");
-            jtfPointsCountEdited.setText(String.valueOf(curveStorage.getCurve("Edited").getCurveMetaData().getNumberOfBreakpoints()));
+            jtfCalculatedNumbeCounts.setText(String.valueOf(curveStorage.getCurve("FromCalculated").getCurveMetaData().getNumberOfBreakpoints()));
         } else {
             Integer count = null;
             try {
-                count = Integer.parseInt(jtfPointsCountEdited.getText());
+                count = Integer.parseInt(jtfCalculatedNumbeCounts.getText());
             } catch (NumberFormatException e) {
-                jtfPointsCountEdited.setText(String.valueOf(curveStorage.getCurve("Edited").getCurveMetaData().getNumberOfBreakpoints()));
+                jtfCalculatedNumbeCounts.setText(String.valueOf(curveStorage.getCurve("FromCalculated").getCurveMetaData().getNumberOfBreakpoints()));
                 log.warn("Исключение во время получения числа из строки OnEnterCurvePointsCount" + e.getMessage());
                 //e.printStackTrace();
             }
             if (count != null) {
-                curveStorage.getCurve("Edited").getCurveMetaData().setNumberOfBreakpoints(Integer.parseInt(jtfPointsCountEdited.getText()));
+                curveStorage.getCurve("FromCalculated").getCurveMetaData().setNumberOfBreakpoints(Integer.parseInt(jtfCalculatedNumbeCounts.getText()));
             }
         }
     }
 
     private void updateOnEnterCurveTermKoefType() {
-        if (jtfTermKoefTypeEdited.getText() == null || jtfTermKoefTypeEdited.getText().isEmpty()) {
+        if (jtfCalculatedTermCoef.getText() == null || jtfCalculatedTermCoef.getText().isEmpty()) {
             log.warn("Попытка установки null-строки как температурного коэффициента");
-            jtfTermKoefTypeEdited.setText(curveStorage.getCurve("Edited").getCurveMetaData().getTemperatureCoefficient());
+            jtfCalculatedTermCoef.setText(curveStorage.getCurve("FromCalculated").getCurveMetaData().getTemperatureCoefficient());
         } else {
-            curveStorage.getCurve("Edited").getCurveMetaData().setTemperatureCoefficient(jtfTermKoefTypeEdited.getText());
+            curveStorage.getCurve("FromCalculated").getCurveMetaData().setTemperatureCoefficient(jtfCalculatedTermCoef.getText());
         }
     }
 
     private void updateOnEditeCurvePointsLimit() {
         Integer num = null;
         try {
-            num = Integer.parseInt(jlpPointsLimitEdited.getText());
+            num = Integer.parseInt(jlpCalculatedPointLimit.getText());
         } catch (NumberFormatException e) {
-            jlpPointsLimitEdited.setText(String.valueOf(curveStorage.getCurve("Edited").getCurveMetaData().getSetPointLimit()));
+            jlpCalculatedPointLimit.setText(String.valueOf(curveStorage.getCurve("FromCalculated").getCurveMetaData().getSetPointLimit()));
             log.warn("Исключение во время получения числа из строки OnEditeCurvePointsLimit" + e.getMessage());
         }
         if (num != null) {
-            curveStorage.getCurve("Edited").getCurveMetaData().setSetPointLimit(num);
+            curveStorage.getCurve("FromCalculated").getCurveMetaData().setSetPointLimit(num);
         }
     }
 
     private void updateOnEditeCurveSerialNumber() {
-        if (jtfSerialNumberEdited.getText() != null && !jtfSerialNumberEdited.getText().isEmpty()) {
-            curveStorage.getCurve("Edited").getCurveMetaData().setSerialNumber(jtfSerialNumberEdited.getText());
+        if (jtfCalculatedSerialNumber.getText() != null && !jtfCalculatedSerialNumber.getText().isEmpty()) {
+            curveStorage.getCurve("FromCalculated").getCurveMetaData().setSerialNumber(jtfCalculatedSerialNumber.getText());
         }
     }
 
     private void updateOnEditeCurveName() {
-        curveStorage.getCurve("Edited").getCurveMetaData().setSensorModel(jtfCurveNameEdited.getText());
+        curveStorage.getCurve("FromCalculated").getCurveMetaData().setSensorModel(jtfCalculatedCurveName.getText());
     }
 
     private void updateOnEnterCurveName() {
-        curveStorage.getCurve("Edited").getCurveMetaData().setSensorModel(jtfCurveNameEdited.getText());
+        curveStorage.getCurve("FromCalculated").getCurveMetaData().setSensorModel(jtfCalculatedCurveName.getText());
     }
 
 
@@ -470,97 +699,47 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
     }
 
     public void clearGraph(ActionEvent e) {
-        readetSeries.clear();
-        editedSeries.clear();
+        fromFileSeries.clear();
+        fromDeviceSeries.clear();
+        calculatedSeries.clear();
+
         repaintChart();
     }
 
-    public void calculateActionHandler(ActionEvent e) {
+    public void calculateActionHandler(ActionEvent e) { //Дописать считывание с гуи нужных переменных и вызов новго метода
         String kelvinString = jtfKelvinMeasured.getText();
-        kelvinString = kelvinString.trim();
-        kelvinString = kelvinString.replaceAll(",", ".");
-
         String voltsString = jtfVoltsMeasured.getText();
-        voltsString = voltsString.trim();
-        voltsString = voltsString.replaceAll(",", ".");
-        double measuredKelvin = Double.parseDouble(kelvinString);
-        double measuredVolts = Double.parseDouble(voltsString);
 
-        // 2. Проверка наличия открытой кривой
-        if (!curveStorage.isContains("Opened")) {
-            jlbStatus.setText("Открытая кривая не найдена");
-            log.warn("Попытка расчета без открытой кривой");
-            return;
+        CurveData selectedCurve = null;
+        if(jcbFileSourceForCalc.getSelectedItem().equals("From Device")) {
+            selectedCurve = curveStorage.getCurve("FromDevice");
+        }else if(jcbFileSourceForCalc.getSelectedItem().equals("From File")){
+            selectedCurve = curveStorage.getCurve("FromFile");
         }
-
-        // 3. Получение данных открытой кривой
-        CurveData openedCurve = curveStorage.getCurve("Opened");
-        List<Map.Entry<Double, Double>> openedPoints = openedCurve.getCurvePoints();
-
-        // 4. Поиск ближайшей точки по температуре
-        double minDiff = Double.MAX_VALUE; //ToDo Ограничение на отклонение
-        Map.Entry<Double, Double> nearestPoint = null;
-
-        for (Map.Entry<Double, Double> point : openedPoints) {
-            double tempDiff = Math.abs(point.getValue() - measuredKelvin);
-            if (tempDiff < minDiff) {
-                minDiff = tempDiff;
-                nearestPoint = point;
-            }
+        CalculatedCurveData calculatedCurveData = null;
+        try {
+            calculatedCurveData = calc.calculateActionHandlerNew(kelvinString, voltsString, selectedCurve);
+        } catch (CurveCalculationException ex) {
+            jlbStatus.setText("Произошла ошибка во время расчета кривой" + ex.getMessage());
         }
-
-        // 5. Проверка найденной точки
-        if (nearestPoint == null) {
-            jlbStatus.setText("Ошибка: не найдено точек в кривой");
-            log.error("Не удалось найти ближайшую точку в открытой кривой");
-            return;
-        }
-
-        // 6. Расчет разницы напряжений
-        double voltageDiff = measuredVolts - nearestPoint.getKey();
-
-        // 7. Обновление меток
-        jlbNearestPoint.setText(String.format("Ближ.т.: %.2fK", nearestPoint.getValue()));
-        jlbAddingVolts.setText(String.format("Точки смещены на: %.4fV", voltageDiff));
-
-        // 8. Создание/обновление отредактированной кривой
-        CurveData editedCurve;
-        if (curveStorage.isContains("Edited")) {
-            editedCurve = curveStorage.getCurve("Edited");
-        } else {
-            jlbStatus.setText("Создание кривой с нуля еще не реализовано");
-            log.error("Создание кривой с нуля еще не реализовано");
-            return;
-        }
-
-        // 9. Применение смещения ко всем точкам
-        List<Map.Entry<Double, Double>> editedPoints = new ArrayList<>();
-        for (Map.Entry<Double, Double> point : openedPoints) {
-            // Создаем новую точку со смещенным напряжением
-            double newVoltage = point.getKey() + voltageDiff;
-            editedPoints.add(new AbstractMap.SimpleEntry<>(newVoltage, point.getValue()));
-        }
-        editedCurve.setCurvePoints(editedPoints);
-
-        // 10. Логирование
-        log.info("Расчет завершен. Ближайшая точка: " + nearestPoint.getValue() + "K (" + nearestPoint.getKey() + "V), Смещение: " + voltageDiff + "V");
-        log.info("Отредактировано точек: " + editedPoints.size());
-
-        // 11. Обновление таблицы и графика
-        buildEditedData(editedCurve);
-        updateTableEditedFile(editedCurve);
-
-        jlbStatus.setText("Расчет завершен успешно");
-
-
+        curveStorage.addOrUpdateCurve("Calculated", calculatedCurveData.getCurveData());
+        jlbNearestPoint.setText(String.format("Ближ.т.: %.2fK", calculatedCurveData.getNearestPoint()));
+        jlbAddingVolts.setText(String.format("Точки смещены на: %.4fV", calculatedCurveData.getShiftSize()));
+        buildGraph(calculatedCurveData.getCurveData(), calculatedSeries);
+        updateDataTableCalculated(calculatedCurveData.getCurveData());
     }
 
-    public void paintReadetPoly(ActionEvent e) {
-        buildReadData(curveStorage.getCurve("Opened"));
+
+    public void paintPolyFromFile(ActionEvent e) {
+        buildGraph(curveStorage.getCurve("FromFile"), fromFileSeries);
     }
 
-    public void paintEditedPoly(ActionEvent e) {
-        buildEditedData(curveStorage.getCurve("Edited"));
+    public void paintCalculatedPoly(ActionEvent e) {
+        buildGraph(curveStorage.getCurve("FromCalculated"), calculatedSeries);
+    }
+
+    public void paintPolyFromDevice(ActionEvent e) {
+        buildGraph(curveStorage.getCurve("FromDevice"), fromDeviceSeries);
     }
 
 
@@ -569,7 +748,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         FileNameExtensionFilter filter;
         String extension;
 
-        if (jcbFileExtension.getSelectedItem().equals("340")) {
+        if (jcbFileExtensionForSave.getSelectedItem().equals("340")) {
             filter = new FileNameExtensionFilter("Poly files (*.340)", "340");
             extension = ".340";
         } else {
@@ -593,14 +772,14 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
                 selectedFile = new File(filePath + extension);
             }
 
-            CurveMetaData metaData = curveStorage.getCurve("Edited").getCurveMetaData();
-            List<Map.Entry<Double, Double>> curveData = curveStorage.getCurve("Edited").getCurvePoints();
+            CurveMetaData metaData = curveStorage.getCurve("FromCalculated").getCurveMetaData();
+            List<Map.Entry<Double, Double>> curveData = curveStorage.getCurve("FromCalculated").getCurvePoints();
 
             try (PrintWriter writer = new PrintWriter(selectedFile)) {
                 writer.println("Sensor Model:   " + metaData.getSensorModel());
                 writer.println("Serial Number:  " + metaData.getSerialNumber());
                 writer.println("Data Format:    " +
-                        metaData.getDataFormat().ordinal() + "      (" +
+                        metaData.getDataFormat().getValue() + "      (" +
                         metaData.getDataFormat() + ")");
                 writer.println("SetPoint Limit: " +
                         metaData.getSetPointLimit() + "      (Kelvin)");
@@ -637,7 +816,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
 
                         String tempStr = String.format(Locale.US, "%.3f", temperature);
 
-                        writer.printf(Locale.US, "%3d  %-11s  %s%n",
+                        writer.printf(Locale.US, "%3d  %-11s   %s%n",
                                 i + 1,
                                 valueStr.length() > 11 ? valueStr.substring(0, 11) : valueStr,
                                 tempStr);
@@ -652,7 +831,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
                     }
                 }
 
-                jlbSelectedFileEdited.setText(selectedFile.getAbsolutePath());
+                jlbSavedFile.setText(selectedFile.getAbsolutePath());
             } catch (FileNotFoundException ex) {
                 log.error("Ошибка сохранения файла", ex);
                 JOptionPane.showMessageDialog(null,
@@ -671,11 +850,11 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
             StringBuilder sb = new StringBuilder();
             int needLineScip = 5;
             if (file.getName().endsWith(".340")) {
-                needLineScip = 9;
+                needLineScip = 8;
             } else if (file.getName().endsWith(".curve")) {
-                needLineScip = 6;
+                needLineScip = 5;
             }
-            // Пропуск заголовков (первые 5 строк)
+            // Пропуск заголовков (первые n строк)
             line = reader.readLine();
             while (line != null && lineCount < needLineScip) {
                 sb.append(line);
@@ -691,13 +870,16 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
                 String[] parts = new String[2];
                 if (file.getName().endsWith(".340")) {
                     //log.info("Ориентируюсь на позиции в строке");
-                    if (line.length() < 26) {
+                    if (line.length() < 24) {
                         log.warn("Слишком короткая строка" + line.length());
+                        log.warn(line);
+                        line = reader.readLine();
                         i = 0;
                         continue;
                     }
                     if (!(line.charAt(3) == ' ')) {
                         log.warn("Неверное положение пробела после номера строки: " + line.charAt(3));
+                        line = reader.readLine();
                         i = 0;
                         continue;
                     }
@@ -707,7 +889,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
                     String units = line.substring(5, 19);
                     units = units.trim();
 
-                    String temperature = line.substring(19, 26);
+                    String temperature = line.substring(19, line.length() - 1);
                     temperature = temperature.trim();
 
                     parts[0] = units;
@@ -731,11 +913,11 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
             CurveMetaData curveOpenedMetaData = new CurveMetaData();
             CurveMetaData curveEditedMetaData = new CurveMetaData();
 
-            curveOpenedMetaData = updateCurveMetaDara(sb.toString());
-            curveEditedMetaData = updateCurveMetaDara(sb.toString());
+            curveOpenedMetaData = ser.fileHeaderToCurveMetaData(sb.toString()); //updateCurveMetaDara
+            curveEditedMetaData = ser.fileHeaderToCurveMetaData(sb.toString()); //updateCurveMetaDara
 
-            updateOpenedCurveInfo(curveOpenedMetaData);
-            updateEditedCurveInfo(curveEditedMetaData);
+            updateCurveInfoFromFile(curveOpenedMetaData);
+            updateCurveInfoCalculated(curveEditedMetaData);
 
             CurveData curveOpenedData = new CurveData();
             curveOpenedData.setCurveMetaData(curveOpenedMetaData);
@@ -745,17 +927,17 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
             curveEditedData.setCurveMetaData(curveEditedMetaData);
             fillCurveData(curveEditedData, tableData);
 
-            curveStorage.addOrUpdateCurve("Opened", curveOpenedData);
-            curveStorage.addOrUpdateCurve("Edited", curveEditedData);
+            curveStorage.addOrUpdateCurve("FromFile", curveOpenedData);
+            curveStorage.addOrUpdateCurve("FromCalculated", curveEditedData);
 
             // Обновление таблицы
-            updateTableOpenedFile(curveOpenedData);
-            updateTableEditedFile(curveEditedData);
-
+            updateDataTableFromFile(curveOpenedData);
+            updateDataTableCalculated(curveEditedData);
 
             // Построение графика
-            buildReadData(curveStorage.getCurve("Opened"));
-            buildEditedData(curveStorage.getCurve("Edited"));
+            buildGraph(curveStorage.getCurve("FromFile"), fromFileSeries);
+            buildGraph(curveStorage.getCurve("FromCalculated"), calculatedSeries);
+
 
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(null,
@@ -767,8 +949,9 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
 
     private void initChart() {
         dataset.removeAllSeries();
-        dataset.addSeries(readetSeries);
-        dataset.addSeries(editedSeries);
+        dataset.addSeries(fromFileSeries);
+        dataset.addSeries(calculatedSeries);
+        dataset.addSeries(fromDeviceSeries);
         chart = createChart(dataset);
         chartPanel = new ChartPanel(chart);
         chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
@@ -802,102 +985,39 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         return chart;
     }
 
-    private CurveMetaData updateCurveMetaDara(String fileHeader) {
-        CurveMetaData curveMetaData = new CurveMetaData();
-        if (fileHeader == null || fileHeader.isEmpty()) {
-            log.warn("fileHeader == null || fileHeader.isEmpty()");
-            return null;
-        }
 
-        String[] fileStrings = fileHeader.split("\n");
-        if (fileStrings.length == 0) {
-            log.warn("fileStrings.length == 0");
-        }
-
-        for (String fileString : fileStrings) {
-            System.out.println("fileString: " + fileString);
-            if (fileString.startsWith("Sensor Model:")) {
-                String value = fileString.replace("Sensor Model:", "").trim();
-                curveMetaData.setSensorModel(value);
-            } else if (fileString.startsWith("Serial Number:")) {
-                curveMetaData.setSerialNumber(fileString.replace("Serial Number:", "").trim());
-            } else if (fileString.startsWith("Data Format:")) {
-                String dataFormat = fileString.replace("Data Format:", "");
-                CurveDataTypes dataTypes = null;
-                if (dataFormat.contains("\t")) {
-                    dataFormat = dataFormat.trim();
-                    dataFormat = dataFormat.replace("    ", "\t");
-                    try {
-                        Integer foundedNumber = Integer.parseInt(dataFormat.split("\t")[0]);
-                        System.out.println("foundedNumber: " + foundedNumber);
-                        CurveDataTypes[] arrayCurves = CurveDataTypes.values();
-                        dataTypes = arrayCurves[foundedNumber];
-                    } catch (NumberFormatException ex) {
-                        log.warn(ex.getMessage());
-                    }
-                } else {
-                    dataTypes = CurveDataTypes.V_V_K;
-                    log.warn("Set default data type");
-                }
-                curveMetaData.setDataFormat(dataTypes);
-            } else if (fileString.startsWith("SetPoint Limit:")) {
-                String setPointsLimitString = fileString.replace("SetPoint Limit:", "").trim();
-                Integer setPointLimit = 800;
-                if (setPointsLimitString.isEmpty()) {
-                    log.warn("Set points limit is empty");
-                    curveMetaData.setSetPointLimit(setPointLimit);
-                    continue;
-                }
-
-                if (setPointsLimitString.contains("      ")) {
-                    setPointsLimitString = setPointsLimitString.split("      ")[0];
-                    setPointsLimitString = setPointsLimitString.trim();
-                }
-                try {
-                    setPointLimit = Integer.parseInt(setPointsLimitString);
-                } catch (NumberFormatException ex) {
-                    log.warn(ex.getMessage());
-                    curveMetaData.setSetPointLimit(setPointLimit);
-                    continue;
-                }
-                curveMetaData.setSetPointLimit(setPointLimit);
-            } else if (fileString.startsWith("Temperature coefficient:")) {
-                System.out.println("Temperature coefficient:");
-                String temperatureCoefficient = fileString.replace("Temperature coefficient:", "").trim();
-                curveMetaData.setTemperatureCoefficient(temperatureCoefficient);
-            } else if (fileString.startsWith("Number of Breakpoints:")) {
-                String numberOfBreakpoints = fileString.replace("Number of Breakpoints:", "").trim();
-                Integer numberOfBreakpointsInt = 160;
-                try {
-                    numberOfBreakpointsInt = Integer.parseInt(numberOfBreakpoints);
-                } catch (NumberFormatException ex) {
-                    log.warn(ex.getMessage());
-                    curveMetaData.setNumberOfBreakpoints(numberOfBreakpointsInt);
-                    continue;
-                }
-                curveMetaData.setNumberOfBreakpoints(numberOfBreakpointsInt);
-            }
-        }
-        return curveMetaData;
-    }
 
     private void fillCurveFormats() {
-        jcbCurveFormat.removeAllItems();
-        jcbCurveFormatEdited.removeAllItems();
+        jcbFromFileCurveFormat.removeAllItems();
+        jcbCalculatedCurveFormat.removeAllItems();
+        jcbFromDeviceCurveFormat.removeAllItems();
         for (CurveDataTypes dataType : CurveDataTypes.values()) {
-            jcbCurveFormat.addItem(dataType);
-            jcbCurveFormatEdited.addItem(dataType);
+            jcbFromFileCurveFormat.addItem(dataType);
+            jcbCalculatedCurveFormat.addItem(dataType);
+            jcbFromDeviceCurveFormat.addItem(dataType);
         }
     }
 
     private void fillSomeGuiElements() {
-        jcbFileExtension.removeAllItems();
-        jcbFileExtension.addItem("340");
-        jcbFileExtension.addItem("curve");
+        jcbFileExtensionForSave.removeAllItems();
+        jcbFileExtensionForSave.addItem("*.340");
+        jcbFileExtensionForSave.addItem("*.curve");
 
-        jcbNewOrOld.removeAllItems();
-        jcbNewOrOld.addItem("Opened File");
-        jcbNewOrOld.addItem("Edited File");
+        jcbFileSourceForSave.removeAllItems();
+        jcbFileSourceForSave.addItem("From File");
+        jcbFileSourceForSave.addItem("From Device");
+        jcbFileSourceForSave.addItem("Calculated");
+
+        jcbFileSourceForWrite.removeAllItems();
+        jcbFileSourceForWrite.addItem("From File");
+        jcbFileSourceForWrite.addItem("From Device");
+        jcbFileSourceForWrite.addItem("Calculated");
+
+
+        jcbFileSourceForCalc.removeAllItems();
+        jcbFileSourceForCalc.addItem("From File");
+        jcbFileSourceForCalc.addItem("From Device");
+
 
         //21-64
         jcbMemoryAddres.removeAllItems();
@@ -907,37 +1027,53 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
 
     }
 
-    private void updateOpenedCurveInfo(CurveMetaData curveMetaData) {
+    private void updateCurveInfoFromFile(CurveMetaData curveMetaData) {
         if (curveMetaData.getSensorModel() != null)
-            jtfCurveName.setText(curveMetaData.getSensorModel());
+            jtfFromFileCurveName.setText(curveMetaData.getSensorModel());
         if (curveMetaData.getSerialNumber() != null)
-            jvtSerialNumber.setText(curveMetaData.getSerialNumber());
+            jtfFromFileSerialNumber.setText(curveMetaData.getSerialNumber());
         if (curveMetaData.getDataFormat() != null)
-            jcbCurveFormat.setSelectedItem(curveMetaData.getDataFormat());
+            jcbFromFileCurveFormat.setSelectedIndex(curveMetaData.getDataFormat().getValue() - 1);
         if (curveMetaData.getSetPointLimit() != null)
-            jvtPointLimit.setText(curveMetaData.getSetPointLimit().toString());
+            jtfFromFilePointLimit.setText(curveMetaData.getSetPointLimit().toString());
         if (curveMetaData.getTemperatureCoefficient() != null)
-            jtfTemperatureCoefficient.setText(curveMetaData.getTemperatureCoefficient());
+            jtfFromFileTermCoef.setText(curveMetaData.getTemperatureCoefficient());
         if (curveMetaData.getNumberOfBreakpoints() != null)
-            jtfNumberOfBreakpoints.setText(curveMetaData.getNumberOfBreakpoints().toString());
+            jtfFromFileNumbeCounts.setText(curveMetaData.getNumberOfBreakpoints().toString());
     }
 
-    private void updateEditedCurveInfo(CurveMetaData curveMetaData) {
+    private void updateCurveInfoCalculated(CurveMetaData curveMetaData) {
         if (curveMetaData.getSensorModel() != null)
-            jtfCurveNameEdited.setText(curveMetaData.getSensorModel());
+            jtfCalculatedCurveName.setText(curveMetaData.getSensorModel());
         if (curveMetaData.getSerialNumber() != null)
-            jtfSerialNumberEdited.setText(curveMetaData.getSerialNumber());
+            jtfCalculatedSerialNumber.setText(curveMetaData.getSerialNumber());
         if (curveMetaData.getDataFormat() != null)
-            jcbCurveFormatEdited.setSelectedItem(curveMetaData.getDataFormat());
+            jcbCalculatedCurveFormat.setSelectedIndex(curveMetaData.getDataFormat().getValue() - 1);
         if (curveMetaData.getSetPointLimit() != null)
-            jtfPointsLimitEdited.setText(curveMetaData.getSetPointLimit().toString());
+            jtfCalculatedPointLimit.setText(curveMetaData.getSetPointLimit().toString());
         if (curveMetaData.getTemperatureCoefficient() != null)
-            jtfTermKoefTypeEdited.setText(curveMetaData.getTemperatureCoefficient());
+            jtfCalculatedTermCoef.setText(curveMetaData.getTemperatureCoefficient());
         if (curveMetaData.getNumberOfBreakpoints() != null)
-            jtfPointsCountEdited.setText(curveMetaData.getNumberOfBreakpoints().toString());
+            jtfCalculatedNumbeCounts.setText(curveMetaData.getNumberOfBreakpoints().toString());
     }
 
-    private void updateTableOpenedFile(CurveData curveData) {
+    private void updateCurveInfoFromDevice(CurveMetaData curveMetaData) {
+        if (curveMetaData.getSensorModel() != null)
+            jtfFromDeviceCurveName.setText(curveMetaData.getSensorModel());
+        if (curveMetaData.getSerialNumber() != null)
+            jtfFromDeviceSerialNumber.setText(curveMetaData.getSerialNumber());
+        if (curveMetaData.getDataFormat() != null)
+            jcbFromDeviceCurveFormat.setSelectedIndex(curveMetaData.getDataFormat().getValue() - 1);
+        if (curveMetaData.getSetPointLimit() != null)
+            jtfFromDevicePointLimit.setText(curveMetaData.getSetPointLimit().toString());
+        if (curveMetaData.getTemperatureCoefficient() != null)
+            jtfFromDeviceTermCoef.setText(curveMetaData.getTemperatureCoefficient());
+        if (curveMetaData.getNumberOfBreakpoints() != null)
+            jtfFromDeviceNumbeCounts.setText(curveMetaData.getNumberOfBreakpoints().toString());
+    }
+
+
+    private void updateDataTableFromDevice(CurveData curveData) {
         // Заголовки столбцов
         String[] header = curveData.getCurveMetaData().getDataFormat().getName().split("vs");
 
@@ -949,10 +1085,10 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         });
 
         // Установка модели таблицы
-        jtbFilePreviewRead.setModel(new DefaultTableModel(rowsList.toArray(new String[0][0]), header));
+        jtbFromDevicePreview.setModel(new DefaultTableModel(rowsList.toArray(new String[0][0]), header));
     }
 
-    private void updateTableEditedFile(CurveData curveData) {
+    private void updateDataTableCalculated(CurveData curveData) {
         // Заголовки столбцов
         String[] header = curveData.getCurveMetaData().getDataFormat().getName().split("vs");
 
@@ -964,16 +1100,42 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         });
 
         // Установка модели таблицы
-        jtbFilePreviewEdite.setModel(new DefaultTableModel(rowsList.toArray(new String[0][0]), header));
+        jtbCalculatedPreview.setModel(new DefaultTableModel(rowsList.toArray(new String[0][0]), header));
     }
 
+    private void updateDataTableFromFile(CurveData curveData) {
+        // Заголовки столбцов
+        String[] header = curveData.getCurveMetaData().getDataFormat().getName().split("vs");
+
+        //Заполнение таблицы
+        // Добавляем новые точки данных через лямбдочку
+        ArrayList<String[]> rowsList = new ArrayList<>();
+        curveData.getCurvePoints().forEach(it -> {
+            rowsList.add(new String[]{String.valueOf(it.getKey()), String.valueOf(it.getValue())});
+        });
+
+        // Установка модели таблицы
+        jtbFromFilePreview.setModel(new DefaultTableModel(rowsList.toArray(new String[0][0]), header));
+    }
+
+    private void buildGraph(CurveData curveData, XYSeries series) {
+
+        series.clear();
+        if(curveData == null){
+            jlbStatus.setText("Нет данных для графика" + curveData.getCurveMetaData().getSensorModel());
+            return;
+        }
+        curveData.getCurvePoints().forEach(it -> {
+            series.add(it.getKey(), it.getValue());
+        });
+        repaintChart();
+    }
 
     private void repaintChart() {
         if (chartPanel == null) {
             System.out.println("Понадобилась реинциализация графика");
             initChart();
         }
-
 
         // Обновляем график
         chartPanel.repaint();
@@ -990,16 +1152,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         }
     }
 
-    private void buildReadData(CurveData curveData) {
-        // Очищаем существующие данные
-        readetSeries.clear();
-        // Добавляем новые точки данных через лямбдочку
-        curveData.getCurvePoints().forEach(it -> {
-            readetSeries.add(it.getKey(), it.getValue());
-        });
-        // Перересовываем график
-        repaintChart();
-    }
+
 
     private <T extends Enum<?>, U> void initComboBox(JComboBox<U> comboBox, T[] values, IntFunction<U> valueExtractor) {
         for (int i = 0; i < values.length; i++) {
@@ -1023,16 +1176,6 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         }
     }
 
-    private void buildEditedData(CurveData curveData) {
-        // Очищаем существующие данные
-        editedSeries.clear();
-        // Добавляем новые точки данных через лямбдочку
-        curveData.getCurvePoints().forEach(it -> {
-            editedSeries.add(it.getKey(), it.getValue());
-        });
-        // Перересовываем график
-        repaintChart();
-    }
 
     /**
      * Method generated by IntelliJ IDEA GUI Designer
@@ -1043,10 +1186,10 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
      */
     private void $$$setupUI$$$() {
         mainPane = new JPanel();
-        mainPane.setLayout(new GridLayoutManager(7, 4, new Insets(0, 0, 0, 0), -1, -1));
+        mainPane.setLayout(new GridLayoutManager(8, 3, new Insets(0, 0, 0, 0), -1, -1));
         comConnection = new JPanel();
         comConnection.setLayout(new GridLayoutManager(7, 1, new Insets(0, 0, 0, 0), -1, -1));
-        mainPane.add(comConnection, new GridConstraints(0, 0, 7, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        mainPane.add(comConnection, new GridConstraints(0, 0, 8, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         jcbComPortNumber = new JComboBox();
         comConnection.add(jcbComPortNumber, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jcbComBarity = new JComboBox();
@@ -1065,255 +1208,387 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         jlbStatus = new JLabel();
         jlbStatus.setText("Ready");
         jpnColorStatus.add(jlbStatus, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final Spacer spacer1 = new Spacer();
-        comConnection.add(spacer1, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        tabbedPane1 = new JTabbedPane();
+        comConnection.add(tabbedPane1, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, new Dimension(200, 200), null, 0, false));
+        final JPanel panel1 = new JPanel();
+        panel1.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        tabbedPane1.addTab("Standart", panel1);
+        jspReadetNamesStandartCurves = new JScrollPane();
+        panel1.add(jspReadetNamesStandartCurves, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        final JPanel panel2 = new JPanel();
+        panel2.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        tabbedPane1.addTab("User", panel2);
+        jspReadetNamesUsersCurves = new JScrollPane();
+        panel2.add(jspReadetNamesUsersCurves, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         fileSelect = new JPanel();
-        fileSelect.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        mainPane.add(fileSelect, new GridConstraints(0, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        fileSelect.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
+        mainPane.add(fileSelect, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         jbtSelectFile = new JButton();
         jbtSelectFile.setText("Select");
-        fileSelect.add(jbtSelectFile, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jlbSelectedFile = new JLabel();
-        jlbSelectedFile.setText(" ");
-        fileSelect.add(jlbSelectedFile, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final Spacer spacer2 = new Spacer();
-        fileSelect.add(spacer2, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        fileSelect.add(jbtSelectFile, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final Spacer spacer1 = new Spacer();
+        fileSelect.add(spacer1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         jpnGraph = new JPanel();
         jpnGraph.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        mainPane.add(jpnGraph, new GridConstraints(6, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(200, 200), new Dimension(600, 400), new Dimension(800, 1000), 0, false));
-        jpOpenedCurvePreview = new JPanel();
-        jpOpenedCurvePreview.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
-        mainPane.add(jpOpenedCurvePreview, new GridConstraints(0, 1, 7, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(300, 300), new Dimension(320, -1), new Dimension(350, -1), 0, false));
-        jpCurveInformation = new JPanel();
-        jpCurveInformation.setLayout(new GridLayoutManager(7, 1, new Insets(0, 0, 0, 0), -1, -1));
-        jpOpenedCurvePreview.add(jpCurveInformation, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(300, -1), new Dimension(320, -1), new Dimension(350, -1), 0, false));
-        jpCurveName = new JPanel();
-        jpCurveName.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpCurveInformation.add(jpCurveName, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
-        final JLabel label1 = new JLabel();
-        label1.setText("Curve Name");
-        jpCurveName.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jtfCurveName = new JTextField();
-        jtfCurveName.setEditable(false);
-        jtfCurveName.setEnabled(false);
-        jpCurveName.add(jtfCurveName, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
-        final Spacer spacer3 = new Spacer();
-        jpCurveName.add(spacer3, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        jpSerialNumber = new JPanel();
-        jpSerialNumber.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpCurveInformation.add(jpSerialNumber, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
-        final JLabel label2 = new JLabel();
-        label2.setText("Serial Number");
-        jpSerialNumber.add(label2, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jvtSerialNumber = new JTextField();
-        jvtSerialNumber.setEditable(false);
-        jvtSerialNumber.setEnabled(false);
-        jpSerialNumber.add(jvtSerialNumber, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
-        final Spacer spacer4 = new Spacer();
-        jpSerialNumber.add(spacer4, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        jpPointLimit = new JPanel();
-        jpPointLimit.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpCurveInformation.add(jpPointLimit, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
-        final JLabel label3 = new JLabel();
-        label3.setText("Point Limit");
-        jpPointLimit.add(label3, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jvtPointLimit = new JTextField();
-        jvtPointLimit.setEditable(false);
-        jvtPointLimit.setEnabled(false);
-        jpPointLimit.add(jvtPointLimit, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
-        final Spacer spacer5 = new Spacer();
-        jpPointLimit.add(spacer5, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        jpCurveFormat = new JPanel();
-        jpCurveFormat.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpCurveInformation.add(jpCurveFormat, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
-        final JLabel label4 = new JLabel();
-        label4.setText("Curve Format");
-        jpCurveFormat.add(label4, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jcbCurveFormat = new JComboBox();
-        jcbCurveFormat.setEnabled(false);
-        jpCurveFormat.add(jcbCurveFormat, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
-        final Spacer spacer6 = new Spacer();
-        jpCurveFormat.add(spacer6, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        jpTemperatCoeff = new JPanel();
-        jpTemperatCoeff.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpCurveInformation.add(jpTemperatCoeff, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
-        TermKoefs = new JLabel();
-        TermKoefs.setText("Term koef type");
-        jpTemperatCoeff.add(TermKoefs, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jtfTemperatureCoefficient = new JTextField();
-        jtfTemperatureCoefficient.setEditable(false);
-        jtfTemperatureCoefficient.setEnabled(false);
-        jpTemperatCoeff.add(jtfTemperatureCoefficient, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
-        final Spacer spacer7 = new Spacer();
-        jpTemperatCoeff.add(spacer7, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        jpNumberOfBreakpoints = new JPanel();
-        jpNumberOfBreakpoints.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpCurveInformation.add(jpNumberOfBreakpoints, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
-        jlNumberOfBreakpoints = new JLabel();
-        jlNumberOfBreakpoints.setText("Points Count");
-        jpNumberOfBreakpoints.add(jlNumberOfBreakpoints, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jtfNumberOfBreakpoints = new JTextField();
-        jtfNumberOfBreakpoints.setEditable(false);
-        jtfNumberOfBreakpoints.setEnabled(false);
-        jpNumberOfBreakpoints.add(jtfNumberOfBreakpoints, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
-        final Spacer spacer8 = new Spacer();
-        jpNumberOfBreakpoints.add(spacer8, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        jpTableRead = new JPanel();
-        jpTableRead.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpOpenedCurvePreview.add(jpTableRead, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        jspForTableRead = new JScrollPane();
-        jpTableRead.add(jspForTableRead, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(100, 200), new Dimension(200, 350), new Dimension(250, 400), 0, false));
-        jtbFilePreviewRead = new JTable();
-        jspForTableRead.setViewportView(jtbFilePreviewRead);
-        final Spacer spacer9 = new Spacer();
-        jpTableRead.add(spacer9, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final Spacer spacer10 = new Spacer();
-        jpTableRead.add(spacer10, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        mainPane.add(jpnGraph, new GridConstraints(7, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(200, 200), new Dimension(600, 400), new Dimension(800, 1000), 0, false));
         jpFileSave = new JPanel();
         jpFileSave.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        mainPane.add(jpFileSave, new GridConstraints(1, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        jcbFileExtension = new JComboBox();
-        jpFileSave.add(jcbFileExtension, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        mainPane.add(jpFileSave, new GridConstraints(2, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        jcbFileExtensionForSave = new JComboBox();
+        jpFileSave.add(jcbFileExtensionForSave, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jbtSaveFile = new JButton();
         jbtSaveFile.setText("Save File");
         jpFileSave.add(jbtSaveFile, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jlbSelectedFileEdited = new JLabel();
-        jlbSelectedFileEdited.setText(" ");
-        jpFileSave.add(jlbSelectedFileEdited, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jcbFileSourceForSave = new JComboBox();
+        jpFileSave.add(jcbFileSourceForSave, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jpFileWrite = new JPanel();
-        jpFileWrite.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        mainPane.add(jpFileWrite, new GridConstraints(2, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        jcbMemoryAddres = new JComboBox();
-        jpFileWrite.add(jcbMemoryAddres, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jcbNewOrOld = new JComboBox();
-        jpFileWrite.add(jcbNewOrOld, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jpFileWrite.setLayout(new GridLayoutManager(2, 5, new Insets(0, 0, 0, 0), -1, -1));
+        mainPane.add(jpFileWrite, new GridConstraints(3, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         jbtWrite = new JButton();
         jbtWrite.setText("Write");
-        jpFileWrite.add(jbtWrite, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jpFileWrite.add(jbtWrite, new GridConstraints(1, 3, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jpnSavedFile = new JPanel();
+        jpnSavedFile.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jpFileWrite.add(jpnSavedFile, new GridConstraints(0, 0, 1, 5, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        jspSavedFile = new JScrollPane();
+        jpnSavedFile.add(jspSavedFile, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        jlbSavedFile = new JLabel();
+        jlbSavedFile.setText(" ");
+        jspSavedFile.setViewportView(jlbSavedFile);
+        jcbMemoryAddres = new JComboBox();
+        jpFileWrite.add(jcbMemoryAddres, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jcbFileSourceForWrite = new JComboBox();
+        jpFileWrite.add(jcbFileSourceForWrite, new GridConstraints(1, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jpEditGraph = new JPanel();
-        jpEditGraph.setLayout(new GridLayoutManager(2, 3, new Insets(0, 0, 0, 0), -1, -1));
-        mainPane.add(jpEditGraph, new GridConstraints(4, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        jpEditGraph.setLayout(new GridLayoutManager(2, 4, new Insets(0, 0, 0, 0), -1, -1));
+        mainPane.add(jpEditGraph, new GridConstraints(5, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         jtfKelvinMeasured = new JTextField();
         jtfKelvinMeasured.setText("296");
-        jpEditGraph.add(jtfKelvinMeasured, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        jpEditGraph.add(jtfKelvinMeasured, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         jtfVoltsMeasured = new JTextField();
         jtfVoltsMeasured.setText("0,89586");
-        jpEditGraph.add(jtfVoltsMeasured, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        jpEditGraph.add(jtfVoltsMeasured, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         jbtCalculate = new JButton();
         jbtCalculate.setText("Calculate");
-        jpEditGraph.add(jbtCalculate, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jpEditGraph.add(jbtCalculate, new GridConstraints(0, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jlbNearestPoint = new JLabel();
         jlbNearestPoint.setText("Температура");
-        jpEditGraph.add(jlbNearestPoint, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jpEditGraph.add(jlbNearestPoint, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jlbAddingVolts = new JLabel();
         jlbAddingVolts.setText("Напряжение");
-        jpEditGraph.add(jlbAddingVolts, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jpEditGraph.add(jlbAddingVolts, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jcbFileSourceForCalc = new JComboBox();
+        final DefaultComboBoxModel defaultComboBoxModel1 = new DefaultComboBoxModel();
+        jcbFileSourceForCalc.setModel(defaultComboBoxModel1);
+        jpEditGraph.add(jcbFileSourceForCalc, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label1 = new JLabel();
+        label1.setText("Данные");
+        jpEditGraph.add(label1, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jpGraphActions = new JPanel();
-        jpGraphActions.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        mainPane.add(jpGraphActions, new GridConstraints(5, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        jpGraphActions.setLayout(new GridLayoutManager(1, 4, new Insets(0, 0, 0, 0), -1, -1));
+        mainPane.add(jpGraphActions, new GridConstraints(6, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         jbtClearGraph = new JButton();
         jbtClearGraph.setText("Clear Graph");
         jpGraphActions.add(jbtClearGraph, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jbtAddCalculatedPoly = new JButton();
-        jbtAddCalculatedPoly.setText("Add Calculated Poly");
-        jpGraphActions.add(jbtAddCalculatedPoly, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jbtAddReadetPoly = new JButton();
-        jbtAddReadetPoly.setText("Add Readet Poly");
-        jpGraphActions.add(jbtAddReadetPoly, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jpEditedCurvePreview = new JPanel();
-        jpEditedCurvePreview.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
-        mainPane.add(jpEditedCurvePreview, new GridConstraints(0, 2, 7, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(300, -1), new Dimension(320, -1), new Dimension(350, -1), 0, false));
-        jpCurveInformationEdited = new JPanel();
-        jpCurveInformationEdited.setLayout(new GridLayoutManager(6, 1, new Insets(0, 0, 0, 0), -1, -1));
-        jpEditedCurvePreview.add(jpCurveInformationEdited, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(300, -1), new Dimension(320, -1), new Dimension(350, -1), 0, false));
-        final JPanel panel1 = new JPanel();
-        panel1.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpCurveInformationEdited.add(panel1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
-        jlbCurveNameEdited = new JLabel();
-        jlbCurveNameEdited.setText("Curve Name");
-        panel1.add(jlbCurveNameEdited, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jtfCurveNameEdited = new JTextField();
-        jtfCurveNameEdited.setEditable(true);
-        jtfCurveNameEdited.setEnabled(true);
-        panel1.add(jtfCurveNameEdited, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
-        final Spacer spacer11 = new Spacer();
-        panel1.add(spacer11, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final JPanel panel2 = new JPanel();
-        panel2.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpCurveInformationEdited.add(panel2, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
-        jlbSerialNumberEdited = new JLabel();
-        jlbSerialNumberEdited.setText("Serial Number");
-        panel2.add(jlbSerialNumberEdited, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jtfSerialNumberEdited = new JTextField();
-        jtfSerialNumberEdited.setEditable(true);
-        jtfSerialNumberEdited.setEnabled(true);
-        panel2.add(jtfSerialNumberEdited, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
-        final Spacer spacer12 = new Spacer();
-        panel2.add(spacer12, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final JPanel panel3 = new JPanel();
-        panel3.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpCurveInformationEdited.add(panel3, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
-        jlpPointsLimitEdited = new JLabel();
-        jlpPointsLimitEdited.setText("Point Limit");
-        panel3.add(jlpPointsLimitEdited, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jtfPointsLimitEdited = new JTextField();
-        jtfPointsLimitEdited.setEditable(true);
-        jtfPointsLimitEdited.setEnabled(true);
-        panel3.add(jtfPointsLimitEdited, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
-        final Spacer spacer13 = new Spacer();
-        panel3.add(spacer13, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final JPanel panel4 = new JPanel();
-        panel4.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpCurveInformationEdited.add(panel4, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
-        jlbCurveFormatEdited = new JLabel();
-        jlbCurveFormatEdited.setText("Curve Format");
-        panel4.add(jlbCurveFormatEdited, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jcbCurveFormatEdited = new JComboBox();
-        jcbCurveFormatEdited.setEditable(true);
-        jcbCurveFormatEdited.setEnabled(true);
-        panel4.add(jcbCurveFormatEdited, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
-        final Spacer spacer14 = new Spacer();
-        panel4.add(spacer14, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final JPanel panel5 = new JPanel();
-        panel5.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpCurveInformationEdited.add(panel5, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
-        jlbTermKoefTypeEdited = new JLabel();
-        jlbTermKoefTypeEdited.setText("Term koef type");
-        panel5.add(jlbTermKoefTypeEdited, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jtfTermKoefTypeEdited = new JTextField();
-        jtfTermKoefTypeEdited.setEditable(true);
-        jtfTermKoefTypeEdited.setEnabled(true);
-        panel5.add(jtfTermKoefTypeEdited, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
-        final Spacer spacer15 = new Spacer();
-        panel5.add(spacer15, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final JPanel panel6 = new JPanel();
-        panel6.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpCurveInformationEdited.add(panel6, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
-        jlbPointsCountEdited = new JLabel();
-        jlbPointsCountEdited.setText("Points Count");
-        panel6.add(jlbPointsCountEdited, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jtfPointsCountEdited = new JTextField();
-        jtfPointsCountEdited.setEditable(true);
-        jtfPointsCountEdited.setEnabled(true);
-        panel6.add(jtfPointsCountEdited, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
-        final Spacer spacer16 = new Spacer();
-        panel6.add(spacer16, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        jpTableEdite = new JPanel();
-        jpTableEdite.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpEditedCurvePreview.add(jpTableEdite, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        final JScrollPane scrollPane1 = new JScrollPane();
-        jpTableEdite.add(scrollPane1, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(100, 200), new Dimension(200, 350), new Dimension(250, 400), 0, false));
-        jtbFilePreviewEdite = new JTable();
-        scrollPane1.setViewportView(jtbFilePreviewEdite);
-        final Spacer spacer17 = new Spacer();
-        jpTableEdite.add(spacer17, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final Spacer spacer18 = new Spacer();
-        jpTableEdite.add(spacer18, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jbtAddPolyCalculated = new JButton();
+        jbtAddPolyCalculated.setText("Add Calculated");
+        jpGraphActions.add(jbtAddPolyCalculated, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jbtAddPolyFromFile = new JButton();
+        jbtAddPolyFromFile.setText("Add From FIle");
+        jpGraphActions.add(jbtAddPolyFromFile, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jbtAddPolyFromDevice = new JButton();
+        jbtAddPolyFromDevice.setText("Add From Device");
+        jpGraphActions.add(jbtAddPolyFromDevice, new GridConstraints(0, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jpDataTranserProggres = new JPanel();
         jpDataTranserProggres.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        mainPane.add(jpDataTranserProggres, new GridConstraints(3, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        mainPane.add(jpDataTranserProggres, new GridConstraints(4, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         jpbCommandSending = new JProgressBar();
         jpDataTranserProggres.add(jpbCommandSending, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jtpFilePreview = new JTabbedPane();
+        mainPane.add(jtpFilePreview, new GridConstraints(0, 1, 8, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, new Dimension(200, 200), null, 0, false));
+        jtpFromFileCurvePreview = new JPanel();
+        jtpFromFileCurvePreview.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jtpFilePreview.addTab("From FIle", jtpFromFileCurvePreview);
+        jpFromFileCurvePreview = new JPanel();
+        jpFromFileCurvePreview.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jtpFromFileCurvePreview.add(jpFromFileCurvePreview, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(300, 300), new Dimension(320, -1), new Dimension(350, -1), 0, false));
+        jpFromFileCurveInformation = new JPanel();
+        jpFromFileCurveInformation.setLayout(new GridLayoutManager(7, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jpFromFileCurvePreview.add(jpFromFileCurveInformation, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(300, -1), new Dimension(320, -1), new Dimension(350, -1), 0, false));
+        jpFromFileCurveName = new JPanel();
+        jpFromFileCurveName.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpFromFileCurveInformation.add(jpFromFileCurveName, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
+        jlbFromFileCurveName = new JLabel();
+        jlbFromFileCurveName.setText("Curve Name");
+        jpFromFileCurveName.add(jlbFromFileCurveName, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jtfFromFileCurveName = new JTextField();
+        jtfFromFileCurveName.setEditable(false);
+        jtfFromFileCurveName.setEnabled(false);
+        jpFromFileCurveName.add(jtfFromFileCurveName, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
+        final Spacer spacer2 = new Spacer();
+        jpFromFileCurveName.add(spacer2, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jpFromFileSerialNumber = new JPanel();
+        jpFromFileSerialNumber.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpFromFileCurveInformation.add(jpFromFileSerialNumber, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
+        jlbFromFileSerialNumber = new JLabel();
+        jlbFromFileSerialNumber.setText("Serial Number");
+        jpFromFileSerialNumber.add(jlbFromFileSerialNumber, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jtfFromFileSerialNumber = new JTextField();
+        jtfFromFileSerialNumber.setEditable(false);
+        jtfFromFileSerialNumber.setEnabled(false);
+        jpFromFileSerialNumber.add(jtfFromFileSerialNumber, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
+        final Spacer spacer3 = new Spacer();
+        jpFromFileSerialNumber.add(spacer3, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jpFromFilePointLimit = new JPanel();
+        jpFromFilePointLimit.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpFromFileCurveInformation.add(jpFromFilePointLimit, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
+        jlbFromFilePointLimit = new JLabel();
+        jlbFromFilePointLimit.setText("Point Limit");
+        jpFromFilePointLimit.add(jlbFromFilePointLimit, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jtfFromFilePointLimit = new JTextField();
+        jtfFromFilePointLimit.setEditable(false);
+        jtfFromFilePointLimit.setEnabled(false);
+        jpFromFilePointLimit.add(jtfFromFilePointLimit, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
+        final Spacer spacer4 = new Spacer();
+        jpFromFilePointLimit.add(spacer4, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jpFromFileCurveFormat = new JPanel();
+        jpFromFileCurveFormat.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpFromFileCurveInformation.add(jpFromFileCurveFormat, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
+        jlbFromFileCurveFormat = new JLabel();
+        jlbFromFileCurveFormat.setText("Curve Format");
+        jpFromFileCurveFormat.add(jlbFromFileCurveFormat, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jcbFromFileCurveFormat = new JComboBox();
+        jcbFromFileCurveFormat.setEnabled(false);
+        jpFromFileCurveFormat.add(jcbFromFileCurveFormat, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
+        final Spacer spacer5 = new Spacer();
+        jpFromFileCurveFormat.add(spacer5, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jpFromFileTemperatCoeff = new JPanel();
+        jpFromFileTemperatCoeff.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpFromFileCurveInformation.add(jpFromFileTemperatCoeff, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
+        jlbFromFileTermCoef = new JLabel();
+        jlbFromFileTermCoef.setText("Term koef type");
+        jpFromFileTemperatCoeff.add(jlbFromFileTermCoef, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jtfFromFileTermCoef = new JTextField();
+        jtfFromFileTermCoef.setEditable(false);
+        jtfFromFileTermCoef.setEnabled(false);
+        jpFromFileTemperatCoeff.add(jtfFromFileTermCoef, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
+        final Spacer spacer6 = new Spacer();
+        jpFromFileTemperatCoeff.add(spacer6, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jpFromFileNumberOfBreakpoints = new JPanel();
+        jpFromFileNumberOfBreakpoints.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpFromFileCurveInformation.add(jpFromFileNumberOfBreakpoints, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
+        jlbFromFileNumbeCounts = new JLabel();
+        jlbFromFileNumbeCounts.setText("Points Count");
+        jpFromFileNumberOfBreakpoints.add(jlbFromFileNumbeCounts, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jtfFromFileNumbeCounts = new JTextField();
+        jtfFromFileNumbeCounts.setEditable(false);
+        jtfFromFileNumbeCounts.setEnabled(false);
+        jpFromFileNumberOfBreakpoints.add(jtfFromFileNumbeCounts, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
+        final Spacer spacer7 = new Spacer();
+        jpFromFileNumberOfBreakpoints.add(spacer7, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jpFromFileTable = new JPanel();
+        jpFromFileTable.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpFromFileCurvePreview.add(jpFromFileTable, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        jspFromFileTable = new JScrollPane();
+        jpFromFileTable.add(jspFromFileTable, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(100, 200), new Dimension(200, 350), new Dimension(250, 400), 0, false));
+        jtbFromFilePreview = new JTable();
+        jspFromFileTable.setViewportView(jtbFromFilePreview);
+        final Spacer spacer8 = new Spacer();
+        jpFromFileTable.add(spacer8, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final Spacer spacer9 = new Spacer();
+        jpFromFileTable.add(spacer9, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jtpCalculatedCurvePreview = new JPanel();
+        jtpCalculatedCurvePreview.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jtpFilePreview.addTab("Calculated", jtpCalculatedCurvePreview);
+        jpCalculatedCurvePreview = new JPanel();
+        jpCalculatedCurvePreview.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jtpCalculatedCurvePreview.add(jpCalculatedCurvePreview, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(300, -1), new Dimension(320, -1), new Dimension(350, -1), 0, false));
+        jpCalculatedCurveInformation = new JPanel();
+        jpCalculatedCurveInformation.setLayout(new GridLayoutManager(6, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jpCalculatedCurvePreview.add(jpCalculatedCurveInformation, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(300, -1), new Dimension(320, -1), new Dimension(350, -1), 0, false));
+        jpnCalculatedCurveName = new JPanel();
+        jpnCalculatedCurveName.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpCalculatedCurveInformation.add(jpnCalculatedCurveName, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
+        jlbCalculatedCurveName = new JLabel();
+        jlbCalculatedCurveName.setText("Curve Name");
+        jpnCalculatedCurveName.add(jlbCalculatedCurveName, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jtfCalculatedCurveName = new JTextField();
+        jtfCalculatedCurveName.setEditable(true);
+        jtfCalculatedCurveName.setEnabled(true);
+        jpnCalculatedCurveName.add(jtfCalculatedCurveName, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
+        final Spacer spacer10 = new Spacer();
+        jpnCalculatedCurveName.add(spacer10, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jpCalculatedSerialNumber = new JPanel();
+        jpCalculatedSerialNumber.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpCalculatedCurveInformation.add(jpCalculatedSerialNumber, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
+        jlbCalculatedSerialNumber = new JLabel();
+        jlbCalculatedSerialNumber.setText("Serial Number");
+        jpCalculatedSerialNumber.add(jlbCalculatedSerialNumber, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jtfCalculatedSerialNumber = new JTextField();
+        jtfCalculatedSerialNumber.setEditable(true);
+        jtfCalculatedSerialNumber.setEnabled(true);
+        jpCalculatedSerialNumber.add(jtfCalculatedSerialNumber, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
+        final Spacer spacer11 = new Spacer();
+        jpCalculatedSerialNumber.add(spacer11, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jpCalculatedPointLimit = new JPanel();
+        jpCalculatedPointLimit.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpCalculatedCurveInformation.add(jpCalculatedPointLimit, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
+        jlpCalculatedPointLimit = new JLabel();
+        jlpCalculatedPointLimit.setText("Point Limit");
+        jpCalculatedPointLimit.add(jlpCalculatedPointLimit, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jtfCalculatedPointLimit = new JTextField();
+        jtfCalculatedPointLimit.setEditable(true);
+        jtfCalculatedPointLimit.setEnabled(true);
+        jpCalculatedPointLimit.add(jtfCalculatedPointLimit, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
+        final Spacer spacer12 = new Spacer();
+        jpCalculatedPointLimit.add(spacer12, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jpCalculatedCurveFormat = new JPanel();
+        jpCalculatedCurveFormat.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpCalculatedCurveInformation.add(jpCalculatedCurveFormat, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
+        jlbCalculatedCurveFormat = new JLabel();
+        jlbCalculatedCurveFormat.setText("Curve Format");
+        jpCalculatedCurveFormat.add(jlbCalculatedCurveFormat, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jcbCalculatedCurveFormat = new JComboBox();
+        jcbCalculatedCurveFormat.setEditable(true);
+        jcbCalculatedCurveFormat.setEnabled(true);
+        jpCalculatedCurveFormat.add(jcbCalculatedCurveFormat, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
+        final Spacer spacer13 = new Spacer();
+        jpCalculatedCurveFormat.add(spacer13, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jpCalculatedTemperatCoeff = new JPanel();
+        jpCalculatedTemperatCoeff.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpCalculatedCurveInformation.add(jpCalculatedTemperatCoeff, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
+        jlbCalculatedTermCoef = new JLabel();
+        jlbCalculatedTermCoef.setText("Term koef type");
+        jpCalculatedTemperatCoeff.add(jlbCalculatedTermCoef, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jtfCalculatedTermCoef = new JTextField();
+        jtfCalculatedTermCoef.setEditable(true);
+        jtfCalculatedTermCoef.setEnabled(true);
+        jpCalculatedTemperatCoeff.add(jtfCalculatedTermCoef, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
+        final Spacer spacer14 = new Spacer();
+        jpCalculatedTemperatCoeff.add(spacer14, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jpCalculatedNumberOfBreakpoints = new JPanel();
+        jpCalculatedNumberOfBreakpoints.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpCalculatedCurveInformation.add(jpCalculatedNumberOfBreakpoints, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
+        jlbCalculatedNumbeCounts = new JLabel();
+        jlbCalculatedNumbeCounts.setText("Points Count");
+        jpCalculatedNumberOfBreakpoints.add(jlbCalculatedNumbeCounts, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jtfCalculatedNumbeCounts = new JTextField();
+        jtfCalculatedNumbeCounts.setEditable(true);
+        jtfCalculatedNumbeCounts.setEnabled(true);
+        jpCalculatedNumberOfBreakpoints.add(jtfCalculatedNumbeCounts, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
+        final Spacer spacer15 = new Spacer();
+        jpCalculatedNumberOfBreakpoints.add(spacer15, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jpCalculatedTable = new JPanel();
+        jpCalculatedTable.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpCalculatedCurvePreview.add(jpCalculatedTable, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        jspCalculatedTable = new JScrollPane();
+        jpCalculatedTable.add(jspCalculatedTable, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(100, 200), new Dimension(200, 350), new Dimension(250, 400), 0, false));
+        jtbCalculatedPreview = new JTable();
+        jspCalculatedTable.setViewportView(jtbCalculatedPreview);
+        final Spacer spacer16 = new Spacer();
+        jpCalculatedTable.add(spacer16, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final Spacer spacer17 = new Spacer();
+        jpCalculatedTable.add(spacer17, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jtpFromDeviceCurvePreview = new JPanel();
+        jtpFromDeviceCurvePreview.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jtpFilePreview.addTab("From Device", jtpFromDeviceCurvePreview);
+        jpFromDeviceCurvePreview = new JPanel();
+        jpFromDeviceCurvePreview.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jtpFromDeviceCurvePreview.add(jpFromDeviceCurvePreview, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(300, -1), new Dimension(320, -1), new Dimension(350, -1), 0, false));
+        jpCurveInformationSelected = new JPanel();
+        jpCurveInformationSelected.setLayout(new GridLayoutManager(6, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jpFromDeviceCurvePreview.add(jpCurveInformationSelected, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(300, -1), new Dimension(320, -1), new Dimension(350, -1), 0, false));
+        jpFromDeviceCurveName = new JPanel();
+        jpFromDeviceCurveName.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpCurveInformationSelected.add(jpFromDeviceCurveName, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
+        jlbFromDeviceCurveName = new JLabel();
+        jlbFromDeviceCurveName.setText("Curve Name");
+        jpFromDeviceCurveName.add(jlbFromDeviceCurveName, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jtfFromDeviceCurveName = new JTextField();
+        jtfFromDeviceCurveName.setEditable(true);
+        jtfFromDeviceCurveName.setEnabled(true);
+        jpFromDeviceCurveName.add(jtfFromDeviceCurveName, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
+        final Spacer spacer18 = new Spacer();
+        jpFromDeviceCurveName.add(spacer18, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jpFromDeviceSerialNumber = new JPanel();
+        jpFromDeviceSerialNumber.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpCurveInformationSelected.add(jpFromDeviceSerialNumber, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
+        jlbFromDeviceSerialNumber = new JLabel();
+        jlbFromDeviceSerialNumber.setText("Serial Number");
+        jpFromDeviceSerialNumber.add(jlbFromDeviceSerialNumber, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jtfFromDeviceSerialNumber = new JTextField();
+        jtfFromDeviceSerialNumber.setEditable(true);
+        jtfFromDeviceSerialNumber.setEnabled(true);
+        jpFromDeviceSerialNumber.add(jtfFromDeviceSerialNumber, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
+        final Spacer spacer19 = new Spacer();
+        jpFromDeviceSerialNumber.add(spacer19, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jpFromDevicePointLimit = new JPanel();
+        jpFromDevicePointLimit.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpCurveInformationSelected.add(jpFromDevicePointLimit, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
+        jlbFromDevicePointLimit = new JLabel();
+        jlbFromDevicePointLimit.setText("Point Limit");
+        jpFromDevicePointLimit.add(jlbFromDevicePointLimit, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jtfFromDevicePointLimit = new JTextField();
+        jtfFromDevicePointLimit.setEditable(true);
+        jtfFromDevicePointLimit.setEnabled(true);
+        jpFromDevicePointLimit.add(jtfFromDevicePointLimit, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
+        final Spacer spacer20 = new Spacer();
+        jpFromDevicePointLimit.add(spacer20, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jpFromDeviceCurveFormat = new JPanel();
+        jpFromDeviceCurveFormat.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpCurveInformationSelected.add(jpFromDeviceCurveFormat, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
+        jlbFromDeviceCurveFormat = new JLabel();
+        jlbFromDeviceCurveFormat.setText("Curve Format");
+        jpFromDeviceCurveFormat.add(jlbFromDeviceCurveFormat, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jcbFromDeviceCurveFormat = new JComboBox();
+        jcbFromDeviceCurveFormat.setEditable(true);
+        jcbFromDeviceCurveFormat.setEnabled(true);
+        jpFromDeviceCurveFormat.add(jcbFromDeviceCurveFormat, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
+        final Spacer spacer21 = new Spacer();
+        jpFromDeviceCurveFormat.add(spacer21, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jpFromDeviceTemperatCoeff = new JPanel();
+        jpFromDeviceTemperatCoeff.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpCurveInformationSelected.add(jpFromDeviceTemperatCoeff, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
+        jlbFromDeviceTermCoef = new JLabel();
+        jlbFromDeviceTermCoef.setText("Term koef type");
+        jpFromDeviceTemperatCoeff.add(jlbFromDeviceTermCoef, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jtfFromDeviceTermCoef = new JTextField();
+        jtfFromDeviceTermCoef.setEditable(true);
+        jtfFromDeviceTermCoef.setEnabled(true);
+        jpFromDeviceTemperatCoeff.add(jtfFromDeviceTermCoef, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
+        final Spacer spacer22 = new Spacer();
+        jpFromDeviceTemperatCoeff.add(spacer22, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jpFromDeviceNumberOfBreakpoints = new JPanel();
+        jpFromDeviceNumberOfBreakpoints.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpCurveInformationSelected.add(jpFromDeviceNumberOfBreakpoints, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(150, -1), new Dimension(200, -1), new Dimension(200, -1), 0, false));
+        jlbFromDeviceNumbeCounts = new JLabel();
+        jlbFromDeviceNumbeCounts.setText("Points Count");
+        jpFromDeviceNumberOfBreakpoints.add(jlbFromDeviceNumbeCounts, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jtfFromDeviceNumbeCounts = new JTextField();
+        jtfFromDeviceNumbeCounts.setEditable(true);
+        jtfFromDeviceNumbeCounts.setEnabled(true);
+        jpFromDeviceNumberOfBreakpoints.add(jtfFromDeviceNumbeCounts, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(80, -1), new Dimension(100, -1), new Dimension(100, -1), 0, false));
+        final Spacer spacer23 = new Spacer();
+        jpFromDeviceNumberOfBreakpoints.add(spacer23, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jpFromDeviceTable = new JPanel();
+        jpFromDeviceTable.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpFromDeviceCurvePreview.add(jpFromDeviceTable, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        jspFromDeviceTable = new JScrollPane();
+        jpFromDeviceTable.add(jspFromDeviceTable, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(100, 200), new Dimension(200, 350), new Dimension(250, 400), 0, false));
+        jtbFromDevicePreview = new JTable();
+        jspFromDeviceTable.setViewportView(jtbFromDevicePreview);
+        final Spacer spacer24 = new Spacer();
+        jpFromDeviceTable.add(spacer24, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final Spacer spacer25 = new Spacer();
+        jpFromDeviceTable.add(spacer25, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jpnSelectedFile = new JPanel();
+        jpnSelectedFile.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        mainPane.add(jpnSelectedFile, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        jspSelectedFile = new JScrollPane();
+        jpnSelectedFile.add(jspSelectedFile, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        jlbSelectedFile = new JLabel();
+        jlbSelectedFile.setText(" ");
+        jspSelectedFile.setViewportView(jlbSelectedFile);
     }
 
     /**
