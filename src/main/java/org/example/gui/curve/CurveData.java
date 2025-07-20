@@ -106,7 +106,7 @@ public class CurveData {
     public boolean isConsistent(){
         if(curveMetaData == null) return false;
         if(curveMetaData.getNumberOfBreakpoints() != null &&  curveMetaData.getNumberOfBreakpoints().equals(0)) return false;
-        if(curveMetaData.getSetPointLimit().equals(0)) return false;
+        if(curveMetaData.getSetPointLimit() == null || curveMetaData.getSetPointLimit().equals(0)) return false;
         if(curveMetaData.getDataFormat() == null) return false;
         if(curveMetaData.getSerialNumber() == null || curveMetaData.getSerialNumber().isEmpty()) return false;
         if(curvePoints == null || curvePoints.isEmpty()) return false;

@@ -22,7 +22,7 @@ public class CurveStorage {
             return;
         }
         if(curves.containsKey(name)){
-            log.warn("Кривая с таким именем уже существует");
+            log.warn("При выполнении addOrUpdateCurve с таким именем уже есть кривая [" + name + "]");
             curves.remove(name);
         }
         curves.put(name, curve);
@@ -34,7 +34,7 @@ public class CurveStorage {
             return null;
         }
         if(! curves.containsKey(name)){
-            log.warn("Кривая с таким именем не существует");
+            log.warn("При getCurve с таким именем не найдена [" + name + "]");
             return null;
         }
         return curves.get(name);
@@ -46,7 +46,7 @@ public class CurveStorage {
             return;
         }
         if(! curves.containsKey(name)){
-            log.warn("Кривая с таким именем не существует");
+            log.warn("При removeCurve с таким именем не найдена [" + name + "]");
             return;
         }
         curves.remove(name);

@@ -6,6 +6,9 @@ import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import org.apache.log4j.Logger;
 import org.example.gui.Rendeble;
+import org.example.gui.curve.file.CurveFileAccessException;
+import org.example.gui.curve.file.CurveFileSerializationException;
+import org.example.gui.curve.file.FileHandler;
 import org.example.gui.curve.file.Serialization;
 import org.example.gui.curve.math.CalculatedCurveData;
 import org.example.gui.curve.math.Calculator;
@@ -39,6 +42,7 @@ import java.util.function.IntFunction;
 
 public class CurveHandlerWindow extends JFrame implements Rendeble {
     private Logger log = null;
+    private final FileHandler fileHandler;
     private final MyProperties prop;
     private final Serialization ser = new Serialization();
     private final Calculator calc = new Calculator();
@@ -172,7 +176,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
     private final ArrayList<CurveMetaData> curveMetaDataInDeviceList = new ArrayList<>();
     private SerialPort comPort = null;
 
-    String filePath;
+
 
     /*
     ToDo
@@ -188,6 +192,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
 
         $$$setupUI$$$();
         log = Logger.getLogger(CurveHandlerWindow.class);
+        fileHandler = new FileHandler();
         this.prop = prop;
         setContentPane(mainPane);
 
@@ -344,7 +349,6 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
     private String getListOfCurvesInDevice() {
         log.error("Начинаю отображение списка кривых");
 
-
         // Настройка прогресс-бара
         jpDataTranserProggres.setVisible(true);
         jpbCommandSending.setValue(0);
@@ -402,7 +406,6 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
             }
         }).start();
 
-
         return "Завершено получение списка кривых";
     }
 
@@ -425,14 +428,14 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         curveButton.addActionListener(e -> {
             CurveMetaData selectedCurve = buttonCurveMap.get(e.getSource());
             if (selectedCurve != null) {
-                loadCurveData(selectedCurve);
+                loadCurveDataFromDevice(selectedCurve);
             }
         });
 
         return curveButton;
     }
 
-    private void loadCurveData(CurveMetaData curve) {
+    private void loadCurveDataFromDevice(CurveMetaData curve) {
 
         jpDataTranserProggres.setVisible(true);
         jpbCommandSending.setValue(0);
@@ -466,7 +469,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
                     // 11. Обновление таблицы и графика
                     // TODO: Доп. проверки
                     buildGraph(curveStorage.getCurve("FromDevice"), fromDeviceSeries);
-                    updateDataTableFromFile(curveStorage.getCurve("FromDevice"));
+                    updateDataTable(curveStorage.getCurve("FromDevice"), jtbFromDevicePreview);
                     updateCurveInfoFromDevice(curveStorage.getCurve("FromDevice").getCurveMetaData());
 
                 });
@@ -523,6 +526,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
 
         if (!curveStorage.isContains(curveType)) {
             jlbStatus.setText("Данные для записи " + curveType + " кривой не найдены");
+            doErrorMessage("Данные для записи " + curveType + " кривой не найдены", "Ошибочка");
             return;
         }
 
@@ -558,7 +562,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
     }
 
     private void updateOnEditeCurveFormat(ActionEvent actionEvent) {
-        System.out.println("Set " + ((CurveDataTypes) jcbCalculatedCurveFormat.getSelectedItem()));
+        log.info("Do updateOnEditeCurveFormat set [" +  ((CurveDataTypes) jcbCalculatedCurveFormat.getSelectedItem()) + "]");
         if (curveStorage.isContains("FromCalculated"))
             curveStorage.getCurve("FromCalculated").getCurveMetaData().setDataFormat((CurveDataTypes) jcbCalculatedCurveFormat.getSelectedItem());
     }
@@ -573,7 +577,8 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
             //e.printStackTrace();
         }
         if (count != null) {
-            curveStorage.getCurve("FromCalculated").getCurveMetaData().setNumberOfBreakpoints(Integer.parseInt(jtfCalculatedNumbeCounts.getText()));
+            if(curveStorage.isContains("FromCalculated"))
+                curveStorage.getCurve("FromCalculated").getCurveMetaData().setNumberOfBreakpoints(Integer.parseInt(jtfCalculatedNumbeCounts.getText()));
         }
     }
 
@@ -644,57 +649,64 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         try {
             num = Integer.parseInt(jlpCalculatedPointLimit.getText());
         } catch (NumberFormatException e) {
-            jlpCalculatedPointLimit.setText(String.valueOf(curveStorage.getCurve("FromCalculated").getCurveMetaData().getSetPointLimit()));
+            if (curveStorage.isContains("FromCalculated")){
+                jlpCalculatedPointLimit.setText(String.valueOf(curveStorage.getCurve("FromCalculated").getCurveMetaData().getSetPointLimit()));
+            }
             log.warn("Исключение во время получения числа из строки OnEditeCurvePointsLimit" + e.getMessage());
         }
         if (num != null) {
-            curveStorage.getCurve("FromCalculated").getCurveMetaData().setSetPointLimit(num);
+            if (curveStorage.isContains("FromCalculated"))
+                curveStorage.getCurve("FromCalculated").getCurveMetaData().setSetPointLimit(num);
         }
     }
 
     private void updateOnEditeCurveSerialNumber() {
-        if (jtfCalculatedSerialNumber.getText() != null && !jtfCalculatedSerialNumber.getText().isEmpty()) {
+        if (jtfCalculatedSerialNumber.getText() != null && !jtfCalculatedSerialNumber.getText().isEmpty() && curveStorage.isContains("FromCalculated")) {
             curveStorage.getCurve("FromCalculated").getCurveMetaData().setSerialNumber(jtfCalculatedSerialNumber.getText());
         }
     }
 
     private void updateOnEditeCurveName() {
-        curveStorage.getCurve("FromCalculated").getCurveMetaData().setSensorModel(jtfCalculatedCurveName.getText());
+        if(curveStorage.isContains("FromCalculated"))
+            curveStorage.getCurve("FromCalculated").getCurveMetaData().setSensorModel(jtfCalculatedCurveName.getText());
     }
 
     private void updateOnEnterCurveName() {
-        curveStorage.getCurve("FromCalculated").getCurveMetaData().setSensorModel(jtfCalculatedCurveName.getText());
+        if(curveStorage.isContains("FromCalculated"))
+            curveStorage.getCurve("FromCalculated").getCurveMetaData().setSensorModel(jtfCalculatedCurveName.getText());
     }
 
 
     // Обработчик выбора файла
     private void handleFileSelection(ActionEvent e) {
-        JFileChooser fileChooser = new JFileChooser();
-
-        // Настройка фильтра (пример для текстовых файлов)
-
-        FileNameExtensionFilter filter = new FileNameExtensionFilter(
-                "Poly files (*.curve, *.340)", "curve", "340");
-
-        fileChooser.setFileFilter(filter);
-
-        if (filePath != null) {
-            fileChooser.setCurrentDirectory(new File(filePath));
+        try {
+            fileHandler.selectFileToOpen();
+        } catch (CurveFileAccessException ex) {
+            doErrorMessage("Ошибка при открытии файла: ["+ex.getMessage()+"]", "Ошибка");
+            return;
         }
-        // Показать диалог выбора
-        int result = fileChooser.showOpenDialog(null);
+        if(fileHandler.getSelectedFileToOpen() != null){
+            jlbSelectedFile.setText(fileHandler.getSelectedFileToOpen().getName());
+            processSelectedFile(fileHandler.getSelectedFileToOpen());
 
-        if (result == JFileChooser.APPROVE_OPTION) {
+            CurveData read = null;
+            try {
+                read = ser.deserializeCurveData(fileHandler.getSelectedFileToOpen());
+            } catch (CurveFileSerializationException ex) {
+                doErrorMessage("Ошибка при разборе файла: ["+ex.getMessage()+"]", "Ошибка");
+                return;
+            }
+            curveStorage.addOrUpdateCurve("FromFile", read);
 
-            File selectedFile = fileChooser.getSelectedFile();
-            filePath = selectedFile.getAbsolutePath();
+            updateCurveInfoFromFile(read.getCurveMetaData());
 
-            // 1. Запомнить путь (можно использовать в других частях программы)
-            System.out.println("Выбран файл: " + filePath);
-            jlbSelectedFile.setText(filePath);
+            curveStorage.addOrUpdateCurve("FromFile", read);
 
-            // 2. Обработать файл
-            processSelectedFile(selectedFile);
+            // Обновление таблицы
+            updateDataTable(read, jtbFromFilePreview);
+
+            // Построение графика
+            buildGraph(curveStorage.getCurve("FromFile"), fromFileSeries);
         }
     }
 
@@ -706,7 +718,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         repaintChart();
     }
 
-    public void calculateActionHandler(ActionEvent e) { //Дописать считывание с гуи нужных переменных и вызов новго метода
+    public void calculateActionHandler(ActionEvent e) {
         String kelvinString = jtfKelvinMeasured.getText();
         String voltsString = jtfVoltsMeasured.getText();
 
@@ -721,12 +733,15 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
             calculatedCurveData = calc.calculateActionHandlerNew(kelvinString, voltsString, selectedCurve);
         } catch (CurveCalculationException ex) {
             jlbStatus.setText("Произошла ошибка во время расчета кривой" + ex.getMessage());
+            doErrorMessage("Произошла ошибка во время расчета кривой: " + ex.getMessage(), "Ошибка");
         }
-        curveStorage.addOrUpdateCurve("Calculated", calculatedCurveData.getCurveData());
+
+        curveStorage.addOrUpdateCurve("FromCalculated", calculatedCurveData.getCurveData());
         jlbNearestPoint.setText(String.format("Ближ.т.: %.2fK", calculatedCurveData.getNearestPoint()));
         jlbAddingVolts.setText(String.format("Точки смещены на: %.4fV", calculatedCurveData.getShiftSize()));
+        updateCurveInfoCalculated(calculatedCurveData.getCurveData().getCurveMetaData());
         buildGraph(calculatedCurveData.getCurveData(), calculatedSeries);
-        updateDataTableCalculated(calculatedCurveData.getCurveData());
+        updateDataTable(calculatedCurveData.getCurveData(), jtbCalculatedPreview);
     }
 
 
@@ -735,6 +750,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
     }
 
     public void paintCalculatedPoly(ActionEvent e) {
+        log.info("paintCalculatedPoly event");
         buildGraph(curveStorage.getCurve("FromCalculated"), calculatedSeries);
     }
 
@@ -758,8 +774,8 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
 
         fileChooser.setFileFilter(filter);
 
-        if (filePath != null) {
-            fileChooser.setCurrentDirectory(new File(filePath));
+        if (fileHandler.getFilePath() != null) {
+            fileChooser.setCurrentDirectory(new File(fileHandler.getFilePath()));
         }
 
         int result = fileChooser.showSaveDialog(null);
@@ -771,7 +787,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
             if (!filePath.endsWith(extension)) {
                 selectedFile = new File(filePath + extension);
             }
-
+            //ToDO выбор источника данных
             CurveMetaData metaData = curveStorage.getCurve("FromCalculated").getCurveMetaData();
             List<Map.Entry<Double, Double>> curveData = curveStorage.getCurve("FromCalculated").getCurvePoints();
 
@@ -834,117 +850,20 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
                 jlbSavedFile.setText(selectedFile.getAbsolutePath());
             } catch (FileNotFoundException ex) {
                 log.error("Ошибка сохранения файла", ex);
-                JOptionPane.showMessageDialog(null,
-                        "Ошибка сохранения: " + ex.getMessage(),
-                        "Ошибка",
-                        JOptionPane.ERROR_MESSAGE);
+                doErrorMessage("Ошибка сохранения: " + ex.getMessage(), "Ошибка");
             }
         }
     }
 
+    private void doErrorMessage(String message, String title) {
+        JOptionPane.showMessageDialog(null,
+                message,
+                title,
+                JOptionPane.ERROR_MESSAGE);
+
+    }
     private void processSelectedFile(File file) {
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            List<String[]> tableData = new ArrayList<>();
-            String line;
-            int lineCount = 0;
-            StringBuilder sb = new StringBuilder();
-            int needLineScip = 5;
-            if (file.getName().endsWith(".340")) {
-                needLineScip = 8;
-            } else if (file.getName().endsWith(".curve")) {
-                needLineScip = 5;
-            }
-            // Пропуск заголовков (первые n строк)
-            line = reader.readLine();
-            while (line != null && lineCount < needLineScip) {
-                sb.append(line);
-                sb.append("\n");
-                lineCount++;
-                line = reader.readLine();
-            }
 
-            // Чтение данных
-            int i = 0;
-            while (line != null) {
-
-                String[] parts = new String[2];
-                if (file.getName().endsWith(".340")) {
-                    //log.info("Ориентируюсь на позиции в строке");
-                    if (line.length() < 24) {
-                        log.warn("Слишком короткая строка" + line.length());
-                        log.warn(line);
-                        line = reader.readLine();
-                        i = 0;
-                        continue;
-                    }
-                    if (!(line.charAt(3) == ' ')) {
-                        log.warn("Неверное положение пробела после номера строки: " + line.charAt(3));
-                        line = reader.readLine();
-                        i = 0;
-                        continue;
-                    }
-                    String lineNumber = line.substring(0, 3);
-                    lineNumber = lineNumber.trim();
-
-                    String units = line.substring(5, 19);
-                    units = units.trim();
-
-                    String temperature = line.substring(19, line.length() - 1);
-                    temperature = temperature.trim();
-
-                    parts[0] = units;
-                    parts[1] = temperature;
-                    //System.out.println("Line number: + " + i + "Readet lineNumber: " + lineNumber + "Line: " + line + " units " + units + " temp " + temperature);
-                } else {
-                    //log.info("Ориентируюсь на нарезку");
-                    parts = line.split("\t"); // Разделитель - табуляция
-
-                    //System.out.println("Line number: + " + i + "Line: " + line + " units " + parts[0] + " temp " + parts[1]);
-                }
-                i++;
-
-                if (parts.length == 2) {
-                    tableData.add(parts);
-                } else {
-                    System.out.println("Scip: " + parts.length);
-                }
-                line = reader.readLine();
-            }
-            CurveMetaData curveOpenedMetaData = new CurveMetaData();
-            CurveMetaData curveEditedMetaData = new CurveMetaData();
-
-            curveOpenedMetaData = ser.fileHeaderToCurveMetaData(sb.toString()); //updateCurveMetaDara
-            curveEditedMetaData = ser.fileHeaderToCurveMetaData(sb.toString()); //updateCurveMetaDara
-
-            updateCurveInfoFromFile(curveOpenedMetaData);
-            updateCurveInfoCalculated(curveEditedMetaData);
-
-            CurveData curveOpenedData = new CurveData();
-            curveOpenedData.setCurveMetaData(curveOpenedMetaData);
-            fillCurveData(curveOpenedData, tableData);
-
-            CurveData curveEditedData = new CurveData();
-            curveEditedData.setCurveMetaData(curveEditedMetaData);
-            fillCurveData(curveEditedData, tableData);
-
-            curveStorage.addOrUpdateCurve("FromFile", curveOpenedData);
-            curveStorage.addOrUpdateCurve("FromCalculated", curveEditedData);
-
-            // Обновление таблицы
-            updateDataTableFromFile(curveOpenedData);
-            updateDataTableCalculated(curveEditedData);
-
-            // Построение графика
-            buildGraph(curveStorage.getCurve("FromFile"), fromFileSeries);
-            buildGraph(curveStorage.getCurve("FromCalculated"), calculatedSeries);
-
-
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(null,
-                    "Ошибка чтения файла: " + ex.getMessage(),
-                    "Ошибка",
-                    JOptionPane.ERROR_MESSAGE);
-        }
     }
 
     private void initChart() {
@@ -1073,7 +992,21 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
     }
 
 
-    private void updateDataTableFromDevice(CurveData curveData) {
+    private void updateDataTable(CurveData curveData, JTable table) {
+        if(curveData == null){
+            doErrorMessage("Для обновления таблицы 'из файла' передан пустой объект данных","Ошибочка");
+            return;
+        }
+
+        if(curveData.getCurveMetaData() == null){
+            doErrorMessage("Для обновления таблицы 'из файла' передан объект данных null полем MetaData","Ошибочка");
+            return;
+        }
+
+        if(curveData.getCurveMetaData().getDataFormat() == null){
+            doErrorMessage("Для обновления таблицы 'из файла' передан объект данных MetaData null полем DataFormat","Ошибочка");
+            return;
+        }
         // Заголовки столбцов
         String[] header = curveData.getCurveMetaData().getDataFormat().getName().split("vs");
 
@@ -1085,45 +1018,21 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         });
 
         // Установка модели таблицы
-        jtbFromDevicePreview.setModel(new DefaultTableModel(rowsList.toArray(new String[0][0]), header));
-    }
-
-    private void updateDataTableCalculated(CurveData curveData) {
-        // Заголовки столбцов
-        String[] header = curveData.getCurveMetaData().getDataFormat().getName().split("vs");
-
-        //Заполнение таблицы
-        // Добавляем новые точки данных через лямбдочку
-        ArrayList<String[]> rowsList = new ArrayList<>();
-        curveData.getCurvePoints().forEach(it -> {
-            rowsList.add(new String[]{String.valueOf(it.getKey()), String.valueOf(it.getValue())});
-        });
-
-        // Установка модели таблицы
-        jtbCalculatedPreview.setModel(new DefaultTableModel(rowsList.toArray(new String[0][0]), header));
-    }
-
-    private void updateDataTableFromFile(CurveData curveData) {
-        // Заголовки столбцов
-        String[] header = curveData.getCurveMetaData().getDataFormat().getName().split("vs");
-
-        //Заполнение таблицы
-        // Добавляем новые точки данных через лямбдочку
-        ArrayList<String[]> rowsList = new ArrayList<>();
-        curveData.getCurvePoints().forEach(it -> {
-            rowsList.add(new String[]{String.valueOf(it.getKey()), String.valueOf(it.getValue())});
-        });
-
-        // Установка модели таблицы
-        jtbFromFilePreview.setModel(new DefaultTableModel(rowsList.toArray(new String[0][0]), header));
+        table.setModel(new DefaultTableModel(rowsList.toArray(new String[0][0]), header));
     }
 
     private void buildGraph(CurveData curveData, XYSeries series) {
 
         series.clear();
         if(curveData == null){
-            jlbStatus.setText("Нет данных для графика" + curveData.getCurveMetaData().getSensorModel());
+            if(series != null){
+                doErrorMessage("В график переданы null данные для " + series.getDescription(), "Ужасы...");
+            }else{
+                doErrorMessage("В график переданы null данные и их контейнер", "Ужасы...");
+            }
+            jlbStatus.setText("Нет данных для графика");
             return;
+
         }
         curveData.getCurvePoints().forEach(it -> {
             series.add(it.getKey(), it.getValue());
@@ -1146,14 +1055,6 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         plot.getRangeAxis().setAutoRange(true);
     }
 
-    private void fillCurveData(CurveData curveData, List<String[]> data) {
-        for (String[] row : data) {
-            curveData.addCurvePointFromString(row[0], row[1]);
-        }
-    }
-
-
-
     private <T extends Enum<?>, U> void initComboBox(JComboBox<U> comboBox, T[] values, IntFunction<U> valueExtractor) {
         for (int i = 0; i < values.length; i++) {
             comboBox.addItem(valueExtractor.apply(i));
@@ -1175,7 +1076,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
             }
         }
     }
-
+//Количество строк 1152
 
     /**
      * Method generated by IntelliJ IDEA GUI Designer
