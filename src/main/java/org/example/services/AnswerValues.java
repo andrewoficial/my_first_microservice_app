@@ -3,8 +3,6 @@ package org.example.services;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.log4j.Logger;
-import org.example.gui.ChartWindow;
-
 
 
 public class AnswerValues {

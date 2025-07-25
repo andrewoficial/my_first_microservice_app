@@ -687,7 +687,6 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         }
         if(fileHandler.getSelectedFileToOpen() != null){
             jlbSelectedFile.setText(fileHandler.getSelectedFileToOpen().getName());
-            processSelectedFile(fileHandler.getSelectedFileToOpen());
 
             CurveData read = null;
             try {
@@ -696,10 +695,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
                 doErrorMessage("Ошибка при разборе файла: ["+ex.getMessage()+"]", "Ошибка");
                 return;
             }
-            curveStorage.addOrUpdateCurve("FromFile", read);
-
             updateCurveInfoFromFile(read.getCurveMetaData());
-
             curveStorage.addOrUpdateCurve("FromFile", read);
 
             // Обновление таблицы
@@ -860,9 +856,6 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
                 message,
                 title,
                 JOptionPane.ERROR_MESSAGE);
-
-    }
-    private void processSelectedFile(File file) {
 
     }
 

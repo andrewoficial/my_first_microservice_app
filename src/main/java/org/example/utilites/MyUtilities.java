@@ -126,6 +126,7 @@ public class MyUtilities {
             case DEMO_PROTOCOL -> device = new DEMO_PROTOCOL();
             case OWON_SPE3051 -> device = new OWON_SPE3051();
             case GPS_Test -> device = new GPS_Test();
+            case DVK_4RD -> device = new DVK_4RD();
             default -> device = new DEMO_PROTOCOL();
         }
         return device;

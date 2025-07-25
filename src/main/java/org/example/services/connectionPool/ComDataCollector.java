@@ -224,7 +224,7 @@ public class ComDataCollector implements Runnable{
                         handleDataAvailableEvent();
                         comPort.flushIOBuffers();
                     }
-                    log.info("Слушатель будет добавлен еще " + (limit - counter) + " раз (отключено)");
+                    //log.info("Слушатель будет добавлен еще " + (limit - counter) + " раз (отключено)");
                     counter++;
                     //comPort.addDataListener(serialPortDataListener);
                 }
@@ -248,11 +248,11 @@ public class ComDataCollector implements Runnable{
     }
     private void poolRules(){
         for (ClientData client : clientsMap.values()) {
-            log.info("Во внутренней очереди устройств опрос по правилам для устройства clientId " + client.clientId + " командой " + client.command);
+            //log.info("Во внутренней очереди устройств опрос по правилам для устройства clientId " + client.clientId + " командой " + client.command);
             RuleStorage ruleStorage = RuleStorage.getInstance();
             List<ComRule> rules = ruleStorage.getRulesForClient(client.clientId);
             if(rules == null){
-                log.warn("Для пользователя " + client.clientId + " нет правил для опроса");
+                //log.warn("Для пользователя " + client.clientId + " нет правил для опроса");
                 continue;
             }
             for (ComRule rule : rules) {

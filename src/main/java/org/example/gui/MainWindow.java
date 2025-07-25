@@ -114,7 +114,7 @@ public class MainWindow extends JFrame implements Rendeble {
 
     private void createMenu() {
         assert prop != null;
-        log.info("prop driver " + prop.getDrv());
+        //log.info("prop driver " + prop.getDrv());
         JMenuBar menuBar = new JMenuBar();
         JmenuFile menu = new JmenuFile(prop, anyPoolService);
         menuBar.add(menu.createFileMenu());
@@ -129,7 +129,7 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
     private int restoreParameters() {
-        log.info("Восстанвливаю параметры");
+        //log.info("Восстанвливаю параметры");
         MainLeftPanelStateCollection restoredFromFile = prop.getLeftPanelStateCollection();
         if (restoredFromFile == null) {//Если в настройках ничего нет
             log.warn(" В настрйоках нету состояний. Создаю с нуля");
@@ -206,7 +206,7 @@ public class MainWindow extends JFrame implements Rendeble {
         tabbedPane1.addChangeListener(new ChangeListener() {
             public void stateChanged(ChangeEvent e) {
                 currentActiveTab.set(tabbedPane1.getSelectedIndex());
-                log.info("Фокус установлен на вкладку " + currentActiveTab); //активна вкладка, выбрана вкладка
+                //log.info("Фокус установлен на вкладку " + currentActiveTab); //активна вкладка, выбрана вкладка
                 currentActiveClientId.set(leftPanState.getClientIdByTabNumber(currentActiveTab.get()));
                 if (currentActiveClientId.get() == -1) {
                     currentActiveClientId.set(checkAndCreateGuiStateClass());

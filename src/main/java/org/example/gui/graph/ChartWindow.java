@@ -1,20 +1,17 @@
-package org.example.gui;
+package org.example.gui.graph;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
-import com.intellij.uiDesigner.core.Spacer;
 import org.apache.log4j.Logger;
+import org.example.gui.Rendeble;
 import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
 import org.example.services.DeviceAnswer;
 import org.jfree.chart.*;
 import org.jfree.chart.axis.LogarithmicAxis;
 import org.jfree.chart.axis.NumberAxis;
-import org.jfree.chart.block.BlockBorder;
 import org.jfree.chart.entity.ChartEntity;
 import org.jfree.chart.entity.XYItemEntity;
-import org.jfree.chart.labels.StandardXYItemLabelGenerator;
-import org.jfree.chart.labels.XYItemLabelGenerator;
 import org.jfree.chart.plot.*;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.data.time.*;
@@ -27,7 +24,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
-import java.text.NumberFormat;
 import java.util.*;
 import java.util.List;
 

@@ -13,12 +13,13 @@ import java.util.HashSet;
 import java.util.concurrent.ExecutorService;
 
 import org.example.gui.curve.CurveHandlerWindow;
+import org.example.gui.graph.ChartWindow;
 import org.example.gui.mgstest.MgsSimpleTest;
 import org.example.services.AnswerStorage;
 import org.example.services.connectionPool.AnyPoolService;
 import org.example.utilites.properties.MyProperties;
 
-import static org.example.gui.ChartWindow.getFieldsCountForTab;
+import static org.example.gui.graph.ChartWindow.getFieldsCountForTab;
 
 public class JmenuFile {
     private static final Logger logger = Logger.getLogger(JmenuFile.class);

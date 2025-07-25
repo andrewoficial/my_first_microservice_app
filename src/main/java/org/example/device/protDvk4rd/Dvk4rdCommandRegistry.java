@@ -1,7 +1,9 @@
 package org.example.device.protDvk4rd;
 
+import org.apache.log4j.Logger;
 import org.example.device.DeviceCommandRegistry;
 import org.example.device.SingleCommand;
+
 import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
 
@@ -9,11 +11,18 @@ import java.util.Arrays;
 
 import static org.example.utilites.MyUtilities.*;
 import static org.example.utilites.MyUtilities.isCorrectNumberF;
+import org.example.device.protDvk4rd.parsers.FULUParser;
+import org.example.device.protDvk4rd.parsers.FULSParser;
 
 public class Dvk4rdCommandRegistry extends DeviceCommandRegistry {
+    private static final Logger log = Logger.getLogger(Dvk4rdCommandRegistry.class);
+    private final FULUParser fuluParser = new FULUParser();
+    private final FULSParser fulsParser = new FULSParser();
     @Override
     protected void initCommands() {
         commandList.addCommand(createFCommand());
+        commandList.addCommand(createFulsCommand());
+        commandList.addCommand(createFuluCommand());
         // Добавление других команд
     }
     
@@ -22,10 +31,35 @@ public class Dvk4rdCommandRegistry extends DeviceCommandRegistry {
             "F", 
             "F - Основная команда опроса", 
             this::parseFResponse, 
-            72
+            74
         );
     }
-    
+
+    private SingleCommand createFuluCommand() {
+        return new SingleCommand(
+                "FULU",
+                "FULU - Напряжения на измерительных каналах",
+                this::parseFULUResponse,
+                117
+        );
+    }
+
+    private SingleCommand createFulsCommand() {
+        return new SingleCommand(
+                "FULS",
+                "FULS - Все основные отношения сигнало",
+                this::parseFULSResponse,
+                156
+        );
+    }
+    private AnswerValues parseFULUResponse(byte[] response){
+        return this.fuluParser.parseFULUResponse(response);
+    }
+
+    private AnswerValues parseFULSResponse(byte[] response) {
+        return this.fulsParser.parseFULSResponse(response);
+    }
+
     private AnswerValues parseFResponse(byte[] response) {
         AnswerValues answerValues = null;
         String example = "02750\t07518\t00023\t00323\t08614\t01695\t06353\t03314\t03314\t00001\t08500012\t0x0D";
@@ -362,15 +396,9 @@ public class Dvk4rdCommandRegistry extends DeviceCommandRegistry {
             return null;
         }
     }
-    
-    // Вынесенные методы для повторного использования
-    private double parseSubResponse(byte[] subResponse) {
-        // Общая логика преобразования байтов в число
-        return 0.0;
-    }
-    
-    private boolean validateCrc(byte[] response) {
-        // Логика проверки CRC
-        return false;
-    }
+
+
+
+
+
 }

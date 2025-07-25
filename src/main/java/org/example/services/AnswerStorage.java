@@ -67,7 +67,7 @@ public class AnswerStorage {
     }
 
     public static ConcurrentHashMap<Integer, String> getDeviceTabPair() {
-        log.info("Вызвано получение коллекции ассоциаций. Размер коллекции " + tabDevicePairs.size());
+        //log.info("Вызвано получение коллекции ассоциаций. Размер коллекции " + tabDevicePairs.size());
         return tabDevicePairs;
     }
 

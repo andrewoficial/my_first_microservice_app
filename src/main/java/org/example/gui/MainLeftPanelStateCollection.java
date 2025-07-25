@@ -210,13 +210,13 @@ public class MainLeftPanelStateCollection {
     }
 
     public void setCommandToSend(int clientId, String command) {
-        System.out.println(" Вызвано сохранение строки для отправки " +  clientId + " строка " + command);
+        //System.out.println(" Вызвано сохранение строки для отправки " +  clientId + " строка " + command);
         MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
         if (stateObj == null) {
             throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
         }
         if(command == null || command.isEmpty()){
-            System.out.println("В сохранение состояния передана пустая команда");
+            //System.out.println("В сохранение состояния передана пустая команда");
             command = "";
         }
         stateObj.setCommand(command);
