@@ -864,6 +864,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         dataset.addSeries(fromFileSeries);
         dataset.addSeries(calculatedSeries);
         dataset.addSeries(fromDeviceSeries);
+
         chart = createChart(dataset);
         chartPanel = new ChartPanel(chart);
         chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
@@ -890,8 +891,19 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
 
         // Настройка рендерера
         XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
+        // Настройки для КАЖДОЙ серии (0, 1, 2)
+        // Серия 0 (fromFileSeries): Синий
         renderer.setSeriesPaint(0, Color.BLUE);
         renderer.setSeriesStroke(0, new BasicStroke(2.0f));
+
+        // Серия 1 (calculatedSeries): Красный
+        renderer.setSeriesPaint(1, Color.RED);
+        renderer.setSeriesStroke(1, new BasicStroke(2.0f));
+
+        // Серия 2 (fromDeviceSeries): Зеленый
+        renderer.setSeriesPaint(2, Color.GREEN);
+        renderer.setSeriesStroke(2, new BasicStroke(2.0f));
+
         plot.setRenderer(renderer);
 
         return chart;
