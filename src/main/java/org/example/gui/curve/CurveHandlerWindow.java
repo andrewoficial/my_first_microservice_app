@@ -444,8 +444,12 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
             jButtonCurveMetaDataEntry.getKey().setEnabled(flag);
         }
     }
+    private void setAddressForWrite(int numberInDeviceMemory) {
+        jcbMemoryAddres.setSelectedItem(numberInDeviceMemory);
+    }
     private void loadCurveDataFromDevice(CurveMetaData curve) {
         setCurveButtons(false);
+        setAddressForWrite(curve.getNumberInDeviceMemory());
         jpDataTranserProggres.setVisible(true);
         jpbCommandSending.setValue(0);
         jlbStatus.setText("Начато чтение кривой...");
@@ -488,7 +492,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
                 doErrorMessage("Ошибка чтения: " + e.getMessage(), "Ошибка чтения кривой");
             }
         }).start(); // Запускаем фоновый поток
-        
+
 
     }
 
