@@ -65,8 +65,8 @@ public class CurveDeviceCommander {
 
         if(!isPortConsistent()) return null;
         ArrayList<CurveMetaData> list = new ArrayList<>();
-        //[CRVHDR? 22] //ToDo FixMe : 65 заменил на 3 что бы тестить быстрее
-        int READ_LIMIT = 28;
+        //[CRVHDR? 22] //
+        int READ_LIMIT = 65;//Limit for curve list reading. Ограничение на размер считываемых кривых.
         int percentOfAsking = 0;
         for (int i = 1; i < READ_LIMIT; i++) {
             String cmdToSend= "CRVHDR? " + i;
@@ -153,7 +153,7 @@ public class CurveDeviceCommander {
                 curveMetaData.setTemperatureCoefficient(tempCoeff);
 
                 curveMetaData.setNumberInDeviceMemory(i);
-                if(i > 24){
+                if(i > 20){
                     curveMetaData.setIsUserCurve(true);
                 }else{
                     curveMetaData.setIsUserCurve(false);

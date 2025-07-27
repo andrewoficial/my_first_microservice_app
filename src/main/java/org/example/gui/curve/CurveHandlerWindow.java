@@ -222,6 +222,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
 
         jbtCalculate.addActionListener(this::calculateActionHandler);
         jbOpenComPort.addActionListener(this::openPortActionHandler);
+        jbCloseComPort.addActionListener(this::closePortActionHandler);
         jbtWrite.addActionListener(this::writeInDeviceHandler);
 
         ListenerUtils.addDocumentListener(jtfCalculatedCurveName, this::updateOnEditeCurveName);
@@ -316,23 +317,26 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
             if (opened) {
                 jlbStatus.setText("Порт " + comPort.getDescriptivePortName() + " открыт");
             } else {
+                doErrorMessage("Не удалось открыть порт. Код ошибки: " + comPort.getLastErrorCode(), "Такое иногда случается...");
                 throw new ConnectException("Не удалось открыть порт. Код ошибки: " + comPort.getLastErrorCode());
             }
 
         } catch (Exception e) {
             jlbStatus.setText("Ошибка открытия порта");
             log.error("Ошибка при открытии COM-порта", e);
-            JOptionPane.showMessageDialog(
-                    null,
-                    "Ошибка открытия порта: " + e.getMessage(),
-                    "Ошибка подключения",
-                    JOptionPane.ERROR_MESSAGE
-            );
+            doErrorMessage("Ошибка открытия порта:" + e.getMessage(), "Такое иногда случается...");
         }
 
 
         jlbStatus.setText(checkDeviceConnection());
         getListOfCurvesInDevice();
+    }
+
+    private void closePortActionHandler(ActionEvent actionEvent) {
+        if (comPort != null && comPort.isOpen()) {
+            comPort.closePort();
+            jlbStatus.setText("Порт закрыт");
+        }
     }
 
     private String checkDeviceConnection() {
@@ -347,7 +351,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
     }
 
     private String getListOfCurvesInDevice() {
-        log.error("Начинаю отображение списка кривых");
+        log.debug("Начинаю отображение списка кривых");
 
         // Настройка прогресс-бара
         jpDataTranserProggres.setVisible(true);
@@ -369,7 +373,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
                 SwingUtilities.invokeLater(() -> {
                     jlbStatus.setText("Считывание завершено успешно!");
                     jpbCommandSending.setValue(100);
-                    log.error("В коллекции " + resultHolder.size());
+                    log.warn("В коллекции " + resultHolder.size());
 
                     curvesContainerUsers.removeAll();
                     curvesContainerStandart.removeAll();
@@ -411,8 +415,8 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
 
     private JButton createCurveButton(CurveMetaData curve) {
         //log.info("Создаю кнопку кривой " + curve.getSensorModel());
-        String buttonText = String.format("%s (SN: %s)",
-                curve.getSensorModel(), curve.getSerialNumber());
+        String buttonText = String.format("%s -- %s (SN: %s)",
+                curve.getNumberInDeviceMemory(), curve.getSensorModel(), curve.getSerialNumber());
 
         JButton curveButton = new JButton(buttonText);
         curveButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Выравнивание по левому краю
@@ -435,8 +439,13 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         return curveButton;
     }
 
+    private void setCurveButtons(boolean flag){
+        for (Map.Entry<JButton, CurveMetaData> jButtonCurveMetaDataEntry : buttonCurveMap.entrySet()) {
+            jButtonCurveMetaDataEntry.getKey().setEnabled(flag);
+        }
+    }
     private void loadCurveDataFromDevice(CurveMetaData curve) {
-
+        setCurveButtons(false);
         jpDataTranserProggres.setVisible(true);
         jpbCommandSending.setValue(0);
         jlbStatus.setText("Начато чтение кривой...");
@@ -471,17 +480,15 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
                     buildGraph(curveStorage.getCurve("FromDevice"), fromDeviceSeries);
                     updateDataTable(curveStorage.getCurve("FromDevice"), jtbFromDevicePreview);
                     updateCurveInfoFromDevice(curveStorage.getCurve("FromDevice").getCurveMetaData());
+                    setCurveButtons(true);
 
                 });
             } catch (Exception e) {
-                SwingUtilities.invokeLater(() -> {
-                    jlbStatus.setText("Ошибка чтения: " + e.getMessage());
-                    log.error("Ошибка чтения кривой", e);
-                    jpDataTranserProggres.setVisible(false);
-                });
+                setCurveButtons(true);
+                doErrorMessage("Ошибка чтения: " + e.getMessage(), "Ошибка чтения кривой");
             }
         }).start(); // Запускаем фоновый поток
-
+        
 
     }
 
@@ -1118,14 +1125,14 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         comConnection.add(tabbedPane1, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, new Dimension(200, 200), null, 0, false));
         final JPanel panel1 = new JPanel();
         panel1.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        tabbedPane1.addTab("Standart", panel1);
-        jspReadetNamesStandartCurves = new JScrollPane();
-        panel1.add(jspReadetNamesStandartCurves, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        tabbedPane1.addTab("User", panel1);
+        jspReadetNamesUsersCurves = new JScrollPane();
+        panel1.add(jspReadetNamesUsersCurves, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         final JPanel panel2 = new JPanel();
         panel2.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        tabbedPane1.addTab("User", panel2);
-        jspReadetNamesUsersCurves = new JScrollPane();
-        panel2.add(jspReadetNamesUsersCurves, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        tabbedPane1.addTab("Standart", panel2);
+        jspReadetNamesStandartCurves = new JScrollPane();
+        panel2.add(jspReadetNamesStandartCurves, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         fileSelect = new JPanel();
         fileSelect.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
         mainPane.add(fileSelect, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
