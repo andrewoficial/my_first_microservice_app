@@ -168,6 +168,7 @@ public class CurveDeviceCommander {
         log.info("Возвращаю список кривых: " + list.size());
         return list;
     }
+
     public List<Map.Entry<Double, Double>> readCurveFromDevice(int curveAddress, IntConsumer progressConsumer) throws Exception {
         if (!isPortConsistent()) {
             throw new Exception("Порт не инициализирован");
@@ -287,6 +288,34 @@ public class CurveDeviceCommander {
         } finally {
             inSendingProcess = false;
         }
+    }
+
+    public void sendWakeUp() throws Exception {
+        sendCommand("WAKEUP\n");
+    }
+
+    public void sendSleep() throws Exception {
+        sendCommand("SLEEP\n");
+    }
+
+    public StateWords getState() throws Exception {
+        sendCommand("STATE?\n");
+        safetySleep(20);
+
+        byte[] response = null;
+        log.info("Начинаю считывание ответа getState");
+        response = readAnswer();
+
+
+        StringBuilder sb = new StringBuilder();
+        for (byte b : response) {
+            if (b > 32 && b < 127) {
+                sb.append((char) b);
+            }
+        }
+
+        int state = Integer.parseInt(sb.toString());
+        return StateWords.getByValue(state);
     }
 
     private void sendCommand(String command) throws Exception {
