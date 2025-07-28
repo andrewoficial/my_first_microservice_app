@@ -178,6 +178,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
     private JPanel curvesContainerUsers; // Контейнер для кнопок
     private final ArrayList<CurveMetaData> curveMetaDataInDeviceList = new ArrayList<>();
     private SerialPort comPort = null;
+    private StateWords currentState = StateWords.S04;
 
 
     public CurveHandlerWindow(MyProperties prop) {
@@ -326,7 +327,9 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
 
 
         jlbStatus.setText(checkDeviceConnection());
+        getStateCmdActionHandler(null);
         getListOfCurvesInDevice();
+
     }
 
     private void closePortActionHandler(ActionEvent actionEvent) {
@@ -357,6 +360,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
                 doErrorMessage("Ошибка при запросе состояния прибора:"+e.getMessage(), "Ошибка запроса состояния");
                 jlbStatus.setText("Ошибка при запросе состояния прибора:"+e.getMessage());
             }
+            currentState = status;
             jlbStatus.setText("Текущее состояние прибора: " + status.getName());
         } else {
             doErrorMessage("Ошибка. Порт не инициализирован." , "Ошибка запроса состояния");
@@ -374,6 +378,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
                 jlbStatus.setText("Ошибка при отправке команды SLEEP прибора:"+e.getMessage());
             }
             jlbStatus.setText("Отправлена команда SLEEP");
+            getStateCmdActionHandler(null);
         } else {
             doErrorMessage("Ошибка. Порт не инициализирован." , "Ошибка отправки SLEEP");
             jlbStatus.setText( "Ошибка 001. Порт не открыт.");
@@ -390,6 +395,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
                 jlbStatus.setText("Ошибка при отправке команды WAKEUP прибора:"+e.getMessage());
             }
             jlbStatus.setText("Отправлена команда WAKEUP");
+            getStateCmdActionHandler(null);
         } else {
             doErrorMessage("Ошибка. Порт не инициализирован." , "Ошибка отправки WAKEUP");
             jlbStatus.setText( "Ошибка 001. Порт не открыт.");
@@ -562,7 +568,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
 
     private void writeInDeviceHandler(ActionEvent actionEvent) {
         CurveDeviceCommander devCommander = new CurveDeviceCommander(comPort);
-        //JPanel jpDataTranserProggres eже создана и инициализирована в Intelige добавить прогресс бар
+
         if (!devCommander.isPortConsistent()) {
             log.warn("Порт не инициализирован");
             jlbStatus.setText("Порт не нициализирован");
@@ -577,7 +583,17 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         // Определение адреса памяти. Доступны адреса с 21 по 64.
         int memoryAddress = jcbMemoryAddres.getSelectedIndex() + 21;
         // Определение кривой для записи
-        String curveType = (jcbFileSourceForWrite.getSelectedIndex() == 0) ? "FromFile" : "FromCalculated";
+        String curveType;
+        if(jcbFileSourceForWrite.getSelectedIndex() == 0){
+            curveType = "FromFile";
+        }else if(jcbFileSourceForWrite.getSelectedIndex() == 1){
+            curveType = "FromDevice";
+        }else if(jcbFileSourceForWrite.getSelectedIndex() == 2){
+            curveType = "FromCalculated";
+        }else{
+            doErrorMessage("Неверно указан источник данных для записи в прибор", "Ошибка записи в прибор");
+            return;
+        }
         log.info("Запись {" + curveType + "} файла");
 
         if (!curveStorage.isContains(curveType)) {
@@ -586,6 +602,9 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
             return;
         }
 
+        if(currentState != StateWords.SLP) {
+            doErrorMessage("Для применения полинома в прибор необходимо отправить команду SLEEP. Записываемые данные будут проигнорированы. Текущий статус:" + currentState.getName(), "Внимание!");
+        }
         // Получение данных кривой
         CurveData curve = curveStorage.getCurve(curveType);
 
@@ -1151,7 +1170,7 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         mainPane.setLayout(new GridLayoutManager(8, 3, new Insets(0, 0, 0, 0), -1, -1));
         comConnection = new JPanel();
         comConnection.setLayout(new GridLayoutManager(8, 3, new Insets(0, 0, 0, 0), -1, -1));
-        mainPane.add(comConnection, new GridConstraints(0, 0, 8, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        mainPane.add(comConnection, new GridConstraints(0, 0, 8, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, new Dimension(400, -1), 0, false));
         jcbComPortNumber = new JComboBox();
         final DefaultComboBoxModel defaultComboBoxModel1 = new DefaultComboBoxModel();
         jcbComPortNumber.setModel(defaultComboBoxModel1);
@@ -1217,9 +1236,6 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         jpFileWrite = new JPanel();
         jpFileWrite.setLayout(new GridLayoutManager(2, 5, new Insets(0, 0, 0, 0), -1, -1));
         mainPane.add(jpFileWrite, new GridConstraints(3, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        jbtWrite = new JButton();
-        jbtWrite.setText("Записать в прибор");
-        jpFileWrite.add(jbtWrite, new GridConstraints(1, 3, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jpnSavedFile = new JPanel();
         jpnSavedFile.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
         jpFileWrite.add(jpnSavedFile, new GridConstraints(0, 0, 1, 5, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
@@ -1232,6 +1248,9 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
         jpFileWrite.add(jcbMemoryAddres, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jcbFileSourceForWrite = new JComboBox();
         jpFileWrite.add(jcbFileSourceForWrite, new GridConstraints(1, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jbtWrite = new JButton();
+        jbtWrite.setText("Записать в прибор");
+        jpFileWrite.add(jbtWrite, new GridConstraints(1, 3, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jpEditGraph = new JPanel();
         jpEditGraph.setLayout(new GridLayoutManager(2, 4, new Insets(0, 0, 0, 0), -1, -1));
         mainPane.add(jpEditGraph, new GridConstraints(5, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));

@@ -12,7 +12,7 @@ public enum StateWords {
     WKP(1, "Is waking up"),
     RNG(2, "Running"),
     SHD(3, "Is shutting down"),
-    S04(4, "State 4"),
+    S04(4, "State 4"),//Going to sleep
     S05(5, "State 5"),
     S06(6, "State 6"),
     S07(7, "State 7");
