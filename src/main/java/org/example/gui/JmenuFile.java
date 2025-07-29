@@ -14,18 +14,19 @@ import java.util.concurrent.ExecutorService;
 
 import org.example.gui.curve.CurveHandlerWindow;
 import org.example.gui.graph.ChartWindow;
+import org.example.gui.graph.data.AnswerLoader;
 import org.example.gui.mgstest.MgsSimpleTest;
 import org.example.services.AnswerStorage;
 import org.example.services.connectionPool.AnyPoolService;
 import org.example.utilites.properties.MyProperties;
 
-import static org.example.gui.graph.ChartWindow.getFieldsCountForTab;
+
 
 public class JmenuFile {
     private static final Logger logger = Logger.getLogger(JmenuFile.class);
     private MyProperties prop;
     private final AnyPoolService anyPoolService;
-
+    private final AnswerLoader answerLoader = new AnswerLoader();
 
     public JmenuFile (MyProperties extProp, AnyPoolService anyPoolService){
         super();
@@ -278,7 +279,7 @@ public class JmenuFile {
 
                 // Обновление списка чек-боксов
                 for (Integer tab : tabs) {
-                    int fieldsCounter = getFieldsCountForTab(tab).size();
+                    int fieldsCounter = answerLoader.getUnitsArrayForTab(tab).size();
                     tabsFieldCapacity.add(fieldsCounter);
                 }
 

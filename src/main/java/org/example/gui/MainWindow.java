@@ -567,7 +567,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 //log.info("Нет новых данных для клиента [" + clientId + "]");
                 return;
             }
-            log.info("Будут отображены новые данные для клиента [" + clientId + "], позиция: " + an.getPosition());
+            //log.info("Будут отображены новые данные для клиента [" + clientId + "], позиция: " + an.getPosition());
 
             // Обновляем позицию атомарно
             lastReceivedPositionFromStorageMap.put(clientId, an.getPosition());

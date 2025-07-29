@@ -164,14 +164,14 @@ public class ComDataCollector implements Runnable{
             String receivedData = buffer.toString();
             if (!receivedData.isEmpty()) {
                 incomingMessages.add(new ReceivedData(receivedData, responseRequested, System.currentTimeMillis()));
-                log.info("Добавлено сообщение в очередь: " + receivedData.trim());
+                //log.info("Добавлено сообщение в очередь: " + receivedData.trim());
             }
         }finally {
             //Пояснения: скорее всего создаётся объект DeviceAnswer в контексте слушателя несколько раз и перезаписывается
             //sleepSafely(800);//ToDo при быстро поступающих данных, видимо из-за addDataListener пока не завершилась обработка предыдущего происходит накладывание и проблема с таймингами потоков
             comDataCollectorBusy.set(false);
             comPort.addDataListener(serialPortDataListener);
-            log.info(" Завершил получение данных");
+            //log.info(" Завершил получение данных");
         }
     }
 /*
@@ -280,7 +280,7 @@ public class ComDataCollector implements Runnable{
         millisPrev = System.currentTimeMillis();
         for (ClientData client : clientsMap.values()) {
             if(client.needPool){
-                log.info("Во внутренней очереди устройств отправляю для устройства clientId " + client.clientId + " командой " + client.command);
+                //log.info("Во внутренней очереди устройств отправляю для устройства clientId " + client.clientId + " командой " + client.command);
                 sendOnce(client.prefix, client.command, client.clientId, true);
                 comPort.addDataListener(serialPortDataListener);
             }
@@ -303,7 +303,7 @@ public class ComDataCollector implements Runnable{
         }
     }
     public void sendOnce(String pref, String cmd,int clientId, boolean internal) {
-        log.info(" Начал отправку " + Thread.currentThread().getName() + " для клиента " + clientId);
+        //log.info(" Начал отправку " + Thread.currentThread().getName() + " для клиента " + clientId);
 
         if( ! internal){
             if(! containClientId(clientId)){
@@ -362,9 +362,9 @@ public class ComDataCollector implements Runnable{
 
 
 
-        log.info("Команда отправлена: " + collection.getPrefix(clientId)+collection.getCommand(clientId));
+        //log.info("Команда отправлена: " + collection.getPrefix(clientId)+collection.getCommand(clientId));
         deviceAnswer = new DeviceAnswer(LocalDateTime.now(),collection.getCommand(clientId),clientId);
-        log.info("Заготовка ответа создана ");
+        //log.info("Заготовка ответа создана ");
         if(!internal){
             comPort.addDataListener(serialPortDataListener);
         }

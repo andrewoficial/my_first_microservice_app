@@ -85,7 +85,7 @@ public class DeviceLogger {
             writeBufferedData(stringsBuffer, logFile, properties.isDbgLogState());
             writeBufferedData(stringsBufferCSV, logFileCSV, properties.isCsvLogState());
 
-            log.info("Завершено ведение лога...");
+            //log.info("Завершено ведение лога...");
         }
     }
 

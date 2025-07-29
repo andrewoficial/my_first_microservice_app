@@ -90,8 +90,8 @@ public class EctTc290CommandRegistry extends DeviceCommandRegistry {
         AnswerValues answerValues = null;
         log.info("Proceed CRDG broadcast");
         answerValues = null;
-        String example = "29.1899";
-        if(response.length >= 99 ){
+        String example = "0.000000,0.000000,21.736603,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000";
+        if(response.length >= 85 ){
             StringBuilder sb = new StringBuilder();
             for (byte b : response) {
                 sb.append((char)b);

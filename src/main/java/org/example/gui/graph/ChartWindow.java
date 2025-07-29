@@ -4,6 +4,9 @@ import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import org.apache.log4j.Logger;
 import org.example.gui.Rendeble;
+import org.example.gui.graph.data.AnswerLoader;
+import org.example.gui.graph.data.AnswerValidator;
+import org.example.gui.graph.ui.SeriesModel;
 import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
 import org.example.services.DeviceAnswer;
@@ -39,30 +42,26 @@ public class ChartWindow extends JFrame implements Rendeble {
     private static final int CONTROL_PANEL_MARGIN = 38;
     private static final Logger log = Logger.getLogger(ChartWindow.class);
     private volatile boolean isGraphBusy = false;
-    private ArrayList<Boolean> cbStates = new ArrayList<>(15);
-    private HashSet<Integer> tabs = new HashSet<>();
-    private ArrayList<Integer> tabsFieldCapacity = new ArrayList<>();
-    private TimeSeriesCollection collection = new TimeSeriesCollection();
-    private ArrayList<JCheckBox> seriesBox = new ArrayList<>();
+    private final TimeSeriesCollection collection = new TimeSeriesCollection();
 
-    JComboBox box = new JComboBox<>();
     private JPanel window;
     private JPanel graph;
     private JPanel setup;
-    private JPanel selectors = new JPanel();
-    private JPanel controlPanel = new JPanel();
+    private final JPanel selectors = new JPanel();
+    private final JPanel controlPanel = new JPanel();
 
+    private final JSlider slider = new JSlider();
 
-    private JSlider slider = new JSlider();
-
-    private JTextField selectedValue = new JTextField();
+    private final JTextField selectedValue = new JTextField();
     private int range = 0;
 
     private ChartPanel chartPanel = null;
     private int currHeight = 400;
     private int currWidth = 400;
-    private Dimension dimension = new Dimension(currWidth, currHeight);
-    private Dimension dimensionControlPanel = new Dimension();
+    private final Dimension dimension = new Dimension(currWidth, currHeight);
+    private final SeriesModel seriesVisibility = new SeriesModel();
+    private final AnswerLoader ansLoader = new AnswerLoader();
+    private final AnswerValidator ansValidator = new AnswerValidator();
 
 
     public ChartWindow() {
@@ -90,6 +89,7 @@ public class ChartWindow extends JFrame implements Rendeble {
     }
 
     public ChartWindow(int num) {
+        // num передается для того что бы в каждом окне был открыт ноый график
         super();
         this.addComponentListener(new ComponentAdapter() {
             @Override
@@ -111,8 +111,6 @@ public class ChartWindow extends JFrame implements Rendeble {
             }
         });
         initUI();
-        cbStates.set(num, true);
-        seriesBox.get(num).setSelected(true);
     }
 
     private void initUI() {
@@ -225,96 +223,52 @@ public class ChartWindow extends JFrame implements Rendeble {
     }
 
     private void updateCB() {
-        seriesBox.clear();
-        tabsFieldCapacity.clear();
-
         // Обновление списка чек-боксов
-        for (Integer tab : tabs) {
-            int fieldsCounter = getFieldsCountForTab(tab).size();
-            System.out.printf("Найдено полей для вкладки %d: %d\n", tab, fieldsCounter);
-            tabsFieldCapacity.add(fieldsCounter);
-            addCheckBoxesForTab(tab, fieldsCounter, getFieldsCountForTab(tab));
+        for (Integer tab : AnswerStorage.getListOfTabsInStorage()) {
+            ArrayList<String> unitsInAnswer = ansLoader.getUnitsArrayForTab(tab);
+            log.info("Найдено полей для вкладки " + tab + ": " + unitsInAnswer.size());
+            addCheckBoxesForTab(tab, unitsInAnswer.size(), unitsInAnswer);
         }
-
-        // Синхронизация состояний чек-боксов
-        syncCheckBoxStates();
 
         // Обновление панели управления
         updateControlPanel();
     }
 
-    public static ArrayList<String> getFieldsCountForTab(Integer tab) {
-        ArrayList<String> unitsInAnswer = new ArrayList<>();
-        int index = AnswerStorage.getAnswersForGraph(tab).size() - 1;
-        index = Math.max(0, index);
-        DeviceAnswer selectedAnswer = AnswerStorage.getAnswersForGraph(tab).get(index);
 
-
-        if (Objects.equals(selectedAnswer.getClientId(), tab)) {
-            if (tab == 0 && selectedAnswer.getFieldCount() == 0) {
-                unitsInAnswer.add(" ");
-                return unitsInAnswer;
-            }
+    private String generateNameForSeries(Integer tab, Integer subMeasurement, ArrayList<String> unitsInAnswer) {
+        if (unitsInAnswer.size() > subMeasurement) {
+            return ("tab" + tab + "_" + "(" + subMeasurement + ")" + unitsInAnswer.get(subMeasurement));
+        } else {
+            return "tab" + tab + "_" + "(" + subMeasurement + ")";
         }
-
-        if (selectedAnswer.getFieldCount() > 0) {
-            AnswerValues values = selectedAnswer.getAnswerReceivedValues();
-            unitsInAnswer.addAll(Arrays.asList(values.getUnits()));
-        }
-
-        return unitsInAnswer;
     }
 
     private void addCheckBoxesForTab(Integer tab, int fieldsCounter, ArrayList<String> unitsInAnswer) {
         for (int j = 0; j < fieldsCounter; j++) {
-            JCheckBox jb = new JCheckBox();
-            jb.setName(seriesBox.size() + "");
-            if (unitsInAnswer.size() > j) {
-                jb.setText("tab" + (tab + 1) + "_" + unitsInAnswer.get(j));
-            } else {
-                jb.setText("tab" + (tab + 1) + "_");
+            String nameForSeries = generateNameForSeries(tab, j, unitsInAnswer);
+            if (!seriesVisibility.containSeries(nameForSeries)) {
+                log.info("Добавляю чекбоксы для " + nameForSeries);
+                seriesVisibility.addSeries(nameForSeries);
+                seriesVisibility.getJBoxes().get(nameForSeries).addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        boolean isSelected = seriesVisibility.getJBoxes().get(nameForSeries).isSelected();
+                        seriesVisibility.setVisibility(e.getActionCommand(), isSelected);
+                    }
+                });
             }
 
-            jb.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    updateCheckBoxState(jb);
-                }
-            });
-            seriesBox.add(jb);
-            if (cbStates.size() < seriesBox.size()) {
-                cbStates.add(jb.isSelected());
-            }
         }
     }
 
-    private void updateCheckBoxState(JCheckBox jb) {
-        cbStates.clear();
-        for (JCheckBox jCheckBox : seriesBox) {
-            cbStates.add(jCheckBox.isSelected());
-        }
-
-        int numberSeries = Integer.parseInt(jb.getName());
-        boolean newState = jb.isSelected();
-        cbStates.set(numberSeries, newState);
-        seriesBox.get(numberSeries).setSelected(newState);
-        //log.info("Setup visibility for " + jb.getName() + " now is " + newState);
-        //System.out.println("Setup visibility for " + jb.getName() + " now is " + newState);
-    }
-
-    private void syncCheckBoxStates() {
-        for (int i = 0; i < seriesBox.size(); i++) {
-            seriesBox.get(i).setSelected(cbStates.get(i));
-        }
-    }
 
     private void updateControlPanel() {
+        log.info("Обновление панели управления");
         controlPanel.removeAll();
         selectors.removeAll();
-        for (JCheckBox jCheckBox : seriesBox) {
-            selectors.add(jCheckBox);
+        for (Map.Entry<String, JCheckBox> stringJCheckBoxEntry : this.seriesVisibility.getJBoxes().entrySet()) {
+            selectors.add(stringJCheckBoxEntry.getValue());//Добавление чек-боксов (работает верно)
         }
-
         slider.setValue(range);
         controlPanel.add(slider);
         controlPanel.add(selectedValue);
@@ -324,92 +278,47 @@ public class ChartWindow extends JFrame implements Rendeble {
     }
 
     private synchronized void getLastData() {
-        tabs.clear();
+
+        log.info("Начинаю получение данных");
         // Get the list of all tab numbers
-        tabs.addAll(AnswerStorage.getListOfTabsInStorage());
-
+        log.info("Получил список клиентов" + AnswerStorage.getListOfTabsInStorage().toString());
         updateCB();
+        log.info("Закончил обновление чекбоксов ");
         int pointer = 0;
-        for (int tab : tabs) {
+        collection.removeAllSeries();//Удаление всех серий
+        for (Integer tab : AnswerStorage.getListOfTabsInStorage()) {
+            log.info("Просматриваю для клиента " + tab);
             List<DeviceAnswer> recentAnswers = AnswerStorage.getRecentAnswersForGraph(tab, range);
-            if (tabsFieldCapacity.size() <= tab) {
-                continue;
-            }
-            for (int j = 0; j < tabsFieldCapacity.get(tab); j++) {
 
-                /*
-                if (pointer < 0)
-                    pointer = 0;
-                 */
+            ArrayList<String> unitsInAnswer = ansLoader.getUnitsArrayForTab(tab);
+            for (int j = 0; j < unitsInAnswer.size(); j++) {
+                String seriesName = generateNameForSeries(tab, j, unitsInAnswer);
+                log.info("Запрашиваю данные для " + seriesName);
                 //log.info("Для вкладки " + tab + " для ответа " + j + " был получен указатель " + pointer);
-
-                while (collection.getSeriesCount() <= pointer || collection.getSeries(pointer) == null) {
-
-                    ArrayList<String> unitsInAnswer = getFieldsCountForTab(tab);
-                    for (String s : unitsInAnswer) {
-                        if (s == null || s.isEmpty()) {
-                            collection.addSeries(new TimeSeries("tab" + (tab + 1) + "_" + "defaultUnits"));
-                        } else {
-                            collection.addSeries(new TimeSeries("tab" + (tab + 1) + "_" + s));
-                        }
-
-                    }
-
-                    //log.info("Для вкладки " + tab + " для ответа " + pointer + " был получен указатель " + pointer);
-                    //System.out.println("addSeries " + pointer);
-                }
+                //ToDo Защита от других команд вначале опроса (поиск существующих ответов)
 
 
-                collection.getSeries(pointer).clear();
-
-                if (cbStates.get(pointer)) {
-                    //log.info("pointer " + pointer + " will be showed");
+                if (seriesVisibility.isVisible(seriesName)) {
+                    collection.addSeries(new TimeSeries(seriesName)); //Добавление новой (Только если нужно)
+                    log.info("pointer " + seriesName + " will be showed");
                     for (DeviceAnswer answer : recentAnswers) {
                         //log.info("answer tab " + answer.getTabNumber() + " field ");
-                        if (isCorrectAnswerValue(answer, tab)) {
+                        if (ansValidator.isCorrectAnswerValue(answer, tab, unitsInAnswer.size(), answer.getFieldCount())) {
 
                             AnswerValues currentAnswers = answer.getAnswerReceivedValues();
                             double currentValues = currentAnswers.getValues()[j];
                             Millisecond millisecond = new Millisecond(convertToLocalDateViaMilisecond(answer.getAnswerReceivedTime()));
 
-                            collection.getSeries(pointer).addOrUpdate(millisecond, currentValues);
+                            collection.getSeries(collection.getSeries().size() - 1).addOrUpdate(millisecond, currentValues);
                             //log.info("addOrUpdate " + millisecond + " " + currentValues);
                         }
                     }
-                } else {
-                    //System.out.println("pointer " + pointer + " will be removed");
-                    //log.info("Для указателя " + pointer + " коллекция будет удалена");
-                    collection.getSeries(pointer).clear();
                 }
                 pointer++;
             }
         }
     }
 
-    private boolean isCorrectAnswerValue(DeviceAnswer answer, int tab) {
-        if (answer == null) {
-            log.debug("Answer is null");
-            return false;
-        }
-
-        if (answer.getAnswerReceivedValues() == null) {
-            //log.info("AnswerReceivedValues is null");
-            return false;
-        }
-
-        if (answer.getAnswerReceivedValues().getValues() == null) {
-            //log.info("AnswerReceivedValues array of values is null");
-            return false;
-        }
-
-        if (answer.getAnswerReceivedValues().getValues().length != tabsFieldCapacity.get(tab)) {
-            //log.info("array of values not equal to tabsFieldCapacity. " + answer.getAnswerReceivedValues().getValues().length + " != " + tabsFieldCapacity.get(tab));
-
-            //log.info(getFieldsCountForTab(tab));
-            return false;
-        }
-        return true;
-    }
 
     @Override
     public void renderData() {

@@ -125,9 +125,9 @@ public class AnswerStorage {
 
         if( answer.getFieldCount() > 0 &&  answer.getAnswerReceivedValues() != null && answer.getAnswerReceivedValues().getValues() != null && answer.getAnswerReceivedValues().getValues().length >= 1 &&
                 answer.getAnswerReceivedValues().getUnits() != null && answer.getAnswerReceivedValues().getUnits().length >= 1){
-            log.info("Сообщение от клиента ["+clientId+"] принято к сохранению (всего: "+answersByTab.get(clientId).size()+")" + answer.getAnswerReceivedValues().getValues()[0] + " " +answer.getAnswerReceivedValues().getUnits()[0]);
+            //log.info("Сообщение от клиента ["+clientId+"] принято к сохранению (всего: "+answersByTab.get(clientId).size()+")" + answer.getAnswerReceivedValues().getValues()[0] + " " +answer.getAnswerReceivedValues().getUnits()[0]);
         }else{
-            log.info("Сообщение от клиента ["+clientId+"] принято к сохранению (всего: "+answersByTab.get(clientId).size()+")" + " (в ответе только строка)");
+            //log.info("Сообщение от клиента ["+clientId+"] принято к сохранению (всего: "+answersByTab.get(clientId).size()+")" + " (в ответе только строка)");
         }
 
 
@@ -177,7 +177,7 @@ public class AnswerStorage {
             appendAnswer(sb, tabAnswers.get(i), showCommands);
         }
 
-        log.info("getAnswersQueForTab: clientId=" + clientId + ", lastPositionBeforeCorrection = "+lastPositionBeforeCorrection+", lastPosition=" + lastPosition + ", queueOffsetInt=" + queueOffsetInt);
+        //log.info("getAnswersQueForTab: clientId=" + clientId + ", lastPositionBeforeCorrection = "+lastPositionBeforeCorrection+", lastPosition=" + lastPosition + ", queueOffsetInt=" + queueOffsetInt);
         // Возвращаем новую позицию как смещение + текущий размер
         return new TabAnswerPart(sb.toString(), queueOffsetInt + size);
     }
