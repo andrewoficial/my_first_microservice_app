@@ -360,7 +360,7 @@ public class WebSocketDataCollector implements Runnable{
             deviceLogger = clientsMap.get(clientId).logger;
             if(deviceLogger == null){
                 log.info("Логгер не был инициализирован ранее");
-                clientsMap.get(clientId).logger = new DeviceLogger(clientsMap.get(clientId).clientId);
+                clientsMap.get(clientId).logger = new DeviceLogger(clientsMap.get(clientId).clientId, myProperties);
                 deviceLogger = clientsMap.get(clientId).logger;
             }
             assert myProperties != null;
@@ -424,7 +424,7 @@ public class WebSocketDataCollector implements Runnable{
         log.info("Добавление клиента в поток " + clientId  + Thread.currentThread().getName());
         DeviceLogger deviceLogger = null;
         if(needLog){
-            deviceLogger = new DeviceLogger(clientId);
+            deviceLogger = new DeviceLogger(clientId, myProperties);
         }
         clientsMap.put(clientId, new WebSocketDataCollector.ClientData(clientId, needLog, needPoolFlag, prf, cmd, deviceLogger));
     }

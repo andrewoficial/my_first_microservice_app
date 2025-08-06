@@ -55,6 +55,7 @@ public class DeviceAnswer {
     public String toString(){
         String formattedString = answerReceivedTime.format(MyUtilities.CUSTOM_FORMATTER);
         return formattedString + "\t" + "className" + "\t" + answerReceivedString + "\n";
+
     }
 
     public String toStringCSV(){

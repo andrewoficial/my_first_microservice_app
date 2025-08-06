@@ -13,7 +13,7 @@
 
     <groupId>org.example</groupId>
     <artifactId>Elephant-Monitor</artifactId>
-    <version>1.8.17-Beta</version>
+    <version>1.8.19-Alpha</version>
     <distributionManagement>
         <repository>
             <id>github</id>
@@ -37,6 +37,27 @@
 
     <build>
         <plugins>
+            <!-- Проверка стиля -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>3.3.0</version> <!-- Актуальная версия -->
+                <executions>
+                    <execution>
+                        <id>checkstyle-validation</id>
+                        <phase>validate</phase> <!-- Привязка к фазе validate -->
+                        <goals>
+                            <goal>check</goal> <!-- Запуск проверки -->
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <!-- Укажите конфигурационный файл (опционально) -->
+                    <configLocation>google_checks.xml</configLocation>
+                    <failOnViolation>true</failOnViolation> <!-- Остановка при ошибках -->
+                </configuration>
+            </plugin>
+
             <!-- Генерация файла метаданных -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -99,28 +120,6 @@
                 </configuration>
             </plugin>
 
-            <!-- Плагин для размещения на гитхабе -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.0.0</version>
-                <executions>
-                    <execution>
-                        <phase>deploy</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <configuration>
-                            <executable>cmd.exe</executable>
-                            <arguments>
-                                <argument>/c</argument>
-                                <argument>${project.basedir}\release.bat</argument>
-                                <argument>${project.version}</argument>
-                            </arguments>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
 
             <!-- Spring Boot -->
             <plugin>
@@ -129,7 +128,6 @@
             </plugin>
 
             <!-- Плагин, помещающий в контекст спринга текущую версию -->
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
@@ -162,6 +160,7 @@
                     <target>17</target>
                 </configuration>
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-release-plugin</artifactId>
@@ -180,6 +179,9 @@
                     <url>https://maven.pkg.github.com/andrewoficial/my_first_microservice_app</url>
                 </configuration>
             </plugin>
+
+
+
         </plugins>
     </build>
 
@@ -217,6 +219,12 @@
             <version>3.1.2.RELEASE</version>
         </dependency>
 
+        <!-- Для работы checkStyle -->
+        <dependency>
+            <groupId>com.puppycrawl.tools</groupId>
+            <artifactId>checkstyle</artifactId>
+            <version>10.12.5</version>
+        </dependency>
 
         <!-- jSerialComm -->
         <dependency>
@@ -347,8 +355,6 @@
         </dependency>
 
         <!-- BLE  -->
-
-
         <dependency>
             <groupId>org.sputnikdev</groupId>
             <artifactId>bluetooth-manager-tinyb</artifactId>
@@ -362,7 +368,12 @@
             <version>1.5.3</version>
         </dependency>
 
-
+        <!-- https://mvnrepository.com/artifact/com.github.akman/jpackage-maven-plugin -->
+        <dependency>
+            <groupId>com.github.akman</groupId>
+            <artifactId>jpackage-maven-plugin</artifactId>
+            <version>0.1.5</version>
+        </dependency>
 
     </dependencies>
 </project>
