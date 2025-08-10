@@ -18,36 +18,72 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.text.SimpleDateFormat;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
 
 import static org.example.device.SomeDevice.log;
 
 public class PoolLogger {
     private static final Logger log = Logger.getLogger(PoolLogger.class);
-    private static final long LOG_WRITE_INTERVAL = 100L;
+    private static final long DEFAULT_LOG_WRITE_INTERVAL = 100L;
+    private static final int DEFAULT_BUFFER_LIMIT = 50;
 
-    private static class SingletonHolder {
-        static final PoolLogger INSTANCE = new PoolLogger();
+    // Зависимости
+    private Clock clock;
+    private final Path logFile;
+    private final long logWriteInterval;
+    private final int bufferLimit;
+    private final Function<LocalDateTime, String> fileNameGenerator;
+
+    private final ReentrantLock lock = new ReentrantLock();
+    private final List<String> buffer = new ArrayList<>();
+    private long lastWriteTime;
+    private static PoolLogger instance;
+    private static int instanceCount = 0;
+
+    public PoolLogger(Clock clock,
+                      String baseDirectory,
+                      Function<LocalDateTime, String> fileNameGenerator,
+                      long logWriteInterval,
+                      int bufferLimit) {
+        this.clock = clock;
+        this.fileNameGenerator = fileNameGenerator;
+        this.logWriteInterval = logWriteInterval;
+        this.bufferLimit = bufferLimit;
+        this.lastWriteTime = clock.millis();
+        this.logFile = createLogFile(baseDirectory);
+    }
+
+    // Конструктор для продакшена
+    public PoolLogger() {
+        this(Clock.systemDefaultZone(),
+                "logs",
+                time -> DateTimeFormatter.ofPattern("yyyy.MM.dd HH-mm-ss").format(time) + " SumLog.txt",
+                DEFAULT_LOG_WRITE_INTERVAL,
+                DEFAULT_BUFFER_LIMIT);
     }
 
     public static PoolLogger getInstance() {
-        return SingletonHolder.INSTANCE;
+        if (instance == null) {
+            instance = new PoolLogger();
+            instanceCount++;
+            if(instanceCount > 1){
+                log.warn("Создано больше одного instance для PoolLogger!");
+            }
+        }
+        return instance;
     }
 
-    private final Path logFile;
-    private final List<String> buffer = new ArrayList<>();
-    private long lastWriteTime = System.currentTimeMillis();
-
-    private PoolLogger() {
-        this.logFile = createLogFile();
-    }
-
-    private Path createLogFile() {
-        String fileName = new SimpleDateFormat("yyyy.MM.dd HH-mm-ss").format(new Date()) + " SumLog.txt";
-        Path path = Paths.get("logs", fileName);
+    private Path createLogFile(String baseDirectory) {
+        String fileName = fileNameGenerator.apply(LocalDateTime.now(clock));
+        Path path = Paths.get(baseDirectory, fileName);
 
         try {
             Files.createDirectories(path.getParent());
@@ -63,15 +99,21 @@ public class PoolLogger {
     }
 
     public void writeLine(DeviceAnswer answer) {
-        if (!validateAnswer(answer)) {
-            return;
-        }
+        if (!validateAnswer(answer)) return;
 
         String logLine = formatLogLine(answer);
-        synchronized (buffer) {
+
+        lock.lock();
+        try {
             buffer.add(logLine);
-            tryWriteBuffer();
+            tryWriteBuffer(false);
+        } finally {
+            lock.unlock();
         }
+    }
+
+    public void flush() {
+        tryWriteBuffer(true);
     }
 
     private boolean validateAnswer(DeviceAnswer answer) {
@@ -102,6 +144,33 @@ public class PoolLogger {
         return true;
     }
 
+
+    private void tryWriteBuffer(boolean force) {
+        lock.lock();
+        try {
+            long currentTime = clock.millis();
+            if (!force
+                    && currentTime - lastWriteTime < logWriteInterval
+                    && buffer.size() < bufferLimit) {
+                return;
+            }
+
+            if (logFile == null || buffer.isEmpty()) {
+                return;
+            }
+
+            try {
+                Files.write(logFile, buffer, StandardOpenOption.APPEND);
+                buffer.clear();
+                lastWriteTime = currentTime;
+            } catch (IOException e) {
+                log.error("Failed to write log entries: " + e.getMessage());
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
     private String formatLogLine(DeviceAnswer answer) {
         return String.format("%s\t%s\t%s%n",
                 answer.getAnswerReceivedTime().format(MyUtilities.CUSTOM_FORMATTER),
@@ -109,23 +178,20 @@ public class PoolLogger {
                 answer.getAnswerReceivedString());
     }
 
-    private void tryWriteBuffer() {
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastWriteTime < LOG_WRITE_INTERVAL) {
-            return;
-        }
+    public Path getLogFile() {
+        return logFile;
+    }
 
-        if (logFile == null || buffer.isEmpty()) {
-            return;
-        }
-
+    public int getBufferSize() {
+        lock.lock();
         try {
-            Files.write(logFile, buffer, StandardOpenOption.APPEND);
-            //log.info("Successfully wrote " + buffer.size() + " log entries");
-            buffer.clear();
-            lastWriteTime = currentTime;
-        } catch (IOException e) {
-            log.error("Failed to write log entries: " + e.getMessage());
+            return buffer.size();
+        } finally {
+            lock.unlock();
         }
+    }
+
+    public void setClock(Clock clock) {
+        this.clock = clock;
     }
 }

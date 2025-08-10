@@ -1,6 +1,7 @@
 package org.example.services.loggers;
 
 import lombok.Getter;
+import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.services.DeviceAnswer;
 import org.example.utilites.MyUtilities;
@@ -21,13 +22,15 @@ import java.util.function.Supplier;
 public class DeviceLogger {
     private static final Logger log = Logger.getLogger(DeviceLogger.class);
     private static final long LOG_WRITE_INTERVAL = 300L;
+    private static final int DEFAULT_BUFFER_LINE_LIMIT = 100; // Значение по умолчанию
 
     // Теперь получаем зависимости через конструктор
     private final MyProperties properties;
     private final Clock clock;
     private final String baseDirectory;
     private final Function<Object, String> fileNameGenerator;
-
+    @Getter @Setter
+    private int bufferLineLimit = DEFAULT_BUFFER_LINE_LIMIT;
     // Геттеры для тестирования
     @Getter
     private final File logFile;
@@ -108,7 +111,7 @@ public class DeviceLogger {
 
             if (Files.notExists(path)) {
                 Files.createFile(path);
-                log.info("Создан новый лог-файл: " + path);
+                //log.info("Создан новый лог-файл: " + path);
             }
             return path.toFile();
 
@@ -120,7 +123,7 @@ public class DeviceLogger {
 
     public void writeLine(DeviceAnswer answer) {
         lock.lock();
-        log.info("Run writeLine");
+        //log.info("Run writeLine");
         try {
             // Подготовка данных
             String txtLine = null;
@@ -128,34 +131,38 @@ public class DeviceLogger {
 
             if (properties.isDbgLogState()) {
                 txtLine = answer.toStringDBG();
-                log.info("Create DBG sting");
+                //log.info("Create DBG sting");
             }
+
             if (properties.isCsvLogState()) {
                 csvLine = answer.toStringCSV();
-                log.info("Create CSV sting");
+                //log.info("Create CSV sting");
             }
 
             // Добавление в буферы
-            if (txtLine != null)            {
-                txtBuffer.add(txtLine);
-            }else{
-                log.info("txtLine is null");
+            if(properties.isDbgLogState()) {
+                if (txtLine != null) {
+                    txtBuffer.add(txtLine);
+                } else {
+                    log.info("txtLine is null");
+                }
             }
-            if (csvLine != null){
-                csvBuffer.add(csvLine);
-            }else{
-                log.info("csvLine is null");
+            if(properties.isCsvLogState()){
+                if (csvLine != null){
+                    csvBuffer.add(csvLine);
+                }else{
+                    log.info("csvLine is null");
+                }
             }
+
 
             // Проверка необходимости записи
             long currentTime = clock.millis();
-            if (currentTime - lastWriteTime >= LOG_WRITE_INTERVAL) {
-                //log.info("Need flush");
+            if (currentTime - lastWriteTime >= LOG_WRITE_INTERVAL
+                    || txtBuffer.size() >= bufferLineLimit
+                    || csvBuffer.size() >= bufferLineLimit) {
                 flush();
                 lastWriteTime = currentTime;
-            }else{
-                log.info("No need flush, current time is " + currentTime + " last write time is " + lastWriteTime
-                + ",difference " +(currentTime - lastWriteTime) + " and interval " + LOG_WRITE_INTERVAL);
             }
         } finally {
             lock.unlock();
@@ -167,7 +174,7 @@ public class DeviceLogger {
         try {
             writeBuffer(txtBuffer, logFile, properties.isDbgLogState());
             writeBuffer(csvBuffer, logFileCSV, properties.isCsvLogState());
-            log.info("Done writing");
+            //log.info("Done writing");
         } finally {
             lock.unlock();
         }
@@ -175,7 +182,7 @@ public class DeviceLogger {
 
     private void writeBuffer(List<String> buffer, File file, boolean isEnabled) {
         if(!isEnabled){
-            log.info("For current file logging is disabled");
+            //log.info("For current file logging is disabled");
             return;
         }
 
@@ -214,4 +221,6 @@ public class DeviceLogger {
     public void setLastWriteTime(long millis) {
         this.lastWriteTime = millis;
     }
+
+
 }

@@ -34,10 +34,11 @@ public class ErstevakMtp4dCommandRegistry extends DeviceCommandRegistry {
 
     private AnswerValues parseMcmd(byte[] response) {//"CRDG? 1" - direct
         AnswerValues answerValues = null;
-        log.info("Proceed M^ direct");
+        //log.info("Proceed M^ direct");
 
         String example = "001M960022Q\n";
-        if (response.length == example.length()) {
+        //String example = "001M495820Z\r\n";
+        if (response.length >= example.length() && response.length < (example.length() + 5)) {
             if (response[3] == 'M') {
                 Double value, degree;
                 StringBuilder sb = new StringBuilder();
@@ -60,7 +61,7 @@ public class ErstevakMtp4dCommandRegistry extends DeviceCommandRegistry {
                 value = (value * (double) Math.pow(10, degree));
                 value /= 10000.0;
                 //System.out.println("Parser result " + value);
-                log.info("Parser result " + value);
+                //log.info("Parser result " + value);
                 answerValues = new AnswerValues(1);
                 answerValues.addValue(value, " unit");
                 return answerValues;
