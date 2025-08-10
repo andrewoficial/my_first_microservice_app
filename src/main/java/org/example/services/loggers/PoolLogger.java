@@ -130,7 +130,8 @@ public class PoolLogger {
 
         if (answer.getRequestSendTime() == null
                 || answer.getAnswerReceivedTime() == null
-                || answer.getAnswerReceivedTime().isBefore(answer.getRequestSendTime())) {
+                || (answer.getAnswerReceivedTime().isAfter(answer.getRequestSendTime()) ||
+                answer.getAnswerReceivedTime().isEqual(answer.getRequestSendTime()))) {
             log.error(String.format("Invalid timestamps for client %d", clientId));
             return false;
         }

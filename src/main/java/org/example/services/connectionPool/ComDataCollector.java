@@ -46,6 +46,7 @@ public class ComDataCollector implements Runnable{
     private SomeDevice device = null;//Объект устройства, содержащий особенности обработки команд. Задается на основе выбранного протоколаё
     @Getter
     private SerialPort comPort;//Объект, обслуживающий соединение по ком-порту. Библиотека fazecast.
+    @Getter
     @Setter
     private SerialPortDataListener serialPortDataListener;//Объект EventListener, обрабатывающий входящие без запроса сообщения. Библиотека fazecast.
     @Getter
@@ -94,7 +95,7 @@ public class ComDataCollector implements Runnable{
 
         this.comPort = comPort;
         this.clientId = clientId;
-        log.warn("getBaudRateValue " + state.getBaudRateValue(clientId) + "getDataBitsValue " +  state.getDataBitsValue(clientId)+ "getStopBitsValue " + state.getStopBitsValue(clientId)+ "getParityBitsValue " + state.getParityBitsValue(clientId));
+        log.info("getBaudRateValue " + state.getBaudRateValue(clientId) + "getDataBitsValue " +  state.getDataBitsValue(clientId)+ "getStopBitsValue " + state.getStopBitsValue(clientId)+ "getParityBitsValue " + state.getParityBitsValue(clientId));
         comPort.setComPortParameters(state.getBaudRateValue(clientId), state.getDataBitsValue(clientId), state.getStopBitsValue(clientId), state.getParityBitsValue(clientId));
         comPort.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, device.getMillisReadLimit(), device.getMillisWriteLimit());
         comPort.openPort(device.getMillisReadLimit());
@@ -136,29 +137,33 @@ public class ComDataCollector implements Runnable{
                 if (event.getEventType() == SerialPort.LISTENING_EVENT_PORT_DISCONNECTED) {
                     comPort.closePort();
                 } else if (event.getEventType() == SerialPort.LISTENING_EVENT_DATA_AVAILABLE) { // || event.getEventType() == SerialPort.LISTENING_EVENT_DATA_RECEIVED
+                    //log.info("Найдено входящее сообщение");
                     handleDataAvailableEvent();
                 }
             }
         };
     }
 
-    private void handleDataAvailableEvent() {
+    public void handleDataAvailableEvent() {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         byte[] chunk = new byte[2048];
         long delay = device == null ? 150L : device.getMillisReadLimit();
         //int sizeLimit = device == null ? 150 : device.getExpectedBytes();
         int sizeLimit = 2048;//Увеличил тут размер
-
+        //log.info("Начинаю получение данных");
         try {
             int dataAvailable = comPort.bytesAvailable();
+            //log.info("Готово к получению " + dataAvailable);
             while (dataAvailable > 0) {
                 int bytesRead = comPort.readBytes(chunk, Math.min(chunk.length, dataAvailable));
                 buffer.write(chunk, 0, bytesRead);
                 if(buffer.size() >= sizeLimit){//Вызывало падение
+                    //log.info("Прерываю получение");
                     return;
                 }
                 sleepSafely(delay);
                 dataAvailable = comPort.bytesAvailable();
+                //log.info("Готово к получению данных после считывания ранее полученных" + dataAvailable);
             }
 
             String receivedData = buffer.toString();
@@ -486,8 +491,19 @@ public class ComDataCollector implements Runnable{
             return;
         }
 
-        AnswerStorage.addAnswer(answer);//Answer Storage
-        PoolLogger.getInstance().writeLine(answer); //Sum log
+        try {
+            AnswerStorage.addAnswer(answer);//Answer Storage
+        }catch (Exception e){
+            log.error("Исключение при выполнении saveAndLogSome" + e.getMessage());
+            return;
+        }
+
+        try{
+            PoolLogger.getInstance().writeLine(answer); //Sum log
+        }catch (Exception e){
+            log.error("saveAndLogSome Exception" + e.getMessage());
+        }
+
 
         DeviceLogger deviceLogger;
         if(clientsMap.containsKey(clientId) && clientsMap.get(clientId).needLog) {
@@ -502,11 +518,17 @@ public class ComDataCollector implements Runnable{
                 parentService.getAnswerSaverLogger().doLog(answer, clientId, PoolLogger.getInstance(), deviceLogger);
             }else{
                 if(deviceLogger != null){
-                    deviceLogger.writeLine(answer);
+                    try{
+                        deviceLogger.writeLine(answer);
+                    }catch (Exception e){
+                        log.error("saveAndLogSome Exception" + e.getMessage());
+                    }
+
                 }
             }
         }
-        //log.info("Завершены все процессы логирования");
+        //log.info("Завершены все процессы логирования" + answer.toString() + " client " + clientId);
+        log.info("Завершены все процессы логирования");
     }
 
     public void setPoolDelay(int poolDelay) {
@@ -640,7 +662,7 @@ public class ComDataCollector implements Runnable{
         return true;
     }
 
-    private static class ClientData {
+    public class ClientData {
         int clientId;
         boolean needLog;
         boolean needPool;
@@ -655,6 +677,14 @@ public class ComDataCollector implements Runnable{
             this.prefix = prefix;
             this.command = command;
             this.logger = logger;
+        }
+
+        public void setDeviceLogger(DeviceLogger deviceLogger) {
+            this.logger = deviceLogger;
+        }
+
+        public void setNeedPool(Boolean needPool) {
+            this.needPool = needPool;
         }
     }
 }

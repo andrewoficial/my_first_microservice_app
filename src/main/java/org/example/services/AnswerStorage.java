@@ -257,7 +257,13 @@ public class AnswerStorage {
     }
 
     public static List<DeviceAnswer> getAnswersForGraph(Integer tabNumber) {
-        return new ArrayList<>(answersByTab.getOrDefault(tabNumber, null));
+        ConcurrentLinkedQueue<DeviceAnswer> answers = answersByTab.getOrDefault(tabNumber, null);
+        if(answers != null) {
+            return List.copyOf(answers);
+        }else{
+            log.error("Для клиента " + tabNumber + " возвращен пустой массив ответов");
+            return new ArrayList<>();
+        }
     }
 
     public static List<DeviceAnswer> getRecentAnswersForGraph(Integer tabNumber, int range) {
