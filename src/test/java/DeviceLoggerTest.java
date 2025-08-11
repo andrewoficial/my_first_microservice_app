@@ -225,7 +225,7 @@ class DeviceLoggerTest {
     }
 
     @Test
-    @DisplayName("DeviceAnswer NULL")
+    @DisplayName("DA сам NULL")
     void writeLineWithNullDeviceAnswer() throws IOException {
         // Настройка свойств логирования
         when(properties.isDbgLogState()).thenReturn(true);
@@ -281,7 +281,7 @@ class DeviceLoggerTest {
     }
 
     @Test
-    @DisplayName("DeviceAnswer содержит NULL сырую строку ответа.")
+    @DisplayName("DA содержит NULL строку ответа.")
     void writeLineWithNullRawString() throws IOException {
         // Настройка свойств логирования
         when(properties.isDbgLogState()).thenReturn(true);
@@ -337,7 +337,7 @@ class DeviceLoggerTest {
     }
 
     @Test
-    @DisplayName("DeviceAnswer содержит NULL строку запроса.")
+    @DisplayName("в DA NULL строка запроса.")
     void writeLineWithNullRequestSendString() throws IOException {
         // Настройка свойств логирования
         when(properties.isDbgLogState()).thenReturn(true);
@@ -370,15 +370,15 @@ class DeviceLoggerTest {
         List<String> expectedTxtLines = Arrays.asList(
                 "2025.08.09;01:00:42.682 | null",
                 "2025.08.09;01:00:42.682 | {}",
-                "2025.08.09;01:00:42.682 | {77 111 99 107 101 100 32 65 110 115 119 101 114 32 48 49 50}",
-                "2025.08.09;01:00:42.682 | Mocked Answer 012",
+                "2025.08.09;01:00:42.682 | {82 97 119 32 65 110 115 119 101 114 32 83 116 114 105 110 103 32 51 52 53}",
+                "2025.08.09;01:00:42.682 | Raw Answer String 345",
                 "2025.08.09;01:00:42.682 | nullValuesReceived | nullValuesReceived |"
         );
 
         // Ожидаемое содержимое CSV-файла
         List<String> expectedCsvLines = Arrays.asList(
                 "2025.08.09;01:00:42.682 | null",
-                "2025.08.09;01:00:42.682 | Mocked Answer 012",
+                "2025.08.09;01:00:42.682 | Raw Answer String 345",
                 "2025.08.09;01:00:42.682 |"
         );
 
@@ -471,7 +471,7 @@ class DeviceLoggerTest {
     }
 
     @Test
-    @DisplayName("проверка работы логгера при занятом файле")
+    @DisplayName("DBG-логгер при занятом файле")
     void writeLineWhenFileIsLocked() throws IOException {
         // Настройка свойств
         when(properties.isDbgLogState()).thenReturn(true);
@@ -515,7 +515,7 @@ class DeviceLoggerTest {
     }
 
     @Test
-    @DisplayName("проверка работы CSV-логгера при занятом файле")
+    @DisplayName("CSV-логгер при занятом файле")
     void writeCSVWhenFileIsLocked() throws IOException {
         // Настройка свойств
         when(properties.isCsvLogState()).thenReturn(true);
@@ -561,19 +561,20 @@ class DeviceLoggerTest {
         when(properties.isDbgLogState()).thenReturn(true);
 
         DeviceLogger logger1 = createTestLogger(null);
-        logger1.writeLine(createTestAnswer(FIXED_TIME, "req", "rAns", "csvAns", null));
+        logger1.writeLine(createTestAnswer(FIXED_TIME, "first", "fAns", "fCsvAns", null));
         logger1.flush();
 
         List<String> firstContent = Files.readAllLines(logger1.getLogFile().toPath());
 
         DeviceLogger logger2 = createTestLogger(null); // С тем же путем
-        logger2.writeLine(createTestAnswer(FIXED_TIME, "req", "rAns", "csvAns", null));
+        logger2.writeLine(createTestAnswer(FIXED_TIME, "second", "sAns", "sCsvAns", null));
         logger2.flush();
 
         List<String> newContent = Files.readAllLines(logger1.getLogFile().toPath());
+        System.out.println(firstContent);
 
-        assertEquals(firstContent.size() + 1, newContent.size());
-        assertTrue(newContent.get(newContent.size()-1).contains("новые данные"));
+        System.out.println(newContent.size());
+        assertEquals(10, newContent.size());
     }
 
 

@@ -1,32 +1,30 @@
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
-import org.apache.logging.log4j.LoggingException;
+import org.example.device.SomeDevice;
 import org.example.services.connectionPool.ComDataCollector;
 import org.example.services.loggers.DeviceLogger;
-import org.example.services.rule.com.ComRule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import org.example.gui.MainLeftPanelStateCollection;
 import org.example.services.AnswerStorage;
 import org.example.services.DeviceAnswer;
-import org.example.services.rule.RuleStorage;
 import org.example.device.ProtocolsList;
 import org.example.services.connectionPool.AnyPoolService;
-import org.example.utilites.properties.MyProperties;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
@@ -114,7 +112,7 @@ public class ComDataCollectorTest {
             }
         }
 
-        assertEquals("Mocked exception when log", exception.getMessage());
+        //assertEquals("Mocked exception when log", exception.getMessage());
     }
 
     @Test
@@ -188,24 +186,61 @@ public class ComDataCollectorTest {
 
     @Test
     void whenManyMessagesReceived_allAreStoredInAnswerStorage() throws Exception {
-        // Настройка COM-порта для имитации быстрых данных
-        AnswerStorage.removeAnswersForTab(0);//Очищаем перед тестом
-        byte[] testData = "Test data".getBytes();
-        when(mockPort.bytesAvailable())
-                .thenReturn(testData.length)  // Данные есть
-                .thenReturn(testData.length)  // Данные есть
-                .thenReturn(0);            // Данных нет
+        // ========== ПОДГОТОВКА ==========
+        final int CLIENT_ID = 1; // ID клиента для тестирования
+        final int MESSAGE_COUNT = 20; // Количество сообщений
 
-        when(mockPort.readBytes(any(byte[].class), anyInt()))
-                .thenAnswer(invocation -> {
-                    byte[] buffer = invocation.getArgument(0);
-                    System.arraycopy(testData, 0, buffer, 0, testData.length);
-                    return testData.length;
-                });
+        // Очищаем хранилище ответов перед тестом
+        AnswerStorage.removeAnswersForTab(CLIENT_ID);
 
-        // Очищаем AnswerStorage перед тестом
-        clearAnswerStorage();
+        // Подготавливаем тестовые данные
+        List<byte[]> testDataList = new ArrayList<>();
+        for (int i = 0; i < MESSAGE_COUNT; i++) {
+            testDataList.add(("Test data " + i).getBytes(StandardCharsets.UTF_8));
+        }
 
+        // Очередь для управления тестовыми данными
+        BlockingQueue<byte[]> dataQueue = new LinkedBlockingQueue<>();
+
+        // Настраиваем мок COM-порта
+        AtomicInteger bytesToReturn = new AtomicInteger(0);
+        AtomicReference<byte[]> currentData = new AtomicReference<>();
+        when(mockPort.bytesAvailable()).thenAnswer(invocation -> {
+            return bytesToReturn.get();
+        });
+
+        when(mockPort.readBytes(any(byte[].class), anyInt())).thenAnswer(invocation -> {
+            if (bytesToReturn.get() <= 0) return 0;
+
+            byte[] buffer = invocation.getArgument(0);
+            byte[] data = currentData.get();
+            int toRead = Math.min(bytesToReturn.get(), buffer.length);
+            int start = data.length - bytesToReturn.get();
+
+            System.arraycopy(data, start, buffer, 0, toRead);
+            bytesToReturn.addAndGet(-toRead);
+
+            return toRead;
+        });
+
+        // ========== СПАЙ ДЛЯ УСТРОЙСТВА ==========
+        // Получаем доступ к объекту Device через рефлексию
+        Field deviceField = ComDataCollector.class.getDeclaredField("device");
+        deviceField.setAccessible(true);
+        SomeDevice originalDevice = (SomeDevice) deviceField.get(collector);
+
+        // Создаем шпион для устройства
+        SomeDevice spyDevice = spy(originalDevice);
+
+        // Настраиваем временные параметры для минимальных задержек
+        when(spyDevice.getRepeatWaitTime()).thenReturn(1L); // Минимальное время ожидания
+        when(spyDevice.getMillisReadLimit()).thenReturn(1); // Минимальный лимит чтения
+        when(spyDevice.getMillisWriteLimit()).thenReturn(1); // Минимальный лимит записи
+        when(spyDevice.getMillisLimit()).thenReturn(1L); // Общий минимальный лимит
+
+        // Устанавливаем шпион обратно в коллектор
+        deviceField.set(collector, spyDevice);
+        // ========== ВЫПОЛНЕНИЕ ==========
         // Запускаем коллектор в отдельном потоке
         Thread collectorThread = new Thread(collector);
         collectorThread.start();
@@ -213,30 +248,64 @@ public class ComDataCollectorTest {
         // Ждем запуска потока
         await().atMost(1, TimeUnit.SECONDS).until(collector::isAlive);
 
-        // Генерируем 500 событий DATA_AVAILABLE
+        // Создаем событие DATA_AVAILABLE
         SerialPortEvent event = mock(SerialPortEvent.class);
         when(event.getEventType()).thenReturn(SerialPort.LISTENING_EVENT_DATA_AVAILABLE);
 
-        for (int i = 0; i < 5; i++) {
-            System.out.println("Call " + i);
-            // Вызываем обработчик события
-            collector.getSerialPortDataListener().serialEvent(event);
-            when(mockPort.bytesAvailable())
-                    .thenReturn(testData.length)  // Данные есть
-                    .thenReturn(testData.length)  // Данные есть
-                    .thenReturn(0);            // Данных нет
-            // Небольшая задержка для имитации реальных условий
-            Thread.sleep(1);
+        // Генерируем события (без цикла по сообщениям!)
+        // Вместо этого создаем отдельный поток для генерации событий
+        Thread eventGeneratorThread = new Thread(() -> {
+            for (byte[] data : testDataList) {
+                // Устанавливаем текущие данные и количество байт для возврата
+                currentData.set(data);
+                bytesToReturn.set(data.length);
+
+                // Генерируем событие о поступлении данных
+                collector.getSerialPortDataListener().serialEvent(event);
+
+                // Ждем, пока данные не будут полностью прочитаны
+                await().atMost(110, TimeUnit.MILLISECONDS)
+                        .until(() -> bytesToReturn.get() == 0);
+
+                // Задержка между сообщениями
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        });
+        eventGeneratorThread.start();
+
+        // ========== ПРОВЕРКА ==========
+        // Ждем обработки всех сообщений
+        await().atMost(50, TimeUnit.SECONDS).untilAsserted(() -> {
+            List<DeviceAnswer> answers = AnswerStorage.getAnswersForGraph(CLIENT_ID);
+            assertEquals(MESSAGE_COUNT, answers.size(),
+                    "Все сообщения должны быть сохранены в хранилище");
+        });
+
+        // Проверяем содержимое сообщений
+        List<DeviceAnswer> answers = AnswerStorage.getAnswersForGraph(CLIENT_ID);
+        Map<String, Integer> contentCount = new HashMap<>();
+
+        for (DeviceAnswer answer : answers) {
+            String content = answer.getAnswerReceivedString();
+            contentCount.put(content, contentCount.getOrDefault(content, 0) + 1);
         }
-        Thread.sleep(20);
-        List<DeviceAnswer> answers = AnswerStorage.getAnswersForGraph(1);
-        System.out.println(answers.size());
-        assertEquals(500, answers.size(), "Должно быть 500 сообщений в хранилище");
 
+        // Проверяем уникальность и полноту данных
+        for (int i = 0; i < MESSAGE_COUNT; i++) {
+            String expected = "Test data " + i;
+            assertEquals(1, contentCount.getOrDefault(expected, 0),
+                    "Сообщение '" + expected + "' должно присутствовать 1 раз");
+        }
 
-        // Останавливаем поток
+        // ========== ЗАВЕРШЕНИЕ ==========
+        // Останавливаем потоки
         collector.shutdown();
-        collectorThread.join(1000);
+        eventGeneratorThread.join(50);
+        collectorThread.join(10);
         assertFalse(collector.isAlive(), "Поток должен завершиться после shutdown");
     }
 

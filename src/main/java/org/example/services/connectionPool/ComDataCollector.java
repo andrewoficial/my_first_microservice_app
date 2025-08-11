@@ -528,7 +528,7 @@ public class ComDataCollector implements Runnable{
             }
         }
         //log.info("Завершены все процессы логирования" + answer.toString() + " client " + clientId);
-        log.info("Завершены все процессы логирования");
+        //log.info("Завершены все процессы логирования");
     }
 
     public void setPoolDelay(int poolDelay) {

@@ -127,7 +127,7 @@ public class AnswerStorage {
                 answer.getAnswerReceivedValues().getUnits() != null && answer.getAnswerReceivedValues().getUnits().length >= 1){
             //log.info("Сообщение от клиента ["+clientId+"] принято к сохранению (всего: "+answersByTab.get(clientId).size()+")" + answer.getAnswerReceivedValues().getValues()[0] + " " +answer.getAnswerReceivedValues().getUnits()[0]);
         }else{
-            //log.info("Сообщение от клиента ["+clientId+"] принято к сохранению (всего: "+answersByTab.get(clientId).size()+")" + " (в ответе только строка)");
+            //log.info("Сообщение от клиента ["+clientId+"] принято к сохранению (всего: "+answersByTab.get(clientId).size()+")" + " (в ответе только строка)" + answer.getAnswerReceivedString());
         }
 
 
