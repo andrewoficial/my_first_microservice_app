@@ -130,8 +130,17 @@ public class PoolLogger {
 
         if (answer.getRequestSendTime() == null
                 || answer.getAnswerReceivedTime() == null
-                || (answer.getAnswerReceivedTime().isBefore(answer.getRequestSendTime()) || //ответ получен после запроса
-                answer.getAnswerReceivedTime().isEqual(answer.getRequestSendTime()))) {//одновременно для входящих команд
+                || (answer.getAnswerReceivedTime().isBefore(answer.getRequestSendTime()))) {//ответ получен после запро))
+            if(answer.getRequestSendTime() == null){
+                log.info("answer.getRequestSendTime() == null");
+            }
+            if(answer.getAnswerReceivedTime() == null){
+                log.info("answer.getAnswerReceivedTime() == null");
+            }
+
+            if((answer.getAnswerReceivedTime().isBefore(answer.getRequestSendTime()))){
+                log.info("answer.getAnswerReceivedTime().isBefore(answer.getRequestSendTime()");
+            }
             log.error(String.format("Invalid timestamps for client %d", clientId));
             return false;
         }

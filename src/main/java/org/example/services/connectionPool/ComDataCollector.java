@@ -391,7 +391,7 @@ public class ComDataCollector implements Runnable{
             return;
         }
         if(deviceAnswer == null || responseRequested != true){
-            deviceAnswer = new DeviceAnswer(LocalDateTime.now(), "", currentDirection.get());
+            deviceAnswer = new DeviceAnswer(LocalDateTime.ofInstant(Instant.ofEpochMilli(receiveTimestamp), ZoneId.systemDefault()), "", currentDirection.get());
         }
 
         if(responseRequested) {
@@ -406,7 +406,7 @@ public class ComDataCollector implements Runnable{
             }
         }else{
             device.setCmdToSend(null);
-            deviceAnswer.setRequestSendTime(LocalDateTime.now());
+            deviceAnswer.setRequestSendTime(LocalDateTime.ofInstant(Instant.ofEpochMilli(receiveTimestamp), ZoneId.systemDefault()));
         }
 
         int tabDirection = clientId;
@@ -661,6 +661,14 @@ public class ComDataCollector implements Runnable{
         }
         return true;
     }
+
+    public DeviceLogger getLogger(int clientId){
+        if(clientsMap.containsKey(clientId)) {
+            return clientsMap.get(clientId).logger;
+        }
+        return null;
+    }
+
 
     public class ClientData {
         int clientId;

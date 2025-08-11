@@ -7,6 +7,7 @@ import com.intellij.uiDesigner.core.Spacer;
 import org.apache.log4j.Logger;
 import org.example.Main;
 import org.example.device.ProtocolsList;
+import org.example.gui.mainWindowUtilites.FolderPictureForLog;
 import org.example.gui.mainWindowUtilites.GuiStateManager;
 import org.example.gui.mainWindowUtilites.PortManager;
 import org.example.gui.mainWindowUtilites.TabManager;
@@ -17,6 +18,7 @@ import org.example.services.comPort.BaudRatesList;
 import org.example.services.comPort.DataBitsList;
 import org.example.services.comPort.ParityList;
 import org.example.services.comPort.StopBitsList;
+import org.example.services.loggers.DeviceLogger;
 import org.example.utilites.*;
 import org.example.services.connectionPool.ComDataCollector;
 import org.example.utilites.properties.MyProperties;
@@ -27,6 +29,8 @@ import javax.swing.event.ChangeListener;
 import javax.swing.text.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
+import java.io.IOException;
 import java.net.ConnectException;
 import java.net.URL;
 import java.time.LocalDateTime;
@@ -57,6 +61,7 @@ public class MainWindow extends JFrame implements Rendeble {
     private final AtomicInteger currentTabCount = new AtomicInteger();
     private final AtomicInteger currentActiveTab = new AtomicInteger(); //Текущая активная (выбранная) вкладка
     private final AtomicInteger currentActiveClientId = new AtomicInteger();
+    private boolean initialCalls = true;
 
     private JPanel addRemove;
     private JPanel portSetup;
@@ -96,6 +101,7 @@ public class MainWindow extends JFrame implements Rendeble {
     private JLabel LableComProtocol;
     private JLabel LableConnectionType;
     private JComboBox comboBox_ConnectionType;
+    private JPanel folderIconPanel;
 
 
     private void initUI() {
@@ -213,9 +219,12 @@ public class MainWindow extends JFrame implements Rendeble {
                 }
                 checkBox_Pool.setSelected(anyPoolService.isComDataCollectorByClientIdActiveDataSurvey(currentActiveClientId.get()));
                 checkBox_Log.setSelected(anyPoolService.isComDataCollectorByClientIdLogged(currentActiveClientId.get()));
+
+
                 updateGuiFromClass();
                 updateComPortSelectorFromProp();
                 checkIsUsedPort();
+                updateFolderPicture();
             }
         });
 
@@ -249,6 +258,7 @@ public class MainWindow extends JFrame implements Rendeble {
         updateClassFromGui();
         tabbedPane1.setSelectedIndex(0);
         uiThPool.submit(new RenderThread(this));
+        initialCalls = false;
     }
 
     private void updateComPortList() {
@@ -259,6 +269,41 @@ public class MainWindow extends JFrame implements Rendeble {
             if (currentPort.getSystemPortName().equals(prop.getPorts()[0])) {
                 comboBox_ComPorts.setSelectedIndex(i);
             }
+        }
+    }
+
+    private void openExplorerWithSelectedFile(File file) {
+        if (file == null || !file.exists()) {
+            JOptionPane.showMessageDialog(null, "Файл лога не найден!", "Ошибка", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        String os = System.getProperty("os.name").toLowerCase();
+
+        try {
+            if (os.contains("win")) {
+                // Windows
+                Runtime.getRuntime().exec("explorer.exe /select,\"" + file.getAbsolutePath() + "\"");
+            } else if (os.contains("mac")) {
+                // macOS
+                Runtime.getRuntime().exec(new String[]{"open", "-R", file.getAbsolutePath()});
+            } else if (os.contains("nix") || os.contains("nux") || os.contains("aix")) {
+                // Linux/Unix
+                String parentDir = file.getParent();
+                if (parentDir != null) {
+                    Runtime.getRuntime().exec(new String[]{"xdg-open", parentDir});
+                }
+            } else {
+                // Неподдерживаемая ОС
+                JOptionPane.showMessageDialog(null,
+                        "Функция открытия папки не поддерживается в вашей ОС",
+                        "Предупреждение", JOptionPane.WARNING_MESSAGE);
+            }
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(null,
+                    "Ошибка при открытии проводника: " + ex.getMessage(),
+                    "Ошибка", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
         }
     }
 
@@ -322,6 +367,7 @@ public class MainWindow extends JFrame implements Rendeble {
     private void closeComPort() {
         addCustomMessage(portManager.closePort(currentActiveClientId.get()));
         checkIsUsedPort(); //Блокировка кнопок
+        updateFolderPicture();
     }
 
 
@@ -395,6 +441,7 @@ public class MainWindow extends JFrame implements Rendeble {
         } else {
             log.info("Для текущей влкадки потока опроса не существует");
         }
+        updateFolderPicture();
     }
 
     // Вспомогательные методы
@@ -541,12 +588,62 @@ public class MainWindow extends JFrame implements Rendeble {
         logDataTransferJtextPanelsMap.get(currentActiveClientId.get()).setCaretPosition(doc.getLength());
     }
 
+    public void updateFolderPictureLater() {
+        Runnable setTextRun = new Runnable() {
+            public void run() {
+                try {
+                    Thread.sleep(900);
+                    updateFolderPictureMethod();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+        SwingUtilities.invokeLater(setTextRun);
+    }
+
+    public void updateFolderPicture() {
+        if (!initialCalls) {
+            updateFolderPictureLater();
+        }
+    }
+
+    public void updateFolderPictureMethod() {
+        ComDataCollector cdc = anyPoolService.findComDataCollectorByClientId(currentActiveClientId.get());
+        FolderPictureForLog fpg = new FolderPictureForLog();
+        folderIconPanel.setLayout(new BoxLayout(folderIconPanel, BoxLayout.Y_AXIS));
+        if (cdc != null) {
+            DeviceLogger currentLogger = cdc.getLogger(currentActiveClientId.get());
+            if (currentLogger != null) {
+                log.info("Set folder state open");
+                folderIconPanel.removeAll();
+                JPanel btnPane = fpg.getPicContainer("Open", true, true, currentLogger.getLogFileCSV());
+                folderIconPanel.add(btnPane);
+                folderIconPanel.revalidate();
+                folderIconPanel.repaint();
+            } else {
+                log.info("Not started");
+                folderIconPanel.removeAll();
+                JPanel btnPane = fpg.getPicContainer("Not available", true, false, null);
+                folderIconPanel.add(btnPane);
+                folderIconPanel.revalidate();
+                folderIconPanel.repaint();
+            }
+        } else {
+            log.info("Set folder state can not started");
+            folderIconPanel.removeAll();
+            JPanel btnPane = fpg.getPicContainer("Not available", false, false, null);
+            folderIconPanel.add(btnPane);
+            folderIconPanel.revalidate();
+            folderIconPanel.repaint();
+        }
+    }
+
     public void renderData() {
         if (!SwingUtilities.isEventDispatchThread()) {
             SwingUtilities.invokeLater(this::renderData);
             return;
         }
-
         Integer clientId = currentActiveClientId.get();
         Document doc = logDataTransferJtextPanelsMap.get(clientId).getDocument();
         final int maxLength = 10_000;
@@ -867,8 +964,11 @@ public class MainWindow extends JFrame implements Rendeble {
         checkBox_Autoconnect.setForeground(new Color(-1));
         checkBox_Autoconnect.setText("Автоподключение");
         panel15.add(checkBox_Autoconnect, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final Spacer spacer7 = new Spacer();
-        panel15.add(spacer7, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        folderIconPanel = new JPanel();
+        folderIconPanel.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        folderIconPanel.setBackground(new Color(-15658218));
+        folderIconPanel.setEnabled(true);
+        panel15.add(folderIconPanel, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         connectionType = new JPanel();
         connectionType.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
         connectionType.setBackground(new Color(-16777216));
@@ -885,8 +985,8 @@ public class MainWindow extends JFrame implements Rendeble {
         final DefaultComboBoxModel defaultComboBoxModel4 = new DefaultComboBoxModel();
         comboBox_ConnectionType.setModel(defaultComboBoxModel4);
         connectionType.add(comboBox_ConnectionType, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(120, -1), new Dimension(120, -1), new Dimension(120, -1), 0, false));
-        final Spacer spacer8 = new Spacer();
-        connectionType.add(spacer8, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final Spacer spacer7 = new Spacer();
+        connectionType.add(spacer7, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
     }
 
     /**

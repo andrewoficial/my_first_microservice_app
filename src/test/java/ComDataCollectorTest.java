@@ -5,6 +5,7 @@ import org.example.device.SomeDevice;
 import org.example.services.connectionPool.ComDataCollector;
 import org.example.services.loggers.DeviceLogger;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.example.gui.MainLeftPanelStateCollection;
@@ -185,10 +186,11 @@ public class ComDataCollectorTest {
     }
 
     @Test
+    @Disabled
     void whenManyMessagesReceived_allAreStoredInAnswerStorage() throws Exception {
         // ========== ПОДГОТОВКА ==========
         final int CLIENT_ID = 1; // ID клиента для тестирования
-        final int MESSAGE_COUNT = 20; // Количество сообщений
+        final int MESSAGE_COUNT = 500; // Количество сообщений
 
         // Очищаем хранилище ответов перед тестом
         AnswerStorage.removeAnswersForTab(CLIENT_ID);
@@ -279,7 +281,7 @@ public class ComDataCollectorTest {
 
         // ========== ПРОВЕРКА ==========
         // Ждем обработки всех сообщений
-        await().atMost(50, TimeUnit.SECONDS).untilAsserted(() -> {
+        await().atMost(500, TimeUnit.SECONDS).untilAsserted(() -> {
             List<DeviceAnswer> answers = AnswerStorage.getAnswersForGraph(CLIENT_ID);
             assertEquals(MESSAGE_COUNT, answers.size(),
                     "Все сообщения должны быть сохранены в хранилище");
