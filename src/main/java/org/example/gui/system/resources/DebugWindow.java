@@ -1,4 +1,4 @@
-package org.example.gui;
+package org.example.gui.system.resources;
 
 import javax.swing.*;
 
@@ -15,6 +15,7 @@ import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import com.sun.management.OperatingSystemMXBean;
 import org.apache.log4j.Logger;
+import org.example.gui.Rendeble;
 
 public class DebugWindow extends JDialog implements Rendeble {
     private Logger log = null;

@@ -592,7 +592,7 @@ public class MainWindow extends JFrame implements Rendeble {
         Runnable setTextRun = new Runnable() {
             public void run() {
                 try {
-                    Thread.sleep(900);
+                    Thread.sleep(1500);
                     updateFolderPictureMethod();
                 } catch (Exception e) {
                     e.printStackTrace();

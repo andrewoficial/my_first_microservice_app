@@ -12,10 +12,13 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.concurrent.ExecutorService;
 
+import org.example.gui.accu10fd.Acu10fdWindow;
 import org.example.gui.curve.CurveHandlerWindow;
 import org.example.gui.graph.ChartWindow;
 import org.example.gui.graph.data.AnswerLoader;
 import org.example.gui.mgstest.MgsSimpleTest;
+import org.example.gui.system.logs.ViewLogsWindow;
+import org.example.gui.system.resources.DebugWindow;
 import org.example.services.AnswerStorage;
 import org.example.services.connectionPool.AnyPoolService;
 import org.example.utilites.properties.MyProperties;
@@ -90,8 +93,10 @@ public class JmenuFile {
         JMenu viewMenu = new JMenu("Система");
         // меню-флажки
         JMenuItem sysDebug  = new JMenuItem("Ресурсы системы");
+        JMenuItem sysLogs  = new JMenuItem("Просмотр логов");
         // добавим все в меню
         viewMenu.add(sysDebug);
+        viewMenu.add(sysLogs);
         sysDebug.addActionListener(new ActionListener()
         {
             @Override
@@ -107,6 +112,19 @@ public class JmenuFile {
                 thPool.submit(new RenderThread(logWindows));
 
 
+            }
+        });
+        sysLogs.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                ViewLogsWindow logWindows = new ViewLogsWindow();
+                logWindows.setName("Logs Window");
+                logWindows.setTitle("Logs Window");
+                logWindows.pack();
+                logWindows.setModal(false);
+                logWindows.setVisible(true);
+                thPool.submit(new RenderThread(logWindows));
             }
         });
         return viewMenu;
@@ -316,6 +334,7 @@ public class JmenuFile {
         JMenuItem bleScan  = new JMenuItem("bleScan");
         JMenuItem customRules = new JMenuItem("Пользовательские правила");
         JMenuItem curveWindow = new JMenuItem("Полиномы TC290");
+        JMenuItem acuTenFd = new JMenuItem("Расходомер ACU10FD-MM");
         JMenuItem mgsTest = new JMenuItem("MGSTest");
 
 
@@ -329,6 +348,7 @@ public class JmenuFile {
         utilitiesMenu.add(bleScan);
         utilitiesMenu.add(customRules);
         utilitiesMenu.add(curveWindow);
+        utilitiesMenu.add(acuTenFd);
         utilitiesMenu.add(mgsTest);
 
 
@@ -461,6 +481,21 @@ public class JmenuFile {
              //chartWindow.isEnabled();
              //thPool.submit(new RenderThread(commandsWindow));
          }
+        });
+        acuTenFd.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                System.out.println("arguments [" + arg0.toString() + "] ");
+                System.out.println("acuTenFd");
+                Acu10fdWindow acu10fdWindow = new Acu10fdWindow(prop);
+                acu10fdWindow.pack();
+                acu10fdWindow.setVisible(true);
+                //commandsWindow.renderData();
+                System.out.println(acu10fdWindow.isShowing());
+                //chartWindow.isEnabled();
+                thPool.submit(new RenderThread(acu10fdWindow));
+            }
         });
         mgsTest.addActionListener(new ActionListener()
         {

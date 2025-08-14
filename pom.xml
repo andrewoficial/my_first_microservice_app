@@ -13,7 +13,7 @@
 
     <groupId>org.example</groupId>
     <artifactId>Elephant-Monitor</artifactId>
-    <version>1.8.20-Alpha</version>
+    <version>1.8.20-Beta</version>
     <distributionManagement>
         <repository>
             <id>github</id>
@@ -374,6 +374,18 @@
             <artifactId>jpackage-maven-plugin</artifactId>
             <version>0.1.5</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/org.jacoco/jacoco-maven-plugin -->
+        <dependency>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <version>0.8.12</version>
+        </dependency>
 
+        <!-- https://mvnrepository.com/artifact/com.intelligt.modbus/jlibmodbus -->
+        <dependency>
+            <groupId>com.intelligt.modbus</groupId>
+            <artifactId>jlibmodbus</artifactId>
+            <version>1.2.9.11</version>
+        </dependency>
     </dependencies>
 </project>

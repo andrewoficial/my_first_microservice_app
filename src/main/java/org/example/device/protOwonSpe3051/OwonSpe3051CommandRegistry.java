@@ -161,16 +161,5 @@ public class OwonSpe3051CommandRegistry extends DeviceCommandRegistry {
         }
         return null;
     }
-
-
-    // Вынесенные методы для повторного использования
-    private double parseSubResponse(byte[] subResponse) {
-        // Общая логика преобразования байтов в число
-        return 0.0;
-    }
-
-    private boolean validateCrc(byte[] response) {
-        // Логика проверки CRC
-        return false;
-    }
+    
 }
