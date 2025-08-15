@@ -76,6 +76,36 @@ public class MyPropertiesSettingsLoader {
         }
     }
 
+    public double getDouble(String name, double defaultValue) {
+        if(name == null){
+            log.warn("в loadIntByName не передано название параметра ");
+            return defaultValue;
+        }
+
+        if(! properties.containsKey(name)){
+            log.warn("в configAccess.properties отсутствует свойство: " + name + ". Он будет добавлен и установлен в " + defaultValue);
+            properties.put(name, String.valueOf(defaultValue));
+            fileHandler.updateFileFromProperties(properties);
+        }
+        if(properties.getProperty(name) == null){
+            log.warn("в configAccess.properties найдено свойтво: " + name + ". Но ему не задан параметр. Он будет установлен в " + defaultValue);
+            properties.setProperty(name, String.valueOf(defaultValue));
+            fileHandler.updateFileFromProperties(properties);
+            return defaultValue;
+        }
+
+
+        try{
+            return Double.parseDouble(properties.getProperty(name));
+        }catch (NumberFormatException exception){
+            log.warn("configAccess.properties содержит недопустимое значение параметра " + name + ". Он будет установлен в " + defaultValue);
+            properties.setProperty(name, String.valueOf(defaultValue));
+            fileHandler.updateFileFromProperties(properties);
+            return defaultValue;
+        }
+    }
+
+
     public String getString(String name, String defaultValue) {
         if (name == null) {
             log.warn("в loadStringByName не передано название параметра");

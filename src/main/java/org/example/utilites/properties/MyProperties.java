@@ -45,6 +45,24 @@ public class MyProperties {
     @Getter
     private int tabCounter;
 
+    @Getter
+    private int portAcu10fd;
+
+    @Getter
+    private int speedAcu10fd;
+
+    @Getter
+    private int firstGasAcu10fd;
+
+    @Getter
+    private int secondGasAcu10fd;
+
+    @Getter
+    private double firstGasAcu10fdConcentration;
+
+    @Getter
+    private double secondGasAcu10fdConcentration;
+
     @Setter
     @Getter
     @Value("${app.version}")
@@ -269,6 +287,14 @@ public class MyProperties {
         dbgLogInputHEX = settingsLoader.getBoolean("dbgLogInputHEX", false);
         dbgLogInputParsed = settingsLoader.getBoolean("dbgLogInputParsed", false);
 
+        //Load ACU10FD-MM
+        portAcu10fd = settingsLoader.getInt("portAcu10fd", 0);
+        speedAcu10fd = settingsLoader.getInt("speedAcu10fd", 0);
+        firstGasAcu10fd = settingsLoader.getInt("firstGasAcu10fd", 0);
+        secondGasAcu10fd = settingsLoader.getInt("secondGasAcu10fd", 0);
+        firstGasAcu10fdConcentration = settingsLoader.getDouble("firstGasAcu10fdConcentration", 100.0);
+        secondGasAcu10fdConcentration = settingsLoader.getDouble("secondGasAcu10fdConcentration", 0.0);
+
         // Load Clients States
         updateLeftPanelStateCollectionClass();
     }
@@ -490,6 +516,46 @@ public class MyProperties {
         settingsLoader.setString("vegaLogin", login);
     }
 
+    public void setPortAcu10fd(int port){
+        this.portAcu10fd = port;
+        properties.setProperty("portAcu10fd", String.valueOf(port));
+        fileHandler.updateFileFromProperties(properties);
+        log.debug("Обновлено значение порта для acu10fd : " + port);
+    }
+
+    public void setSpeedAcu10fd(int speed){
+        this.speedAcu10fd = speed;
+        properties.setProperty("speedAcu10fd", String.valueOf(speed));
+        fileHandler.updateFileFromProperties(properties);
+        log.debug("Обновлено значение скорости для acu10fd : " + speed);
+    }
+    public void setFirstGasAcu10fd(int gas){
+        this.firstGasAcu10fd = gas;
+        properties.setProperty("firstGasAcu10fd", String.valueOf(gas));
+        fileHandler.updateFileFromProperties(properties);
+        log.debug("Обновлено значение firstGasAcu10fd для acu10fd : " + gas);
+    }
+
+    public void setSecondGasAcu10fd(int gas){
+        this.secondGasAcu10fd = gas;
+        properties.setProperty("secondGasAcu10fd", String.valueOf(gas));
+        fileHandler.updateFileFromProperties(properties);
+        log.debug("Обновлено значение secondGasAcu10fd для acu10fd : " + gas);
+    }
+
+    public void setFirstGasAcu10fdConcentration(double concentration){
+        this.firstGasAcu10fdConcentration = concentration;
+        properties.setProperty("firstGasAcu10fdConcentration", String.valueOf(concentration));
+        fileHandler.updateFileFromProperties(properties);
+        log.debug("Обновлено значение firstGasAcu10fdConcentration для acu10fd : " + concentration);
+    }
+
+    public void setSecondGasAcu10fdConcentration(double concentration){
+        this.secondGasAcu10fdConcentration = concentration;
+        properties.setProperty("secondGasAcu10fdConcentration", String.valueOf(concentration));
+        fileHandler.updateFileFromProperties(properties);
+        log.debug("Обновлено значение secondGasAcu10fdConcentration для acu10fd : " + concentration);
+    }
 
     public org.apache.log4j.Level getLogLevel() {
         return Level.toLevel(logLevel);

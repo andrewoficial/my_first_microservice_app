@@ -494,7 +494,9 @@ public class JmenuFile {
                 //commandsWindow.renderData();
                 System.out.println(acu10fdWindow.isShowing());
                 //chartWindow.isEnabled();
-                thPool.submit(new RenderThread(acu10fdWindow));
+                RenderThread render = new RenderThread(acu10fdWindow);
+                render.setRenderDelay(3000L);
+                thPool.submit(render);
             }
         });
         mgsTest.addActionListener(new ActionListener()

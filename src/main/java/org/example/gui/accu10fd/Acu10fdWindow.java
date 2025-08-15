@@ -18,6 +18,8 @@ import org.apache.log4j.Logger;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.util.List;
 import java.util.function.IntFunction;
@@ -55,10 +57,13 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
     private JTextField jtfCalculateResult;
     private JButton jbCmdSetGasCoefficient;
     private JButton jbSearch;
+    private JTextArea jtaStatus;
 
-    private SerialPort comPort = null;
+    private SerialPort comPort;
     private final AcuTableFileHandler acuTableFileHandler;
     private double calculatedCoefficient;
+    private boolean poolState;
+    private Acu10fsCommander acu10fsCommander;
 
     public Acu10fdWindow(MyProperties prop) {
         $$$setupUI$$$();
@@ -106,7 +111,7 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
 
 
         jbOpenComPort.addActionListener(this::openPortActionHandler);
-        jbOpenComPort.addActionListener(this::closePortActionHandler);
+        jbCloseComPort.addActionListener(this::closePortActionHandler);
         jbCmdReadInstantFlow.addActionListener(this::readInstantaneousFlow);
         jbCmdReadCumulativeFlow.addActionListener(this::readCumulativeFlow);
         jbCmdResetCumulativeFlow.addActionListener((this::clearCumulativeFlow));
@@ -115,21 +120,127 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
         jbCmdResetZeroing.addActionListener(this::cancelZeroPoint);
         jbCmdCalculate.addActionListener(this::cmdCalculate);
         jbCmdSetGasCoefficient.addActionListener(this::setCoefficient);
-
+        jcbBackgroundDataPool.addActionListener(this::changePoolState);
         jbSearch.addActionListener(this::testComPortSpeedsHandler);
+        acu10fsCommander = new Acu10fsCommander(comPort);
+
+        this.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent windowEvent) {
+                log.info("Закрытие окна работы с расходомером:");
+                poolState = false;
+                if (comPort != null && comPort.isOpen()) {
+                    comPort.closePort();
+                }
+
+                if (acu10fsCommander != null && acu10fsCommander.getComPort() != null) {
+                    acu10fsCommander.getComPort().closePort();
+                }
+
+            }
+        });
+
+        if (prop != null && prop.getPortAcu10fd() != 0) {
+            jcbComPortNumber.setSelectedIndex(prop.getPortAcu10fd());
+        }
+
+        if (prop != null && prop.getSpeedAcu10fd() != 0) {
+            jcbComSpeed.setSelectedIndex(prop.getSpeedAcu10fd());
+        }
+
+        if (prop != null && prop.getFirstGasAcu10fd() != 0) {
+            jcbFirstComponentName.setSelectedIndex(prop.getFirstGasAcu10fd());
+        }
+
+        if (prop != null && prop.getSecondGasAcu10fd() != 0) {
+            jcbSecondComponentName.setSelectedIndex(prop.getSecondGasAcu10fd());
+        }
+
+        if (prop != null && prop.getFirstGasAcu10fdConcentration() != 0) {
+            jsFirstComponentConcentration.setValue(prop.getFirstGasAcu10fdConcentration());
+        }
+
+        if (prop != null && prop.getSecondGasAcu10fdConcentration() != 0) {
+            jsSecondComponentConcentration.setValue(prop.getSecondGasAcu10fdConcentration());
+        }
+
 
     }
 
+    private void changePoolState(ActionEvent actionEvent) {
+        log.info("Change pool state");
+        if (poolState == false) {
+            if (acu10fsCommander.isPortConsistent()) {
+                poolState = jcbBackgroundDataPool.isSelected();
+            } else {
+                jcbBackgroundDataPool.setSelected(false);
+            }
+        } else {
+            poolState = jcbBackgroundDataPool.isSelected();
+        }
+
+    }
+
+    private void backgroundPool() {
+        if (poolState == false) {
+            return;
+        }
+        if (!acu10fsCommander.isPortConsistent()) {
+            poolState = false;
+            jcbBackgroundDataPool.setSelected(false);
+            return;
+        }
+        String firstAskResult = null;
+        String firstAskError = null;
+        String secondAskResult = null;
+        String secondAskError = null;
+
+        if (acu10fsCommander.isBusy()) return;
+        try {
+            firstAskResult = String.valueOf(acu10fsCommander.readCumulativeFlow());
+        } catch (Exception e) {
+            firstAskError = "Ошибка запроса в фоне CumulativeFlow \n" + e.getMessage();
+            log.info(firstAskError);
+        }
+
+        try {
+            secondAskResult = String.valueOf(acu10fsCommander.readInstantaneousFlow());
+        } catch (Exception e) {
+            secondAskError = "Ошибка запроса в фоне InstantaneousFlow \n" + e.getMessage();
+            log.info(secondAskError);
+        }
+
+        String resultOne;
+        String resultSecond;
+        if (firstAskResult != null) {
+            resultOne = "Текущий накопленный расход: \n" + firstAskResult;
+        } else if (firstAskError != null) {
+            resultOne = "Текущий накопленный расход \nне был считан: \n" + firstAskError;
+        } else {
+            resultOne = "Текущий накопленный расход \nне был считан: \n(неизвестная ошибка)";
+        }
+
+        if (secondAskResult != null) {
+            resultSecond = "\nТекущий мгновенный расход: \n" + secondAskResult;
+        } else if (secondAskError != null) {
+            resultSecond = "\nТекущий мгновенный расход \nне был считан: \n" + secondAskError;
+        } else {
+            resultSecond = "\nТекущий мгновенный расход \nне был считан: \n(неизвестная ошибка)";
+        }
+
+        jtaStatus.setText(resultOne + resultSecond);
+
+    }
 
     private void openPortActionHandler(ActionEvent actionEvent) {
         Integer selectedBaudRate = null;
         Integer selectedParity = null;
 
-        jlbStatus.setText("Открываю");
+        jtaStatus.setText("Открываю");
         if (comPort != null) {
             if (comPort.isOpen()) {
                 comPort.closePort();
-                jlbStatus.setText("Переоткрываю...");
+                jtaStatus.setText("Переоткрываю...");
             }
         }
         try {
@@ -141,17 +252,17 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
 
             SerialPort[] ports = SerialPort.getCommPorts();
             if (ports.length == 0 || jcbComPortNumber.getSelectedIndex() >= ports.length) {
-                jlbStatus.setText("Выбранный порт не найден в системе о.о");
+                jtaStatus.setText("Выбранный порт не найден в системе о.о");
                 return;
             }
 
             comPort = ports[jcbComPortNumber.getSelectedIndex()];
             if (comPort == null) {
-                jlbStatus.setText("Выбранный порт оказался null");
+                jtaStatus.setText("Выбранный порт оказался null");
                 return;
             }
         } catch (Exception e) {
-            jlbStatus.setText("Ошибка разбора параметров");
+            jtaStatus.setText("Ошибка разбора параметров");
             log.error("Ошибка разбора параметров", e);
             JOptionPane.showMessageDialog(
                     null,
@@ -188,25 +299,29 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
             boolean opened = comPort.openPort(readTimeout);
 
             if (opened) {
-                jlbStatus.setText("Порт " + comPort.getDescriptivePortName() + " открыт");
+                jtaStatus.setText("Порт " + comPort.getDescriptivePortName() + " открыт");
             } else {
                 doErrorMessage("Не удалось открыть порт. Код ошибки: " + comPort.getLastErrorCode(), "Такое иногда случается...");
             }
-
         } catch (Exception e) {
-            jlbStatus.setText("Ошибка открытия порта");
+            jtaStatus.setText("Ошибка открытия порта");
             log.error("Ошибка при открытии COM-порта", e);
             doErrorMessage("Ошибка открытия порта:" + e.getMessage(), "Такое иногда случается...");
         }
-
-
-        jlbStatus.setText(checkDeviceConnection());
+        acu10fsCommander.setComPort(comPort);
+        prop.setPortAcu10fd(jcbComPortNumber.getSelectedIndex());
+        prop.setSpeedAcu10fd(jcbComSpeed.getSelectedIndex());
     }
 
     private void closePortActionHandler(ActionEvent actionEvent) {
         if (comPort != null && comPort.isOpen()) {
             comPort.closePort();
-            jlbStatus.setText("Порт закрыт");
+            jtaStatus.setText("Порт закрыт");
+            poolState = false;
+            jcbBackgroundDataPool.setSelected(false);
+        }
+        if (acu10fsCommander != null && acu10fsCommander.getComPort() != null) {
+            acu10fsCommander.getComPort().closePort();
         }
     }
 
@@ -239,6 +354,12 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
 
         // Выводим результат
         log.info("Calculated coefficient: " + calculatedCoefficient);
+        prop.setFirstGasAcu10fdConcentration(conc1);
+        prop.setSecondGasAcu10fdConcentration(conc2);
+        prop.setFirstGasAcu10fd(jcbFirstComponentName.getSelectedIndex());
+        prop.setSecondGasAcu10fd(jcbSecondComponentName.getSelectedIndex());
+
+
         jtfCalculateResult.setText(String.valueOf(calculatedCoefficient));
     }
 
@@ -258,7 +379,6 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
             doErrorMessage("Не нужно задавать коэффициент равный или меньше нуля", "Ошибочка");
             return;
         }
-        Acu10fsCommander acu10fsCommander = new Acu10fsCommander(comPort);
         log.info("Double " + calculatedCoefficient);
 
         float coefficient = (float) calculatedCoefficient;
@@ -272,7 +392,6 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
     }
 
     private void readInstantaneousFlow(ActionEvent actionEvent) {
-        Acu10fsCommander acu10fsCommander = new Acu10fsCommander(comPort);
         float result = 5f;
         try {
             result = acu10fsCommander.readInstantaneousFlow();
@@ -280,11 +399,10 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
             doErrorMessage(e.getMessage(), "Err");
             throw new RuntimeException(e);
         }
-        jlbStatus.setText("Мгновенный расход: \n" + result);
+        jtaStatus.setText("Мгновенный расход: \n" + result);
     }
 
     private void readCumulativeFlow(ActionEvent actionEvent) {
-        Acu10fsCommander acu10fsCommander = new Acu10fsCommander(comPort);
         float result = 5f;
         try {
             result = acu10fsCommander.readCumulativeFlow();
@@ -292,22 +410,20 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
             doErrorMessage(e.getMessage(), "Err");
             throw new RuntimeException(e);
         }
-        jlbStatus.setText("Накопленный расход \n" + result);
+        jtaStatus.setText("Накопленный расход \n" + result);
     }
 
     private void clearCumulativeFlow(ActionEvent actionEvent) {
-        Acu10fsCommander acu10fsCommander = new Acu10fsCommander(comPort);
         try {
             acu10fsCommander.resetCumulativeFlow();
         } catch (Exception e) {
             doErrorMessage(e.getMessage(), "Err");
             throw new RuntimeException(e);
         }
-        jlbStatus.setText("Накопленный расход сброшен\n");
+        jtaStatus.setText("Накопленный расход сброшен\n");
     }
 
     private void setControlMode(ActionEvent actionEvent) {
-        Acu10fsCommander acu10fsCommander = new Acu10fsCommander(comPort);
         if (jcbControlMode.getSelectedItem().equals(ControlMod.ANALOG.getName())) {
             log.info("Set " + ControlMod.ANALOG + " mode");
             try {
@@ -316,7 +432,7 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
                 doErrorMessage(e.getMessage(), "Err");
                 throw new RuntimeException(e);
             }
-            jlbStatus.setText("Установлен ANALOG режим работы\n");
+            jtaStatus.setText("Установлен ANALOG режим работы\n");
         } else if (jcbControlMode.getSelectedItem().equals(ControlMod.DIGITAL.getName())) {
             log.info("Set " + ControlMod.DIGITAL + " mode");
             try {
@@ -325,14 +441,13 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
                 doErrorMessage(e.getMessage(), "Err");
                 throw new RuntimeException(e);
             }
-            jlbStatus.setText("Установлен DIGITAL режим работы\n");
+            jtaStatus.setText("Установлен DIGITAL режим работы\n");
         } else {
             doErrorMessage("Неизвестный тип работы", "Ошибка");
         }
     }
 
     private void setZeroPoint(ActionEvent actionEvent) {
-        Acu10fsCommander acu10fsCommander = new Acu10fsCommander(comPort);
         log.info("Set zero point mode");
         try {
             acu10fsCommander.setZeroPoint();
@@ -340,11 +455,10 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
             doErrorMessage(e.getMessage(), "Err");
             throw new RuntimeException(e);
         }
-        jlbStatus.setText("Установлен нулевой уровень расхода\n");
+        jtaStatus.setText("Установлен нулевой уровень расхода\n");
     }
 
     private void cancelZeroPoint(ActionEvent actionEvent) {
-        Acu10fsCommander acu10fsCommander = new Acu10fsCommander(comPort);
         log.info("Cancel zero point mode");
         try {
             acu10fsCommander.cancelZeroPoint();
@@ -352,19 +466,9 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
             doErrorMessage(e.getMessage(), "Err");
             throw new RuntimeException(e);
         }
-        jlbStatus.setText("Отменён нулевой уровень расхода\n");
+        jtaStatus.setText("Отменён нулевой уровень расхода\n");
     }
 
-
-    private String checkDeviceConnection() {
-        if (comPort != null && comPort.isOpen()) {
-            Acu10fsCommander acu10fsCommander = new Acu10fsCommander(comPort);
-
-            return "";
-        } else {
-            return "Ошибка 001. Порт не открыт.";
-        }
-    }
 
     private void testComPortSpeedsHandler(ActionEvent actionEvent) {
         if (comPort == null || !comPort.isOpen()) {
@@ -388,13 +492,13 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
                 jcbComSpeed.setSelectedIndex(index);
             }
 
-            jlbStatus.setText("Найдена скорость: " + foundBaud + " бод");
+            jtaStatus.setText("Найдена скорость: " + foundBaud + " бод");
             JOptionPane.showMessageDialog(this,
                     "Устройство найдено на скорости " + foundBaud + " бод",
                     "Успех",
                     JOptionPane.INFORMATION_MESSAGE);
         } else {
-            jlbStatus.setText("Устройство не найдено");
+            jtaStatus.setText("Устройство не найдено");
             JOptionPane.showMessageDialog(this,
                     "Не удалось определить скорость подключения",
                     "Ошибка",
@@ -486,11 +590,13 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
         jbCloseComPort.setText("Закрыть com-порт");
         comConnection.add(jbCloseComPort, new GridConstraints(4, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jpnColorStatus = new JPanel();
-        jpnColorStatus.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jpnColorStatus.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
         comConnection.add(jpnColorStatus, new GridConstraints(7, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         jlbStatus = new JLabel();
         jlbStatus.setText("Готов");
-        jpnColorStatus.add(jlbStatus, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jpnColorStatus.add(jlbStatus, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jtaStatus = new JTextArea();
+        jpnColorStatus.add(jtaStatus, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(150, 50), null, 0, false));
         jcbControlMode = new JComboBox();
         jcbControlMode.setEnabled(false);
         comConnection.add(jcbControlMode, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -577,17 +683,16 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
 
     @Override
     public void renderData() {
-
+        backgroundPool();
     }
 
     @Override
     public boolean isEnable() {
-        return false;
+        return true;
     }
 
 
     private void createUIComponents() {
-        // TODO: place custom component creation code here
         jsFirstComponentConcentration = new DecimalSpinner(95.6, 0.0, 100.0, 0.1);
         jsSecondComponentConcentration = new DecimalSpinner(4.4, 0.0, 100.0, 0.1);
     }

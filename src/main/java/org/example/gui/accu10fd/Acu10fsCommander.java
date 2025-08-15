@@ -1,17 +1,22 @@
 package org.example.gui.accu10fd;
 
 import com.fazecast.jSerialComm.SerialPort;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.utilites.MyUtilities;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Acu10fsCommander {
     private static final byte DEVICE_ADDRESS = 0x01;
-    private static final int RESPONSE_TIMEOUT_MS = 200;
-    private static final int READ_RETRIES = 3;
+    private static final int RESPONSE_TIMEOUT_MS = 500;
+    private static final int READ_RETRIES = 5;
     private static final int[] TEST_BAUD_RATES = {
             55, 75, 110, 150, 300, 600, 1200, 2400, 4800,
             9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600
@@ -19,11 +24,21 @@ public class Acu10fsCommander {
     private static final int TEST_REGISTER = 0x0010; // Instantaneous Flow
 
     private int detectedBaudRate = -1;
-    private final SerialPort comPort;
+    @Getter @Setter
+    private SerialPort comPort;
     private final Logger log = Logger.getLogger(Acu10fsCommander.class);
-
+    @Getter
+    private AtomicBoolean busyStatus = new AtomicBoolean(false);
     public Acu10fsCommander(SerialPort port) {
         this.comPort = port;
+    }
+
+    public boolean isBusy(){
+        return this.busyStatus.get();
+    }
+
+    public void forceRelease(){
+        this.busyStatus.set(false);
     }
 
     public boolean isPortConsistent() {
@@ -165,44 +180,92 @@ public class Acu10fsCommander {
     // ===== Отправка и чтение ответа =====
 
     private byte[] sendModbusRequest(byte[] request, boolean waitForAnswer) throws Exception {
-        if (!isPortConsistent()) throw new Exception("COM port not initialized");
-
-        log.info("Com connection speed: " + comPort.getBaudRate());
+        if (!isPortConsistent()){
+            log.info("Попытка отправки при закрытом ком-порту");
+            throw new Exception("COM port not initialized");
+        }
+        if(busyStatus.get()){
+            log.warn("Попытка обращения к занятому соединению");
+            return null;
+        }
+        this.busyStatus.set(true);
+        comPort.flushDataListener();
+        comPort.flushIOBuffers();
+        Thread.sleep(50L);
         comPort.writeBytes(request, request.length);
-        log.info("Sent: " + bytesToHex(request));
+        log.info("Отправлено: " + bytesToHex(request) + " ожидатся ответ? " + waitForAnswer);
         if(waitForAnswer) {
             byte[] response = null;
-            for (int i = 0; i < READ_RETRIES; i++) {
-                response = readResponse(request[0], request[1]);
-                if (response != null) break;
-                Thread.sleep(50);
+            response = readResponse(request[0], request[1]);
+//            for (int i = 0; i < READ_RETRIES; i++) {
+//
+//                if (response != null) break;
+//                Thread.sleep(70);
+//            }
+
+            if (response == null){
+                this.busyStatus.set(false);
+                log.warn("Нет ответа от прибора");
+                throw new Exception("Нет ответа от прибора");
             }
-
-            if (response == null) throw new Exception("No response from device");
-            if (!checkCrc(response)) throw new Exception("CRC check failed");
-
+            if (!checkCrc(response)){
+                this.busyStatus.set(false);
+                log.warn("Ошибка проверки CRC");
+                throw new Exception("Ошибка проверки CRC");
+            }
+            this.busyStatus.set(false);
             return response;
         }
+        this.busyStatus.set(false);
         return null;
     }
 
-    private byte[] readResponse(byte expectedAddress, byte expectedFunction) throws InterruptedException {
+    private byte[] readResponse(byte expectedAddress, byte expectedFunction) throws InterruptedException, IOException {
         long startTime = System.currentTimeMillis();
-        while (comPort.bytesAvailable() == 0) {
-            if (System.currentTimeMillis() - startTime > RESPONSE_TIMEOUT_MS) {
-                return null;
+        ByteArrayOutputStream accumulatedBuffer = new ByteArrayOutputStream();
+        int minPacketSize = 5; // Минимальный размер пакета для проверки
+
+        while (System.currentTimeMillis() - startTime <= RESPONSE_TIMEOUT_MS) {
+            int available = comPort.bytesAvailable();
+            if (available == 0) {
+                Thread.sleep(10); // Ждем, если данных нет
+                continue;
             }
+
+            // Читаем доступные байты
+            byte[] tempBuffer = new byte[available];
+            int read = comPort.readBytes(tempBuffer, available);
+            if (read > 0) {
+                // Добавляем считанные байты в накопительный буфер
+                accumulatedBuffer.write(Arrays.copyOf(tempBuffer, read));
+                log.debug("Received chunk: " + bytesToHex(Arrays.copyOf(tempBuffer, read)) +
+                        ", Accumulated: " + bytesToHex(accumulatedBuffer.toByteArray()));
+            } else {
+                log.warn("Read returned 0 bytes despite available=" + available);
+                Thread.sleep(10);
+                continue;
+            }
+
+            // Проверяем накопленный буфер
+            byte[] currentData = accumulatedBuffer.toByteArray();
+            if (currentData.length >= minPacketSize &&
+                    currentData[0] == expectedAddress &&
+                    currentData[1] == expectedFunction) {
+                log.debug("Valid packet received: " + bytesToHex(currentData));
+                return currentData;
+            } else {
+//                log.info("Accumulated data invalid: length=" + currentData.length +
+//                        ", address=" + (currentData.length > 0 ? currentData[0] : "N/A") +
+//                        ", function=" + (currentData.length > 1 ? currentData[1] : "N/A"));
+            }
+
+            // Небольшая пауза перед следующей попыткой чтения
             Thread.sleep(10);
         }
-        int available = comPort.bytesAvailable();
-        byte[] buffer = new byte[available];
-        int read = comPort.readBytes(buffer, available);
-        log.debug("Received: " + bytesToHex(Arrays.copyOf(buffer, read)));
 
-        if (read < 5 || buffer[0] != expectedAddress || buffer[1] != expectedFunction) {
-            return null;
-        }
-        return Arrays.copyOf(buffer, read);
+        log.error("Timeout reached or no valid data received. Accumulated: " +
+                bytesToHex(accumulatedBuffer.toByteArray()));
+        return null;
     }
 
     // ===== Парсинг =====
