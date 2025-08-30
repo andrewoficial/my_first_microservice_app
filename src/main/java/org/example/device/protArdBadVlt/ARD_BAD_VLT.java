@@ -2,17 +2,12 @@ package org.example.device.protArdBadVlt;
 
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
-import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.device.DeviceCommandListClass;
-import org.example.device.SingleCommand;
 import org.example.device.SomeDevice;
 import org.example.device.connectParameters.ComConnectParameters;
-import org.example.device.protDvk4rd.Dvk4rdCommandRegistry;
 import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
-
-import static org.example.utilites.MyUtilities.*;
 
 public class ARD_BAD_VLT implements SomeDevice {
     private static final Logger log = Logger.getLogger(ARD_BAD_VLT.class);

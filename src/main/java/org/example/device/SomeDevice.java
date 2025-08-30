@@ -66,4 +66,8 @@ public interface SomeDevice {
     default long getMillisPrev() {
         return millisPrev;
     }
+
+    default boolean isASCII(){
+        return true;
+    }
 }

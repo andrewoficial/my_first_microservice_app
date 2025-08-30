@@ -2,15 +2,10 @@ package org.example.device.protArdBadVlt;
 
 import org.apache.log4j.Logger;
 import org.example.device.DeviceCommandRegistry;
-import org.example.device.SingleCommand;
-import org.example.services.AnswerStorage;
+import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
-import org.example.services.connectionPool.ComDataCollector;
-
-import java.util.Arrays;
 
 import static org.example.utilites.MyUtilities.*;
-import static org.example.utilites.MyUtilities.isCorrectNumberF;
 
 public class ArdBadVltCommandRegistry extends DeviceCommandRegistry {
     private final static Logger log = Logger.getLogger(ArdBadVltCommandRegistry.class); // Объект логера

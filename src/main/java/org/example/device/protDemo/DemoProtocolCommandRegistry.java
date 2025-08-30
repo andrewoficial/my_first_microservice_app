@@ -3,15 +3,10 @@ package org.example.device.protDemo;
 
 import org.apache.log4j.Logger;
 import org.example.device.DeviceCommandRegistry;
-import org.example.device.SingleCommand;
-import org.example.device.protArdFeeBrdMeter.ARD_FEE_BRD_METER;
-import org.example.services.AnswerStorage;
+import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
 
 import java.util.Arrays;
-
-import static org.example.utilites.MyUtilities.*;
-import static org.example.utilites.MyUtilities.isCorrectNumberF;
 
 public class DemoProtocolCommandRegistry extends DeviceCommandRegistry {
     private static final Logger log = Logger.getLogger(DemoProtocolCommandRegistry.class);

@@ -3,9 +3,8 @@ package org.example.device.protGpsTest;
 
 import org.apache.log4j.Logger;
 import org.example.device.DeviceCommandRegistry;
-import org.example.device.SingleCommand;
 
-import org.example.services.AnswerStorage;
+import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
 import org.example.services.loggers.GPS_Loger;
 

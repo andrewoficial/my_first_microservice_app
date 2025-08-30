@@ -1,6 +1,7 @@
 package org.example.device;
 
 import lombok.Getter;
+import org.example.device.command.SingleCommand;
 import org.example.device.commandNameNormalizers.DeviceCommandNameNormalizer;
 import org.example.device.commandNameNormalizers.PrefixCutNormalizer;
 import org.example.device.commandNameNormalizers.TrimNormalizer;
@@ -37,7 +38,7 @@ public class DeviceCommandListClass {
     }
 
     public void addCommand(SingleCommand command){
-        commandPool.put(command.getName(), command);
+        commandPool.put(command.getMapKey(), command);
     }
 
 
@@ -57,5 +58,6 @@ public class DeviceCommandListClass {
         }
         return getCommand(name).getExpectedBytes();
     }
+
 
 }

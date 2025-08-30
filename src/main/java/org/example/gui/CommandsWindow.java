@@ -5,7 +5,7 @@ import com.intellij.uiDesigner.core.GridLayoutManager;
 import org.example.device.SomeDevice;
 import org.example.device.DeviceCommandListClass;
 import org.example.device.ProtocolsList;
-import org.example.device.SingleCommand;
+import org.example.device.command.SingleCommand;
 
 import javax.swing.*;
 import java.awt.*;
@@ -54,7 +54,7 @@ public class CommandsWindow extends JDialog {
                             }
                             StringBuilder sb = new StringBuilder();
                             for (SingleCommand value : commandHashMap.values()) {
-                                sb.append(value.getName());
+                                sb.append(value.getMapKey());
                                 sb.append(" - \t - ");
                                 sb.append(value.getDescription());
                                 sb.append("\r\n");

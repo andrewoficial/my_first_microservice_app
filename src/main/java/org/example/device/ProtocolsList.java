@@ -23,7 +23,8 @@ public enum ProtocolsList {
     OWON_SPE3051("OWON_SPE3051"),
     DVK_4RD("DVK_4RD"),
     EDWARDS_D397_00_000("EDWARDS_D397_00_000"),
-    LORADIF("LORADIF");
+    LORADIF("LORADIF"),
+    Dynament("Dynament");
 
 
     private final String value;

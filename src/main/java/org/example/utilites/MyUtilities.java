@@ -10,6 +10,7 @@ import org.example.device.protArdFeeBrdMeter.ARD_FEE_BRD_METER;
 import org.example.device.protArdTerm.ARD_TERM;
 import org.example.device.protDemo.DEMO_PROTOCOL;
 import org.example.device.protDvk4rd.DVK_4RD;
+import org.example.device.protDynament.Dynament;
 import org.example.device.protEctTc290.ECT_TC290;
 import org.example.device.protEdwardsD397.EDWARDS_D397_00_000;
 import org.example.device.protErstevakMtp4d.ERSTEVAK_MTP4D;
@@ -106,6 +107,7 @@ public class MyUtilities {
             case DEMO_PROTOCOL -> device = new DEMO_PROTOCOL(comPort);
             case GPS_Test -> device = new GPS_Test(comPort);
             case OWON_SPE3051 -> device = new OWON_SPE3051(comPort);
+            case Dynament -> device = new Dynament(comPort);
             //case LORADIF -> device = new LORADIF(comPort);
             default -> device = new DEMO_PROTOCOL(comPort);
         }
@@ -127,6 +129,7 @@ public class MyUtilities {
             case OWON_SPE3051 -> device = new OWON_SPE3051();
             case GPS_Test -> device = new GPS_Test();
             case DVK_4RD -> device = new DVK_4RD();
+            case Dynament -> device = new Dynament();
             default -> device = new DEMO_PROTOCOL();
         }
         return device;

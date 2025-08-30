@@ -3,15 +3,10 @@ package org.example.device.protArdTerm;
 
 import org.apache.log4j.Logger;
 import org.example.device.DeviceCommandRegistry;
-import org.example.device.SingleCommand;
-import org.example.device.protArdFeeBrdMeter.ARD_FEE_BRD_METER;
-import org.example.services.AnswerStorage;
+import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
 
-import java.util.Arrays;
-
 import static org.example.utilites.MyUtilities.*;
-import static org.example.utilites.MyUtilities.isCorrectNumberF;
 
 public class ArdTermCommandRegistry extends DeviceCommandRegistry {
     private static final Logger log = Logger.getLogger(ArdTermCommandRegistry.class);

@@ -3,13 +3,9 @@ package org.example.device.protVega;
 
 import org.apache.log4j.Logger;
 import org.example.device.DeviceCommandRegistry;
-import org.example.device.SingleCommand;
 
+import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
-
-import java.util.Arrays;
-
-
 
 
 public class WegaWanCommandRegistry extends DeviceCommandRegistry {

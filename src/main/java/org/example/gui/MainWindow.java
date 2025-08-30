@@ -7,6 +7,9 @@ import com.intellij.uiDesigner.core.Spacer;
 import org.apache.log4j.Logger;
 import org.example.Main;
 import org.example.device.ProtocolsList;
+import org.example.device.SomeDevice;
+import org.example.device.command.ArgumentDescriptor;
+import org.example.device.command.SingleCommand;
 import org.example.gui.mainWindowUtilites.FolderPictureForLog;
 import org.example.gui.mainWindowUtilites.GuiStateManager;
 import org.example.gui.mainWindowUtilites.PortManager;
@@ -42,6 +45,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntFunction;
 import java.util.function.IntSupplier;
+
+import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 
 
 public class MainWindow extends JFrame implements Rendeble {
@@ -102,6 +107,7 @@ public class MainWindow extends JFrame implements Rendeble {
     private JLabel LableConnectionType;
     private JComboBox comboBox_ConnectionType;
     private JPanel folderIconPanel;
+    private JPanel nonAsciCommandListPanel;
 
 
     private void initUI() {
@@ -393,8 +399,57 @@ public class MainWindow extends JFrame implements Rendeble {
 
     private void updateProtocol() {
         leftPanState.setProtocol(currentActiveClientId.get(), comboBox_Protocol.getSelectedIndex());
-        if (ProtocolsList.getLikeArrayEnum(comboBox_Protocol.getSelectedIndex()) != null)
+        if (ProtocolsList.getLikeArrayEnum(comboBox_Protocol.getSelectedIndex()) != null) {
             button_Search.setEnabled(ProtocolsList.getLikeArrayEnum(comboBox_Protocol.getSelectedIndex()) == ProtocolsList.ERSTEVAK_MTP4D);
+            SomeDevice device = createDeviceByProtocol(ProtocolsList.getLikeArrayEnum(comboBox_Protocol.getSelectedIndex()));
+            nonAsciCommandListPanel.setLayout(new FlowLayout());
+            if (!device.isASCII()) {
+                HashMap<String, SingleCommand> commandList = device.getCommandListClass().getCommandPool();
+                textField_textToSend.setEnabled(false);
+                textField_prefToSend.setEnabled(false);
+
+                //nonAsciCommandListPanel добавить Layout потому что в Intelije IDE создаю.
+                JPanel tempPanel = new JPanel(new FlowLayout());
+                for (Map.Entry<String, SingleCommand> stringSingleCommandEntry : commandList.entrySet()) {
+                    log.info("Создаю панель для " + stringSingleCommandEntry.getKey());
+                    JPanel subCmd = new JPanel(new FlowLayout());
+                    JLabel jLabel = new JLabel(stringSingleCommandEntry.getKey());
+                    stringSingleCommandEntry.getValue().getDescription();
+                    List<ArgumentDescriptor> argumentDescriptorsList = stringSingleCommandEntry.getValue().getArguments();
+                    subCmd.add(jLabel);
+                    for (ArgumentDescriptor argumentDescriptor : argumentDescriptorsList) {
+                        log.info("  Для " + stringSingleCommandEntry.getKey() + " добавил поле ввода для " + argumentDescriptor.getName());
+                        JPanel argumentPanel = new JPanel(new FlowLayout());
+                        JLabel argumentDescription = new JLabel(argumentDescriptor.getName());
+                        TextField textField = new TextField(argumentDescriptor.getDefaultValue().toString());
+                        argumentPanel.add(argumentDescription);
+                        argumentPanel.add(textField);
+
+                        subCmd.add(argumentPanel);
+
+                    }
+                    JButton jButton = new JButton();
+                    jButton.addActionListener(new ActionListener() {
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            textField_textToSend.setText(MyUtilities.byteArrayToString(stringSingleCommandEntry.getValue().getBaseBody()));
+                        }
+                    });
+                    subCmd.add(jButton);
+                    log.info("Создал панель для " + stringSingleCommandEntry.getKey());
+                    tempPanel.add(subCmd);
+                }
+                log.info("Добавил в поле коменд все команды ");
+                nonAsciCommandListPanel.add(tempPanel);
+                nonAsciCommandListPanel.repaint();
+                //Создать выпадающий список, по выбору из которого будет вызываться buldCommand и заполнять textField_textToSend, что бы по старой логике отправлять данные
+            } else {
+                textField_textToSend.setEnabled(true);
+                textField_prefToSend.setEnabled(true);
+                nonAsciCommandListPanel.removeAll();
+                nonAsciCommandListPanel.repaint();
+            }
+        }
     }
 
     // Обработчики действий
@@ -748,8 +803,8 @@ public class MainWindow extends JFrame implements Rendeble {
         panel2.setForeground(new Color(-16777216));
         Terminal.add(panel2, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, 1, 1, new Dimension(-1, 10), new Dimension(-1, 10), new Dimension(-1, 10), 0, false));
         final JPanel panel3 = new JPanel();
-        panel3.setLayout(new GridLayoutManager(1, 6, new Insets(0, 0, 0, 0), -1, -1));
-        Terminal.add(panel3, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(-1, 30), new Dimension(-1, 30), new Dimension(-1, 30), 0, false));
+        panel3.setLayout(new GridLayoutManager(2, 6, new Insets(0, 0, 0, 0), -1, -1));
+        Terminal.add(panel3, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(-1, 50), new Dimension(-1, 400), new Dimension(-1, 800), 0, false));
         textField_textToSend = new JTextField();
         textField_textToSend.setForeground(new Color(-10328984));
         textField_textToSend.setText("M^");
@@ -769,6 +824,9 @@ public class MainWindow extends JFrame implements Rendeble {
         textField_prefToSend = new JTextField();
         textField_prefToSend.setText("");
         panel3.add(textField_prefToSend, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(10, 25), new Dimension(40, 25), new Dimension(80, 25), 0, false));
+        nonAsciCommandListPanel = new JPanel();
+        nonAsciCommandListPanel.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        panel3.add(nonAsciCommandListPanel, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(-1, 20), new Dimension(-1, 400), new Dimension(-1, 750), 0, false));
         final JPanel panel4 = new JPanel();
         panel4.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
         panel4.setBackground(new Color(-16777216));
