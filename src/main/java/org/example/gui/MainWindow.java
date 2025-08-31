@@ -10,6 +10,9 @@ import org.example.device.ProtocolsList;
 import org.example.device.SomeDevice;
 import org.example.device.command.ArgumentDescriptor;
 import org.example.device.command.SingleCommand;
+import org.example.gui.components.CustomScrollBarUI;
+import org.example.gui.components.HeartButton;
+import org.example.gui.components.SimpleButton;
 import org.example.gui.mainWindowUtilites.FolderPictureForLog;
 import org.example.gui.mainWindowUtilites.GuiStateManager;
 import org.example.gui.mainWindowUtilites.PortManager;
@@ -71,9 +74,6 @@ public class MainWindow extends JFrame implements Rendeble {
     private JPanel addRemove;
     private JPanel portSetup;
     private JPanel Terminal;
-    private JPanel spacer_middle;
-    private JPanel right_spacer;
-    private JPanel left_spacer;
     private JPanel contentPane;
     private JTabbedPane tabbedPane1;
     private JComboBox<String> comboBox_ComPorts;
@@ -108,6 +108,9 @@ public class MainWindow extends JFrame implements Rendeble {
     private JComboBox comboBox_ConnectionType;
     private JPanel folderIconPanel;
     private JPanel nonAsciCommandListPanel;
+    private JPanel sendInpuntJpane;
+    private JPanel asciiInput;
+    private JPanel terminalLogPanel;
 
 
     private void initUI() {
@@ -399,57 +402,170 @@ public class MainWindow extends JFrame implements Rendeble {
 
     private void updateProtocol() {
         leftPanState.setProtocol(currentActiveClientId.get(), comboBox_Protocol.getSelectedIndex());
+        // Устанавливаем BorderLayout для основной панели
+        sendInpuntJpane.setLayout(new BorderLayout());
+
         if (ProtocolsList.getLikeArrayEnum(comboBox_Protocol.getSelectedIndex()) != null) {
             button_Search.setEnabled(ProtocolsList.getLikeArrayEnum(comboBox_Protocol.getSelectedIndex()) == ProtocolsList.ERSTEVAK_MTP4D);
             SomeDevice device = createDeviceByProtocol(ProtocolsList.getLikeArrayEnum(comboBox_Protocol.getSelectedIndex()));
-            nonAsciCommandListPanel.setLayout(new FlowLayout());
+
+
             if (!device.isASCII()) {
-                HashMap<String, SingleCommand> commandList = device.getCommandListClass().getCommandPool();
-                textField_textToSend.setEnabled(false);
-                textField_prefToSend.setEnabled(false);
+                showNonAsciiPanel(device);
+//                HashMap<String, SingleCommand> commandList = device.getCommandListClass().getCommandPool();
+//                textField_textToSend.setEnabled(false);
+//                textField_prefToSend.setEnabled(false);
+//                //sendInpuntJpane задать высоту 400
+//                sendInpuntJpane.setSize(new Dimension(sendInpuntJpane.getWidth(), 400));
+//                sendInpuntJpane.setMaximumSize(new Dimension(sendInpuntJpane.getWidth(), 400));
+//                nonAsciCommandListPanel.setSize(new Dimension(nonAsciCommandListPanel.getWidth(), 350));
+//
+//                // Основная панель с вертикальным расположением
+//                JPanel mainPanel = new JPanel();
+//                mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+//
+//                for (Map.Entry<String, SingleCommand> entry : commandList.entrySet()) {
+//                    log.info("Создаю панель для " + entry.getKey());
+//
+//                    // Панель для отдельной команды
+//                    JPanel commandPanel = new JPanel();
+//                    //commandPanel.setLayout(new BoxLayout(commandPanel, BoxLayout.Y_AXIS));
+//                    commandPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+//                    commandPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+//
+//                    JLabel commandLabel = new JLabel(entry.getKey());
+//                    commandPanel.add(commandLabel);
+//
+//                    List<ArgumentDescriptor> arguments = entry.getValue().getArguments();
+//                    for (ArgumentDescriptor arg : arguments) {
+//                        log.info("  Для " + entry.getKey() + " добавил поле ввода для " + arg.getName());
+//
+//                        JPanel argPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+//                        JLabel argLabel = new JLabel(arg.getName());
+//                        JTextField textField = new JTextField(arg.getDefaultValue().toString(), 10);
+//
+//                        argPanel.add(argLabel);
+//                        argPanel.add(textField);
+//                        commandPanel.add(argPanel);
+//                    }
+//
+//                    JButton sendButton = new SimpleButton("задать");
+//                    sendButton.setPreferredSize(new Dimension(120, 25));
+//                    sendButton.addActionListener(e -> {
+//                        textField_textToSend.setText(MyUtilities.byteArrayToString(entry.getValue().getBaseBody()));
+//                    });
+//
+//                    commandPanel.add(sendButton);
+//                    mainPanel.add(commandPanel);
+//
+//                    // Добавляем разделитель между командами
+//                    mainPanel.add(new JSeparator(SwingConstants.HORIZONTAL));
+//                }
+//
+//                // Добавляем скроллинг
+//                JScrollPane scrollPane = new JScrollPane(mainPanel);
+//                scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+//                scrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
+//
+//                nonAsciCommandListPanel.removeAll();
+//                nonAsciCommandListPanel.add(scrollPane, BorderLayout.CENTER);
+//                nonAsciCommandListPanel.revalidate();
+//                nonAsciCommandListPanel.repaint();
 
-                //nonAsciCommandListPanel добавить Layout потому что в Intelije IDE создаю.
-                JPanel tempPanel = new JPanel(new FlowLayout());
-                for (Map.Entry<String, SingleCommand> stringSingleCommandEntry : commandList.entrySet()) {
-                    log.info("Создаю панель для " + stringSingleCommandEntry.getKey());
-                    JPanel subCmd = new JPanel(new FlowLayout());
-                    JLabel jLabel = new JLabel(stringSingleCommandEntry.getKey());
-                    stringSingleCommandEntry.getValue().getDescription();
-                    List<ArgumentDescriptor> argumentDescriptorsList = stringSingleCommandEntry.getValue().getArguments();
-                    subCmd.add(jLabel);
-                    for (ArgumentDescriptor argumentDescriptor : argumentDescriptorsList) {
-                        log.info("  Для " + stringSingleCommandEntry.getKey() + " добавил поле ввода для " + argumentDescriptor.getName());
-                        JPanel argumentPanel = new JPanel(new FlowLayout());
-                        JLabel argumentDescription = new JLabel(argumentDescriptor.getName());
-                        TextField textField = new TextField(argumentDescriptor.getDefaultValue().toString());
-                        argumentPanel.add(argumentDescription);
-                        argumentPanel.add(textField);
-
-                        subCmd.add(argumentPanel);
-
-                    }
-                    JButton jButton = new JButton();
-                    jButton.addActionListener(new ActionListener() {
-                        @Override
-                        public void actionPerformed(ActionEvent e) {
-                            textField_textToSend.setText(MyUtilities.byteArrayToString(stringSingleCommandEntry.getValue().getBaseBody()));
-                        }
-                    });
-                    subCmd.add(jButton);
-                    log.info("Создал панель для " + stringSingleCommandEntry.getKey());
-                    tempPanel.add(subCmd);
-                }
-                log.info("Добавил в поле коменд все команды ");
-                nonAsciCommandListPanel.add(tempPanel);
-                nonAsciCommandListPanel.repaint();
-                //Создать выпадающий список, по выбору из которого будет вызываться buldCommand и заполнять textField_textToSend, что бы по старой логике отправлять данные
             } else {
-                textField_textToSend.setEnabled(true);
-                textField_prefToSend.setEnabled(true);
-                nonAsciCommandListPanel.removeAll();
-                nonAsciCommandListPanel.repaint();
+                showAsciiPanel();
             }
         }
+    }
+
+    private void showNonAsciiPanel(SomeDevice device) {
+        textField_textToSend.setEnabled(false);
+        textField_prefToSend.setEnabled(false);
+
+        // Убираем все компоненты с sendInpuntJpane
+        sendInpuntJpane.removeAll();
+
+        // Настраиваем nonAsciCommandListPanel
+        nonAsciCommandListPanel.setLayout(new BorderLayout());
+
+        HashMap<String, SingleCommand> commandList = device.getCommandListClass().getCommandPool();
+
+        // Основная панель с вертикальным расположением
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+
+        for (Map.Entry<String, SingleCommand> entry : commandList.entrySet()) {
+            log.info("Создаю панель для " + entry.getKey());
+
+            // Панель для отдельной команды
+            JPanel commandPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+            commandPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+
+            JLabel commandLabel = new JLabel(entry.getKey());
+            commandPanel.add(commandLabel);
+
+            List<ArgumentDescriptor> arguments = entry.getValue().getArguments();
+            for (ArgumentDescriptor arg : arguments) {
+                log.info("  Для " + entry.getKey() + " добавил поле ввода для " + arg.getName());
+
+                JPanel argPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+                JLabel argLabel = new JLabel(arg.getName());
+                JTextField textField = new JTextField(arg.getDefaultValue().toString(), 10);
+
+                argPanel.add(argLabel);
+                argPanel.add(textField);
+                commandPanel.add(argPanel);
+            }
+
+            JButton sendButton = new SimpleButton("задать");
+            sendButton.setPreferredSize(new Dimension(120, 25));
+            sendButton.addActionListener(e -> {
+                textField_textToSend.setText(MyUtilities.byteArrayToString(entry.getValue().getBaseBody()));
+            });
+
+            commandPanel.add(sendButton);
+            mainPanel.add(commandPanel);
+            mainPanel.add(new JSeparator(SwingConstants.HORIZONTAL));
+        }
+
+        // Добавляем скроллинг
+        JScrollPane scrollPane = new JScrollPane(mainPanel);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        scrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
+        scrollPane.setPreferredSize(new Dimension(sendInpuntJpane.getWidth(), 100));
+
+        nonAsciCommandListPanel.removeAll();
+        nonAsciCommandListPanel.add(scrollPane, BorderLayout.CENTER);
+
+        // Добавляем nonAsciCommandListPanel и asciiInput в sendInpuntJpane
+        sendInpuntJpane.add(nonAsciCommandListPanel, BorderLayout.CENTER);
+        sendInpuntJpane.add(asciiInput, BorderLayout.SOUTH);
+
+        // Устанавливаем размеры
+        nonAsciCommandListPanel.setPreferredSize(new Dimension(sendInpuntJpane.getWidth(), 100));
+        asciiInput.setPreferredSize(new Dimension(sendInpuntJpane.getWidth(), 50));
+
+        sendInpuntJpane.revalidate();
+        sendInpuntJpane.repaint();
+    }
+
+    private void showAsciiPanel() {
+        textField_textToSend.setEnabled(true);
+        textField_prefToSend.setEnabled(true);
+
+        // Убираем все компоненты с sendInpuntJpane
+        sendInpuntJpane.removeAll();
+
+        // Добавляем только asciiInput
+        sendInpuntJpane.add(asciiInput, BorderLayout.CENTER);
+        asciiInput.setPreferredSize(new Dimension(sendInpuntJpane.getWidth(), 50));
+
+        // Очищаем и скрываем nonAsciCommandListPanel
+        nonAsciCommandListPanel.removeAll();
+        nonAsciCommandListPanel.setPreferredSize(new Dimension(0, 0));
+
+        sendInpuntJpane.revalidate();
+        sendInpuntJpane.repaint();
     }
 
     // Обработчики действий
@@ -790,166 +906,165 @@ public class MainWindow extends JFrame implements Rendeble {
         panel1.setForeground(new Color(-11513259));
         contentPane.add(panel1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(450, 350), null, null, 0, false));
         Terminal = new JPanel();
-        Terminal.setLayout(new GridLayoutManager(3, 1, new Insets(0, 0, 0, 0), -1, -1));
+        Terminal.setLayout(new BorderLayout(0, 0));
         Terminal.setBackground(new Color(-16777216));
         Terminal.setForeground(new Color(-16777216));
-        panel1.add(Terminal, new GridConstraints(0, 1, 3, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(210, 350), new Dimension(250, 390), null, 0, false));
-        tabbedPane1 = new JTabbedPane();
-        tabbedPane1.setForeground(new Color(-10328984));
-        Terminal.add(tabbedPane1, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
-        final JPanel panel2 = new JPanel();
-        panel2.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        panel2.setBackground(new Color(-16777216));
-        panel2.setForeground(new Color(-16777216));
-        Terminal.add(panel2, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, 1, 1, new Dimension(-1, 10), new Dimension(-1, 10), new Dimension(-1, 10), 0, false));
-        final JPanel panel3 = new JPanel();
-        panel3.setLayout(new GridLayoutManager(2, 6, new Insets(0, 0, 0, 0), -1, -1));
-        Terminal.add(panel3, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(-1, 50), new Dimension(-1, 400), new Dimension(-1, 800), 0, false));
+        panel1.add(Terminal, new GridConstraints(0, 1, 3, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(250, 400), null, null, 1, false));
+        sendInpuntJpane = new JPanel();
+        sendInpuntJpane.setLayout(new BorderLayout(0, 0));
+        Terminal.add(sendInpuntJpane, BorderLayout.NORTH);
+        nonAsciCommandListPanel = new JPanel();
+        nonAsciCommandListPanel.setLayout(new BorderLayout(0, 0));
+        sendInpuntJpane.add(nonAsciCommandListPanel, BorderLayout.WEST);
+        asciiInput = new JPanel();
+        asciiInput.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        asciiInput.setMinimumSize(new Dimension(450, 45));
+        asciiInput.setOpaque(true);
+        asciiInput.setPreferredSize(new Dimension(450, 45));
+        sendInpuntJpane.add(asciiInput, BorderLayout.CENTER);
+        textField_prefToSend = new JTextField();
+        textField_prefToSend.setPreferredSize(new Dimension(60, 40));
+        textField_prefToSend.setText("");
+        asciiInput.add(textField_prefToSend, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(10, 25), new Dimension(40, 25), new Dimension(80, 25), 0, false));
         textField_textToSend = new JTextField();
         textField_textToSend.setForeground(new Color(-10328984));
+        textField_textToSend.setMargin(new Insets(5, 9, 2, 6));
+        textField_textToSend.setPreferredSize(new Dimension(100, 40));
         textField_textToSend.setText("M^");
-        panel3.add(textField_textToSend, new GridConstraints(0, 3, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(25, 25), new Dimension(900, 25), new Dimension(-1, 25), 0, false));
+        asciiInput.add(textField_textToSend, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(25, 25), new Dimension(900, 25), new Dimension(-1, 25), 0, false));
         button_Send = new JButton();
+        button_Send.setMargin(new Insets(5, 5, 5, 5));
         button_Send.setText("Отправить");
-        panel3.add(button_Send, new GridConstraints(0, 4, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        right_spacer = new JPanel();
-        right_spacer.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        panel3.add(right_spacer, new GridConstraints(0, 5, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(5, 5), new Dimension(5, 5), new Dimension(5, 5), 0, false));
-        spacer_middle = new JPanel();
-        spacer_middle.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        panel3.add(spacer_middle, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, 1, 1, new Dimension(2, 2), new Dimension(2, 2), new Dimension(2, 2), 0, false));
-        left_spacer = new JPanel();
-        left_spacer.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        panel3.add(left_spacer, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, 1, 1, new Dimension(2, 2), new Dimension(2, 2), new Dimension(2, 2), 0, false));
-        textField_prefToSend = new JTextField();
-        textField_prefToSend.setText("");
-        panel3.add(textField_prefToSend, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(10, 25), new Dimension(40, 25), new Dimension(80, 25), 0, false));
-        nonAsciCommandListPanel = new JPanel();
-        nonAsciCommandListPanel.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        panel3.add(nonAsciCommandListPanel, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(-1, 20), new Dimension(-1, 400), new Dimension(-1, 750), 0, false));
-        final JPanel panel4 = new JPanel();
-        panel4.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
-        panel4.setBackground(new Color(-16777216));
-        panel1.add(panel4, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, 1, 1, new Dimension(250, 450), new Dimension(255, 450), new Dimension(255, 450), 0, false));
+        asciiInput.add(button_Send, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        terminalLogPanel = new JPanel();
+        terminalLogPanel.setLayout(new BorderLayout(0, 0));
+        Terminal.add(terminalLogPanel, BorderLayout.CENTER);
+        tabbedPane1 = new JTabbedPane();
+        tabbedPane1.setForeground(new Color(-10328984));
+        terminalLogPanel.add(tabbedPane1, BorderLayout.CENTER);
+        final JPanel panel2 = new JPanel();
+        panel2.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
+        panel2.setBackground(new Color(-16777216));
+        panel1.add(panel2, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, 1, 1, new Dimension(250, 450), new Dimension(255, 450), new Dimension(255, 450), 0, false));
         portSetup = new JPanel();
         portSetup.setLayout(new GridLayoutManager(12, 1, new Insets(0, 0, 0, 0), -1, -1));
         portSetup.setBackground(new Color(-16777216));
         portSetup.setEnabled(true);
         portSetup.setForeground(new Color(-16777216));
-        panel4.add(portSetup, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(250, 390), new Dimension(250, 450), new Dimension(250, 500), 0, false));
-        final JPanel panel5 = new JPanel();
-        panel5.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        panel5.setBackground(new Color(-16777216));
-        panel5.setForeground(new Color(-16777216));
-        portSetup.add(panel5, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        panel2.add(portSetup, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(250, 390), new Dimension(250, 450), new Dimension(250, 500), 0, false));
+        final JPanel panel3 = new JPanel();
+        panel3.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        panel3.setBackground(new Color(-16777216));
+        panel3.setForeground(new Color(-16777216));
+        portSetup.add(panel3, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         LableComDataBits = new JLabel();
         LableComDataBits.setBackground(new Color(-16777216));
         LableComDataBits.setForeground(new Color(-1));
         LableComDataBits.setText("Биты данных");
-        panel5.add(LableComDataBits, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel3.add(LableComDataBits, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         comboBox_DataBits = new JComboBox();
         comboBox_DataBits.setBackground(new Color(-11513259));
         comboBox_DataBits.setForeground(new Color(-16777216));
-        panel5.add(comboBox_DataBits, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
+        panel3.add(comboBox_DataBits, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
         final Spacer spacer1 = new Spacer();
-        panel5.add(spacer1, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final JPanel panel6 = new JPanel();
-        panel6.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        panel6.setBackground(new Color(-16777216));
-        panel6.setForeground(new Color(-16777216));
-        portSetup.add(panel6, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        panel3.add(spacer1, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final JPanel panel4 = new JPanel();
+        panel4.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        panel4.setBackground(new Color(-16777216));
+        panel4.setForeground(new Color(-16777216));
+        portSetup.add(panel4, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         LableComParity = new JLabel();
         LableComParity.setForeground(new Color(-1));
         LableComParity.setText("Чётность");
-        panel6.add(LableComParity, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel4.add(LableComParity, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         comboBox_Parity = new JComboBox();
         comboBox_Parity.setBackground(new Color(-11513259));
         comboBox_Parity.setForeground(new Color(-16777216));
         final DefaultComboBoxModel defaultComboBoxModel1 = new DefaultComboBoxModel();
         comboBox_Parity.setModel(defaultComboBoxModel1);
-        panel6.add(comboBox_Parity, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
+        panel4.add(comboBox_Parity, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
         final Spacer spacer2 = new Spacer();
-        panel6.add(spacer2, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final JPanel panel7 = new JPanel();
-        panel7.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        panel7.setBackground(new Color(-16777216));
-        panel7.setForeground(new Color(-16777216));
-        portSetup.add(panel7, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        panel4.add(spacer2, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final JPanel panel5 = new JPanel();
+        panel5.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        panel5.setBackground(new Color(-16777216));
+        panel5.setForeground(new Color(-16777216));
+        portSetup.add(panel5, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         LableComStopBit = new JLabel();
         LableComStopBit.setBackground(new Color(-16777216));
         LableComStopBit.setForeground(new Color(-1));
         LableComStopBit.setText("Стоп бит");
-        panel7.add(LableComStopBit, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel5.add(LableComStopBit, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         comboBox_StopBit = new JComboBox();
         comboBox_StopBit.setBackground(new Color(-11513259));
         comboBox_StopBit.setForeground(new Color(-16777216));
-        panel7.add(comboBox_StopBit, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
+        panel5.add(comboBox_StopBit, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
         final Spacer spacer3 = new Spacer();
-        panel7.add(spacer3, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final JPanel panel8 = new JPanel();
-        panel8.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
-        panel8.setBackground(new Color(-16777216));
-        panel8.setForeground(new Color(-16777216));
-        portSetup.add(panel8, new GridConstraints(8, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        panel5.add(spacer3, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final JPanel panel6 = new JPanel();
+        panel6.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
+        panel6.setBackground(new Color(-16777216));
+        panel6.setForeground(new Color(-16777216));
+        portSetup.add(panel6, new GridConstraints(8, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         button_Open = new JButton();
         button_Open.setBackground(new Color(-16777216));
         button_Open.setForeground(new Color(-1));
         button_Open.setText("Открыть");
-        panel8.add(button_Open, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel6.add(button_Open, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         button_Close = new JButton();
         button_Close.setBackground(new Color(-16777216));
         button_Close.setForeground(new Color(-1));
         button_Close.setText("Закрыть");
-        panel8.add(button_Close, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JPanel panel9 = new JPanel();
-        panel9.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        panel9.setBackground(new Color(-16777216));
-        panel9.setForeground(new Color(-16777216));
-        portSetup.add(panel9, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        panel6.add(button_Close, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JPanel panel7 = new JPanel();
+        panel7.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        panel7.setBackground(new Color(-16777216));
+        panel7.setForeground(new Color(-16777216));
+        portSetup.add(panel7, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         LableComPorts = new JLabel();
         LableComPorts.setBackground(new Color(-1));
         LableComPorts.setForeground(new Color(-1));
         LableComPorts.setText("Порт");
-        panel9.add(LableComPorts, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel7.add(LableComPorts, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         comboBox_ComPorts = new JComboBox();
         comboBox_ComPorts.setBackground(new Color(-11513259));
         comboBox_ComPorts.setForeground(new Color(-16777216));
         final DefaultComboBoxModel defaultComboBoxModel2 = new DefaultComboBoxModel();
         comboBox_ComPorts.setModel(defaultComboBoxModel2);
-        panel9.add(comboBox_ComPorts, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
+        panel7.add(comboBox_ComPorts, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
         final Spacer spacer4 = new Spacer();
-        panel9.add(spacer4, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final JPanel panel10 = new JPanel();
-        panel10.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        panel10.setBackground(new Color(-16777216));
-        panel10.setForeground(new Color(-16777216));
-        portSetup.add(panel10, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        panel7.add(spacer4, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final JPanel panel8 = new JPanel();
+        panel8.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        panel8.setBackground(new Color(-16777216));
+        panel8.setForeground(new Color(-16777216));
+        portSetup.add(panel8, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         LableComProtocol = new JLabel();
         LableComProtocol.setBackground(new Color(-16777216));
         LableComProtocol.setForeground(new Color(-1));
         LableComProtocol.setText("Протокол");
-        panel10.add(LableComProtocol, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel8.add(LableComProtocol, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         comboBox_Protocol = new JComboBox();
         comboBox_Protocol.setBackground(new Color(-11513259));
         comboBox_Protocol.setForeground(new Color(-16777216));
         final DefaultComboBoxModel defaultComboBoxModel3 = new DefaultComboBoxModel();
         comboBox_Protocol.setModel(defaultComboBoxModel3);
-        panel10.add(comboBox_Protocol, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
+        panel8.add(comboBox_Protocol, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
         final Spacer spacer5 = new Spacer();
-        panel10.add(spacer5, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final JPanel panel11 = new JPanel();
-        panel11.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
-        panel11.setBackground(new Color(-16777216));
-        panel11.setForeground(new Color(-16777216));
-        portSetup.add(panel11, new GridConstraints(10, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        panel8.add(spacer5, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final JPanel panel9 = new JPanel();
+        panel9.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
+        panel9.setBackground(new Color(-16777216));
+        panel9.setForeground(new Color(-16777216));
+        portSetup.add(panel9, new GridConstraints(10, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         checkBox_Pool = new JCheckBox();
         checkBox_Pool.setBackground(new Color(-16777216));
         checkBox_Pool.setForeground(new Color(-1));
         checkBox_Pool.setText("Опрос  ");
-        panel11.add(checkBox_Pool, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel9.add(checkBox_Pool, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         textField_poolDelay = new JTextField();
         textField_poolDelay.setText("1000");
-        panel11.add(textField_poolDelay, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        panel9.add(textField_poolDelay, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         addRemove = new JPanel();
         addRemove.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
         addRemove.setBackground(new Color(-16777216));
@@ -965,73 +1080,73 @@ public class MainWindow extends JFrame implements Rendeble {
         button_RemoveDev.setForeground(new Color(-1));
         button_RemoveDev.setText("Удалить тек.");
         addRemove.add(button_RemoveDev, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JPanel panel12 = new JPanel();
-        panel12.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        panel12.setBackground(new Color(-16777216));
-        panel12.setForeground(new Color(-16777216));
-        portSetup.add(panel12, new GridConstraints(7, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        final JPanel panel10 = new JPanel();
+        panel10.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        panel10.setBackground(new Color(-16777216));
+        panel10.setForeground(new Color(-16777216));
+        portSetup.add(panel10, new GridConstraints(7, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         button_Update = new JButton();
         button_Update.setBackground(new Color(-16777216));
         button_Update.setForeground(new Color(-1));
         button_Update.setText("Обновить");
-        panel12.add(button_Update, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JPanel panel13 = new JPanel();
-        panel13.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        panel13.setBackground(new Color(-16777216));
-        panel13.setForeground(new Color(-16777216));
-        portSetup.add(panel13, new GridConstraints(9, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        panel10.add(button_Update, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JPanel panel11 = new JPanel();
+        panel11.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        panel11.setBackground(new Color(-16777216));
+        panel11.setForeground(new Color(-16777216));
+        portSetup.add(panel11, new GridConstraints(9, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         button_Search = new JButton();
         button_Search.setAutoscrolls(false);
         button_Search.setBackground(new Color(-10328984));
         button_Search.setForeground(new Color(-1));
         button_Search.setHideActionText(false);
         button_Search.setText("Поиск сетевых адресов");
-        panel13.add(button_Search, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JPanel panel14 = new JPanel();
-        panel14.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        panel14.setBackground(new Color(-16777216));
-        panel14.setEnabled(true);
-        panel14.setForeground(new Color(-16777216));
-        portSetup.add(panel14, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, 1, 1, null, null, null, 0, false));
+        panel11.add(button_Search, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JPanel panel12 = new JPanel();
+        panel12.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        panel12.setBackground(new Color(-16777216));
+        panel12.setEnabled(true);
+        panel12.setForeground(new Color(-16777216));
+        portSetup.add(panel12, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, 1, 1, null, null, null, 0, false));
         LableComBaudRate = new JLabel();
         LableComBaudRate.setBackground(new Color(-16777216));
         LableComBaudRate.setForeground(new Color(-1));
         LableComBaudRate.setText("Скорость   ");
-        panel14.add(LableComBaudRate, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel12.add(LableComBaudRate, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         comboBox_BaudRate = new JComboBox();
         comboBox_BaudRate.setBackground(new Color(-11513259));
         comboBox_BaudRate.setEnabled(true);
         comboBox_BaudRate.setForeground(new Color(-16777216));
-        panel14.add(comboBox_BaudRate, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
+        panel12.add(comboBox_BaudRate, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
         final Spacer spacer6 = new Spacer();
-        panel14.add(spacer6, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final JPanel panel15 = new JPanel();
-        panel15.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        panel15.setBackground(new Color(-16777216));
-        panel15.setForeground(new Color(-16777216));
-        portSetup.add(panel15, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        panel12.add(spacer6, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final JPanel panel13 = new JPanel();
+        panel13.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        panel13.setBackground(new Color(-16777216));
+        panel13.setForeground(new Color(-16777216));
+        portSetup.add(panel13, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         checkBox_Log = new JCheckBox();
         checkBox_Log.setBackground(new Color(-16777216));
         checkBox_Log.setEnabled(true);
         checkBox_Log.setForeground(new Color(-1));
         checkBox_Log.setText("Лог");
-        panel15.add(checkBox_Log, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel13.add(checkBox_Log, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         checkBox_Autoconnect = new JCheckBox();
         checkBox_Autoconnect.setBackground(new Color(-16777216));
         checkBox_Autoconnect.setEnabled(false);
         checkBox_Autoconnect.setForeground(new Color(-1));
         checkBox_Autoconnect.setText("Автоподключение");
-        panel15.add(checkBox_Autoconnect, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel13.add(checkBox_Autoconnect, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         folderIconPanel = new JPanel();
         folderIconPanel.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
         folderIconPanel.setBackground(new Color(-15658218));
         folderIconPanel.setEnabled(true);
-        panel15.add(folderIconPanel, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        panel13.add(folderIconPanel, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         connectionType = new JPanel();
         connectionType.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
         connectionType.setBackground(new Color(-16777216));
         connectionType.setEnabled(true);
-        panel4.add(connectionType, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(250, 35), new Dimension(250, 38), new Dimension(250, 40), 0, false));
+        panel2.add(connectionType, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(250, 35), new Dimension(250, 38), new Dimension(250, 40), 0, false));
         LableConnectionType = new JLabel();
         LableConnectionType.setBackground(new Color(-1));
         LableConnectionType.setForeground(new Color(-1));
@@ -1055,4 +1170,7 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
 
+    private void createUIComponents() {
+        // TODO: place custom component creation code here
+    }
 }

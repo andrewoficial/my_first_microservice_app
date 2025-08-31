@@ -53,9 +53,9 @@ public class CustomScrollBarUI extends BasicScrollBarUI {
         //g2.drawRoundRect(thumbBounds.x, thumbBounds.y, thumbBounds.width, thumbBounds.height, 10, 10);
 
         // Рисуем сердечко в центре
-        int centerX = thumbBounds.x + thumbBounds.width / 2;
-        int centerY = thumbBounds.y + thumbBounds.height / 2;
-        drawHeart(g2, centerX, centerY, 5, new Color(222,222,222));
+//        int centerX = thumbBounds.x + thumbBounds.width / 2;
+//        int centerY = thumbBounds.y + thumbBounds.height / 2;
+//        drawHeart(g2, centerX, centerY, 5, new Color(222,222,222));
     }
 
 

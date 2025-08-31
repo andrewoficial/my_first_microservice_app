@@ -27,12 +27,10 @@
         </properties>
         <border type="none"/>
         <children>
-          <grid id="c38b8" binding="Terminal" layout-manager="GridLayoutManager" row-count="3" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-            <margin top="0" left="0" bottom="0" right="0"/>
+          <grid id="c38b8" binding="Terminal" layout-manager="BorderLayout" hgap="0" vgap="0">
             <constraints>
-              <grid row="0" column="1" row-span="3" col-span="1" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false">
-                <minimum-size width="210" height="350"/>
-                <preferred-size width="250" height="390"/>
+              <grid row="0" column="1" row-span="3" col-span="1" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="1" use-parent-layout="false">
+                <minimum-size width="250" height="400"/>
               </grid>
             </constraints>
             <properties>
@@ -41,129 +39,81 @@
             </properties>
             <border type="none"/>
             <children>
-              <tabbedpane id="b93bc" binding="tabbedPane1" default-binding="true">
-                <constraints>
-                  <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
-                </constraints>
-                <properties>
-                  <foreground color="-10328984"/>
-                </properties>
-                <border type="none"/>
-                <children/>
-              </tabbedpane>
-              <grid id="a5223" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                <margin top="0" left="0" bottom="0" right="0"/>
-                <constraints>
-                  <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="3" indent="0" use-parent-layout="false">
-                    <minimum-size width="-1" height="10"/>
-                    <preferred-size width="-1" height="10"/>
-                    <maximum-size width="-1" height="10"/>
-                  </grid>
-                </constraints>
-                <properties>
-                  <background color="-16777216"/>
-                  <foreground color="-16777216"/>
-                </properties>
-                <border type="none"/>
-                <children/>
-              </grid>
-              <grid id="5dd47" layout-manager="GridLayoutManager" row-count="2" column-count="6" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                <margin top="0" left="0" bottom="0" right="0"/>
-                <constraints>
-                  <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false">
-                    <minimum-size width="-1" height="50"/>
-                    <preferred-size width="-1" height="400"/>
-                    <maximum-size width="-1" height="800"/>
-                  </grid>
-                </constraints>
+              <grid id="5dd47" binding="sendInpuntJpane" layout-manager="BorderLayout" hgap="0" vgap="0">
+                <constraints border-constraint="North"/>
                 <properties/>
                 <border type="none"/>
                 <children>
-                  <component id="25f9" class="javax.swing.JTextField" binding="textField_textToSend">
-                    <constraints>
-                      <grid row="0" column="3" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                        <minimum-size width="25" height="25"/>
-                        <preferred-size width="900" height="25"/>
-                        <maximum-size width="-1" height="25"/>
-                      </grid>
-                    </constraints>
+                  <grid id="a3656" binding="nonAsciCommandListPanel" layout-manager="BorderLayout" hgap="0" vgap="0">
+                    <constraints border-constraint="West"/>
+                    <properties/>
+                    <border type="none"/>
+                    <children/>
+                  </grid>
+                  <grid id="b27ef" binding="asciiInput" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                    <margin top="0" left="0" bottom="0" right="0"/>
+                    <constraints border-constraint="Center"/>
+                    <properties>
+                      <minimumSize width="450" height="45"/>
+                      <opaque value="true"/>
+                      <preferredSize width="450" height="45"/>
+                    </properties>
+                    <border type="none"/>
+                    <children>
+                      <component id="d7ebc" class="javax.swing.JTextField" binding="textField_prefToSend">
+                        <constraints>
+                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="7" hsize-policy="6" anchor="4" fill="0" indent="0" use-parent-layout="false">
+                            <minimum-size width="10" height="25"/>
+                            <preferred-size width="40" height="25"/>
+                            <maximum-size width="80" height="25"/>
+                          </grid>
+                        </constraints>
+                        <properties>
+                          <preferredSize width="60" height="40"/>
+                          <text value=""/>
+                        </properties>
+                      </component>
+                      <component id="25f9" class="javax.swing.JTextField" binding="textField_textToSend">
+                        <constraints>
+                          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                            <minimum-size width="25" height="25"/>
+                            <preferred-size width="900" height="25"/>
+                            <maximum-size width="-1" height="25"/>
+                          </grid>
+                        </constraints>
+                        <properties>
+                          <foreground color="-10328984"/>
+                          <margin top="5" left="9" bottom="2" right="6"/>
+                          <preferredSize width="100" height="40"/>
+                          <text value="M^"/>
+                        </properties>
+                      </component>
+                      <component id="7fef2" class="javax.swing.JButton" binding="button_Send">
+                        <constraints>
+                          <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                        </constraints>
+                        <properties>
+                          <margin top="5" left="5" bottom="5" right="5"/>
+                          <text value="Отправить"/>
+                        </properties>
+                      </component>
+                    </children>
+                  </grid>
+                </children>
+              </grid>
+              <grid id="ed849" binding="terminalLogPanel" layout-manager="BorderLayout" hgap="0" vgap="0">
+                <constraints border-constraint="Center"/>
+                <properties/>
+                <border type="none"/>
+                <children>
+                  <tabbedpane id="b93bc" binding="tabbedPane1" default-binding="true">
+                    <constraints border-constraint="Center"/>
                     <properties>
                       <foreground color="-10328984"/>
-                      <text value="M^"/>
                     </properties>
-                  </component>
-                  <component id="7fef2" class="javax.swing.JButton" binding="button_Send">
-                    <constraints>
-                      <grid row="0" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties>
-                      <text value="Отправить"/>
-                    </properties>
-                  </component>
-                  <grid id="233d" binding="right_spacer" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                    <margin top="0" left="0" bottom="0" right="0"/>
-                    <constraints>
-                      <grid row="0" column="5" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false">
-                        <minimum-size width="5" height="5"/>
-                        <preferred-size width="5" height="5"/>
-                        <maximum-size width="5" height="5"/>
-                      </grid>
-                    </constraints>
-                    <properties/>
                     <border type="none"/>
                     <children/>
-                  </grid>
-                  <grid id="db08" binding="spacer_middle" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                    <margin top="0" left="0" bottom="0" right="0"/>
-                    <constraints>
-                      <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="3" indent="0" use-parent-layout="false">
-                        <minimum-size width="2" height="2"/>
-                        <preferred-size width="2" height="2"/>
-                        <maximum-size width="2" height="2"/>
-                      </grid>
-                    </constraints>
-                    <properties/>
-                    <border type="none"/>
-                    <children/>
-                  </grid>
-                  <grid id="d750e" binding="left_spacer" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                    <margin top="0" left="0" bottom="0" right="0"/>
-                    <constraints>
-                      <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="3" indent="0" use-parent-layout="false">
-                        <minimum-size width="2" height="2"/>
-                        <preferred-size width="2" height="2"/>
-                        <maximum-size width="2" height="2"/>
-                      </grid>
-                    </constraints>
-                    <properties/>
-                    <border type="none"/>
-                    <children/>
-                  </grid>
-                  <component id="d7ebc" class="javax.swing.JTextField" binding="textField_prefToSend">
-                    <constraints>
-                      <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="7" hsize-policy="6" anchor="4" fill="0" indent="0" use-parent-layout="false">
-                        <minimum-size width="10" height="25"/>
-                        <preferred-size width="40" height="25"/>
-                        <maximum-size width="80" height="25"/>
-                      </grid>
-                    </constraints>
-                    <properties>
-                      <text value=""/>
-                    </properties>
-                  </component>
-                  <grid id="a3656" binding="nonAsciCommandListPanel" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                    <margin top="0" left="0" bottom="0" right="0"/>
-                    <constraints>
-                      <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false">
-                        <minimum-size width="-1" height="20"/>
-                        <preferred-size width="-1" height="400"/>
-                        <maximum-size width="-1" height="750"/>
-                      </grid>
-                    </constraints>
-                    <properties/>
-                    <border type="none"/>
-                    <children/>
-                  </grid>
+                  </tabbedpane>
                 </children>
               </grid>
             </children>
