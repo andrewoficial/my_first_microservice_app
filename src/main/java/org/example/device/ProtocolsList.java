@@ -24,7 +24,9 @@ public enum ProtocolsList {
     DVK_4RD("DVK_4RD"),
     EDWARDS_D397_00_000("EDWARDS_D397_00_000"),
     LORADIF("LORADIF"),
-    Dynament("Dynament");
+    Dynament("Dynament"),
+    Belead("Belead"),
+    Cubic("Cubic");
 
 
     private final String value;

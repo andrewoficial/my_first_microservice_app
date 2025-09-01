@@ -8,6 +8,8 @@ import org.example.device.*;
 import org.example.device.protArdBadVlt.ARD_BAD_VLT;
 import org.example.device.protArdFeeBrdMeter.ARD_FEE_BRD_METER;
 import org.example.device.protArdTerm.ARD_TERM;
+import org.example.device.protBelead.BeLead;
+import org.example.device.protCubic.Cubic;
 import org.example.device.protDemo.DEMO_PROTOCOL;
 import org.example.device.protDvk4rd.DVK_4RD;
 import org.example.device.protDynament.Dynament;
@@ -108,6 +110,8 @@ public class MyUtilities {
             case GPS_Test -> device = new GPS_Test(comPort);
             case OWON_SPE3051 -> device = new OWON_SPE3051(comPort);
             case Dynament -> device = new Dynament(comPort);
+            case Cubic -> device = new Cubic(comPort);
+            case Belead -> device = new BeLead(comPort);
             //case LORADIF -> device = new LORADIF(comPort);
             default -> device = new DEMO_PROTOCOL(comPort);
         }
@@ -130,6 +134,8 @@ public class MyUtilities {
             case GPS_Test -> device = new GPS_Test();
             case DVK_4RD -> device = new DVK_4RD();
             case Dynament -> device = new Dynament();
+            case Cubic -> device = new Cubic();
+            case Belead -> device = new BeLead();
             default -> device = new DEMO_PROTOCOL();
         }
         return device;

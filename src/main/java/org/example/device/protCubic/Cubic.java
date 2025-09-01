@@ -1,4 +1,4 @@
-package org.example.device.protDynament;
+package org.example.device.protCubic;
 
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
@@ -11,7 +11,6 @@ import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 import org.example.utilites.MyUtilities;
 
-import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
@@ -19,14 +18,14 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-public class Dynament implements SomeDevice {
-    private static final Logger log = Logger.getLogger(Dynament.class);
+public class Cubic implements SomeDevice {
+    private static final Logger log = Logger.getLogger(Cubic.class);
     @Getter
-    private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора
+    private final ComConnectParameters comParameters = new ComConnectParameters();
     private final SerialPort comPort;
 
     private final DeviceCommandListClass commands;
-    private final DynamentCommandRegistry commandRegistry;
+    private final CubicCommandRegistry commandRegistry;
 
     private volatile byte[] lastAnswerBytes = new byte[1];
     private StringBuilder lastAnswer = new StringBuilder();
@@ -36,30 +35,27 @@ public class Dynament implements SomeDevice {
     private String cmdToSend;
     private int expectedBytes = 0;
 
-    private String devIdent = "DYNAMENT";
+    private String devIdent = "CUBIC";
 
-    private static final int[] BAUDRATES = {38400, 50, 75, 110, 150, 300, 600, 1200, 2400, 4800, 9600, 19200, 57600, 115200};
-
-    public Dynament() {
-        log.info("Создан объект протокола DYNAMENT эмуляция");
+    public Cubic() {
+        log.info("Created Cubic protocol emulation object");
         this.comPort = null;
-        this.commandRegistry = new DynamentCommandRegistry();
+        this.commandRegistry = new CubicCommandRegistry();
         this.commands = commandRegistry.getCommandList();
     }
 
-    public Dynament(SerialPort port) {
-        log.info("Создан объект протокола DYNAMENT");
+    public Cubic(SerialPort port) {
+        log.info("Created Cubic protocol object");
         this.comPort = port;
-        this.commandRegistry = new DynamentCommandRegistry();
+        this.commandRegistry = new CubicCommandRegistry();
         this.commands = commandRegistry.getCommandList();
         comParameters.setDataBits(DataBitsList.B8);
         comParameters.setParity(ParityList.P_NO);
-        comParameters.setBaudRate(BaudRatesList.B38400); // Default baudrate from Python
+        comParameters.setBaudRate(BaudRatesList.B9600);
         comParameters.setStopBits(StopBitsList.S1);
-        comParameters.setStringEndian(StringEndianList.NO);
-        comParameters.setMillisLimit(600); // Timeout from Python
-        comParameters.setMillisReadLimit(300);
-        comParameters.setRepeatWaitTime(800);
+        comParameters.setStringEndian(StringEndianList.CR);
+        comParameters.setMillisLimit(3000);
+        comParameters.setRepeatWaitTime(250);
         this.enable();
     }
 
@@ -74,15 +70,11 @@ public class Dynament implements SomeDevice {
             expectedBytes = 500;
             cmdToSend = null;
         } else {
-            expectedBytes = commands.getExpectedBytes(str.split(" ")[0]); // Ignore params for expected
+            expectedBytes = commands.getExpectedBytes(str.split(" ")[0]);
             cmdToSend = str;
         }
     }
 
-    /**
-     * Returns the list of byte arrays to send for the command.
-     * For simple reads, one array; for sets, multiple (WR then DAT).
-     */
     public List<byte[]> getBytesToSend() {
         if (cmdToSend == null) {
             return new ArrayList<>();
@@ -92,12 +84,15 @@ public class Dynament implements SomeDevice {
         List<byte[]> bytesList = new ArrayList<>();
 
         if ("getConc".equals(cmdName)) {
-            bytesList.add(commandRegistry.buildReadCommand(0x01));
+            bytesList.add(commandRegistry.buildCommand(0x01, new byte[0]));
         } else if ("getVersion".equals(cmdName)) {
-            bytesList.add(commandRegistry.buildReadCommand(0x00));
+            bytesList.add(commandRegistry.buildCommand(0x1E, new byte[0]));
+        } else if ("getSerial".equals(cmdName)) {
+            bytesList.add(commandRegistry.buildCommand(0x1F, new byte[0]));
+        } else if ("getGasProperty".equals(cmdName)) {
+            bytesList.add(commandRegistry.buildCommand(0x0D, new byte[0]));
         } else if ("setZero".equals(cmdName)) {
-            bytesList.add(commandRegistry.buildWriteCommand(0x02, true));
-            bytesList.add(commandRegistry.buildDataFrame(new byte[0]));
+            bytesList.add(commandRegistry.buildCommand(0x4B, new byte[]{0x00, 0x00, 0x00}));
         } else if ("setConc".equals(cmdName)) {
             if (parts.length < 2) {
                 throw new IllegalArgumentException("Value required for setConc");
@@ -108,55 +103,14 @@ public class Dynament implements SomeDevice {
             } catch (NumberFormatException e) {
                 throw new IllegalArgumentException("Invalid value for setConc");
             }
-            ByteBuffer bb = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(value);
-            byte[] valueBytes = bb.array();
-            bytesList.add(commandRegistry.buildWriteCommand(0x03, true));
-            bytesList.add(commandRegistry.buildDataFrame(valueBytes));
-        } else if ("searchBaudrate".equals(cmdName)) {
-            // Search is handled separately
-            searchBaudrate();
-            return new ArrayList<>();
+            int intValue = Math.round(value); // Assume n=0
+            byte df1 = (byte) ((intValue >> 8) & 0xFF);
+            byte df2 = (byte) (intValue & 0xFF);
+            bytesList.add(commandRegistry.buildCommand(0x03, new byte[]{df1, df2}));
+        } else if ("resetFactory".equals(cmdName)) {
+            bytesList.add(commandRegistry.buildCommand(0x4D, new byte[]{0x00}));
         }
         return bytesList;
-    }
-
-    /**
-     * Searches for the working baudrate by trying each one.
-     * Sets the comPort baudrate if found.
-     * @return found baudrate or -1 if not found
-     */
-    public int searchBaudrate() {
-        byte[] requestWithoutCs = new byte[]{0x10, 0x13, 0x01, 0x10, 0x1F};
-        byte[] checksum = commandRegistry.calculateChecksum(requestWithoutCs);
-        byte[] request = new byte[requestWithoutCs.length + 2];
-        System.arraycopy(requestWithoutCs, 0, request, 0, requestWithoutCs.length);
-        System.arraycopy(checksum, 0, request, requestWithoutCs.length, 2);
-
-        int originalBaud = comPort.getBaudRate();
-        for (int baud : BAUDRATES) {
-            comPort.setBaudRate(baud);
-            // Flush or wait
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                // ignore
-            }
-            comPort.writeBytes(request, request.length);
-            byte[] buffer = new byte[100];
-            int read = comPort.readBytes(buffer, buffer.length);
-            if (read > 0) {
-                byte[] response = new byte[read];
-                System.arraycopy(buffer, 0, response, 0, read);
-                //boolean success = commandRegistry.getCommandList().getCommand()response);
-                boolean success = true;
-                if (success) {
-                    log.info("Found baudrate: " + baud);
-                    return baud;
-                }
-            }
-        }
-        comPort.setBaudRate(originalBaud);
-        return -1;
     }
 
     @Override
@@ -227,18 +181,26 @@ public class Dynament implements SomeDevice {
     public void parseData() {
         if (lastAnswerBytes != null && lastAnswerBytes.length > 0) {
             lastAnswer.setLength(0);
-            log.info("Отправленная команда: " + MyUtilities.bytesToHex(cmdToSend.getBytes()));
-            log.info("Полученный ответ: " + MyUtilities.bytesToHex(lastAnswerBytes));
             String cmdName = cmdToSend != null ? cmdToSend.split(" ")[0] : "";
             boolean isKnown = false;
+            log.info("Отправленная команда: " + MyUtilities.bytesToHex(cmdToSend.getBytes()));
+            log.info("Полученный ответ: " + MyUtilities.bytesToHex(lastAnswerBytes));
+
             HashMap <String, SingleCommand> commandsList = commands.getCommandPool();
             SingleCommand foundetCommand = null;
 
+            byte[]  sentPart = new byte[3];
+            System.arraycopy(cmdToSend.getBytes(), 0, sentPart, 0, 3);
+
+            byte[]  commandPart = new byte[3];
+            System.arraycopy(cmdToSend.getBytes(), 0, sentPart, 0, 3);
             for (SingleCommand value : commandsList.values()) {
-                if(Arrays.equals(value.getBaseBody(), cmdToSend.getBytes())){
-                    log.info("Found command pattern for command [" + value.getMapKey() + "]");
+                System.arraycopy(value.getBaseBody(), 0, commandPart, 0, 3);
+                //log.info("Arrays commandPart: " +  Arrays.toString(commandPart)  + " sentPart: " + Arrays.toString(sentPart));
+                if(Arrays.equals(commandPart, sentPart)){
                     isKnown = true;
                     foundetCommand = value;
+                    log.info("Found command pattern for command [" + value.getMapKey() + "]");
                     break;
                 }
             }
@@ -251,14 +213,14 @@ public class Dynament implements SomeDevice {
                     }
                 } else {
                     lastAnswer.append(new String(lastAnswerBytes));
-                    log.info("DYNAMENT Cant create answers obj (error in answer)");
+                    log.info("CUBIC Cant create answers obj (error in answer)");
                 }
             } else {
-                lastAnswer.append(new String(lastAnswerBytes));
-                log.info("DYNAMENT Cant create answers obj (unknown command)");
+                lastAnswer.append(new String(MyUtilities.bytesToHex(lastAnswerBytes)));
+                log.info("CUBIC Cant create answers obj (unknown command)");
             }
         } else {
-            log.info("DYNAMENT empty received");
+            log.info("CUBIC: empty received");
         }
     }
 
@@ -285,6 +247,7 @@ public class Dynament implements SomeDevice {
     public boolean isASCII(){
         return false;
     }
+
     public AnswerValues getValues() {
         return this.answerValues;
     }

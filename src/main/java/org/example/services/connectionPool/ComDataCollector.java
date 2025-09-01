@@ -17,6 +17,7 @@ import org.example.device.ProtocolsList;
 import org.example.device.*;
 import org.example.services.rule.RuleStorage;
 import org.example.services.rule.com.ComRule;
+import org.example.utilites.MyUtilities;
 import org.example.utilites.properties.MyProperties;
 
 import java.time.Instant;
@@ -65,11 +66,11 @@ public class ComDataCollector implements Runnable{
 
     // Вспомогательный класс для хранения входящих данных
     private static class ReceivedData {
-        String message;
+        byte[] message;
         boolean isResponseRequested;
         long timestamp;
 
-        ReceivedData(String message, boolean isResponseRequested, long timestamp) {
+        ReceivedData(byte[] message, boolean isResponseRequested, long timestamp) {
             this.message = message;
             this.isResponseRequested = isResponseRequested;
             this.timestamp = timestamp;
@@ -145,38 +146,36 @@ public class ComDataCollector implements Runnable{
     }
 
     public void handleDataAvailableEvent() {
+        // 2. Используйте ByteArrayOutputStream для накопления байтов
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         byte[] chunk = new byte[2048];
         long delay = device == null ? 150L : device.getMillisReadLimit();
-        //int sizeLimit = device == null ? 150 : device.getExpectedBytes();
-        int sizeLimit = 2048;//Увеличил тут размер
-        //log.info("Начинаю получение данных");
+        int sizeLimit = 2048;
+
         try {
             int dataAvailable = comPort.bytesAvailable();
-            //log.info("Готово к получению " + dataAvailable);
             while (dataAvailable > 0) {
                 int bytesRead = comPort.readBytes(chunk, Math.min(chunk.length, dataAvailable));
+                // 3. Записываем сырые байты в буфер
                 buffer.write(chunk, 0, bytesRead);
-                if(buffer.size() >= sizeLimit){//Вызывало падение
-                    //log.info("Прерываю получение");
+                if (buffer.size() >= sizeLimit) {
                     return;
                 }
                 sleepSafely(delay);
                 dataAvailable = comPort.bytesAvailable();
-                //log.info("Готово к получению данных после считывания ранее полученных" + dataAvailable);
             }
 
-            String receivedData = buffer.toString();
-            if (!receivedData.isEmpty()) {
-                incomingMessages.add(new ReceivedData(receivedData, responseRequested, System.currentTimeMillis()));
-                //log.info("Добавлено сообщение в очередь: " + receivedData.trim());
+            // 4. Получаем массив байтов без преобразования в строку
+            byte[] receivedBytes = buffer.toByteArray();
+            if (receivedBytes.length > 0) {
+                // 5. Добавляем массив байтов в очередь
+                incomingMessages.add(new ReceivedData(receivedBytes, responseRequested, System.currentTimeMillis()));
+                // Для логирования используйте bytesToHex
+                log.info("Добавлено сообщение в очередь: " + MyUtilities.bytesToHex(receivedBytes));
             }
-        }finally {
-            //Пояснения: скорее всего создаётся объект DeviceAnswer в контексте слушателя несколько раз и перезаписывается
-            //sleepSafely(800);//ToDo при быстро поступающих данных, видимо из-за addDataListener пока не завершилась обработка предыдущего происходит накладывание и проблема с таймингами потоков
+        } finally {
             comDataCollectorBusy.set(false);
             comPort.addDataListener(serialPortDataListener);
-            //log.info(" Завершил получение данных");
         }
     }
 /*
@@ -375,16 +374,13 @@ public class ComDataCollector implements Runnable{
         }
     }
 
-    public void saveReceivedByEvent(String msg, boolean responseRequested, long receiveTimestamp) {
-        if(msg == null || msg.isEmpty()){
+    public void saveReceivedByEvent(byte[] message, boolean responseRequested, long receiveTimestamp) {
+        if(message == null || message.length == 0){
             log.warn("Пустое сообщение при попытке saveReceivedByEvent");
             return;
         }
-        byte [] received = new byte[msg.length()];
-        char [] receivedChar = msg.toCharArray();
-        for (int i = 0; i < received.length; i++) {
-            received [i] = (byte) receivedChar[i];
-        }
+
+        String msg = message.toString();
         //log.info("Конвертация в массив завершена");
         if (device == null) {
             log.error("Устройство не инициализировано при попытке saveReceivedByEvent");
@@ -397,7 +393,7 @@ public class ComDataCollector implements Runnable{
         if(responseRequested) {
             if(currentComRule != null && currentComRule.isWaitingForAnswer()){
                 currentComRule.setWaitingForAnswer(false);
-                currentComRule.processResponse(received); //Передаю ответ от устроиства правилу, завершаю обработку ответа
+                currentComRule.processResponse(message); //Передаю ответ от устроиства правилу, завершаю обработку ответа
                 currentComRule.updateState();
                 return;
             }
@@ -410,7 +406,7 @@ public class ComDataCollector implements Runnable{
         }
 
         int tabDirection = clientId;
-        device.setLastAnswer(received);
+        device.setLastAnswer(message);
         deviceAnswer.changeTabNum(tabDirection);
 
         try{
@@ -429,9 +425,9 @@ public class ComDataCollector implements Runnable{
             if(answer == null || answer.isEmpty()){
                 log.warn("ПУСТАЯ СТРОКА ОТВЕТА  ПЕРЕДАНА В ОБЪЕКТ ОТВЕТА метка времени в ответе" + deviceAnswer.getAnswerReceivedTime() +
                         " количество полей в ответе " + deviceAnswer.getFieldCount() +
-                        " для строки от устройства [" + Arrays.toString(received) + "] ");
+                        " для строки от устройства [" + Arrays.toString(message) + "] ");
                 StringBuilder sb = new StringBuilder();
-                for (byte b : received) {
+                for (byte b : message) {
                     sb.append((char) b);
                 }
                 answer = sb.toString();

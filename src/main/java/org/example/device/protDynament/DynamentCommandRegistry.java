@@ -8,9 +8,12 @@ import org.example.device.command.CommandBuilder;
 import org.example.device.command.CommandParser;
 import org.example.device.command.CommandType;
 import org.example.services.AnswerValues;
+import org.example.utilites.MyUtilities;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Predicate;
 
@@ -70,14 +73,14 @@ public class DynamentCommandRegistry extends DeviceCommandRegistry {
     }
 
     private SingleCommand createGetVersionCommand() {
-        byte[] baseBody = buildReadCommand(0x00); // 10 13 00 10 1F cs1 cs2
+        byte[] baseBody = buildReadCommand(0x06); // 10 13 00 10 1F cs1 cs2
         SingleCommand command = new SingleCommand(
                 "getVersion",
                 "getVersion - Получить версию конфигурации",
                 "getVersion",
                 baseBody,
                 args -> baseBody,
-                this::parseConfigDataResponse,
+                this::parseLiveDataResponseShort,
                 7,
                 CommandType.BINARY
         );
@@ -189,7 +192,6 @@ public class DynamentCommandRegistry extends DeviceCommandRegistry {
         return new byte[]{(byte) ((checksum >> 8) & 0xFF), (byte) (checksum & 0xFF)};
     }
 
-    // Parse methods (unchanged from your code)
     private AnswerValues parseLiveDataResponse(byte[] response) {
         AnswerValues answerValues = new AnswerValues(7); // version, status, concentration, temperature, detector_signal, reference_signal, absorbance
 
@@ -205,13 +207,21 @@ public class DynamentCommandRegistry extends DeviceCommandRegistry {
 
         if (!validateChecksum(response)) {
             log.warn("DYNAMENT: Ошибка контрольной суммы LiveDataResponse");
+            //return null;
+        }
+
+
+
+        int dataLength = Byte.toUnsignedInt(response[2]);
+        int payloadEnd = 3 + dataLength + 2; // 3 - заголовок, 2 - CRC
+        if (payloadEnd > response.length) {
+            log.warn("DYNAMENT: Несоответствие длины данных: ожидалось " + payloadEnd + ", получено " + response.length);
             return null;
         }
 
-        int dataLength = Byte.toUnsignedInt(response[2]);
         byte[] payload = Arrays.copyOfRange(response, 3, response.length - 4);
 
-        if (payload.length != dataLength) {
+        if (payload.length < dataLength) {
             log.warn("DYNAMENT: Несоответствие длины данных: ожидалось {"+dataLength+"}, получено {"+payload.length+"} LiveDataResponse");
             return null;
         }
@@ -246,21 +256,69 @@ public class DynamentCommandRegistry extends DeviceCommandRegistry {
         return answerValues;
     }
 
-    private AnswerValues parseConfigDataResponse(byte[] response) {
-        AnswerValues answerValues = new AnswerValues(1); // version
+    private AnswerValues parseLiveDataResponseShort(byte[] rawResponse) {
+        AnswerValues answerValues = new AnswerValues(3); // version
+        log.info("Массив на входе: " + MyUtilities.bytesToHex(rawResponse));
+        log.info("Размер массива на входе: " + rawResponse.length);
+        byte[] frame = extractFrame(rawResponse);
+        if (frame == null) return null;
+        log.info("Выделенный frame: " + MyUtilities.bytesToHex(frame));
+        log.info("Размер выделенного frame: " + frame.length);
 
-        if (response.length < 7) {
-            log.warn("DYNAMENT: Слишком короткий ответ для версии");
+        byte[] response = unescapeFrame(frame);
+        log.info("Востановленный массив: " + MyUtilities.bytesToHex(response));
+        log.info("Размер востановленного массива: " + response.length);
+        //byte[] response = unescapeResponse(rawResponse);
+        //byte[] response = (rawResponse);
+
+
+        // Минимальная длина ответа: DLE + DAT + len + 8 data + DLE + EOF + checksum(2)
+        if (response.length < 10) {
+            log.warn("DYNAMENT: Слишком короткий ответ. " + response.length);
             return null;
         }
 
-        if (!validateChecksum(response)) {
-            log.warn("DYNAMENT: Ошибка контрольной суммы для версии");
-            //return null;
+        if (!validateChecksum(rawResponse)) {
+            log.warn("DYNAMENT: Ошибка контрольной суммы");
+            // return null; // можно не прерывать, если хочется отладить
         }
 
-        String version = Byte.toUnsignedInt(response[3]) + "." + Byte.toUnsignedInt(response[4]);
-        answerValues.addValue(Double.parseDouble(version), "Config Version");
+        // Проверяем сигнатуру
+        if (response[0] != 0x10 || response[1] != 0x1A) {
+            log.warn("DYNAMENT: Неверный заголовок ответа");
+            log.info("Ожидался на нулевой позиции " + 0x10 + " был найден " + response[0]);
+            log.info("Ожидался на первой позиции " + 0x1A + " был найден " + response[1]);
+            return null;
+        }
+
+        int dataLen = response[2] & 0xFF;
+
+        if (dataLen != 0x08) {
+            log.warn("DYNAMENT: Неожиданный размер блока данных: " + dataLen);
+            return null;
+        }else{
+            log.info("Найден пакет данных размером:" + dataLen);
+        }
+
+        // смещение данных: байты после dataLen
+        int dataOffset = 3;
+
+        // Version: 2 байта (младший-старший)
+        int version = ((response[dataOffset + 1] & 0xFF) << 8) | (response[dataOffset] & 0xFF);
+        answerValues.addValue((double) version, "Version");
+
+        // Status flags: 2 байта
+        int statusFlags = ((response[dataOffset + 3] & 0xFF) << 8) | (response[dataOffset + 2] & 0xFF);
+        answerValues.addValue((double) statusFlags, "Status Flags");
+
+        // Gas reading: 4 байта float (IEEE754, little-endian!)
+        int gasIntBits =
+                (response[dataOffset + 4] & 0xFF) |
+                        ((response[dataOffset + 5] & 0xFF) << 8) |
+                        ((response[dataOffset + 6] & 0xFF) << 16) |
+                        ((response[dataOffset + 7] & 0xFF) << 24);
+        float gasReading = Float.intBitsToFloat(gasIntBits);
+        answerValues.addValue((double) gasReading, "Gas Reading");
 
         return answerValues;
     }
@@ -307,17 +365,107 @@ public class DynamentCommandRegistry extends DeviceCommandRegistry {
         return activeFlags.length() > 0 ? activeFlags.toString() : "No active flags";
     }
 
-    private boolean validateChecksum(byte[] response) {
-        if (response.length < 4) {
+    /**
+     * Проверка контрольной суммы Dynament.
+     *
+     * Алгоритм:
+     *  - Берём все байты кадра начиная с первого DLE (0x10)
+     *    и до EOF (0x1F) включительно.
+     *  - Складываем их как беззнаковые байты.
+     *  - Результат берём по модулю 0x10000 (16 бит).
+     *  - Сравниваем с двумя байтами в конце кадра
+     *    (high byte + low byte).
+     */
+    private boolean validateChecksum(byte[] frame) {
+        if (frame == null || frame.length < 6) { // min: DLE, type, len, DLE, EOF, CRC(2)
+            log.warn("validateChecksum: слишком короткий кадр: " + (frame == null ? 0 : frame.length));
             return false;
         }
-        int calculated = 0;
-        for (int i = 0; i < response.length - 2; i++) {
-            calculated += Byte.toUnsignedInt(response[i]);
+
+        log.info("CRC: исходный кадр: [" + MyUtilities.bytesToHex(frame) + "], len=" + frame.length);
+
+        // 1) Принятый CRC (Big Endian: High, Low)
+        int rxHigh = frame[frame.length - 2] & 0xFF;
+        int rxLow  = frame[frame.length - 1] & 0xFF;
+        int rxCrc  = (rxHigh << 8) | rxLow;
+
+        // 2) Наш расчёт: сумма всех байт кадра, кроме двух последних (CRC_H, CRC_L)
+        int sum = 0;
+        for (int i = 0; i < frame.length - 2; i++) {
+            sum += (frame[i] & 0xFF);
         }
-        calculated &= 0xFFFF;
-        int received = (Byte.toUnsignedInt(response[response.length - 2]) << 8) | Byte.toUnsignedInt(response[response.length - 1]);
-        return calculated == received;
+        sum &= 0xFFFF;
+
+        log.info(String.format("CRC: received=0x%04X (%d), calculated=0x%04X (%d)", rxCrc, rxCrc, sum, sum));
+
+        // Доп. диагностика: разложим сумму на "базу" + "газ" для пакетов live data (формат 10 1A 08 ... 10 1F CRC CRC)
+        if (frame.length >= 15 && frame[0] == 0x10 && frame[1] == 0x1A && (frame[2] & 0xFF) == 0x08) {
+            // Индексы данных в таком кадре фиксированы:
+            // [0]=DLE [1]=DAT [2]=LEN(08) [3..4]=version [5..6]=flags [7..10]=gas(4 bytes) [11]=DLE [12]=EOF [13]=CRC_H [14]=CRC_L
+            int base = 0;
+            for (int i = 0; i <= 12; i++) { // до EOF включительно
+                if (i >= 7 && i <= 10) continue; // пропускаем 4 байта газа
+                base += (frame[i] & 0xFF);
+            }
+            base &= 0xFFFF;
+
+            int gasB0 = frame[7] & 0xFF;
+            int gasB1 = frame[8] & 0xFF;
+            int gasB2 = frame[9] & 0xFF;
+            int gasB3 = frame[10] & 0xFF;
+            int gasSum = (gasB0 + gasB1 + gasB2 + gasB3) & 0xFFFF;
+
+            int calcCheck = (base + gasSum) & 0xFFFF;
+
+            log.info(String.format("CRC diag (live): base=0x%04X (%d), gasBytes=[%02X %02X %02X %02X] gasSum=0x%04X (%d), base+gas=0x%04X (%d)",
+                    base, base, gasB0, gasB1, gasB2, gasB3, gasSum, gasSum, calcCheck, calcCheck));
+            log.info(String.format("Разность received - calculated = 0x%04X (%d)", (rxCrc - sum) & 0xFFFF, (rxCrc - sum)));
+        }
+
+        return rxCrc == sum;
+    }
+
+    private byte[] extractFrame(byte[] response) {
+        // Ищем первый DLE и последний DLE EOF
+        int start = -1, end = -1;
+        for (int i = 0; i < response.length - 1; i++) {
+            if (response[i] == DLE && response[i + 1] == 0x1A) {
+                start = i;
+            }
+            if (response[i] == DLE && response[i + 1] == EOF) {
+                end = i;
+                break;
+            }
+        }
+        if (start == -1 || end == -1) {
+            log.warn("DYNAMENT: не удалось найти границы кадра");
+            return null;
+        }
+
+        // Берём всё от DLE ... EOF + 2 байта CRC
+        int frameLen = (end + 4) - start;
+        byte[] frame = Arrays.copyOfRange(response, start, start + frameLen);
+        log.info("Extracted frame: " + MyUtilities.bytesToHex(frame));
+        return frame;
+    }
+
+    private byte[] unescapeFrame(byte[] frame) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        for (int i = 0; i < frame.length; i++) {
+            if (frame[i] == DLE && i + 1 < frame.length) {
+                if (frame[i + 1] == DLE) {
+                    baos.write(DLE);
+                    i++; // пропускаем второй
+                    continue;
+                }
+            }
+            baos.write(frame[i]);
+        }
+
+        byte[] unescaped = baos.toByteArray();
+        log.info("Unescaped frame: " + MyUtilities.bytesToHex(unescaped));
+        return unescaped;
     }
 
     // Helper to concatenate frames for multi-frame commands (e.g., WR + DAT)

@@ -1,4 +1,4 @@
-package org.example.device.protDynament;
+package org.example.device.protBelead;
 
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
@@ -9,9 +9,7 @@ import org.example.device.command.SingleCommand;
 import org.example.device.connectParameters.ComConnectParameters;
 import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
-import org.example.utilites.MyUtilities;
 
-import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
@@ -19,14 +17,14 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-public class Dynament implements SomeDevice {
-    private static final Logger log = Logger.getLogger(Dynament.class);
+public class BeLead implements SomeDevice {
+    private static final Logger log = Logger.getLogger(BeLead.class);
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора
     private final SerialPort comPort;
 
     private final DeviceCommandListClass commands;
-    private final DynamentCommandRegistry commandRegistry;
+    private final BeLeadCommandRegistry commandRegistry;
 
     private volatile byte[] lastAnswerBytes = new byte[1];
     private StringBuilder lastAnswer = new StringBuilder();
@@ -36,30 +34,29 @@ public class Dynament implements SomeDevice {
     private String cmdToSend;
     private int expectedBytes = 0;
 
-    private String devIdent = "DYNAMENT";
+    private String devIdent = "BLDM";
 
     private static final int[] BAUDRATES = {38400, 50, 75, 110, 150, 300, 600, 1200, 2400, 4800, 9600, 19200, 57600, 115200};
 
-    public Dynament() {
-        log.info("Создан объект протокола DYNAMENT эмуляция");
+    public BeLead() {
+        log.info("Создан объект протокола BELEAD эмуляция");
         this.comPort = null;
-        this.commandRegistry = new DynamentCommandRegistry();
+        this.commandRegistry = new BeLeadCommandRegistry();
         this.commands = commandRegistry.getCommandList();
     }
 
-    public Dynament(SerialPort port) {
-        log.info("Создан объект протокола DYNAMENT");
+    public BeLead(SerialPort port) {
+        log.info("Создан объект протокола BELEAD");
         this.comPort = port;
-        this.commandRegistry = new DynamentCommandRegistry();
+        this.commandRegistry = new BeLeadCommandRegistry();
         this.commands = commandRegistry.getCommandList();
         comParameters.setDataBits(DataBitsList.B8);
         comParameters.setParity(ParityList.P_NO);
-        comParameters.setBaudRate(BaudRatesList.B38400); // Default baudrate from Python
+        comParameters.setBaudRate(BaudRatesList.B57600); // Default from BLRM datasheet
         comParameters.setStopBits(StopBitsList.S1);
-        comParameters.setStringEndian(StringEndianList.NO);
-        comParameters.setMillisLimit(600); // Timeout from Python
-        comParameters.setMillisReadLimit(300);
-        comParameters.setRepeatWaitTime(800);
+        comParameters.setStringEndian(StringEndianList.CR);
+        comParameters.setMillisLimit(3000);
+        comParameters.setRepeatWaitTime(250);
         this.enable();
     }
 
@@ -74,15 +71,11 @@ public class Dynament implements SomeDevice {
             expectedBytes = 500;
             cmdToSend = null;
         } else {
-            expectedBytes = commands.getExpectedBytes(str.split(" ")[0]); // Ignore params for expected
+            expectedBytes = commands.getExpectedBytes(str.split(" ")[0]);
             cmdToSend = str;
         }
     }
 
-    /**
-     * Returns the list of byte arrays to send for the command.
-     * For simple reads, one array; for sets, multiple (WR then DAT).
-     */
     public List<byte[]> getBytesToSend() {
         if (cmdToSend == null) {
             return new ArrayList<>();
@@ -91,13 +84,12 @@ public class Dynament implements SomeDevice {
         String cmdName = parts[0];
         List<byte[]> bytesList = new ArrayList<>();
 
-        if ("getConc".equals(cmdName)) {
-            bytesList.add(commandRegistry.buildReadCommand(0x01));
-        } else if ("getVersion".equals(cmdName)) {
-            bytesList.add(commandRegistry.buildReadCommand(0x00));
+        if ("getAllData".equals(cmdName)) {
+            bytesList.add(commandRegistry.buildReadCommand((byte) 0x13, null));
+        } else if ("getSimpleData".equals(cmdName)) {
+            bytesList.add(commandRegistry.buildReadCommand((byte) 0x06, null));
         } else if ("setZero".equals(cmdName)) {
-            bytesList.add(commandRegistry.buildWriteCommand(0x02, true));
-            bytesList.add(commandRegistry.buildDataFrame(new byte[0]));
+            bytesList.add(commandRegistry.buildWriteCommand((byte) 0x02, null));
         } else if ("setConc".equals(cmdName)) {
             if (parts.length < 2) {
                 throw new IllegalArgumentException("Value required for setConc");
@@ -110,32 +102,21 @@ public class Dynament implements SomeDevice {
             }
             ByteBuffer bb = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(value);
             byte[] valueBytes = bb.array();
-            bytesList.add(commandRegistry.buildWriteCommand(0x03, true));
-            bytesList.add(commandRegistry.buildDataFrame(valueBytes));
+            bytesList.add(commandRegistry.buildWriteCommand((byte) 0x03, valueBytes));
         } else if ("searchBaudrate".equals(cmdName)) {
-            // Search is handled separately
             searchBaudrate();
             return new ArrayList<>();
         }
         return bytesList;
     }
 
-    /**
-     * Searches for the working baudrate by trying each one.
-     * Sets the comPort baudrate if found.
-     * @return found baudrate or -1 if not found
-     */
     public int searchBaudrate() {
-        byte[] requestWithoutCs = new byte[]{0x10, 0x13, 0x01, 0x10, 0x1F};
-        byte[] checksum = commandRegistry.calculateChecksum(requestWithoutCs);
-        byte[] request = new byte[requestWithoutCs.length + 2];
-        System.arraycopy(requestWithoutCs, 0, request, 0, requestWithoutCs.length);
-        System.arraycopy(checksum, 0, request, requestWithoutCs.length, 2);
+        // Adapted from Dynament; test with a read command
+        byte[] request = commandRegistry.buildReadCommand((byte) 0x13, null);
 
         int originalBaud = comPort.getBaudRate();
         for (int baud : BAUDRATES) {
             comPort.setBaudRate(baud);
-            // Flush or wait
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
@@ -147,8 +128,8 @@ public class Dynament implements SomeDevice {
             if (read > 0) {
                 byte[] response = new byte[read];
                 System.arraycopy(buffer, 0, response, 0, read);
-                //boolean success = commandRegistry.getCommandList().getCommand()response);
-                boolean success = true;
+                // Validate if response is valid (e.g., starts with START, etc.)
+                boolean success = true; // Placeholder; add actual validation if needed
                 if (success) {
                     log.info("Found baudrate: " + baud);
                     return baud;
@@ -227,23 +208,10 @@ public class Dynament implements SomeDevice {
     public void parseData() {
         if (lastAnswerBytes != null && lastAnswerBytes.length > 0) {
             lastAnswer.setLength(0);
-            log.info("Отправленная команда: " + MyUtilities.bytesToHex(cmdToSend.getBytes()));
-            log.info("Полученный ответ: " + MyUtilities.bytesToHex(lastAnswerBytes));
             String cmdName = cmdToSend != null ? cmdToSend.split(" ")[0] : "";
-            boolean isKnown = false;
-            HashMap <String, SingleCommand> commandsList = commands.getCommandPool();
-            SingleCommand foundetCommand = null;
-
-            for (SingleCommand value : commandsList.values()) {
-                if(Arrays.equals(value.getBaseBody(), cmdToSend.getBytes())){
-                    log.info("Found command pattern for command [" + value.getMapKey() + "]");
-                    isKnown = true;
-                    foundetCommand = value;
-                    break;
-                }
-            }
-            if (isKnown) {
-                answerValues = foundetCommand.getResult(lastAnswerBytes);
+            SingleCommand foundCommand = commands.getCommand(cmdName);
+            if (foundCommand != null) {
+                answerValues = foundCommand.getResult(lastAnswerBytes);
                 if (answerValues != null) {
                     for (int i = 0; i < answerValues.getValues().length; i++) {
                         lastAnswer.append(answerValues.getValues()[i]);
@@ -251,14 +219,14 @@ public class Dynament implements SomeDevice {
                     }
                 } else {
                     lastAnswer.append(new String(lastAnswerBytes));
-                    log.info("DYNAMENT Cant create answers obj (error in answer)");
+                    log.info("BELEAD Cant create answers obj (error in answer)");
                 }
             } else {
                 lastAnswer.append(new String(lastAnswerBytes));
-                log.info("DYNAMENT Cant create answers obj (unknown command)");
+                log.info("BELEAD Cant create answers obj (unknown command)");
             }
         } else {
-            log.info("DYNAMENT empty received");
+            log.info("BELEAD empty received");
         }
     }
 
@@ -282,9 +250,10 @@ public class Dynament implements SomeDevice {
     }
 
     @Override
-    public boolean isASCII(){
+    public boolean isASCII() {
         return false;
     }
+
     public AnswerValues getValues() {
         return this.answerValues;
     }
