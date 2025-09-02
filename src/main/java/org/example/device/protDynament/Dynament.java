@@ -250,11 +250,11 @@ public class Dynament implements SomeDevice {
                         lastAnswer.append("\t");
                     }
                 } else {
-                    lastAnswer.append(new String(lastAnswerBytes));
-                    log.info("DYNAMENT Cant create answers obj (error in answer)");
+                    lastAnswer.append(new String(MyUtilities.bytesToHex(lastAnswerBytes)));
+                    log.info("DYNAMENT Cant create answers obj (unknown command)");
                 }
             } else {
-                lastAnswer.append(new String(lastAnswerBytes));
+                lastAnswer.append(new String(MyUtilities.bytesToHex(lastAnswerBytes)));
                 log.info("DYNAMENT Cant create answers obj (unknown command)");
             }
         } else {

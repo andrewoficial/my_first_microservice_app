@@ -88,13 +88,14 @@ public class ComDataCollectorTest {
         doThrow(new RuntimeException("Mocked exception when log")).when(mockLogger).writeLine(any(DeviceAnswer.class));
 
         // Создание тестовых данных
-        String testData = "Test data";
+        //String testData = "Test data";
+        byte[] testData = {55, 55, 55};
         boolean isResponse = true;
         long timestamp = System.currentTimeMillis();
 
         // Вызов приватного метода через рефлексию
         Method method = ComDataCollector.class.getDeclaredMethod(
-                "saveReceivedByEvent", String.class, boolean.class, long.class
+                "saveReceivedByEvent", byte[].class, boolean.class, long.class
         );
         method.setAccessible(true);
         long receiveTimestamp = System.currentTimeMillis();

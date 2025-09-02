@@ -48,6 +48,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntFunction;
 import java.util.function.IntSupplier;
+import java.util.function.Predicate;
 
 import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 
@@ -505,13 +506,17 @@ public class MainWindow extends JFrame implements Rendeble {
             commandPanel.add(commandLabel);
 
             List<ArgumentDescriptor> arguments = entry.getValue().getArguments();
+            Map<String, JTextField> argsInput = new ConcurrentHashMap<>();
+            Map<String, Object> argsValue = new ConcurrentHashMap<>();
             for (ArgumentDescriptor arg : arguments) {
+
                 log.info("  Для " + entry.getKey() + " добавил поле ввода для " + arg.getName());
 
                 JPanel argPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
                 JLabel argLabel = new JLabel(arg.getName());
                 JTextField textField = new JTextField(arg.getDefaultValue().toString(), 10);
-
+                argsInput.put(arg.getName(), textField);
+                argsValue.put(arg.getName(), 0.0f);
                 argPanel.add(argLabel);
                 argPanel.add(textField);
                 commandPanel.add(argPanel);
@@ -520,7 +525,20 @@ public class MainWindow extends JFrame implements Rendeble {
             JButton sendButton = new SimpleButton("задать");
             sendButton.setPreferredSize(new Dimension(120, 25));
             sendButton.addActionListener(e -> {
-                textField_textToSend.setText(MyUtilities.byteArrayToString(entry.getValue().getBaseBody()));
+                for (Map.Entry<String, Object> stringObjectEntry : argsValue.entrySet()) {
+                    Float argument = 0.0f;
+                    try {
+                        argument = Float.parseFloat(argsInput.get(stringObjectEntry.getKey()).getText());
+                        argsValue.put(stringObjectEntry.getKey(), argument);
+                    } catch (NumberFormatException ex) {
+                        log.warn("Error when parse argument " + ex.getMessage());
+                        return;
+                    }
+                }
+
+
+                byte[] cmdForSend = entry.getValue().build(argsValue);
+                textField_textToSend.setText(MyUtilities.byteArrayToString(cmdForSend));
             });
 
             commandPanel.add(sendButton);
