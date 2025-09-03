@@ -18,6 +18,7 @@ import org.example.device.protEdwardsD397.EDWARDS_D397_00_000;
 import org.example.device.protErstevakMtp4d.ERSTEVAK_MTP4D;
 import org.example.device.protGpsTest.GPS_Test;
 import org.example.device.protIgm10.IGM_10;
+import org.example.device.protMipex2.Mipex2;
 import org.example.device.protOwonSpe3051.OWON_SPE3051;
 
 import java.time.LocalDate;
@@ -112,6 +113,7 @@ public class MyUtilities {
             case Dynament -> device = new Dynament(comPort);
             case Cubic -> device = new Cubic(comPort);
             case Belead -> device = new BeLead(comPort);
+            case Mipex2 -> device = new Mipex2(comPort);
             //case LORADIF -> device = new LORADIF(comPort);
             default -> device = new DEMO_PROTOCOL(comPort);
         }
@@ -136,6 +138,7 @@ public class MyUtilities {
             case Dynament -> device = new Dynament();
             case Cubic -> device = new Cubic();
             case Belead -> device = new BeLead();
+            case Mipex2 -> device = new Mipex2();
             default -> device = new DEMO_PROTOCOL();
         }
         return device;

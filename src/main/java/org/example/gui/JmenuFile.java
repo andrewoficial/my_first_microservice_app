@@ -16,7 +16,7 @@ import org.example.gui.accu10fd.Acu10fdWindow;
 import org.example.gui.curve.CurveHandlerWindow;
 import org.example.gui.graph.ChartWindow;
 import org.example.gui.graph.data.AnswerLoader;
-import org.example.gui.mgstest.MgsSimpleTest;
+import org.example.gui.mgstest.MultigassensWindow;
 import org.example.gui.system.logs.ViewLogsWindow;
 import org.example.gui.system.resources.DebugWindow;
 import org.example.services.AnswerStorage;
@@ -505,7 +505,7 @@ public class JmenuFile {
             public void actionPerformed(ActionEvent arg0) {
                 System.out.println("arguments [" + arg0.toString() + "] ");
                 System.out.println("MGS simple test Window");
-                MgsSimpleTest mgsSimpleTest = new MgsSimpleTest();
+                MultigassensWindow mgsSimpleTest = new MultigassensWindow();
                 mgsSimpleTest.setName("MGS simple test Window");
                 mgsSimpleTest.pack();
                 mgsSimpleTest.setVisible(true);

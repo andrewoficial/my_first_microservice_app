@@ -22,6 +22,7 @@ public enum ProtocolsList {
     ECT_TC290("ECT_TC290"),//East Changing Technologies
     OWON_SPE3051("OWON_SPE3051"),
     DVK_4RD("DVK_4RD"),
+    Mipex2("Mipex2"),
     EDWARDS_D397_00_000("EDWARDS_D397_00_000"),
     LORADIF("LORADIF"),
     Dynament("Dynament"),
