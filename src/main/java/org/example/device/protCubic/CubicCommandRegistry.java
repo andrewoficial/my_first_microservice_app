@@ -123,11 +123,12 @@ public class CubicCommandRegistry extends DeviceCommandRegistry {
     }
 
     private SingleCommand createSetConcCommand() {
+        byte[] baseBody = buildCommand(0x03, new byte[]{0x00, 0x00, 0x00}); // 00 DF1=0 DF2=0
         SingleCommand command = new SingleCommand(
                 "setConc",
                 "setConc [value] - Set concentration calibration",
                 "setConc",
-                null, // Dynamic
+                baseBody, // Dynamic
                 args -> {
                     Float value = (Float) args.getOrDefault("value", 0.0f);
                     // Assume n=0 for ppm, adjust if needed. User should know resolution.
@@ -246,8 +247,15 @@ public class CubicCommandRegistry extends DeviceCommandRegistry {
         for (int i = 3; i < response.length - 1; i++) {
             version.append((char) response[i]);
         }
+        log.info("CUBIC: version: " + version);
+        double versionNum = -1D;
+        try{
+            versionNum = Double.parseDouble(version.toString());
+        }catch (NumberFormatException e){
+            log.warn("CUBIC: Invalid version response");
+        }
         AnswerValues answerValues = new AnswerValues(1);
-        answerValues.addValue(0.0, version.toString());
+        answerValues.addValue(versionNum, version.toString());
         return answerValues;
     }
 
@@ -257,12 +265,25 @@ public class CubicCommandRegistry extends DeviceCommandRegistry {
             return null;
         }
         StringBuilder serial = new StringBuilder();
+        log.info("CUBIC: Raw serial data: " + MyUtilities.bytesToHex(Arrays.copyOfRange(response, 3, 13))); // Логируем сырые данные
         for (int i = 0; i < 5; i++) {
-            int sn = ByteBuffer.wrap(new byte[]{response[3 + i*2], response[4 + i*2]}).order(ByteOrder.BIG_ENDIAN).getShort();
+            // Используем беззнаковое преобразование
+            int byte1 = Byte.toUnsignedInt(response[3 + i*2]);
+            int byte2 = Byte.toUnsignedInt(response[4 + i*2]);
+            int sn = (byte1 << 8) | byte2; // Корректное беззнаковое значение
+            //log.info("CUBIC: SN" + (i+1) + " = " + sn); // Логируем каждое значение
             serial.append(String.format("%04d", sn));
+            //serial.append(sn);
+        }
+        log.info("CUBIC: SN" + serial.toString()); // Логируем каждое значение
+        double sn = -1L;
+        try{
+            sn = Double.parseDouble(serial.toString());
+        }catch (NumberFormatException e){
+            log.warn("CUBIC: Invalid serial response" + e.getMessage());
         }
         AnswerValues answerValues = new AnswerValues(1);
-        answerValues.addValue(0.0, serial.toString());
+        answerValues.addValue(sn, serial.toString());
         return answerValues;
     }
 
@@ -271,14 +292,21 @@ public class CubicCommandRegistry extends DeviceCommandRegistry {
             log.warn("CUBIC: Invalid gas property response");
             return null;
         }
+        log.info("Начинаю разбор ответа на GasProperty: ");
         int df1 = Byte.toUnsignedInt(response[3]);
+        log.info("df1: " + df1);
         int df2 = Byte.toUnsignedInt(response[4]);
+        log.info("df2: " + df2);
         int decimals = Byte.toUnsignedInt(response[5]);
+        log.info("decimals: " + decimals);
         // df4 reserved
         int unit = Byte.toUnsignedInt(response[7]); // 0 ppm, 2 vol%
         // df6 df7 reserved
         double range = (df1 * 256 + df2) / Math.pow(10, decimals);
+        log.info("Range: " + range);
         String unitStr = unit == 0 ? "ppm" : (unit == 2 ? "vol%" : "unknown");
+        log.info("unit: " + unitStr);
+        log.info("decimals: " + decimals);
         AnswerValues answerValues = new AnswerValues(3);
         answerValues.addValue(range, "Range");
         answerValues.addValue((double) decimals, "Decimals");

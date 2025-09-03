@@ -4,6 +4,7 @@ import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
 import org.apache.log4j.Logger;
 import org.example.device.DeviceCommandListClass;
+import org.example.device.NonAscii;
 import org.example.device.SomeDevice;
 import org.example.device.command.SingleCommand;
 import org.example.device.connectParameters.ComConnectParameters;
@@ -36,6 +37,7 @@ public class Cubic implements SomeDevice {
     private int expectedBytes = 0;
 
     private String devIdent = "CUBIC";
+    private byte [] rawCmd = null;
 
     public Cubic() {
         log.info("Created Cubic protocol emulation object");
@@ -194,18 +196,24 @@ public class Cubic implements SomeDevice {
 
             byte[]  commandPart = new byte[3];
             System.arraycopy(cmdToSend.getBytes(), 0, sentPart, 0, 3);
+            //log.info("Определяю команду... ");
             for (SingleCommand value : commandsList.values()) {
+                //log.info("Готовлюсь к просмотру тела команды (имя): " + value.getGuiName());
+                //log.info("Готовлюсь к просмотру тела команды (значение): " +  MyUtilities.bytesToHex(value.getBaseBody()));
                 System.arraycopy(value.getBaseBody(), 0, commandPart, 0, 3);
-                //log.info("Arrays commandPart: " +  Arrays.toString(commandPart)  + " sentPart: " + Arrays.toString(sentPart));
+                //log.info("Сравниваю commandPart: " +  MyUtilities.bytesToHex(commandPart)  + " sentPart: " + MyUtilities.bytesToHex(sentPart));
                 if(Arrays.equals(commandPart, sentPart)){
+                    log.info("Found command pattern for command [" + value.getMapKey() + "]");
                     isKnown = true;
                     foundetCommand = value;
-                    log.info("Found command pattern for command [" + value.getMapKey() + "]");
                     break;
                 }
             }
+            //log.info("Завершил поиск команды");
             if (isKnown) {
+
                 answerValues = foundetCommand.getResult(lastAnswerBytes);
+                log.info("Записываю ответ [" +answerValues + "]");
                 if (answerValues != null) {
                     for (int i = 0; i < answerValues.getValues().length; i++) {
                         lastAnswer.append(answerValues.getValues()[i]);
@@ -216,7 +224,8 @@ public class Cubic implements SomeDevice {
                     log.info("CUBIC Cant create answers obj (error in answer)");
                 }
             } else {
-                lastAnswer.append(new String(MyUtilities.bytesToHex(lastAnswerBytes)));
+                lastAnswer.setLength(0);
+                lastAnswer.append(MyUtilities.bytesToHex(lastAnswerBytes));
                 log.info("CUBIC Cant create answers obj (unknown command)");
             }
         } else {
@@ -250,5 +259,10 @@ public class Cubic implements SomeDevice {
 
     public AnswerValues getValues() {
         return this.answerValues;
+    }
+
+    //@Override
+    public void setRawCommand(byte[] cmd) {
+        this.rawCmd = cmd;
     }
 }

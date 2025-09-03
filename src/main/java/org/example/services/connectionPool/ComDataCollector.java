@@ -320,6 +320,7 @@ public class ComDataCollector implements Runnable{
         }
         currentDirection.set(clientId);
 
+
         if(internal){
             waitForComDataCollectorBusy(40);
         }else {
@@ -365,7 +366,20 @@ public class ComDataCollector implements Runnable{
             buffer[i] = (byte) textToSend.charAt(i);
         }
         System.arraycopy(device.getStrEndian(), 0, buffer, textToSend.length() , device.getStrEndian().length);
-        comPort.writeBytes(buffer, buffer.length);
+        if(! device.isASCII()){
+            if(collection.containClientId(clientId) && collection.getRawCommand(clientId) != null){
+                log.info("Отправляю сырую команду из состояния панели" + MyUtilities.bytesToHex(collection.getRawCommand(clientId)));
+                if(device instanceof NonAscii){
+                    log.info("Выполняю setRawCommand с проверкой через device instanceof NonAscii");
+                    ((NonAscii) device).setRawCommand(collection.getRawCommand(clientId));
+                }
+                comPort.writeBytes(collection.getRawCommand(clientId), collection.getRawCommand(clientId).length);
+            }
+
+        }else{
+            comPort.writeBytes(buffer, buffer.length);
+        }
+
 
 
 
