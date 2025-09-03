@@ -59,7 +59,7 @@ public class ComDataCollector implements Runnable{
     private volatile long requestTimestamp = 0;
     private final long RESPONSE_TIMEOUT_MS = 3000; // Таймаут ожидания ответа
     private volatile DeviceAnswer deviceAnswer;
-    private ComRule currentComRule;
+    private volatile ComRule currentComRule;
 
     private MainLeftPanelStateCollection collection;
     private int clientId;
@@ -148,9 +148,15 @@ public class ComDataCollector implements Runnable{
     public void handleDataAvailableEvent() {
         // 2. Используйте ByteArrayOutputStream для накопления байтов
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        byte[] chunk = new byte[2048];
-        long delay = device == null ? 150L : device.getMillisReadLimit();
         int sizeLimit = 2048;
+        byte[] chunk = new byte[sizeLimit + 1];
+        long delay = 150L;
+        if(device != null){
+            if(device.getMillisReadLimit() != 0){
+                delay = device.getMillisReadLimit();
+            }
+        }
+
 
         try {
             int dataAvailable = comPort.bytesAvailable();
@@ -159,6 +165,8 @@ public class ComDataCollector implements Runnable{
                 // 3. Записываем сырые байты в буфер
                 buffer.write(chunk, 0, bytesRead);
                 if (buffer.size() >= sizeLimit) {
+                    buffer.reset();
+                    log.warn("Переполнение буффера при приёме данных, сделан сброс");
                     return;
                 }
                 sleepSafely(delay);
@@ -173,28 +181,23 @@ public class ComDataCollector implements Runnable{
                 // Для логирования используйте bytesToHex
                 log.info("Добавлено сообщение в очередь: " + MyUtilities.bytesToHex(receivedBytes));
             }
-        } finally {
+        } catch (Exception e) {  // Или конкретнее, напр. IOException | RuntimeException
+            log.warn("Исключение в обработке данных из порта", e);  // Лог с трассой
+        }finally {
             comDataCollectorBusy.set(false);
             comPort.addDataListener(serialPortDataListener);
         }
     }
-/*
-            if (responseRequested && (System.currentTimeMillis() - requestTimestamp) < RESPONSE_TIMEOUT_MS) {
-                //log.info("Получен ожидаемый ответ" + receivedData.trim());
-                saveReceivedByEvent(receivedData, true);
-                responseRequested = false;
-                //log.info("Завершена обработка ожидаемых данных (ответа)");
-            } else {
-                //log.info("Получены неожиданные данные: " + receivedData.trim());
-                saveReceivedByEvent(receivedData, false);
-                //log.info("Завершена обработка неожиданных данных. responseRequested " + responseRequested + " requestTimestamp " + requestTimestamp);
-            }
-*/
+
     private void processIncomingMessages() {
         while (!incomingMessages.isEmpty()) {
             ReceivedData data = incomingMessages.poll();
             if (data != null) {
-                saveReceivedByEvent(data.message, data.isResponseRequested, data.timestamp);
+                try {
+                    saveReceivedByEvent(data.message, data.isResponseRequested, data.timestamp);
+                } catch (Exception e) {
+                    log.warn("Исключение при обработке входящего сообщения", e);
+                }
             }
         }
     }
@@ -375,18 +378,21 @@ public class ComDataCollector implements Runnable{
     }
 
     public void saveReceivedByEvent(byte[] message, boolean responseRequested, long receiveTimestamp) {
+        log.info("saveReceivedByEvent вызван: responseRequested=" + responseRequested + ", message.length=" + (message != null ? message.length : "null") + ", device=" + (device != null ? "ok" : "null") + ", deviceAnswer=" + (deviceAnswer != null ? "ok" : "null"));
         if(message == null || message.length == 0){
             log.warn("Пустое сообщение при попытке saveReceivedByEvent");
             return;
         }
 
-        String msg = message.toString();
         //log.info("Конвертация в массив завершена");
         if (device == null) {
-            log.error("Устройство не инициализировано при попытке saveReceivedByEvent");
+            log.warn("Устройство не инициализировано при попытке saveReceivedByEvent");
             return;
         }
         if(deviceAnswer == null || responseRequested != true){
+            if(currentDirection == null || currentDirection.get() == 0){
+                log.warn("Неверное значение currentDirection");
+            }
             deviceAnswer = new DeviceAnswer(LocalDateTime.ofInstant(Instant.ofEpochMilli(receiveTimestamp), ZoneId.systemDefault()), "", currentDirection.get());
         }
 
@@ -397,8 +403,10 @@ public class ComDataCollector implements Runnable{
                 currentComRule.updateState();
                 return;
             }
-            if(collection.containClientId(clientId)){
+            if(collection != null && collection.containClientId(clientId)){
                 device.setCmdToSend(collection.getCommand(clientId));
+            }else{
+                log.warn("Collection null или не содержит clientId: " + clientId);
             }
         }else{
             device.setCmdToSend(null);
@@ -435,6 +443,7 @@ public class ComDataCollector implements Runnable{
             }
         }catch (Exception e){
             log.warn("Исключение во время разбора ответа внутри класса прибора" + e.getMessage());
+            log.warn("Трасса:" + Arrays.toString(e.getStackTrace()));
             answer = "Исключение во время разбора ответа внутри класса прибора";
         }
 
