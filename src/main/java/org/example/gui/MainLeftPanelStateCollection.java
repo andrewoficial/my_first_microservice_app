@@ -241,6 +241,14 @@ public class MainLeftPanelStateCollection {
         stateObj.setProtocol(state);
     }
 
+    public void setRawCommand(int clientId, byte [] cmd){
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        stateObj.setRawCommand(cmd);
+    }
+
     public int getNewRandomId(){
         int candidate = (int) (500000 + Math.random() * 10000 + Math.random() * 10);
         while(clientIdTab.containsKey(candidate)){
@@ -345,6 +353,14 @@ public class MainLeftPanelStateCollection {
             throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
         }
         return stateObj.getPrefix();
+    }
+
+    public byte [] getRawCommand(int clientId){
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        return stateObj.getRawCommand();
     }
 
 

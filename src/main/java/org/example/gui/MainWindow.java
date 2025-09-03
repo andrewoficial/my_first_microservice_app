@@ -538,7 +538,10 @@ public class MainWindow extends JFrame implements Rendeble {
 
 
                 byte[] cmdForSend = entry.getValue().build(argsValue);
+                log.info("Set command in input field to " + MyUtilities.bytesToHex(cmdForSend));
                 textField_textToSend.setText(MyUtilities.byteArrayToString(cmdForSend));
+                leftPanState.setRawCommand(currentActiveClientId.get(), cmdForSend);
+                log.info("Saved  " + MyUtilities.bytesToHex(textField_textToSend.getText().getBytes()));
             });
 
             commandPanel.add(sendButton);
@@ -720,6 +723,7 @@ public class MainWindow extends JFrame implements Rendeble {
             if (ps != null)
                 anyPoolService.findComDataCollectorByClientId(currentActiveClientId.get()).setTextToSendString(leftPanState.getPrefix(currentActiveClientId.get()), leftPanState.getCommand(currentActiveClientId.get()), currentActiveClientId.get());
             saveParameters();
+
         }
     }
 

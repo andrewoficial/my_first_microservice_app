@@ -4,11 +4,13 @@ import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
 import org.apache.log4j.Logger;
 import org.example.device.DeviceCommandListClass;
+import org.example.device.NonAscii;
 import org.example.device.SomeDevice;
 import org.example.device.command.SingleCommand;
 import org.example.device.connectParameters.ComConnectParameters;
 import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
+import org.example.utilites.MyUtilities;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -17,7 +19,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-public class BeLead implements SomeDevice {
+public class BeLead implements SomeDevice, NonAscii {
     private static final Logger log = Logger.getLogger(BeLead.class);
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора
@@ -35,6 +37,7 @@ public class BeLead implements SomeDevice {
     private int expectedBytes = 0;
 
     private String devIdent = "BLDM";
+    private byte [] rawCmd = null;
 
     private static final int[] BAUDRATES = {38400, 50, 75, 110, 150, 300, 600, 1200, 2400, 4800, 9600, 19200, 57600, 115200};
 
@@ -206,12 +209,41 @@ public class BeLead implements SomeDevice {
 
     @Override
     public void parseData() {
+        //rawCmd
         if (lastAnswerBytes != null && lastAnswerBytes.length > 0) {
             lastAnswer.setLength(0);
             String cmdName = cmdToSend != null ? cmdToSend.split(" ")[0] : "";
-            SingleCommand foundCommand = commands.getCommand(cmdName);
-            if (foundCommand != null) {
-                answerValues = foundCommand.getResult(lastAnswerBytes);
+            boolean isKnown = false;
+            log.info("Отправленная команда: " + MyUtilities.bytesToHex(rawCmd));
+            log.info("Полученный ответ: " + MyUtilities.bytesToHex(lastAnswerBytes));
+
+            HashMap <String, SingleCommand> commandsList = commands.getCommandPool();
+            SingleCommand foundetCommand = null;
+
+            byte[]  sentPart = new byte[3];
+            //Заменено на rawCmd вместо сломанного от стрин билдера
+            System.arraycopy(rawCmd, 0, sentPart, 0, 3);
+
+            byte[]  commandPart = new byte[3];
+            System.arraycopy(rawCmd, 0, sentPart, 0, 3);
+            log.info("Определяю команду... ");
+            for (SingleCommand value : commandsList.values()) {
+                log.info("Готовлюсь к просмотру тела команды (имя): " + value.getGuiName());
+                //log.info("Готовлюсь к просмотру тела команды (значение): " +  MyUtilities.bytesToHex(value.getBaseBody()));
+                System.arraycopy(value.getBaseBody(), 0, commandPart, 0, 3);
+                log.info("Сравниваю commandPart: " +  MyUtilities.bytesToHex(commandPart)  + " sentPart: " + MyUtilities.bytesToHex(sentPart));
+                if(Arrays.equals(commandPart, sentPart)){
+                    log.info("Found command pattern for command [" + value.getMapKey() + "]");
+                    isKnown = true;
+                    foundetCommand = value;
+                    break;
+                }
+            }
+            //log.info("Завершил поиск команды");
+            if (isKnown) {
+
+                answerValues = foundetCommand.getResult(lastAnswerBytes);
+                log.info("Записываю ответ [" +answerValues + "]");
                 if (answerValues != null) {
                     for (int i = 0; i < answerValues.getValues().length; i++) {
                         lastAnswer.append(answerValues.getValues()[i]);
@@ -222,11 +254,12 @@ public class BeLead implements SomeDevice {
                     log.info("BELEAD Cant create answers obj (error in answer)");
                 }
             } else {
-                lastAnswer.append(new String(lastAnswerBytes));
+                lastAnswer.setLength(0);
+                lastAnswer.append(MyUtilities.bytesToHex(lastAnswerBytes));
                 log.info("BELEAD Cant create answers obj (unknown command)");
             }
         } else {
-            log.info("BELEAD empty received");
+            log.info("BELEAD: empty received");
         }
     }
 
@@ -256,5 +289,10 @@ public class BeLead implements SomeDevice {
 
     public AnswerValues getValues() {
         return this.answerValues;
+    }
+
+    @Override
+    public void setRawCommand(byte[] cmd) {
+        this.rawCmd = cmd;
     }
 }

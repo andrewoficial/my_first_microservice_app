@@ -6,6 +6,7 @@ import org.example.device.command.SingleCommand;
 import org.example.device.command.ArgumentDescriptor;
 import org.example.device.command.CommandType;
 import org.example.services.AnswerValues;
+import org.example.utilites.MyUtilities;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -51,7 +52,7 @@ public class BeLeadCommandRegistry extends DeviceCommandRegistry {
     }
 
     private SingleCommand createGetAllDataCommand() {
-        byte[] baseBody = buildReadCommand((byte) 0x13, null);
+        byte[] baseBody = buildReadCommand((byte) 0x01, null); // Исправлено: 0x01 вместо 0x13
         SingleCommand command = new SingleCommand(
                 "getAllData",
                 "getAllData - Получить все измеренные данные",
@@ -59,7 +60,7 @@ public class BeLeadCommandRegistry extends DeviceCommandRegistry {
                 baseBody,
                 args -> baseBody, // No args
                 this::parseDataResponse,
-                27, // Assuming similar response length as Dynament
+                39, // Исправлено: 39 байт для ответа со всеми данными
                 CommandType.BINARY
         );
         return command;
@@ -73,15 +74,15 @@ public class BeLeadCommandRegistry extends DeviceCommandRegistry {
                 "getSimpleData",
                 baseBody,
                 args -> baseBody, // No args
-                this::parseDataResponse,
-                27, // Assuming similar; adjust if known
+                this::parseSimpleDataResponse,
+                23, // Исправлено: 23 байта для ответа с простыми данными
                 CommandType.BINARY
         );
         return command;
     }
 
     private SingleCommand createSetZeroCommand() {
-        byte[] baseBody = buildWriteCommand((byte) 0x02, null); // Assuming 0x02 for zero calibration
+        byte[] baseBody = buildWriteCommand((byte) 0x02, null);
         SingleCommand command = new SingleCommand(
                 "setZero",
                 "setZero - Установить калибровку нуля",
@@ -96,7 +97,7 @@ public class BeLeadCommandRegistry extends DeviceCommandRegistry {
     }
 
     private SingleCommand createSetConcCommand() {
-        byte[] baseBody = buildWriteCommand((byte) 0x03, null); // Assuming 0x03 for span calibration
+        byte[] baseBody = buildWriteCommand((byte) 0x03, null);
         SingleCommand command = new SingleCommand(
                 "setConc",
                 "setConc [value] - Установить калибровку span",
@@ -106,7 +107,15 @@ public class BeLeadCommandRegistry extends DeviceCommandRegistry {
                     Float value = (Float) args.getOrDefault("value", 0.0f);
                     ByteBuffer bb = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(value);
                     byte[] valueBytes = bb.array();
-                    return buildWriteCommand((byte) 0x03, valueBytes);
+
+                    // Преобразуем 4 байта в 8 байтов (каждый байт разбивается на два)
+                    byte[] expandedValue = new byte[8];
+                    for (int i = 0; i < 4; i++) {
+                        expandedValue[i * 2] = (byte) ((valueBytes[i] >> 4) & 0x0F);
+                        expandedValue[i * 2 + 1] = (byte) (valueBytes[i] & 0x0F);
+                    }
+
+                    return buildWriteCommand((byte) 0x03, expandedValue);
                 },
                 this::parseAckNakResponse,
                 6,
@@ -116,16 +125,18 @@ public class BeLeadCommandRegistry extends DeviceCommandRegistry {
                 "value",
                 Float.class,
                 0.0f,
-                val -> (Float) val >= 0 // Basic validation
+                val -> (Float) val >= 0
         ));
         return command;
     }
 
     public byte[] buildReadCommand(byte variableId, byte[] data) {
+        log.info("Return buildReadCommand body " + MyUtilities.bytesToHex(buildCommand(RD, variableId, data, true)));
         return buildCommand(RD, variableId, data, true);
     }
 
     public byte[] buildWriteCommand(byte variableId, byte[] data) {
+        log.info("Return buildWriteCommand body " + MyUtilities.bytesToHex(buildCommand(WR, variableId, data, true)));
         return buildCommand(WR, variableId, data, true);
     }
 
@@ -145,21 +156,76 @@ public class BeLeadCommandRegistry extends DeviceCommandRegistry {
         frame[11] = DLE;
         frame[12] = EOF;
         byte[] cs = calculateChecksum(frame, isHostSend);
+        log.info("Return buildCommand body " + MyUtilities.bytesToHex(concatenate(frame, cs)));
         return concatenate(frame, cs);
     }
 
     private byte[] calculateChecksum(byte[] data, boolean isHostSend) {
-        long checksum = 0;
+        int sum = 0;
         for (byte b : data) {
-            checksum += Byte.toUnsignedLong(b);
+            sum += b & 0xFF;
         }
         if (isHostSend) {
-            // 32-bit checksum for host send (4 bytes), big-endian
-            return ByteBuffer.allocate(4).putInt((int) (checksum & 0xFFFFFFFFL)).array();
+            // Для отправки: представляем 16-битную сумму как 4 байта (каждый полубайт становится байтом)
+            byte[] checksumBytes = new byte[4];
+            checksumBytes[0] = (byte) ((sum >> 12) & 0x0F);
+            checksumBytes[1] = (byte) ((sum >> 8) & 0x0F);
+            checksumBytes[2] = (byte) ((sum >> 4) & 0x0F);
+            checksumBytes[3] = (byte) (sum & 0x0F);
+            return checksumBytes;
         } else {
-            // 16-bit checksum for sensor send (2 bytes), big-endian
-            return ByteBuffer.allocate(2).putShort((short) (checksum & 0xFFFF)).array();
+            // Для приема: возвращаем 2 байта (старший и младший) в big-endian порядке
+            return new byte[] { (byte) (sum >> 8), (byte) (sum & 0xFF) };
         }
+    }
+
+    private AnswerValues parseSimpleDataResponse(byte[] response) {
+            AnswerValues answerValues = new AnswerValues(4); // concentration, temperature, humidity, absorbance
+
+            if (response.length < 23) {
+                log.warn("BELEAD: Слишком короткий ответ для SimpleDataResponse. Длина: " + response.length);
+                return null;
+            }
+
+            if (response[0] != START || response[1] != DAT) {
+                log.warn("BELEAD: Некорректный заголовок пакета (START DAT) в SimpleDataResponse");
+                return null;
+            }
+
+            if (!validateChecksum(response, false)) {
+                log.warn("BELEAD: Ошибка контрольной суммы в SimpleDataResponse");
+            }
+
+            int dataLength = Byte.toUnsignedInt(response[2]);
+            if (dataLength != 16) {
+                log.warn("BELEAD: Неожиданная длина данных в SimpleDataResponse: " + dataLength);
+                return null;
+            }
+
+            // Извлекаем 16 байт данных (4 float значения)
+            byte[] data = Arrays.copyOfRange(response, 3, 3 + dataLength);
+
+            // Парсим концентрацию (байты 0-3)
+            float concentration = ByteBuffer.wrap(Arrays.copyOfRange(data, 0, 4))
+                    .order(ByteOrder.LITTLE_ENDIAN).getFloat();
+            answerValues.addValue(concentration, "Концентрация (ppm)");
+
+            // Парсим температуру (байты 4-7)
+            float temperature = ByteBuffer.wrap(Arrays.copyOfRange(data, 4, 8))
+                    .order(ByteOrder.LITTLE_ENDIAN).getFloat();
+            answerValues.addValue(temperature, "Температура (°C)");
+
+            // Парсим влажность (байты 8-11)
+            float humidity = ByteBuffer.wrap(Arrays.copyOfRange(data, 8, 12))
+                    .order(ByteOrder.LITTLE_ENDIAN).getFloat();
+            answerValues.addValue(humidity, "Влажность (% RH)");
+
+            // Парсим поглощение (байты 12-15)
+            float absorbance = ByteBuffer.wrap(Arrays.copyOfRange(data, 12, 16))
+                    .order(ByteOrder.LITTLE_ENDIAN).getFloat();
+            answerValues.addValue(absorbance, "Поглощение");
+
+            return answerValues;
     }
 
     private AnswerValues parseDataResponse(byte[] response) {

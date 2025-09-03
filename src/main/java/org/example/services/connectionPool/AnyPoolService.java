@@ -7,6 +7,7 @@ import org.example.gui.MainLeftPanelStateCollection;
 import org.example.services.AnswerSaverSync;
 import org.example.services.AnswerStorage;
 import org.example.services.comPort.ComPort;
+import org.example.utilites.MyUtilities;
 import org.example.utilites.properties.MyProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -53,6 +54,7 @@ public class AnyPoolService {
 
         if (psSearch != null) {
             log.info("Изменение существующего потока. Отправка префикса "  + state.getPrefix(clientId) + " и команды " + state.getCommand(clientId));
+            log.info("Binary: " + MyUtilities.bytesToHex(state.getCommand(clientId).getBytes()));
             processExistingComDataCollector(state, psSearch, clientId, pool, isBtn, poolDelay);
             return " Добавление вкладки к существующему потоку ";
 
@@ -87,6 +89,7 @@ public class AnyPoolService {
         //log.info("Порт уже используется, проверка среди запущенных потоков");
         if (psSearch.containClientId(clientId)) {
             log.info("Клинет уже содержится в потоке отправка префикса и команды");
+
             handleTabInExistingCollector(psSearch, clientId, state, pool, isBtn, poolDelay);
         } else {
             log.info("Клинет не содержится в потоке");
