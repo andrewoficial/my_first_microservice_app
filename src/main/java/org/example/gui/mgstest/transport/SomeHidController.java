@@ -13,31 +13,30 @@ public class SomeHidController {
 
     public int count = 0;
 
-    public void resetCounter(){
-        count = 0;
-    }
 
-    public int simpleSend(HidDevice device, byte[] data) {
-        count++;
-        if (device.isOpen()) {
-            //log.info("Перед отправкой все еще открыто");
-        } else {
-            log.warn("Перед отправкой ЗАКРЫТО");
-        }
-
-        //log.info("Отправка пакета номер: " + count);
-        log.info("Полезная нагрузка: " + MyUtilities.bytesToHex(data));
-
+    /**
+     *
+     * @param device -  HID-устройство куда отправлять
+     * @param data -  byte массив данных. От 1 до 64. Будет заполнен 00 до 64.
+     */
+    public void simpleSend(HidDevice device, byte[] data) {
         byte reportId = data[0];
         byte[] msg = generateMessageConfiguredDropFirst(data);
-
-        //log.info("Должно совпадать в сниффере с массивом ниже:");
-        //printArrayLikeDeviceMonitor(generateMessageConfiguredUnmodified(data));
-
         int sent = device.write(msg, msg.length, reportId);
-        log.info("Отправлено байт: " + sent);
+        log.info("Полезная нагрузка: " + MyUtilities.bytesToHex(data) + " остальное заполнено 00 до " + sent + " байт");
+        //log.info(" Остальное заполнено 00 до " + sent + " байт");
+    }
 
-        return sent;
+    /**
+     *
+     * @param device -  HID-устройство куда отправлять
+     * @param data -  byte массив данных. От 1 до 64. Будет заполнен CC до 64.
+     */
+    public void simpleSendInitial(HidDevice device, byte[] data) {
+        byte reportId = data[0];
+        byte[] msg = generateMessageConfiguredDropFirstInitial(data);
+        int sent = device.write(msg, msg.length, reportId);
+        log.info("Полезная нагрузка: " + MyUtilities.bytesToHex(data) + " остальное заполнено CC до " + sent + " байт");
     }
 
     public void printArrayLikeDeviceMonitor(byte[] data) {
@@ -46,18 +45,13 @@ public class SomeHidController {
         }
 
         for (int i = 0; i < data.length; i++) {
-            // Преобразование в беззнаковое значение (0-255)
             int unsignedValue = data[i] & 0xFF;
-            // Форматирование в HEX с ведущим нулем
             System.out.printf("%02X ", unsignedValue);
-
-            // Перенос строки каждые 16 байт (после текущего элемента)
             if ((i + 1) % 16 == 0) {
                 System.out.println();
             }
         }
 
-        // Добавляем перенос в конце, если последняя строка не полная
         if (data.length % 16 != 0) {
             System.out.println();
         }
@@ -68,7 +62,21 @@ public class SomeHidController {
             System.out.println("Слишком большое сообщение");
         }
         byte[] msg = new byte[64];
-        Arrays.fill(msg, (byte) 0xcc);
+        Arrays.fill(msg, (byte) 0x00);
+        int counterLimit = Math.min(64, data.length);
+        for (int i = 1; i < counterLimit; i++) {
+            msg[i-1] = data[i];
+        }
+        //System.out.println("Создана посылка размером " + msg.length);
+        return msg;
+    }
+
+    public byte[] generateMessageConfiguredDropFirstInitial(byte[] data) {
+        if (data.length > 64) {
+            System.out.println("Слишком большое сообщение");
+        }
+        byte[] msg = new byte[64];
+        Arrays.fill(msg, (byte) 0xCC);
         int counterLimit = Math.min(64, data.length);
         for (int i = 1; i < counterLimit; i++) {
             msg[i-1] = data[i];

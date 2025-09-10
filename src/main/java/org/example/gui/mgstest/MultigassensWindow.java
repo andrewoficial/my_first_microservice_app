@@ -4,33 +4,39 @@ import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import org.apache.log4j.Logger;
 import org.example.gui.Rendeble;
+import org.example.gui.components.SimpleButton;
+import org.example.gui.components.SimpleTabbedPane;
+import org.example.gui.mgstest.device.AllCoef;
 import org.example.gui.mgstest.device.DeviceInfo;
+import org.example.gui.mgstest.pool.DeviceState;
+import org.example.gui.mgstest.pool.DeviceStateStorage;
+import org.example.gui.mgstest.tabs.TabCoefficients;
+import org.example.gui.mgstest.tabs.DeviceTab;
+import org.example.gui.mgstest.tabs.TabInfo;
+import org.example.gui.mgstest.tabs.TabSettings;
 import org.example.gui.mgstest.transport.CradleController;
 import org.hid4java.HidDevice;
 import org.hid4java.HidManager;
 import org.hid4java.HidServices;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MultigassensWindow extends JFrame implements Rendeble {
-
     private Logger log = Logger.getLogger(MultigassensWindow.class);
 
-    private JTable deviceTable;
-    private DefaultTableModel tableModel;
+    private JList<String> cradleList;
+    private DefaultListModel<String> listModel;
     private JPanel contentPane;
+
+    private TabInfo infoTab;
     private JButton shutdownButton;
+    private JButton setCoefficientsButton;
     private JButton getInfoButton;
-    private JButton alarmOnButton;
-    private JButton alarmOffButton;
     private JButton opticCommandButton;
-    private JButton beepCmd;
-    private JButton blinkCmd;
-    private JButton rebootCmd;
-    private JButton resetBatteryButton;
     private JButton setSerialNumberButton;
     private boolean MGS_found = false;
     private boolean MGS_CreadleFound = false;
@@ -39,10 +45,17 @@ public class MultigassensWindow extends JFrame implements Rendeble {
     private HidDevice selectedDevice;
     CradleController cradleController = new CradleController();
     JPanel statusMGSpanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    private Map<String, String> deviceIdToSerialMap = new HashMap<>();
+    private Map<String, String> serialToDeviceIdMap = new HashMap<>();
+    private Map<String, HidDevice> deviceMap = new HashMap<>();
+    private DeviceStateStorage stateStorage = DeviceStateStorage.getInstance();
+    private JTabbedPane tabbedPane;
+    private Map<String, DeviceTab> tabs = new HashMap<>();
 
     public MultigassensWindow() {
         setTitle("MGS Test");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setSize(800, 600); // Временно изменил размер окна (проверить шрифты)
 
         contentPane = new JPanel();
         setContentPane(contentPane);
@@ -54,6 +67,7 @@ public class MultigassensWindow extends JFrame implements Rendeble {
     @Override
     public void renderData() {
         updateDeviceList();
+        deviceMap.clear();
     }
 
     @Override
@@ -65,109 +79,127 @@ public class MultigassensWindow extends JFrame implements Rendeble {
         hidServices = HidManager.getHidServices();
         contentPane.setLayout(new BorderLayout());
 
-        String[] columns = {"Vendor ID", "Product ID", "Manufacturer", "Product", "Serial Number"};
-        tableModel = new DefaultTableModel(columns, 0);
-        deviceTable = new JTable(tableModel);
+        // Панель с информацией о устройстве
+        tabbedPane = new SimpleTabbedPane();
+        TabInfo infoTab = new TabInfo(cradleController, selectedDevice, null);
+        tabs.put("info", infoTab);
+        tabbedPane.addTab(infoTab.getTabName(), infoTab.getPanel());
 
-        contentPane.add(new JScrollPane(deviceTable), BorderLayout.CENTER);
+        TabCoefficients coefficientsTab = new TabCoefficients();
+        tabs.put("coefficients", coefficientsTab);
+        tabbedPane.addTab(coefficientsTab.getTabName(), coefficientsTab.getPanel());
+
+        TabSettings settingsTab = new TabSettings();
+        tabs.put("settings", settingsTab);
+        tabbedPane.addTab(settingsTab.getTabName(), settingsTab.getPanel());
+
+        contentPane.add(tabbedPane, BorderLayout.CENTER);
+
+        String[] columns = {"Vendor ID", "Product ID", "Manufacturer", "Product", "Serial Number"};
+        // Панель с списком кредлов слева
+        JPanel leftPanel = new JPanel(new BorderLayout());
+        leftPanel.setPreferredSize(new Dimension(200, 400));
+
+        listModel = new DefaultListModel<>();
+        cradleList = new JList<>(listModel);
+        cradleList.addListSelectionListener(e -> {
+            String selectedDisplayName = cradleList.getSelectedValue();
+            if (selectedDisplayName != null) {
+                selectedDevice = deviceMap.get(selectedDisplayName);
+                if (selectedDevice != null) {
+                    String deviceKey = selectedDevice.getPath();
+                    String storageKey = deviceIdToSerialMap.get(deviceKey);
+                    if (storageKey != null) {
+                        updateDeviceInfo(storageKey);
+                        infoTab.setCradleController(cradleController);
+                        infoTab.setSelectedDevice(selectedDevice);
+                        if(stateStorage.get(storageKey) == null){
+                            log.error("stateStorage.get(storageKey) == null");
+                        }else{
+                            infoTab.setDeviceState(stateStorage.get(storageKey));
+                            coefficientsTab.updateData(stateStorage.get(storageKey));
+                        }
+                    }
+                }
+            }
+        });
+
+        leftPanel.add(new JLabel("Cradles:"), BorderLayout.NORTH);
+        leftPanel.add(new JScrollPane(cradleList), BorderLayout.CENTER);
+
+        contentPane.add(leftPanel, BorderLayout.WEST);
+
+
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        shutdownButton = new JButton("Shutdown Device");
+        shutdownButton = new SimpleButton("Shutdown");
         shutdownButton.addActionListener(e -> {
             if (selectedDevice != null) {
                 //cradleController.
+                byte[] coefRaw = null;
+                try {
+                    coefRaw = cradleController.getAllCoef(selectedDevice);
+                } catch (Exception ex) {
+                    log.warn("Ошибка во время выполнения getAllCoef" + ex.getMessage());
+                    //throw new RuntimeException(ex);
+                }
+                if(coefRaw != null){
+                    AllCoef coef = AllCoef.parseAllCoef(coefRaw);
+                    if(stateStorage.get(generateStorageKey(selectedDevice)) != null){
+                        stateStorage.get(generateStorageKey(selectedDevice)).setAllCoef(coef);
+                    }else{
+                        DeviceState state = new DeviceState();
+                        state.setAllCoef(coef);
+                        stateStorage.put(generateStorageKey(selectedDevice), state);
+                    }
+                    coefficientsTab.updateData(stateStorage.get(generateStorageKey(selectedDevice)));
+                    log.info("Parsed coef: " + coef.toString());
+                }else{
+                    log.warn("coefRaw == null)");
+                }
+
             } else {
                 JOptionPane.showMessageDialog(this, "No device selected");
             }
         });
         buttonPanel.add(shutdownButton);
 
-        getInfoButton = new JButton("Get Info");
+        setCoefficientsButton = new SimpleButton("SET O2");
+        setCoefficientsButton.addActionListener(e -> {
+            if (selectedDevice != null) {
+                //cradleController.
+                byte[] coefRaw = null;
+                try {
+                    cradleController.setCoefficientsO2(selectedDevice);
+                } catch (Exception ex) {
+                    log.warn("Ошибка во время выполнения setCoefficientsO2" + ex.getMessage());
+                    //throw new RuntimeException(ex);
+                }
+
+            } else {
+                JOptionPane.showMessageDialog(this, "No device selected");
+            }
+        });
+        buttonPanel.add(setCoefficientsButton);
+
+        getInfoButton = new SimpleButton("Get Info");
         getInfoButton.addActionListener(e -> {
 
         });
         buttonPanel.add(getInfoButton);
 
-        alarmOnButton = new JButton("Alarm On");
-        alarmOnButton.addActionListener(e -> {
-            if (selectedDevice != null) {
-                cradleController.soundOn(selectedDevice);
-            } else {
-                JOptionPane.showMessageDialog(this, "No device connected");
-            }
-        });
-        buttonPanel.add(alarmOnButton);
 
-        alarmOffButton = new JButton("Alarm Off");
-        alarmOffButton.addActionListener(e -> {
-            if (selectedDevice != null) {
-                cradleController.soundOff(selectedDevice);
-            } else {
-                JOptionPane.showMessageDialog(this, "No device connected");
-            }
-        });
-        buttonPanel.add(alarmOffButton);
 
-        opticCommandButton = new JButton("Send Optic Command");
+        opticCommandButton = new SimpleButton("Send Optic Command");
         opticCommandButton.addActionListener(e -> {
             String text = JOptionPane.showInputDialog(this, "Enter text for optic command:");
 
         });
         buttonPanel.add(opticCommandButton);
 
-        beepCmd = new JButton("Beep Test");
-        beepCmd.addActionListener(e -> {
-            if (selectedDevice != null) {
-                cradleController.beepTest(selectedDevice);
-            } else {
-                JOptionPane.showMessageDialog(this, "No device connected");
-            }
-        });
-        buttonPanel.add(beepCmd);
 
-        blinkCmd = new JButton("Blink Test");
-        blinkCmd.addActionListener(e -> {
-            if (selectedDevice != null) {
-                //cradleController.blinkTest(selectedDevice);
-                byte[] deviceInfoRaw = null;
-                try {
-                    deviceInfoRaw = cradleController.getDeviceInfo(selectedDevice);
-                } catch (Exception ex) {
-                    log.warn(ex.getMessage());
-                }
 
-                try{
-                    DeviceInfo info = DeviceInfo.parseDeviceInfo(deviceInfoRaw);
-                }catch (Exception ex){
-                    log.warn(ex.getMessage());
-                }
-            } else {
-                JOptionPane.showMessageDialog(this, "No device connected");
-            }
-        });
-        buttonPanel.add(blinkCmd);
-
-        rebootCmd = new JButton("Reboot");
-        rebootCmd.addActionListener(e -> {
-            if (selectedDevice != null) {
-                cradleController.rebootCmd(selectedDevice);
-            } else {
-                JOptionPane.showMessageDialog(this, "No device connected");
-            }
-        });
-        buttonPanel.add(rebootCmd);
-
-        resetBatteryButton = new JButton("Reset Battery Counter");
-        resetBatteryButton.addActionListener(e -> {
-            if (selectedDevice != null) {
-                cradleController.resetBatteryCounter(selectedDevice);
-            } else {
-                JOptionPane.showMessageDialog(this, "No device connected");
-            }
-        });
-        buttonPanel.add(resetBatteryButton);
-
-        setSerialNumberButton = new JButton("Set Serial Number");
+        setSerialNumberButton = new SimpleButton("Set Serial Number");
         setSerialNumberButton.addActionListener(e -> {
             if (selectedDevice != null) {
                 String input = JOptionPane.showInputDialog(this,
@@ -209,35 +241,59 @@ public class MultigassensWindow extends JFrame implements Rendeble {
         JPanel statusPanel = new JPanel(new GridLayout(1, 1));
         statusPanel.add(statusMGSpanel);
         contentPane.add(statusPanel, BorderLayout.SOUTH);
-
+        setupGetInfoButton();
         updateDeviceList();
     }
 
+    private String generateStorageKey(HidDevice device){
+        String deviceKey = device.getPath();
+        String serialNumber = device.getSerialNumber();
+
+        // Если серийный номер доступен, используем его как основной ключ
+        return  (serialNumber != null && !serialNumber.isEmpty()) ? serialNumber : deviceKey;
+    }
     private void updateDeviceList() {
-        tableModel.setRowCount(0);
+        listModel.clear();
+        deviceMap.clear();
 
         List<HidDevice> devices = hidServices.getAttachedHidDevices();
-
+        hidServices.stop();
         MGS_CreadleFound = false;
         for (HidDevice device : devices) {
             if (device != null && Integer.toHexString(device.getProductId()).equalsIgnoreCase("d0d0")) {
-                Object[] rowData = {
-                        String.format("%04X", device.getVendorId()),
-                        String.format("%04X", device.getProductId()),
-                        device.getManufacturer(),
-                        device.getProduct(),
-                        device.getSerialNumber()
-                };
-                tableModel.addRow(rowData);
+                String deviceKey = device.getPath();
+                String serialNumber = device.getSerialNumber();
 
-                System.out.println("Найден кредл: " + device.getProduct());
-                MGS_status = " кредл найден";
+                // Если серийный номер доступен, используем его как основной ключ
+                String displayName = String.format("%s (%s)",
+                        device.getProduct(),
+                        serialNumber != null && !serialNumber.isEmpty() ? serialNumber : "No SN");
+
+                //Добавление в список слева (JList)
+                listModel.addElement(displayName);
+
+                // Сохранение в deviceMap по отображаемому имени
+                deviceMap.put(displayName, device);
+
+
+                String storageKey = generateStorageKey(device);
+                // Сохраняем mapping между идентификаторами
+                deviceIdToSerialMap.put(deviceKey, storageKey);
+                if (serialNumber != null) {
+                    serialToDeviceIdMap.put(serialNumber, deviceKey);
+                }
+
+                // Используем storageKey для хранилища состояний
+                if (!stateStorage.contains(storageKey)) {
+                    stateStorage.put(storageKey, new DeviceState());
+                }
+
                 MGS_CreadleFound = true;
                 MGS_found = true;
-                selectedDevice = device;
-                poolMgs(device);
+                MGS_status = " кредл найден";
             }
         }
+
         if (!MGS_CreadleFound) {
             MGS_status = " не найдено";
             MGS_found = false;
@@ -245,21 +301,119 @@ public class MultigassensWindow extends JFrame implements Rendeble {
         updateStatusPanel(statusMGSpanel, "MGS" + MGS_status, MGS_found);
     }
 
-    private void poolMgs(HidDevice device) {
-        MGS_status = " найден кредл";
+    private void onDeviceSelected(String displayName) {
+        HidDevice device = deviceMap.get(displayName);
+        if (device != null) {
+            selectedDevice = device;
+            String deviceKey = device.getPath();
+            String storageKey = deviceIdToSerialMap.get(deviceKey);
 
-        if (device.isOpen()) {
-            System.out.println("Успешно открыто");
-        } else {
-            if (device.open()) {
-                System.out.println("Переоткрыто успешно ");
-            } else {
-                System.out.println("Ошибка открытия");
-                return;
+            if (storageKey != null) {
+                updateDeviceInfo(storageKey);
             }
         }
+    }
 
-        updateStatusPanel(statusMGSpanel, "MGS" + MGS_status, MGS_found);
+    // При получении информации об устройстве
+    private void onDeviceInfoReceived(HidDevice device, DeviceInfo info) {
+        String deviceKey = device.getPath();
+        String oldStorageKey = deviceIdToSerialMap.get(deviceKey);
+        String newStorageKey = String.valueOf(info.getSerialNumber());
+
+        // Если серийный номер изменился или мы раньше использовали deviceKey
+        if (!newStorageKey.equals(oldStorageKey)) {
+            // Переносим состояние на новый ключ
+            DeviceState oldState = stateStorage.get(oldStorageKey);
+            if (oldState != null) {
+                stateStorage.put(newStorageKey, oldState);
+                stateStorage.remove(oldStorageKey);
+            }
+
+            // Обновляем маппинги
+            deviceIdToSerialMap.put(deviceKey, newStorageKey);
+            serialToDeviceIdMap.put(newStorageKey, deviceKey);
+        }
+
+        updateDeviceInfo(newStorageKey);
+    }
+
+    private void updateDeviceInfo(String deviceKey) {
+        DeviceState state = stateStorage.get(deviceKey);
+
+        log.info("Вызвано updateDeviceInfo для ключа " + deviceKey);
+        if(state.getDeviceInfo() != null){
+            log.info("Найден прибор с номером " + state.getDeviceInfo().getSerialNumber());
+        }else{
+            log.info("Пустые данные ");
+        }
+
+        // Обновляем все вкладки
+        for (DeviceTab tab : tabs.values()) {
+            log.info("Обновляю для вкладки " + tab.getTabName());
+            tab.updateData(state);
+        }
+    }
+
+    // В методе обработки кнопки Get Info нужно обновлять состояние устройства
+    private void setupGetInfoButton() {
+        getInfoButton.addActionListener(e -> {
+            if (selectedDevice != null) {
+                byte[] deviceInfoRaw = null;
+                try{
+                    deviceInfoRaw = cradleController.getDeviceInfo(selectedDevice);
+                } catch (Exception ex) {
+                    log.warn("Failed getDeviceInfo: " + ex.getMessage());
+                    JOptionPane.showMessageDialog(this, "Error getting device info" + ex.getMessage());
+                }
+                log.info("Завершил получение данных");
+                DeviceState state = null;
+                DeviceInfo info = null;
+                String storageKey = null;
+                try {
+                    if(deviceInfoRaw == null){
+                        JOptionPane.showMessageDialog(this, "deviceInfoRaw is null");
+                        log.info("Полученные данные пусты!");
+                        return;
+                    }
+                    log.info("Начал парсинг массива данных");
+                    info = DeviceInfo.parseDeviceInfo(deviceInfoRaw);
+                    // Сохраняем информацию в хранилище
+                    String deviceKey = selectedDevice.getPath();
+                    storageKey = deviceIdToSerialMap.get(deviceKey);
+                    log.info("Найденный ключ устройства " + storageKey);
+                    state = stateStorage.get(storageKey);
+                    if (state == null) {
+                        state = new DeviceState();
+                        stateStorage.put(storageKey, state);
+                        log.info("Устройство было добавлено в пул состояний " + storageKey);
+                    }
+
+
+                } catch (Exception ex) {
+                    log.warn("Failed to get device info: " + ex.getMessage());
+                    JOptionPane.showMessageDialog(this, "Error getting device info " + ex.getMessage());
+                }
+
+                try {
+                    log.info("Для состояния обновляю данные " + info.serialNumber);
+                    state.setDeviceInfo(info);
+                }catch (Exception ex){
+                    log.warn("Failed to get device info: " + ex.getMessage());
+                    JOptionPane.showMessageDialog(this, "Error setDeviceInfo " + ex.getMessage());
+                }
+
+                try {
+                    log.info("Вызываю  updateDeviceInfo для ключа " + storageKey);
+                    updateDeviceInfo(storageKey);
+                }catch (Exception ex){
+                    log.warn("Failed to get device info: " + ex.getMessage());
+                    JOptionPane.showMessageDialog(this, "Error updateDeviceInfo " + ex.getMessage());
+                }
+
+            } else {
+                JOptionPane.showMessageDialog(this, "No device selected");
+            }
+        });
     }
 
     private void updateStatusPanel(JPanel panel, String label, boolean status) {
