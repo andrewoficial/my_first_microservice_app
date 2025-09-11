@@ -5,12 +5,13 @@ import lombok.Getter;
 import org.apache.log4j.Logger;
 import org.example.device.DeviceCommandListClass;
 import org.example.device.SomeDevice;
+import org.example.device.TemplatedAscii;
 import org.example.device.connectParameters.ComConnectParameters;
 import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 
 
-public class Mipex2  implements SomeDevice {
+public class Mipex2  implements SomeDevice, TemplatedAscii {
     private static final Logger log = Logger.getLogger(Mipex2.class);
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора

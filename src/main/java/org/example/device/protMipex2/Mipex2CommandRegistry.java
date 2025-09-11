@@ -2,9 +2,10 @@ package org.example.device.protMipex2;
 
 import org.apache.log4j.Logger;
 import org.example.device.DeviceCommandRegistry;
+import org.example.device.command.ArgumentDescriptor;
+import org.example.device.command.CommandType;
 import org.example.device.command.SingleCommand;
-import org.example.device.protMipex2.parsers.FULSParser;
-import org.example.device.protMipex2.parsers.FULUParser;
+import org.example.device.protMipex2.parsers.ZERO2Parser;
 import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
 
@@ -14,20 +15,19 @@ import static org.example.utilites.MyUtilities.*;
 
 public class Mipex2CommandRegistry extends DeviceCommandRegistry {
     private static final Logger log = Logger.getLogger(Mipex2CommandRegistry.class);
-    private final FULUParser fuluParser = new FULUParser();
-    private final FULSParser fulsParser = new FULSParser();
+    private final ZERO2Parser fuluParser = new ZERO2Parser();
     @Override
     protected void initCommands() {
         commandList.addCommand(createFCommand());
-        commandList.addCommand(createFulsCommand());
         commandList.addCommand(createFuluCommand());
+        commandList.addCommand(createSetConcCommand());
         // Добавление других команд
     }
 
     private SingleCommand createFCommand() {
         return new SingleCommand(
             "F",
-            "F - Основная команда опроса",
+            "Получение текущих значенией",
             this::parseFResponse,
             74
         );
@@ -35,29 +35,54 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
 
     private SingleCommand createFuluCommand() {
         return new SingleCommand(
-                "FULU",
-                "FULU - Напряжения на измерительных каналах",
+                "ZERO2",
+                "Установка нуля",
                 this::parseFULUResponse,
-                117
+                50
         );
     }
 
-    private SingleCommand createFulsCommand() {
-        return new SingleCommand(
-                "FULS",
-                "FULS - Все основные отношения сигнало",
-                this::parseFULSResponse,
-                156
-        );
-    }
+
     private AnswerValues parseFULUResponse(byte[] response){
-        return this.fuluParser.parseFULUResponse(response);
+        return this.fuluParser.parseZero2Response(response);
     }
 
-    private AnswerValues parseFULSResponse(byte[] response) {
-        return this.fulsParser.parseFULSResponse(response);
+    private SingleCommand createSetConcCommand() {
+        byte[] baseBody = "CALB 0000".getBytes();
+        ZERO2Parser parser = new ZERO2Parser();
+        SingleCommand command = new SingleCommand(
+                "CALB ",
+                "CALB 0225 - Установка 2.25 VOL",
+                "setConc",
+                baseBody, // Dynamic
+                args -> {
+                    Float value = (Float) args.getOrDefault("value", 0.0f);
+                    // Добавляем префикс "CALB "
+                    return buildCommand("CALB", value).getBytes();
+                },
+                null,
+                60,
+                CommandType.BINARY
+        );
+        command.addArgument(new ArgumentDescriptor(
+                "value",
+                Float.class,
+                2.2f,
+                val -> (Float) val >= 0
+        ));
+        return command;
     }
 
+    public String buildCommand(String body, double value) {
+        // Умножаем на 100 и преобразуем в целое число
+        int intValue = (int) Math.round(value * 100);
+
+        // Форматируем в 4-значное число с ведущими нулями
+        String formatted = String.format("%04d", intValue);
+
+        // Добавляем префикс "CALB "
+        return body + " " + formatted;
+    }
     private AnswerValues parseFResponse(byte[] response) {
         AnswerValues answerValues = null;
         String example = "02750\t07518\t00023\t00323\t08614\t01695\t06353\t03314\t03314\t00001\t08500012\t0x0D";
@@ -72,6 +97,7 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
             double value = 0.0;
             double serialNumber = 0.0;
             answerValues = new AnswerValues(10);
+            //===================================================1...6==============Term================================
             byte subResponse[] = Arrays.copyOfRange(response, 1, 6);
             if (isCorrectNumberF(subResponse)) {
                 boolean success = true;
@@ -102,6 +128,8 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
                 answerValues.addValue(-99.99, " °C(ERR)");
                 return null;
             }
+
+            //===================================================7...12==============St=================================
             value = 0.0;
 
             subResponse = Arrays.copyOfRange(response, 7, 12);
@@ -121,7 +149,7 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
 
                 // Применяем десятичный порядок для получения числа в формате 123.45
                 if (success) {
-                    answerValues.addValue(value, " Units");
+                    answerValues.addValue(value, " St");
                 } else {
                     answerValues.addValue(-88.88, " 1(ERR)");
                     return null;
@@ -131,6 +159,7 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
                 answerValues.addValue(-99.99, " 1(ERR)");
                 return null;
             }
+            //===================================================13...18==============Us================================
             value = 0.0;
 
             subResponse = Arrays.copyOfRange(response, 13, 18);
@@ -146,7 +175,7 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
                     }
                 }
                 if (success) {
-                    answerValues.addValue(value, " Units");
+                    answerValues.addValue(value, " Us");
                 } else {
                     answerValues.addValue(-88.88, " 2(ERR)");
                     return null;
@@ -156,9 +185,10 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
                 answerValues.addValue(-99.99, " 2(ERR)");
                 return null;
             }
+            //===================================================19...24==============Uref==============================
             value = 0.0;
 
-            subResponse = Arrays.copyOfRange(response, 19, 24);  //Напряжение питания
+            subResponse = Arrays.copyOfRange(response, 19, 24);
             if (isCorrectNumberF(subResponse)) {
                 boolean success = true;
                 for (int i = 0; i < subResponse.length; i++) {
@@ -171,7 +201,7 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
                     }
                 }
                 if (success) {
-                    answerValues.addValue(value, " Units");
+                    answerValues.addValue(value, " Uref");
                 } else {
                     answerValues.addValue(-88.88, " 3(ERR)");
                     return null;
@@ -181,6 +211,7 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
                 answerValues.addValue(-99.99, " 3(ERR)");
                 return null;
             }
+            //===================================================25...30==============Stz0==============================
             value = 0.0;
 
             subResponse = Arrays.copyOfRange(response, 25, 30);  //Сила тока шунт один до полинома
@@ -196,7 +227,7 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
                     }
                 }
                 if (success) {
-                    answerValues.addValue(value, " Units");
+                    answerValues.addValue(value, " Stz0");
                 } else {
                     answerValues.addValue(-88.88, " 4(ERR)");
                     return null;
@@ -206,6 +237,7 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
                 answerValues.addValue(-99.99, " 4(ERR)");
                 return null;
             }
+            //===================================================31...36==============Stz===============================
             value = 0.0;
 
             subResponse = Arrays.copyOfRange(response, 31, 36);  //Сила тока шунт два до полинома
@@ -221,7 +253,7 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
                     }
                 }
                 if (success) {
-                    answerValues.addValue(value, " Units");
+                    answerValues.addValue(value, " Stz");
                 } else {
                     answerValues.addValue(-88.88, " 5(ERR)");
                     return null;
@@ -231,26 +263,23 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
                 answerValues.addValue(-99.99, " 5(ERR)");
                 return null;
             }
+            //===================================================37...42==============Stzkt=============================
             value = 0.0;
 
             subResponse = Arrays.copyOfRange(response, 37, 42);  //Сила тока шунт один после полинома
             if (isCorrectNumberF(subResponse)) {
                 boolean success = true;
-                boolean isNegative = false;
-
                 for (int i = 0; i < subResponse.length; i++) {
                     byte b = subResponse[i];
-                    if (i == 0 && b == '-' ) {
-                        isNegative = true;
-                        continue;
-                    }
-
                     if (b >= '0' && b <= '9') {
                         value = value * 10 + (b - '0');
+                    } else {
+                        success = false;
+                        break;
                     }
                 }
                 if (success) {
-                    value = isNegative ? -value : value; // Применяем знак
+                    answerValues.addValue(value, " Stzkt");
                 } else {
                     answerValues.addValue(-88.88, " 6(ERR)");
                     return null;
@@ -261,27 +290,23 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
                 answerValues.addValue(-99.99, " 6(ERR)");
                 return null;
             }
+            //===================================================43...48==============C0================================
             value = 0.0;
 
             subResponse = Arrays.copyOfRange(response, 43, 48);  //Сила тока шунт два после полинома
             if (isCorrectNumberFExceptMinus(subResponse)) {
                 boolean success = true;
-                boolean isNegative = false;
-
                 for (int i = 0; i < subResponse.length; i++) {
                     byte b = subResponse[i];
-                    if (i == 0 && b == '-' ) {
-                        isNegative = true;
-                        continue;
-                    }
-
                     if (b >= '0' && b <= '9') {
                         value = value * 10 + (b - '0');
+                    } else {
+                        success = false;
+                        break;
                     }
                 }
                 if (success) {
-                    value = isNegative ? -value : value; // Применяем знак
-                    answerValues.addValue(value, " Units");
+                    answerValues.addValue(value, " Конц. заводск. калибровка (C0)");
                 } else {
                     answerValues.addValue(-88.88, " 7(ERR)");
                     return null;
@@ -291,6 +316,7 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
                 answerValues.addValue(-99.99, " 7(ERR)");
                 return null;
             }
+            //===================================================49...54==============C1================================
             value = 0.0;
 
             subResponse = Arrays.copyOfRange(response, 49, 54);  //Сила тока выбранный результат (ардуиной)
@@ -300,12 +326,15 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
                     byte b = subResponse[i];
                     if (b >= '0' && b <= '9') {
                         value = value * 10 + (b - '0');
+                    } else {
+                        success = false;
+                        break;
                     }
                 }
                 if (success) {
-                    answerValues.addValue(value, " C0");
+                    answerValues.addValue(value, " Конц. пользов. калибровка (C1)");
                 } else {
-                    answerValues.addValue(-88.88, " 8(ERR)");
+                    answerValues.addValue(-88.88, " 7(ERR)");
                     return null;
                 }
             } else {
@@ -313,6 +342,7 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
                 answerValues.addValue(-99.99, " 8(ERR)");
                 return null;
             }
+            //===================================================55...60==============C1================================
             value = 0.0;
 
             subResponse = Arrays.copyOfRange(response, 55, 60);  //Статус
@@ -328,7 +358,7 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
                     }
                 }
                 if (success) {
-                    answerValues.addValue(value, " C1");
+                    answerValues.addValue(value, " Статус");
                 } else {
                     answerValues.addValue(-88.88, " 9(ERR)");
                     return null;
@@ -338,6 +368,7 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
                 answerValues.addValue(-99.99, " 9(ERR)");
                 return null;
             }
+            //===================================================61...69==============SN================================
             value = 0.0;
 
             subResponse = Arrays.copyOfRange(response, 61, 69);  //Серийный номер

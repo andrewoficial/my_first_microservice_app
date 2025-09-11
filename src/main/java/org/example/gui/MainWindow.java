@@ -10,6 +10,7 @@ import org.apache.log4j.Logger;
 import org.example.Main;
 import org.example.device.ProtocolsList;
 import org.example.device.SomeDevice;
+import org.example.device.TemplatedAscii;
 import org.example.device.command.ArgumentDescriptor;
 import org.example.device.command.SingleCommand;
 import org.example.gui.components.*;
@@ -386,20 +387,17 @@ public class MainWindow extends JFrame implements Rendeble {
             jbComSearch.setEnabled(ProtocolsList.getLikeArrayEnum(jcbProtocol.getSelectedIndex()) == ProtocolsList.ERSTEVAK_MTP4D);
             SomeDevice device = createDeviceByProtocol(ProtocolsList.getLikeArrayEnum(jcbProtocol.getSelectedIndex()));
 
-
-            if (!device.isASCII()) {
+            if (device instanceof TemplatedAscii) {
+                showTemplatedAsciiPanel(device);
+            } else if (!device.isASCII()) {
                 showNonAsciiPanel(device);
-
             } else {
                 showAsciiPanel();
             }
         }
     }
 
-    private void showNonAsciiPanel(SomeDevice device) {
-        jtfTextToSend.setEnabled(false);
-        jtfPrefToSend.setEnabled(false);
-
+    private void showExtendetAsciiPanel(SomeDevice device) {
         // Убираем все компоненты с sendInpuntJpane
         jpSendInput.removeAll();
 
@@ -419,7 +417,7 @@ public class MainWindow extends JFrame implements Rendeble {
             JPanel commandPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
             commandPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
-            JLabel commandLabel = new JLabel(entry.getKey());
+            JLabel commandLabel = new JLabel(entry.getValue().getDescription());
             commandPanel.add(commandLabel);
 
             List<ArgumentDescriptor> arguments = entry.getValue().getArguments();
@@ -485,6 +483,18 @@ public class MainWindow extends JFrame implements Rendeble {
 
         jpSendInput.revalidate();
         jpSendInput.repaint();
+    }
+    private void showTemplatedAsciiPanel(SomeDevice device) {
+        jtfTextToSend.setEnabled(true);
+        jtfPrefToSend.setEnabled(true);
+
+        showExtendetAsciiPanel(device);
+    }
+    private void showNonAsciiPanel(SomeDevice device) {
+        jtfTextToSend.setEnabled(false);
+        jtfPrefToSend.setEnabled(false);
+
+        showExtendetAsciiPanel(device);
     }
 
     private void showAsciiPanel() {
