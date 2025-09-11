@@ -488,7 +488,7 @@
                         </constraints>
                         <properties>
                           <hideActionText value="false"/>
-                          <text value="Обновить"/>
+                          <text value="Обновить список портов"/>
                         </properties>
                       </component>
                     </children>

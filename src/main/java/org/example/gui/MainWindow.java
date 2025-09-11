@@ -484,12 +484,14 @@ public class MainWindow extends JFrame implements Rendeble {
         jpSendInput.revalidate();
         jpSendInput.repaint();
     }
+
     private void showTemplatedAsciiPanel(SomeDevice device) {
         jtfTextToSend.setEnabled(true);
         jtfPrefToSend.setEnabled(true);
 
         showExtendetAsciiPanel(device);
     }
+
     private void showNonAsciiPanel(SomeDevice device) {
         jtfTextToSend.setEnabled(false);
         jtfPrefToSend.setEnabled(false);
@@ -1002,7 +1004,7 @@ public class MainWindow extends JFrame implements Rendeble {
         jpComPortSetup.add(panel5, new GridConstraints(7, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(-1, 100), new Dimension(-1, 100), new Dimension(-1, 100), 0, false));
         jbComUpdateList = new JButton();
         jbComUpdateList.setHideActionText(false);
-        jbComUpdateList.setText("Обновить");
+        jbComUpdateList.setText("Обновить список портов");
         panel5.add(jbComUpdateList, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(260, 25), new Dimension(400, 200), 0, false));
         final JPanel panel6 = new JPanel();
         panel6.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));

@@ -96,7 +96,7 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
             }
             double value = 0.0;
             double serialNumber = 0.0;
-            answerValues = new AnswerValues(10);
+            answerValues = new AnswerValues(11);
             //===================================================1...6==============Term================================
             byte subResponse[] = Arrays.copyOfRange(response, 1, 6);
             if (isCorrectNumberF(subResponse)) {

@@ -73,18 +73,20 @@ public class ChartWindow extends JFrame implements Rendeble {
             public void componentResized(ComponentEvent componentEvent) {
                 int newWidth = getWidth();
                 int newHeight = getHeight();
-
+                isGraphBusy = true;
                 if (Math.abs(currHeight - newHeight) < HEIGHT_THRESHOLD) {
                     //System.out.println("skip Height");
-                    return;
+                    //return;
                 }
                 if (Math.abs(currWidth - newWidth) < WIDTH_THRESHOLD) {
                     //System.out.println("skip Width");
-                    return;
+                    //return;
                 }
                 currWidth = newWidth;
                 currHeight = newHeight;
                 dimension.setSize(controlPanel.getWidth(), currHeight - controlPanel.getHeight() - CONTROL_PANEL_MARGIN);
+                repaint();
+                isGraphBusy = false;
             }
         });
         initUI();
@@ -93,25 +95,25 @@ public class ChartWindow extends JFrame implements Rendeble {
     public ChartWindow(int num) {
         // num передается для того что бы в каждом окне был открыт ноый график
         super();
-        this.addComponentListener(new ComponentAdapter() {
-            @Override
-            public void componentResized(ComponentEvent componentEvent) {
-                int newWidth = getWidth();
-                int newHeight = getHeight();
-
-                if (Math.abs(currHeight - newHeight) < HEIGHT_THRESHOLD) {
-                    //System.out.println("skip Height");
-                    return;
-                }
-                if (Math.abs(currWidth - newWidth) < WIDTH_THRESHOLD) {
-                    //System.out.println("skip Width");
-                    return;
-                }
-                currWidth = newWidth;
-                currHeight = newHeight;
-                dimension.setSize(controlPanel.getWidth(), currHeight - controlPanel.getHeight() - CONTROL_PANEL_MARGIN);
-            }
-        });
+//        this.addComponentListener(new ComponentAdapter() {
+//            @Override
+//            public void componentResized(ComponentEvent componentEvent) {
+//                int newWidth = getWidth();
+//                int newHeight = getHeight();
+//
+//                if (Math.abs(currHeight - newHeight) < HEIGHT_THRESHOLD) {
+//                    //System.out.println("skip Height");
+//                    //return;
+//                }
+//                if (Math.abs(currWidth - newWidth) < WIDTH_THRESHOLD) {
+//                    //System.out.println("skip Width");
+//                    //return;
+//                }
+//                //currWidth = newWidth;
+//                //currHeight = newHeight;
+//                dimension.setSize(controlPanel.getWidth(), currHeight - controlPanel.getHeight() - CONTROL_PANEL_MARGIN);
+//            }
+//        });
         initUI();
     }
 
@@ -148,6 +150,8 @@ public class ChartWindow extends JFrame implements Rendeble {
 
         slider.setMaximum(1000);
         slider.setMinimum(10);
+        range = 60;
+        slider.setValue(range);
         selectedValue.setText(" ");
         lastReceivedValue.setText(" ");
 
@@ -193,6 +197,7 @@ public class ChartWindow extends JFrame implements Rendeble {
                     double yValue = itemEntity.getDataset().getYValue(seriesIndex, itemIndex);
                     //selectedValue.setText(String.format("Series: %d, X: %.2f, Y: %.2f", seriesIndex, xValue, yValue));
                     selectedValue.setText("Series: " + seriesIndex + " Время: " + formattedDate + " Значение: " + yValue);
+                    refreshControlPane();
                 }
             }
 
@@ -274,18 +279,26 @@ public class ChartWindow extends JFrame implements Rendeble {
 
     private void updateControlPanel() {
         log.info("Обновление панели управления");
-        controlPanel.removeAll();
+        //controlPanel.removeAll();
         selectors.removeAll();
         for (Map.Entry<String, JCheckBox> stringJCheckBoxEntry : this.seriesVisibility.getJBoxes().entrySet()) {
             selectors.add(stringJCheckBoxEntry.getValue());//Добавление чек-боксов (работает верно)
         }
-        slider.setValue(range);
-        controlPanel.add(slider);
-        controlPanel.add(selectedValue);
-        controlPanel.add(lastReceivedValue);
+        //slider.setValue(range);
+        //controlPanel.add(slider);
+        //controlPanel.add(selectedValue);
+        //controlPanel.add(lastReceivedValue);
 
-        add(controlPanel, BorderLayout.SOUTH);
-        pack();
+        //add(controlPanel, BorderLayout.SOUTH);
+        selectors.revalidate();
+        selectors.repaint();
+//pack();
+        //repaint();
+    }
+
+    private void refreshControlPane() {
+        controlPanel.revalidate();
+        controlPanel.repaint();
     }
 
     private synchronized void getLastData() {
@@ -335,6 +348,7 @@ public class ChartWindow extends JFrame implements Rendeble {
             }
         }
         lastReceivedValue.setText(sb.toString());
+        refreshControlPane();
     }
 
 
