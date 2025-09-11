@@ -178,8 +178,7 @@ public class ComDataCollector implements Runnable{
             if (receivedBytes.length > 0) {
                 // 5. Добавляем массив байтов в очередь
                 incomingMessages.add(new ReceivedData(receivedBytes, responseRequested, System.currentTimeMillis()));
-                // Для логирования используйте bytesToHex
-                log.info("Добавлено сообщение в очередь: " + MyUtilities.bytesToHex(receivedBytes));
+                //log.info("Добавлено сообщение в очередь: " + MyUtilities.bytesToHex(receivedBytes));
             }
         } catch (Exception e) {  // Или конкретнее, напр. IOException | RuntimeException
             log.warn("Исключение в обработке данных из порта", e);  // Лог с трассой
@@ -392,7 +391,7 @@ public class ComDataCollector implements Runnable{
     }
 
     public void saveReceivedByEvent(byte[] message, boolean responseRequested, long receiveTimestamp) {
-        log.info("saveReceivedByEvent вызван: responseRequested=" + responseRequested + ", message.length=" + (message != null ? message.length : "null") + ", device=" + (device != null ? "ok" : "null") + ", deviceAnswer=" + (deviceAnswer != null ? "ok" : "null"));
+        //log.info("saveReceivedByEvent вызван: responseRequested=" + responseRequested + ", message.length=" + (message != null ? message.length : "null") + ", device=" + (device != null ? "ok" : "null") + ", deviceAnswer=" + (deviceAnswer != null ? "ok" : "null"));
         if(message == null || message.length == 0){
             log.warn("Пустое сообщение при попытке saveReceivedByEvent");
             return;

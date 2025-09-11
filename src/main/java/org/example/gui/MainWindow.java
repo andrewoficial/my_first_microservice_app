@@ -592,6 +592,7 @@ public class MainWindow extends JFrame implements Rendeble {
             //isBtn - вызов по кнопке / pool - вызов про чекбоксу
             anyPoolService.createOrUpdateComDataCollector(leftPanState, currentActiveClientId.get(), getCurrComSelection(), getCurrProtocolSelection(),
                     getNeedPoolState(), isBtn, getCurrPoolDelay());
+            updateFolderPictureMethod();
         } catch (ConnectException e) {
             addCustomMessage(" Ошибка начала отправки " + e.getMessage());
         }
@@ -676,6 +677,7 @@ public class MainWindow extends JFrame implements Rendeble {
             jbComOpen.setEnabled(false);
             jcbProtocol.setEnabled(false);
         }
+        updateFolderPictureMethod();
     }
 
     private int getCurrComSelection() {

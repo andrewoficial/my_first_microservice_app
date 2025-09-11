@@ -12,8 +12,12 @@ import java.awt.*;
  * Содержит статический метод для применения всех настроек.
  */
 public class NimbusCustomizer {
-    final static Logger log = org.apache.log4j.Logger.getLogger(NimbusCustomizer.class);//Внешний логгер
-
+    final public static Logger log = org.apache.log4j.Logger.getLogger(NimbusCustomizer.class);//Внешний логгер
+    final public static Color accent = new Color(83, 83, 83);
+    final public static Color defBackground = new Color(0x3D, 0x3D, 0x3D);
+    final public static Color disabledBackground = new Color(0x2D, 0x2D, 0x2D);
+    final public static Color disabledForeground = new Color(0x88, 0x88, 0x88);
+    final public static Color scrollThumb = new Color(0x55, 0x55, 0x55);
 
     /**
      * Метод для кастомизации Nimbus LookAndFeel.
@@ -31,13 +35,6 @@ public class NimbusCustomizer {
             log.warn("Ошибка применения стиля");
             //throw new RuntimeException(e);
         }
-
-        // Базовые цвета
-        Color accent = new Color(83, 83, 83);
-        Color defBackground = new Color(0x3D, 0x3D, 0x3D);
-        Color disabledBackground = new Color(0x2D, 0x2D, 0x2D);
-        Color disabledForeground = new Color(0x88, 0x88, 0x88);
-        Color scrollThumb = new Color(0x55, 0x55, 0x55);
 
         // Заменяю стандартные painter'ы Nimbus для комбобокса
         UIDefaults defaults = UIManager.getLookAndFeelDefaults();
