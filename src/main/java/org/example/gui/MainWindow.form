@@ -1,56 +1,60 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="org.example.gui.MainWindow">
-  <grid id="cbd77" binding="contentPane" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+  <grid id="cbd77" binding="jpMainPanel" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
     <margin top="10" left="10" bottom="10" right="10"/>
     <constraints>
       <xy x="48" y="54" width="885" height="807"/>
     </constraints>
     <properties>
-      <background color="-16777216"/>
       <font swing-font="Tree.font"/>
-      <foreground color="-16777216"/>
-      <maximumSize width="900" height="900"/>
+      <maximumSize width="1200" height="1200"/>
       <minimumSize width="530" height="530"/>
+      <preferredSize width="900" height="700"/>
     </properties>
     <border type="none"/>
     <children>
-      <grid id="d5384" layout-manager="GridLayoutManager" row-count="4" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-        <margin top="0" left="0" bottom="0" right="0"/>
+      <grid id="d5384" layout-manager="FormLayout">
+        <rowspec value="center:d:grow"/>
+        <rowspec value="top:4dlu:noGrow"/>
+        <rowspec value="center:max(d;4px):noGrow"/>
+        <rowspec value="top:4dlu:noGrow"/>
+        <rowspec value="center:max(d;4px):noGrow"/>
+        <rowspec value="top:4dlu:noGrow"/>
+        <rowspec value="center:max(d;4px):noGrow"/>
+        <colspec value="fill:max(d;4px):noGrow"/>
+        <colspec value="left:4dlu:noGrow"/>
+        <colspec value="fill:d:grow"/>
         <constraints>
-          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="3" indent="0" use-parent-layout="false">
-            <minimum-size width="450" height="350"/>
+          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="6" hsize-policy="6" anchor="0" fill="3" indent="0" use-parent-layout="false">
+            <minimum-size width="450" height="400"/>
+            <preferred-size width="700" height="600"/>
           </grid>
         </constraints>
-        <properties>
-          <background color="-16777216"/>
-          <foreground color="-11513259"/>
-        </properties>
+        <properties/>
         <border type="none"/>
         <children>
-          <grid id="c38b8" binding="Terminal" layout-manager="BorderLayout" hgap="0" vgap="0">
+          <grid id="c38b8" binding="jpTerminalHistory" layout-manager="BorderLayout" hgap="0" vgap="0">
             <constraints>
-              <grid row="0" column="1" row-span="3" col-span="1" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="1" use-parent-layout="false">
+              <grid row="0" column="2" row-span="3" col-span="1" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="1" use-parent-layout="false">
                 <minimum-size width="250" height="400"/>
               </grid>
+              <forms defaultalign-horz="false" defaultalign-vert="false"/>
             </constraints>
-            <properties>
-              <background color="-16777216"/>
-              <foreground color="-16777216"/>
-            </properties>
+            <properties/>
             <border type="none"/>
             <children>
-              <grid id="5dd47" binding="sendInpuntJpane" layout-manager="BorderLayout" hgap="0" vgap="0">
+              <grid id="5dd47" binding="jpSendInput" layout-manager="BorderLayout" hgap="0" vgap="0">
                 <constraints border-constraint="North"/>
                 <properties/>
                 <border type="none"/>
                 <children>
-                  <grid id="a3656" binding="nonAsciCommandListPanel" layout-manager="BorderLayout" hgap="0" vgap="0">
+                  <grid id="a3656" binding="jpNonAsciCommandListPanel" layout-manager="BorderLayout" hgap="0" vgap="0">
                     <constraints border-constraint="West"/>
                     <properties/>
                     <border type="none"/>
                     <children/>
                   </grid>
-                  <grid id="b27ef" binding="asciiInput" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                  <grid id="b27ef" binding="jpAsciiInput" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                     <margin top="0" left="0" bottom="0" right="0"/>
                     <constraints border-constraint="Center"/>
                     <properties>
@@ -60,12 +64,12 @@
                     </properties>
                     <border type="none"/>
                     <children>
-                      <component id="d7ebc" class="javax.swing.JTextField" binding="textField_prefToSend">
+                      <component id="d7ebc" class="javax.swing.JTextField" binding="jtfPrefToSend">
                         <constraints>
                           <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="7" hsize-policy="6" anchor="4" fill="0" indent="0" use-parent-layout="false">
-                            <minimum-size width="10" height="25"/>
-                            <preferred-size width="40" height="25"/>
-                            <maximum-size width="80" height="25"/>
+                            <minimum-size width="10" height="35"/>
+                            <preferred-size width="40" height="35"/>
+                            <maximum-size width="80" height="35"/>
                           </grid>
                         </constraints>
                         <properties>
@@ -73,22 +77,21 @@
                           <text value=""/>
                         </properties>
                       </component>
-                      <component id="25f9" class="javax.swing.JTextField" binding="textField_textToSend">
+                      <component id="25f9" class="javax.swing.JTextField" binding="jtfTextToSend">
                         <constraints>
                           <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                            <minimum-size width="25" height="25"/>
-                            <preferred-size width="900" height="25"/>
-                            <maximum-size width="-1" height="25"/>
+                            <minimum-size width="25" height="35"/>
+                            <preferred-size width="900" height="35"/>
+                            <maximum-size width="-1" height="35"/>
                           </grid>
                         </constraints>
                         <properties>
-                          <foreground color="-10328984"/>
-                          <margin top="5" left="9" bottom="2" right="6"/>
+                          <margin top="2" left="9" bottom="2" right="6"/>
                           <preferredSize width="100" height="40"/>
                           <text value="M^"/>
                         </properties>
                       </component>
-                      <component id="7fef2" class="javax.swing.JButton" binding="button_Send">
+                      <component id="7fef2" class="javax.swing.JButton" binding="jbTerminalSend">
                         <constraints>
                           <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                         </constraints>
@@ -101,16 +104,14 @@
                   </grid>
                 </children>
               </grid>
-              <grid id="ed849" binding="terminalLogPanel" layout-manager="BorderLayout" hgap="0" vgap="0">
+              <grid id="ed849" binding="jpTerminalLogPanel" layout-manager="BorderLayout" hgap="0" vgap="0">
                 <constraints border-constraint="Center"/>
                 <properties/>
                 <border type="none"/>
                 <children>
-                  <tabbedpane id="b93bc" binding="tabbedPane1" default-binding="true">
+                  <tabbedpane id="b93bc" binding="jtpDevicesTerminal">
                     <constraints border-constraint="Center"/>
-                    <properties>
-                      <foreground color="-10328984"/>
-                    </properties>
+                    <properties/>
                     <border type="none"/>
                     <children/>
                   </tabbedpane>
@@ -118,58 +119,82 @@
               </grid>
             </children>
           </grid>
-          <grid id="9b68c" layout-manager="GridLayoutManager" row-count="2" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-            <margin top="0" left="0" bottom="0" right="0"/>
+          <grid id="9b68c" binding="jpConnectionSettings" layout-manager="BorderLayout" hgap="0" vgap="0">
             <constraints>
-              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="9" fill="0" indent="0" use-parent-layout="false">
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="7" hsize-policy="1" anchor="1" fill="0" indent="0" use-parent-layout="false">
                 <minimum-size width="250" height="450"/>
-                <preferred-size width="255" height="450"/>
-                <maximum-size width="255" height="450"/>
+                <preferred-size width="255" height="500"/>
+                <maximum-size width="255" height="600"/>
               </grid>
+              <forms defaultalign-horz="false" defaultalign-vert="false"/>
             </constraints>
             <properties>
-              <background color="-16777216"/>
+              <maximumSize width="275" height="2147483647"/>
+              <minimumSize width="275" height="594"/>
+              <preferredSize width="275" height="627"/>
             </properties>
             <border type="none"/>
             <children>
-              <grid id="46d07" binding="portSetup" layout-manager="GridLayoutManager" row-count="12" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+              <grid id="b4970" binding="jpConnectionType" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                 <margin top="0" left="0" bottom="0" right="0"/>
-                <constraints>
-                  <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false">
-                    <minimum-size width="250" height="390"/>
-                    <preferred-size width="250" height="450"/>
-                    <maximum-size width="250" height="500"/>
-                  </grid>
-                </constraints>
+                <constraints border-constraint="North"/>
                 <properties>
-                  <background color="-16777216"/>
                   <enabled value="true"/>
-                  <foreground color="-16777216"/>
                 </properties>
                 <border type="none"/>
                 <children>
-                  <grid id="81ddc" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                  <component id="71b3d" class="javax.swing.JLabel" binding="jlbConnectionType">
+                    <constraints>
+                      <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Тип соединения"/>
+                    </properties>
+                  </component>
+                  <component id="c0b5f" class="javax.swing.JComboBox" binding="jcbConnectionType">
+                    <constraints>
+                      <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                        <minimum-size width="120" height="-1"/>
+                        <preferred-size width="120" height="-1"/>
+                        <maximum-size width="120" height="-1"/>
+                      </grid>
+                    </constraints>
+                    <properties>
+                      <model/>
+                    </properties>
+                  </component>
+                  <hspacer id="1a97e">
+                    <constraints>
+                      <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                  </hspacer>
+                </children>
+              </grid>
+              <grid id="46d07" binding="jpComPortSetup" layout-manager="GridLayoutManager" row-count="12" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                <margin top="0" left="0" bottom="0" right="0"/>
+                <constraints border-constraint="Center"/>
+                <properties>
+                  <enabled value="true"/>
+                </properties>
+                <border type="none"/>
+                <children>
+                  <grid id="81ddc" binding="jpDataBits" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                     <margin top="0" left="0" bottom="0" right="0"/>
                     <constraints>
                       <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                     </constraints>
-                    <properties>
-                      <background color="-16777216"/>
-                      <foreground color="-16777216"/>
-                    </properties>
+                    <properties/>
                     <border type="none"/>
                     <children>
-                      <component id="e474f" class="javax.swing.JLabel" binding="LableComDataBits">
+                      <component id="e474f" class="javax.swing.JLabel" binding="jlbComDataBits">
                         <constraints>
                           <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                         </constraints>
                         <properties>
-                          <background color="-16777216"/>
-                          <foreground color="-1"/>
                           <text value="Биты данных"/>
                         </properties>
                       </component>
-                      <component id="433c" class="javax.swing.JComboBox" binding="comboBox_DataBits">
+                      <component id="433c" class="javax.swing.JComboBox" binding="jcbDataBits">
                         <constraints>
                           <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
                             <minimum-size width="160" height="-1"/>
@@ -177,10 +202,7 @@
                             <maximum-size width="160" height="-1"/>
                           </grid>
                         </constraints>
-                        <properties>
-                          <background color="-11513259"/>
-                          <foreground color="-16777216"/>
-                        </properties>
+                        <properties/>
                       </component>
                       <hspacer id="26dee">
                         <constraints>
@@ -189,27 +211,23 @@
                       </hspacer>
                     </children>
                   </grid>
-                  <grid id="ab78" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                  <grid id="ab78" binding="jpParity" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                     <margin top="0" left="0" bottom="0" right="0"/>
                     <constraints>
                       <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                     </constraints>
-                    <properties>
-                      <background color="-16777216"/>
-                      <foreground color="-16777216"/>
-                    </properties>
+                    <properties/>
                     <border type="none"/>
                     <children>
-                      <component id="b2fd0" class="javax.swing.JLabel" binding="LableComParity">
+                      <component id="b2fd0" class="javax.swing.JLabel" binding="jlbComParity">
                         <constraints>
                           <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                         </constraints>
                         <properties>
-                          <foreground color="-1"/>
                           <text value="Чётность"/>
                         </properties>
                       </component>
-                      <component id="28d3a" class="javax.swing.JComboBox" binding="comboBox_Parity">
+                      <component id="28d3a" class="javax.swing.JComboBox" binding="jcbParity">
                         <constraints>
                           <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
                             <minimum-size width="160" height="-1"/>
@@ -218,8 +236,6 @@
                           </grid>
                         </constraints>
                         <properties>
-                          <background color="-11513259"/>
-                          <foreground color="-16777216"/>
                           <model/>
                         </properties>
                       </component>
@@ -230,28 +246,23 @@
                       </hspacer>
                     </children>
                   </grid>
-                  <grid id="c65c1" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                  <grid id="c65c1" binding="jpComStopBit" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                     <margin top="0" left="0" bottom="0" right="0"/>
                     <constraints>
                       <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                     </constraints>
-                    <properties>
-                      <background color="-16777216"/>
-                      <foreground color="-16777216"/>
-                    </properties>
+                    <properties/>
                     <border type="none"/>
                     <children>
-                      <component id="26c5" class="javax.swing.JLabel" binding="LableComStopBit">
+                      <component id="26c5" class="javax.swing.JLabel" binding="jlbComStopBit">
                         <constraints>
                           <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                         </constraints>
                         <properties>
-                          <background color="-16777216"/>
-                          <foreground color="-1"/>
                           <text value="Стоп бит"/>
                         </properties>
                       </component>
-                      <component id="5969e" class="javax.swing.JComboBox" binding="comboBox_StopBit">
+                      <component id="5969e" class="javax.swing.JComboBox" binding="jcbStopBit">
                         <constraints>
                           <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
                             <minimum-size width="160" height="-1"/>
@@ -259,10 +270,7 @@
                             <maximum-size width="160" height="-1"/>
                           </grid>
                         </constraints>
-                        <properties>
-                          <background color="-11513259"/>
-                          <foreground color="-16777216"/>
-                        </properties>
+                        <properties/>
                       </component>
                       <hspacer id="21b72">
                         <constraints>
@@ -271,34 +279,41 @@
                       </hspacer>
                     </children>
                   </grid>
-                  <grid id="b0c05" layout-manager="GridLayoutManager" row-count="1" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                  <grid id="b0c05" binding="jpOpenClose" layout-manager="GridLayoutManager" row-count="1" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                     <margin top="0" left="0" bottom="0" right="0"/>
                     <constraints>
-                      <grid row="8" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                      <grid row="8" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="7" anchor="0" fill="1" indent="0" use-parent-layout="false">
+                        <minimum-size width="240" height="29"/>
+                        <preferred-size width="240" height="29"/>
+                      </grid>
                     </constraints>
-                    <properties>
-                      <background color="-16777216"/>
-                      <foreground color="-16777216"/>
-                    </properties>
+                    <properties/>
                     <border type="none"/>
                     <children>
-                      <component id="77ec1" class="javax.swing.JButton" binding="button_Open">
+                      <component id="77ec1" class="javax.swing.JButton" binding="jbComOpen">
                         <constraints>
-                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false">
+                            <minimum-size width="100" height="25"/>
+                            <preferred-size width="119" height="25"/>
+                            <maximum-size width="200" height="200"/>
+                          </grid>
                         </constraints>
                         <properties>
-                          <background color="-16777216"/>
-                          <foreground color="-1"/>
+                          <alignmentY value="0.0"/>
+                          <hideActionText value="false"/>
                           <text value="Открыть"/>
                         </properties>
                       </component>
-                      <component id="2eab5" class="javax.swing.JButton" binding="button_Close">
+                      <component id="2eab5" class="javax.swing.JButton" binding="jbComClose">
                         <constraints>
-                          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false">
+                            <minimum-size width="100" height="25"/>
+                            <preferred-size width="119" height="25"/>
+                            <maximum-size width="200" height="200"/>
+                          </grid>
                         </constraints>
                         <properties>
-                          <background color="-16777216"/>
-                          <foreground color="-1"/>
+                          <alignmentY value="0.0"/>
                           <text value="Закрыть"/>
                         </properties>
                       </component>
@@ -309,23 +324,18 @@
                     <constraints>
                       <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                     </constraints>
-                    <properties>
-                      <background color="-16777216"/>
-                      <foreground color="-16777216"/>
-                    </properties>
+                    <properties/>
                     <border type="none"/>
                     <children>
-                      <component id="7c6e0" class="javax.swing.JLabel" binding="LableComPorts">
+                      <component id="7c6e0" class="javax.swing.JLabel" binding="jlbComPorts">
                         <constraints>
                           <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                         </constraints>
                         <properties>
-                          <background color="-1"/>
-                          <foreground color="-1"/>
                           <text value="Порт"/>
                         </properties>
                       </component>
-                      <component id="9415b" class="javax.swing.JComboBox" binding="comboBox_ComPorts">
+                      <component id="9415b" class="javax.swing.JComboBox" binding="jcbComPorts">
                         <constraints>
                           <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
                             <minimum-size width="160" height="-1"/>
@@ -334,8 +344,6 @@
                           </grid>
                         </constraints>
                         <properties>
-                          <background color="-11513259"/>
-                          <foreground color="-16777216"/>
                           <model/>
                         </properties>
                       </component>
@@ -351,23 +359,18 @@
                     <constraints>
                       <grid row="5" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                     </constraints>
-                    <properties>
-                      <background color="-16777216"/>
-                      <foreground color="-16777216"/>
-                    </properties>
+                    <properties/>
                     <border type="none"/>
                     <children>
-                      <component id="3169a" class="javax.swing.JLabel" binding="LableComProtocol">
+                      <component id="3169a" class="javax.swing.JLabel" binding="jlbComProtocol">
                         <constraints>
                           <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                         </constraints>
                         <properties>
-                          <background color="-16777216"/>
-                          <foreground color="-1"/>
                           <text value="Протокол"/>
                         </properties>
                       </component>
-                      <component id="e34a9" class="javax.swing.JComboBox" binding="comboBox_Protocol">
+                      <component id="e34a9" class="javax.swing.JComboBox" binding="jcbProtocol">
                         <constraints>
                           <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
                             <minimum-size width="160" height="-1"/>
@@ -376,8 +379,6 @@
                           </grid>
                         </constraints>
                         <properties>
-                          <background color="-11513259"/>
-                          <foreground color="-16777216"/>
                           <model/>
                         </properties>
                       </component>
@@ -388,28 +389,31 @@
                       </hspacer>
                     </children>
                   </grid>
-                  <grid id="230ae" layout-manager="GridLayoutManager" row-count="1" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                  <grid id="230ae" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                     <margin top="0" left="0" bottom="0" right="0"/>
                     <constraints>
-                      <grid row="10" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                      <grid row="10" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                     </constraints>
-                    <properties>
-                      <background color="-16777216"/>
-                      <foreground color="-16777216"/>
-                    </properties>
+                    <properties/>
                     <border type="none"/>
                     <children>
-                      <component id="e638d" class="javax.swing.JCheckBox" binding="checkBox_Pool">
+                      <component id="e638d" class="javax.swing.JCheckBox" binding="jCbNeedPool">
                         <constraints>
                           <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                         </constraints>
                         <properties>
-                          <background color="-16777216"/>
-                          <foreground color="-1"/>
                           <text value="Опрос  "/>
                         </properties>
                       </component>
-                      <component id="94d33" class="javax.swing.JTextField" binding="textField_poolDelay">
+                      <component id="3c25c" class="javax.swing.JLabel">
+                        <constraints>
+                          <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                        </constraints>
+                        <properties>
+                          <text value="мс"/>
+                        </properties>
+                      </component>
+                      <component id="94d33" class="javax.swing.JTextField" binding="jtfPoolDelay">
                         <constraints>
                           <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
                             <preferred-size width="150" height="-1"/>
@@ -421,34 +425,43 @@
                       </component>
                     </children>
                   </grid>
-                  <grid id="9bcd8" binding="addRemove" layout-manager="GridLayoutManager" row-count="1" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                  <grid id="9bcd8" binding="jpAddRemove" layout-manager="GridLayoutManager" row-count="1" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                     <margin top="0" left="0" bottom="0" right="0"/>
                     <constraints>
-                      <grid row="11" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                      <grid row="11" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="7" anchor="0" fill="1" indent="0" use-parent-layout="false">
+                        <minimum-size width="240" height="29"/>
+                        <preferred-size width="240" height="29"/>
+                      </grid>
                     </constraints>
-                    <properties>
-                      <background color="-16777216"/>
-                      <foreground color="-16777216"/>
-                    </properties>
+                    <properties/>
                     <border type="none"/>
                     <children>
-                      <component id="dfd93" class="javax.swing.JButton" binding="button_AddDev">
+                      <component id="dfd93" class="javax.swing.JButton" binding="jbAddDev">
                         <constraints>
-                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false">
+                            <minimum-size width="100" height="25"/>
+                            <preferred-size width="119" height="25"/>
+                            <maximum-size width="200" height="200"/>
+                          </grid>
                         </constraints>
                         <properties>
-                          <background color="-16777216"/>
-                          <foreground color="-1"/>
+                          <alignmentX value="0.0"/>
+                          <alignmentY value="0.0"/>
                           <text value="Добавить у-во"/>
                         </properties>
                       </component>
-                      <component id="bb745" class="javax.swing.JButton" binding="button_RemoveDev">
+                      <component id="bb745" class="javax.swing.JButton" binding="jbRemoveDev">
                         <constraints>
-                          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false">
+                            <minimum-size width="100" height="25"/>
+                            <preferred-size width="119" height="25"/>
+                            <maximum-size width="200" height="200"/>
+                          </grid>
                         </constraints>
                         <properties>
-                          <background color="-16777216"/>
-                          <foreground color="-1"/>
+                          <alignmentX value="0.0"/>
+                          <alignmentY value="0.0"/>
+                          <autoscrolls value="false"/>
                           <text value="Удалить тек."/>
                         </properties>
                       </component>
@@ -457,21 +470,24 @@
                   <grid id="7b4f4" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                     <margin top="0" left="0" bottom="0" right="0"/>
                     <constraints>
-                      <grid row="7" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                      <grid row="7" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="1" indent="0" use-parent-layout="false">
+                        <minimum-size width="-1" height="100"/>
+                        <preferred-size width="-1" height="100"/>
+                        <maximum-size width="-1" height="100"/>
+                      </grid>
                     </constraints>
-                    <properties>
-                      <background color="-16777216"/>
-                      <foreground color="-16777216"/>
-                    </properties>
+                    <properties/>
                     <border type="none"/>
                     <children>
-                      <component id="44c3" class="javax.swing.JButton" binding="button_Update">
+                      <component id="44c3" class="javax.swing.JButton" binding="jbComUpdateList">
                         <constraints>
-                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false">
+                            <preferred-size width="260" height="25"/>
+                            <maximum-size width="400" height="200"/>
+                          </grid>
                         </constraints>
                         <properties>
-                          <background color="-16777216"/>
-                          <foreground color="-1"/>
+                          <hideActionText value="false"/>
                           <text value="Обновить"/>
                         </properties>
                       </component>
@@ -480,22 +496,21 @@
                   <grid id="6d855" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                     <margin top="0" left="0" bottom="0" right="0"/>
                     <constraints>
-                      <grid row="9" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                      <grid row="9" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                     </constraints>
-                    <properties>
-                      <background color="-16777216"/>
-                      <foreground color="-16777216"/>
-                    </properties>
+                    <properties/>
                     <border type="none"/>
                     <children>
-                      <component id="2110a" class="javax.swing.JButton" binding="button_Search">
+                      <component id="2110a" class="javax.swing.JButton" binding="jbComSearch">
                         <constraints>
-                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false">
+                            <preferred-size width="260" height="25"/>
+                            <maximum-size width="400" height="200"/>
+                          </grid>
                         </constraints>
                         <properties>
+                          <alignmentY value="0.0"/>
                           <autoscrolls value="false"/>
-                          <background color="-10328984"/>
-                          <foreground color="-1"/>
                           <hideActionText value="false"/>
                           <text value="Поиск сетевых адресов"/>
                         </properties>
@@ -505,26 +520,23 @@
                   <grid id="3ed9a" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                     <margin top="0" left="0" bottom="0" right="0"/>
                     <constraints>
-                      <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                      <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                     </constraints>
                     <properties>
-                      <background color="-16777216"/>
                       <enabled value="true"/>
-                      <foreground color="-16777216"/>
                     </properties>
                     <border type="none"/>
                     <children>
-                      <component id="190c8" class="javax.swing.JLabel" binding="LableComBaudRate">
+                      <component id="190c8" class="javax.swing.JLabel" binding="jlbComBaudRate">
                         <constraints>
                           <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                         </constraints>
                         <properties>
-                          <background color="-16777216"/>
-                          <foreground color="-1"/>
+                          <background color="-11184811"/>
                           <text value="Скорость   "/>
                         </properties>
                       </component>
-                      <component id="9f396" class="javax.swing.JComboBox" binding="comboBox_BaudRate">
+                      <component id="9f396" class="javax.swing.JComboBox" binding="jcbBaudRate">
                         <constraints>
                           <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
                             <minimum-size width="160" height="-1"/>
@@ -533,9 +545,7 @@
                           </grid>
                         </constraints>
                         <properties>
-                          <background color="-11513259"/>
                           <enabled value="true"/>
-                          <foreground color="-16777216"/>
                         </properties>
                       </component>
                       <hspacer id="be30d">
@@ -548,43 +558,35 @@
                   <grid id="179b6" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                     <margin top="0" left="0" bottom="0" right="0"/>
                     <constraints>
-                      <grid row="6" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                      <grid row="6" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                     </constraints>
-                    <properties>
-                      <background color="-16777216"/>
-                      <foreground color="-16777216"/>
-                    </properties>
+                    <properties/>
                     <border type="none"/>
                     <children>
-                      <component id="8fb5" class="javax.swing.JCheckBox" binding="checkBox_Log">
+                      <component id="8fb5" class="javax.swing.JCheckBox" binding="jCbNeedLog">
                         <constraints>
                           <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                         </constraints>
                         <properties>
-                          <background color="-16777216"/>
                           <enabled value="true"/>
-                          <foreground color="-1"/>
                           <text value="Лог"/>
                         </properties>
                       </component>
-                      <component id="62ff4" class="javax.swing.JCheckBox" binding="checkBox_Autoconnect">
+                      <component id="62ff4" class="javax.swing.JCheckBox" binding="jCbAutoConnect">
                         <constraints>
                           <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                         </constraints>
                         <properties>
-                          <background color="-16777216"/>
                           <enabled value="false"/>
-                          <foreground color="-1"/>
                           <text value="Автоподключение"/>
                         </properties>
                       </component>
-                      <grid id="42251" binding="folderIconPanel" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                      <grid id="42251" binding="jpFolderIconPanel" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                         <margin top="0" left="0" bottom="0" right="0"/>
                         <constraints>
                           <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
                         </constraints>
                         <properties>
-                          <background color="-15658218"/>
                           <enabled value="true"/>
                         </properties>
                         <border type="none"/>
@@ -592,52 +594,6 @@
                       </grid>
                     </children>
                   </grid>
-                </children>
-              </grid>
-              <grid id="b4970" binding="connectionType" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                <margin top="0" left="0" bottom="0" right="0"/>
-                <constraints>
-                  <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false">
-                    <minimum-size width="250" height="35"/>
-                    <preferred-size width="250" height="38"/>
-                    <maximum-size width="250" height="40"/>
-                  </grid>
-                </constraints>
-                <properties>
-                  <background color="-16777216"/>
-                  <enabled value="true"/>
-                </properties>
-                <border type="none"/>
-                <children>
-                  <component id="71b3d" class="javax.swing.JLabel" binding="LableConnectionType">
-                    <constraints>
-                      <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties>
-                      <background color="-1"/>
-                      <foreground color="-1"/>
-                      <text value="Тип соединения"/>
-                    </properties>
-                  </component>
-                  <component id="c0b5f" class="javax.swing.JComboBox" binding="comboBox_ConnectionType">
-                    <constraints>
-                      <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                        <minimum-size width="120" height="-1"/>
-                        <preferred-size width="120" height="-1"/>
-                        <maximum-size width="120" height="-1"/>
-                      </grid>
-                    </constraints>
-                    <properties>
-                      <background color="-11513259"/>
-                      <foreground color="-16777216"/>
-                      <model/>
-                    </properties>
-                  </component>
-                  <hspacer id="1a97e">
-                    <constraints>
-                      <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                  </hspacer>
                 </children>
               </grid>
             </children>
