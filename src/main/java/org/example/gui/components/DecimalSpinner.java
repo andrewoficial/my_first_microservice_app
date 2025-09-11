@@ -3,6 +3,7 @@ package org.example.gui.components;
 import javax.swing.*;
 import javax.swing.text.DefaultFormatterFactory;
 import javax.swing.text.NumberFormatter;
+import java.awt.*;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.ParseException;
@@ -15,6 +16,12 @@ public class DecimalSpinner extends JSpinner {
                 Double.valueOf(min),
                 Double.valueOf(max),
                 Double.valueOf(step)));
+
+        // Отключение специфичных рендереров Nimbus для JSpinner и JFormattedTextField
+        UIManager.put("Spinner[Enabled].backgroundPainter", null);
+        UIManager.put("FormattedTextField[Enabled].backgroundPainter", null);
+        UIManager.put("Spinner:FormattedTextField[Enabled].background", NimbusCustomizer.defBackground);
+        UIManager.put("Spinner:FormattedTextField[Enabled].opaque", true);
 
         // Редактор с форматом чисел
         JSpinner.NumberEditor editor = new JSpinner.NumberEditor(this, "#0.###");
@@ -35,7 +42,7 @@ public class DecimalSpinner extends JSpinner {
                 }
                 Object val = super.stringToValue(text);
                 if (val instanceof Number) {
-                    return ((Number) val).doubleValue(); // всегда Double!
+                    return ((Number) val).doubleValue();
                 }
                 return val;
             }
@@ -53,5 +60,42 @@ public class DecimalSpinner extends JSpinner {
         formatter.setOverwriteMode(false);
 
         textField.setFormatterFactory(new DefaultFormatterFactory(formatter));
+
+        // Настройка текстового поля
+        textField.setOpaque(true);
+        textField.setBackground(NimbusCustomizer.disabledBackground);
+        textField.setForeground(Color.WHITE);
+        textField.setCaretColor(Color.WHITE);
+        textField.setSelectionColor(NimbusCustomizer.accent);
+        textField.setSelectedTextColor(Color.WHITE);
+        textField.setDisabledTextColor(new Color(191, 191, 191));
+        textField.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+
+        // Отключение стилей Nimbus для текстового поля
+        textField.putClientProperty("Nimbus.Overrides", new UIDefaults());
+        textField.putClientProperty("Nimbus.Overrides.InheritDefaults", false);
+
+        // Вывод всех компонентов JSpinner
+        System.out.println("=== Components of JSpinner ===");
+        //printComponentHierarchy(this, 0);
+
+
+        textField.revalidate();
+        textField.repaint();
     }
+
+    // Метод для рекурсивного вывода всех компонентов
+    private void printComponentHierarchy(Component comp, int level) {
+        String indent = "  ".repeat(level);
+        System.out.println(indent + "Component: " + comp.getClass().getName() +
+                ", Name: " + comp.getName() +
+                ", Background: " + (comp instanceof JComponent ? ((JComponent) comp).getBackground() : "N/A") +
+                ", Opaque: " + (comp instanceof JComponent ? ((JComponent) comp).isOpaque() : "N/A"));
+        if (comp instanceof Container) {
+            for (Component child : ((Container) comp).getComponents()) {
+                printComponentHierarchy(child, level + 1);
+            }
+        }
+    }
+
 }

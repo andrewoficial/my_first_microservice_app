@@ -8,6 +8,7 @@ import org.example.gui.accu10fd.table.AcuTableCreator;
 import org.example.gui.accu10fd.table.AcuTableFileHandler;
 import org.example.gui.accu10fd.table.GasData;
 import org.example.gui.components.DecimalSpinner;
+import org.example.gui.components.NimbusCustomizer;
 import org.example.gui.curve.file.Serialization;
 import org.example.services.comPort.BaudRatesList;
 import org.example.services.comPort.ParityList;
@@ -67,6 +68,7 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
 
     public Acu10fdWindow(MyProperties prop) {
         $$$setupUI$$$();
+
         log = Logger.getLogger(Acu10fdWindow.class);
         this.prop = prop;
         setContentPane(mainPane);
@@ -664,7 +666,7 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
         panel4.add(jbCmdCalculate, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jtfCalculateResult = new JTextField();
         jtfCalculateResult.setEditable(false);
-        jtfCalculateResult.setEnabled(false);
+        jtfCalculateResult.setEnabled(true);
         panel4.add(jtfCalculateResult, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         final JPanel panel5 = new JPanel();
         panel5.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
@@ -693,7 +695,9 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
 
 
     private void createUIComponents() {
+        //jsFirstComponentConcentration = new JSpinner();
         jsFirstComponentConcentration = new DecimalSpinner(95.6, 0.0, 100.0, 0.1);
         jsSecondComponentConcentration = new DecimalSpinner(4.4, 0.0, 100.0, 0.1);
     }
+
 }

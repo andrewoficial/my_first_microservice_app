@@ -60,15 +60,42 @@ public class NimbusCustomizer {
         defaults.put("TextField.caretForeground", Color.WHITE);
         defaults.put("TextField.border", BorderFactory.createEmptyBorder(5, 5, 5, 5)); // Отступы
         defaults.put("Panel.background", defBackground);
+        // Настройки для JSpinner
+        defaults.put("Spinner.background", defBackground); // Темный фон
+        defaults.put("Spinner.foreground", Color.WHITE); // Белый текст
+        defaults.put("Spinner.caretForeground", Color.WHITE); // Цвет курсора
+        defaults.put("Spinner.selectionBackground", accent); // Цвет выделения текста
+        defaults.put("Spinner.selectionForeground", Color.WHITE); // Цвет текста при выделении
+        defaults.put("Spinner.inactiveForeground", new Color(191, 191, 191)); // Цвет неактивного текста
+        defaults.put("Spinner.border", BorderFactory.createEmptyBorder(5, 5, 5, 5)); // Отступы
+        UIManager.put("Spinner.background", NimbusCustomizer.defBackground);
+        UIManager.put("Spinner.editor.background", NimbusCustomizer.defBackground);
+
+        UIManager.put("Spinner:FormattedTextField[Enabled].backgroundPainter", null);
+        UIManager.put("Spinner:FormattedTextField[Enabled].foreground", Color.WHITE);
+        UIManager.put("Spinner:FormattedTextField[Enabled].caretForeground", Color.WHITE);
+        UIManager.put("Spinner:FormattedTextField[Enabled].selectionBackground", NimbusCustomizer.accent);
+        UIManager.put("Spinner:FormattedTextField[Enabled].selectionForeground", Color.WHITE);
 
         // Настройки для JTextPane
-        defaults.put("TextPane.background", new Color(0x2D, 0x2D, 0x2D)); // Темный фон
+        defaults.put("TextPane.background", defBackground); // Темный фон
         defaults.put("TextPane.foreground", Color.WHITE); // Белый текст
         defaults.put("TextPane.caretForeground", Color.WHITE); // Цвет курсора
         defaults.put("TextPane.selectionBackground", accent); // Цвет выделения текста
         defaults.put("TextPane.selectionForeground", Color.WHITE); // Цвет текста при выделении
         defaults.put("TextPane.inactiveForeground", new Color(191, 191, 191)); // Цвет неактивного текста
         defaults.put("TextPane.border", BorderFactory.createEmptyBorder(5, 5, 5, 5)); // Отступы
+        // Настройки для FormattedTextField
+        defaults.put("FormattedTextField.background", defBackground); // Темный фон
+        defaults.put("FormattedTextField.foreground", Color.WHITE); // Белый текст
+        defaults.put("FormattedTextField.caretForeground", Color.WHITE); // Цвет курсора
+        defaults.put("FormattedTextField.selectionBackground", accent); // Цвет выделения текста
+        defaults.put("FormattedTextField.selectionForeground", Color.WHITE); // Цвет текста при выделении
+        defaults.put("FormattedTextField.inactiveForeground", new Color(191, 191, 191)); // Цвет неактивного текста
+        defaults.put("FormattedTextField.border", BorderFactory.createEmptyBorder(5, 5, 5, 5)); // Отступы
+
+
+
 
         // Отключаем стандартные эффекты Nimbus
         defaults.put("TextPane[Enabled].backgroundPainter", null);

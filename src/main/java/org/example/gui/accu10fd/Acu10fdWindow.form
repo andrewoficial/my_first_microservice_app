@@ -274,7 +274,7 @@
                 </constraints>
                 <properties>
                   <editable value="false"/>
-                  <enabled value="false"/>
+                  <enabled value="true"/>
                 </properties>
               </component>
             </children>
