@@ -27,6 +27,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
 
@@ -53,6 +54,7 @@ public class ChartWindow extends JFrame implements Rendeble {
     private final JSlider slider = new JSlider();
 
     private final JTextField selectedValue = new JTextField();
+    private final JTextField lastReceivedValue = new JTextField();
     private int range = 0;
 
     private ChartPanel chartPanel = null;
@@ -130,7 +132,9 @@ public class ChartWindow extends JFrame implements Rendeble {
         // Нижняя панель управления
         controlPanel.setLayout(new FlowLayout());
         controlPanel.add(slider);
+        controlPanel.add(lastReceivedValue);
         controlPanel.add(selectedValue);
+
 
         // Добавляем в главное окно
         add(scrollPane, BorderLayout.WEST);   // Слева — чекбоксы
@@ -145,6 +149,7 @@ public class ChartWindow extends JFrame implements Rendeble {
         slider.setMaximum(1000);
         slider.setMinimum(10);
         selectedValue.setText(" ");
+        lastReceivedValue.setText(" ");
 
         slider.addChangeListener(new ChangeListener() {
             @Override
@@ -181,8 +186,13 @@ public class ChartWindow extends JFrame implements Rendeble {
                     int seriesIndex = itemEntity.getSeriesIndex();
                     int itemIndex = itemEntity.getItem();
                     double xValue = itemEntity.getDataset().getXValue(seriesIndex, itemIndex);
+                    Date date = new Date((long) xValue);
+
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd HH:mm:ss.SSS");
+                    String formattedDate = sdf.format(date);
                     double yValue = itemEntity.getDataset().getYValue(seriesIndex, itemIndex);
-                    selectedValue.setText(String.format("Series: %d, X: %.2f, Y: %.2f", seriesIndex, xValue, yValue));
+                    //selectedValue.setText(String.format("Series: %d, X: %.2f, Y: %.2f", seriesIndex, xValue, yValue));
+                    selectedValue.setText("Series: " + seriesIndex + " Время: " + formattedDate + " Значение: " + yValue);
                 }
             }
 
@@ -272,6 +282,7 @@ public class ChartWindow extends JFrame implements Rendeble {
         slider.setValue(range);
         controlPanel.add(slider);
         controlPanel.add(selectedValue);
+        controlPanel.add(lastReceivedValue);
 
         add(controlPanel, BorderLayout.SOUTH);
         pack();
@@ -286,11 +297,13 @@ public class ChartWindow extends JFrame implements Rendeble {
         log.info("Закончил обновление чекбоксов ");
         int pointer = 0;
         collection.removeAllSeries();//Удаление всех серий
+        StringBuilder sb = new StringBuilder();
         for (Integer tab : AnswerStorage.getListOfTabsInStorage()) {
             log.info("Просматриваю для клиента " + tab);
             List<DeviceAnswer> recentAnswers = AnswerStorage.getRecentAnswersForGraph(tab, range);
 
             ArrayList<String> unitsInAnswer = ansLoader.getUnitsArrayForTab(tab);
+
             for (int j = 0; j < unitsInAnswer.size(); j++) {
                 String seriesName = generateNameForSeries(tab, j, unitsInAnswer);
                 log.info("Запрашиваю данные для " + seriesName);
@@ -301,8 +314,10 @@ public class ChartWindow extends JFrame implements Rendeble {
                 if (seriesVisibility.isVisible(seriesName)) {
                     collection.addSeries(new TimeSeries(seriesName)); //Добавление новой (Только если нужно)
                     log.info("pointer " + seriesName + " will be showed");
+                    Double lastPointValue = null;
                     for (DeviceAnswer answer : recentAnswers) {
                         //log.info("answer tab " + answer.getTabNumber() + " field ");
+
                         if (ansValidator.isCorrectAnswerValue(answer, tab, unitsInAnswer.size(), answer.getFieldCount())) {
 
                             AnswerValues currentAnswers = answer.getAnswerReceivedValues();
@@ -310,13 +325,16 @@ public class ChartWindow extends JFrame implements Rendeble {
                             Millisecond millisecond = new Millisecond(convertToLocalDateViaMilisecond(answer.getAnswerReceivedTime()));
 
                             collection.getSeries(collection.getSeries().size() - 1).addOrUpdate(millisecond, currentValues);
+                            lastPointValue = currentValues;
                             //log.info("addOrUpdate " + millisecond + " " + currentValues);
                         }
                     }
+                    sb.append("[").append(lastPointValue).append("] ").append(seriesName).append("   ");
                 }
                 pointer++;
             }
         }
+        lastReceivedValue.setText(sb.toString());
     }
 
 
