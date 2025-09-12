@@ -7,8 +7,10 @@ import org.hid4java.HidDevice;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.zip.CRC32;
 
 public class CradleController {
 
@@ -40,7 +42,6 @@ public class CradleController {
         return command.execute(device);
     }
 
-    //Не работает, если делать после GetDeviceInfo. Если команда первая после перезапуска, то рабоатет корректно.
     public byte[] getAllCoef(HidDevice device) throws Exception {
         log.info("Run get all coef (0x05)");
 
@@ -184,54 +185,81 @@ public class CradleController {
     public void setCoefficientsO2(HidDevice device) throws Exception {
         double[] coefs = new double[19];
         for (int i = 0; i < coefs.length; i++) {
-            coefs[i] = i + 101.0;
+            coefs[i] = i + 4620010.5;
         }
         log.info("Будут заданы " + coefs[0] + "..." + coefs[coefs.length-1] + " для газа ");
         setCoefForGas("o2", coefs, device);
     }
 
-    // Helper to convert double to 4 bytes little-endian float
-    private byte[] doubleToLittleEndianBytes(double val) {
-        ByteBuffer bb = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN);
-        bb.putFloat((float) val);
-
-        byte[] hotFix = new byte[4];
-        hotFix[0] = 0;
-        hotFix[1] = bb.array()[2];
-        hotFix[2] = bb.array()[3];
-        hotFix[3] = 0;
-
-        return hotFix;
+    public void setCoefficientsCO(HidDevice device) throws Exception {
+        double[] coefs = new double[14];
+        for (int i = 0; i < coefs.length; i++) {
+            coefs[i] = i + 201.0;
+        }
+        log.info("Будут заданы " + coefs[0] + "..." + coefs[coefs.length-1] + " для газа ");
+        setCoefForGas("co", coefs, device);
     }
-    // For general setCoef, extend this method with parameters for gas code, command byte, num coefs
+
+    public void setCoefficientsH2S(HidDevice device) throws Exception {
+        double[] coefs = new double[14];
+        for (int i = 0; i < coefs.length; i++) {
+            coefs[i] = i + 401.0;
+        }
+        log.info("Будут заданы " + coefs[0] + "..." + coefs[coefs.length-1] + " для газа ");
+        setCoefForGas("h2s", coefs, device);
+    }
+
+
+    /**
+     *
+     * @param gasType [o2] - for 19 values; [co] - 14 values; [h2s] - values
+     * @param coefs double array
+     * @param device HidDeviceObject
+     * @throws Exception
+     */
     public void setCoefForGas(String gasType, double[] coefs, HidDevice device) throws Exception {
+        // Открыть устройство
+        device.open();
+
+        // Определить код газа, байт команды и ожидаемое число коэффициента
         int gasCode, commandByte;
         int expectedNum;
+        byte sixEcommand;
+        int afterGasCode; //5D - 02; 49 -CO afterGasCode
         switch (gasType.toLowerCase()) {
             case "o2":
-                gasCode = 0x61;
+                gasCode = 0x61;//(OK)
                 commandByte = 0x06;  // SendCoefO2Byte
                 expectedNum = 19;
+                sixEcommand = 0x56;
+                afterGasCode = 0x5D;
                 break;
             case "co":
-                gasCode = 0x62;
+                gasCode = 0x4D;//(OK)
                 commandByte = 0x07;  // SendCoefCOByte
                 expectedNum = 14;
+                sixEcommand = 0x42;
+                afterGasCode = 0x49;
                 break;
             case "h2s":
                 gasCode = 0x63;
                 commandByte = 0x08;  // SendCoefH2SByte
                 expectedNum = 14;
+                sixEcommand = 42;
+                afterGasCode = 0x49;
                 break;
             case "temp":
                 gasCode = 0x0A;  // From Definitions.h SendCoefTempByte 0x0A ToDo check it
                 commandByte = 0x0A;
-                expectedNum = 10;  // ToDo check it
+                expectedNum = 14;  // ToDo check it
+                sixEcommand = 42;
+                afterGasCode = 0x49;
                 break;
             default:
                 throw new IllegalArgumentException("Unknown gas type: " + gasType);
         }
 
+        // Проверка соответствия длины входного массива ожидаемому количеству коэффициента
         if (coefs.length != expectedNum) {
             throw new IllegalArgumentException(gasType + " coefficients must be exactly " + expectedNum + " values");
         }
@@ -241,98 +269,123 @@ public class CradleController {
         byte[] answer = null;
         byte[] exceptedAns = new byte[]{0x07, (byte)0x80, 0x04, 0x00, 0x78, (byte)0xF0, 0x00};
 
-        communicator.doSettingsBytes(device);
-
         communicator.cradleSwitchOn(device);
 
         communicator.resetZeroOffset(device);
 
+        // Запись первого магического байта с кодом газа
+        //01 04 07 02 21 01 03 61 D1 01 (OK) - 61 - код газа для О2
         // Write first magik with gas code: 01 04 07 02 21 01 03 [gasCode] D1 01
-        gasCode = 0x61;//ИСПРАВИЛ ДЛЯ КИСЛОРОДА СОГЛАСНО ДАМПУ ПРОГИ
+        int finalGasCode = gasCode;
         answer = communicator.waitForResponse(device,
-                () -> communicator.cradleWriteBlock(device, (byte) 0x01, new byte[]{0x03, (byte) 0x61, (byte) 0xD1, 0x01}),
+                () -> communicator.cradleWriteBlock(device, (byte) 0x01, new byte[]{0x03, (byte) finalGasCode, (byte) 0xD1, 0x01}),
                 exceptedAns, "", 10, 200);
 
 
-        // Write second magik: fixed 5D 54 02 65 (ОК)
+        //01 04 07 02 21 02 5D 54 02 65 (ОК) (FixME 5D - 02; 49 -CO afterGasCode
+        int finalMagikNumber = afterGasCode;
         answer = communicator.waitForResponse(device,
-                () -> communicator.cradleWriteBlock(device, (byte) 0x02, new byte[]{0x5D, 0x54, 0x02, 0x65}),
+                () -> communicator.cradleWriteBlock(device, (byte) 0x02, new byte[]{(byte)finalMagikNumber, 0x54, 0x02, 0x65}),
                 exceptedAns, "", 10, 200);
 
+        //01 04 07 02 21 03 6E 00 00 00 00 00 00 00 (OK)
         communicator.writeCountInThirdOffset(device, 0x00); //(ОК)
         communicator.safetySleep(100);
 
+        //01 04 07 02 21 04 00 06 00 01 00 00 00 00 (для О2 - OK)
         // Write command: 01 04 07 02 21 04 00 [commandByte] 00 01
-        //исправил согласно дампу
         answer = communicator.waitForResponse(device,
-                () -> communicator.cradleWriteBlock(device, (byte) 0x04, new byte[]{0x00, (byte) 0x06, 0x00, 0x01}),
+                () -> communicator.cradleWriteBlock(device, (byte) 0x04, new byte[]{0x00, (byte) commandByte, 0x00, 0x01}),
                 exceptedAns, "", 10, 200);
 
-        // Write magik in fifth: 01 00 00 00 (Исправил)
-        answer = communicator.waitForResponse(device,
-                () -> communicator.cradleWriteBlock(device, (byte) 0x05, new byte[]{0x01, 0x00, 0x00, (byte) 0x00}),
-                exceptedAns, "Write magik in fifth", 10, 250);
+        // Подготовка payload — последовательность float (little-endian)
+        byte[] payload = new byte[expectedNum * 4];
+        ByteBuffer bb = ByteBuffer.wrap(payload).order(ByteOrder.LITTLE_ENDIAN);
+        for (double c : coefs) {
+            bb.putFloat((float) c);
+        }
+        //log.info("payload= " + MyUtilities.bytesToHex(payload));
 
-        // Write data blocks starting from 0x06
-        for (int i = 0; i < expectedNum; i++) {
-            byte[] coefBytes = doubleToLittleEndianBytes(coefs[i]);
-            final byte address = (byte) (0x06 + i);
+        // Вычисление CRC32 по payload
+        CRC32 crc = new CRC32();
+        crc.update(payload);
+        long crcVal = crc.getValue();
+
+        // Формирование финального массива = payload + CRC
+        byte[] crcBytes = ByteBuffer.allocate(4)
+                .order(ByteOrder.LITTLE_ENDIAN)
+                .putInt((int) crcVal)
+                .array();
+
+        byte[] finalArray = new byte[payload.length + 5];
+        System.arraycopy(payload, 0, finalArray, 0, payload.length);
+        System.arraycopy(crcBytes, 0, finalArray, payload.length, 4);
+        finalArray[finalArray.length - 1] = (byte) 0xFE;
+
+        // 3. Отправка: адрес 0x05 — первый байт finalArray
+        answer = communicator.waitForResponse(device,
+                () -> communicator.cradleWriteBlock(device, (byte) 0x05, new byte[]{
+                        0x01, 0x00, 0x00, finalArray[0]  // finalArray[0]
+                }),
+                exceptedAns, "finalArray first byte", 10, 150);
+        communicator.safetySleep(100);
+
+        // Адрес для посылки данных начинается с 0x06
+        int addr = 0x06;
+        for (int i = 0; i < finalArray.length; i += 4) {
+            byte[] arrForSend = Arrays.copyOfRange(finalArray, i + 1 , i + 1 + 4); // +1 потому что 0 уже оправлен по 5 адресу
+            log.info(String.format("Send addr %02X: %s", addr, MyUtilities.bytesToHex(arrForSend)));
+
+            int finalAddr = addr;
             answer = communicator.waitForResponse(device,
-                    () -> communicator.cradleWriteBlock(device, (address), coefBytes),
-                    exceptedAns, "", 10, 150);
-            communicator.safetySleep(100);
+                    () -> communicator.cradleWriteBlock(device, (byte) finalAddr, arrForSend),
+                    exceptedAns, "Adr" + addr, 10, 150);
+
+            addr++;
         }
 
-        communicator.simpleSend(device, new byte[]{0x01, 0x04, 0x07, 0x02, 0x21, 0x19, (byte)0x97, (byte)0xDD, (byte)0xD8, (byte)0xFE, 0x00, 0x00, 0x00, 0x00, 0x00});
+
+        //01 04 07 02 21 1A 00 00 00 00 00 00 00 00 00 00 (ОК) (для 02, заполнение нулями)
+        communicator.simpleSend(device, new byte[]{0x01, 0x04, 0x07, 0x02, 0x21, (byte)addr, (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
         communicator.safetySleep(100);
         communicator.readResponse(device);
         communicator.safetySleep(150);
 
-        communicator.simpleSend(device, new byte[]{0x01, 0x04, 0x07, 0x02, 0x21, (byte)0x1A, (byte)0x00, (byte)0x00, (byte)0x00, (byte)0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
+        //01 04 07 02 21 03 6E 56 00 00 00 00 00 00 00 00 (ОК) (FixMe: 56 для О2, для CO - 42
+        communicator.simpleSend(device, new byte[]{0x01, 0x04, 0x07, 0x02, 0x21, (byte)0x03, (byte)0x6E, (byte)sixEcommand, (byte)0x00, (byte)0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
         communicator.safetySleep(100);
         communicator.readResponse(device);
         communicator.safetySleep(150);
 
-        communicator.simpleSend(device, new byte[]{0x01, 0x04, 0x07, 0x02, 0x21, (byte)0x03, (byte)0x6E, (byte)0x56, (byte)0x00, (byte)0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
-        communicator.safetySleep(100);
-        communicator.readResponse(device);
-        communicator.safetySleep(150);
 
-//        // Write total count: 6E + little-endian (expectedNum * 4)
-//        int totalBytes = expectedNum * 4;
-//        byte low = (byte) (totalBytes & 0xFF);
-//        byte high = (byte) ((totalBytes >> 8) & 0xFF);
-//        answer = communicator.waitForResponse(device,
-//                () -> communicator.cradleWriteBlock(device, (byte) 0x03, new byte[]{0x6E, low, high, 0x00}),
-//                exceptedAns, "", 10, 70);
-
-        //01 04 07 02 21 00 E1 40 FF 01
+        //01 04 07 02 21 00 E1 40 FF 01 (ОК)
         communicator.cradleActivateTransmit(device);
 
+        //01 02 02 00 00 00 00 00 00 00 00 00 00 00 00 00 (ОК)
         communicator.cradleSwitchOff(device);
 
+        //01 02 02 01 0D 00 00 00 00 00 00 00 00 00 00 00 (ОК)
         communicator.cradleSwitchOn(device);
 
+        //01 04 04 02 23 00 07 00 00 00 00 00 00 00 00 00 (ОК)
         communicator.simpleSend(device, new byte[]{0x01, 0x04, 0x04, 0x02, 0x23, (byte)0x00, (byte)0x07});
         communicator.safetySleep(100);
         communicator.readResponse(device);
         communicator.safetySleep(150);
 
+        //01 04 04 02 23 00 07 00 00 00 00 00 00 00 00 00 (ОК)
         communicator.simpleSend(device, new byte[]{0x01, 0x04, 0x04, 0x02, 0x23, (byte)0x00, (byte)0x07});
         communicator.safetySleep(100);
         communicator.readResponse(device);
         communicator.safetySleep(150);
 
+        //01 04 04 02 23 08 07 00 00 00 00 00 00 00 00 00 (ОК)
         communicator.simpleSend(device, new byte[]{0x01, 0x04, 0x04, 0x02, 0x23, (byte)0x08, (byte)0x07});
         communicator.safetySleep(100);
         communicator.readResponse(device);
         communicator.safetySleep(150);
 
-        communicator.simpleSend(device, new byte[]{0x01, 0x04, 0x04, 0x02, 0x23, (byte)0x08, (byte)0x07});
-        communicator.safetySleep(100);
-        communicator.readResponse(device);
-        communicator.safetySleep(150);
-
+        //01 02 02 00 00 00 00 00 00 00 00 00 00 00 00 00 (ОК)
         communicator.simpleSend(device, new byte[]{0x01, 0x02, 0x02, 0x00, 0x00});
         communicator.safetySleep(100);
         communicator.readResponse(device);

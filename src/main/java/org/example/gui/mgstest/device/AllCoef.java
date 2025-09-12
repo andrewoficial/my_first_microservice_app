@@ -113,6 +113,8 @@ public class AllCoef {
             info.ch4Pressure[i] = bb.getFloat(231 + i * 4);
             //log.info("CH4 pressure coef " + i + ": " + info.ch4Pressure[i]);
         }
+        info.ch4Pressure[0] =  bb.getInt(231);
+
         for (int i = 0; i < data.length - 8; i++) {
             double candidate = bb.getFloat(i);
             if (candidate == 601.0) {

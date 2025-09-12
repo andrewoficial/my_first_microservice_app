@@ -1,9 +1,12 @@
 package org.example.gui.mgstest.tabs;
 
+import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.gui.mgstest.device.AllCoef;
 import org.example.gui.mgstest.device.DeviceInfo;
 import org.example.gui.mgstest.pool.DeviceState;
+import org.example.gui.mgstest.transport.CradleController;
+import org.hid4java.HidDevice;
 
 import javax.swing.*;
 import java.awt.*;
@@ -11,6 +14,13 @@ import java.text.DecimalFormat;
 
 public class TabCoefficients extends DeviceTab {
     private Logger log = Logger.getLogger(TabCoefficients.class);
+    private CoefficientNames coefficientNamesNames = new CoefficientNames();
+    @Setter
+    private CradleController cradleController;
+    @Setter
+    private HidDevice selectedDevice;
+    @Setter
+    private DeviceState deviceState;
 
     private JPanel mainPanel;
     private JScrollPane scrollPane;
@@ -36,8 +46,11 @@ public class TabCoefficients extends DeviceTab {
     // Формат для отображения чисел
     private DecimalFormat decimalFormat = new DecimalFormat("0.##########");
 
-    public TabCoefficients() {
+    public TabCoefficients(CradleController cradleController, HidDevice selectedDevice, DeviceState deviceState) {
         super("Коэффициенты");
+        this.selectedDevice = selectedDevice;
+        this.cradleController = cradleController;
+        this.deviceState = deviceState;
         initComponents();
     }
 
@@ -81,13 +94,18 @@ public class TabCoefficients extends DeviceTab {
         o2Fields = new JTextField[19];
 
         for (int i = 0; i < 19; i++) {
-            gridPanel.add(new JLabel("Коэффициент " + (i + 101) + ":"));
+            gridPanel.add(new JLabel(coefficientNamesNames.oxygen.get(i)));
             o2Fields[i] = new JTextField();
-            o2Fields[i].setEditable(false);
+            o2Fields[i].setEditable(true); // Делаем поле редактируемым
             gridPanel.add(o2Fields[i]);
         }
 
         o2Panel.add(gridPanel);
+
+        // Добавляем кнопку "Задать" для O2
+        JButton setO2Button = new JButton("Задать коэффициенты O2");
+        setO2Button.addActionListener(e -> setCoefficientsForGas("o2", o2Fields));
+        o2Panel.add(setO2Button);
     }
 
     private void createCoPanel() {
@@ -99,13 +117,18 @@ public class TabCoefficients extends DeviceTab {
         coFields = new JTextField[14];
 
         for (int i = 0; i < 14; i++) {
-            gridPanel.add(new JLabel("Коэффициент " + (i + 201) + ":"));
+            gridPanel.add(new JLabel(coefficientNamesNames.coDt.get(i)));
             coFields[i] = new JTextField();
-            coFields[i].setEditable(false);
+            coFields[i].setEditable(true); // Делаем поле редактируемым
             gridPanel.add(coFields[i]);
         }
 
         coPanel.add(gridPanel);
+
+        // Добавляем кнопку "Задать" для CO
+        JButton setCoButton = new JButton("Задать коэффициенты CO");
+        setCoButton.addActionListener(e -> setCoefficientsForGas("co", coFields));
+        coPanel.add(setCoButton);
     }
 
     private void createH2sPanel() {
@@ -117,13 +140,18 @@ public class TabCoefficients extends DeviceTab {
         h2sFields = new JTextField[14];
 
         for (int i = 0; i < 14; i++) {
-            gridPanel.add(new JLabel("Коэффициент " + (i + 301) + ":"));
+            gridPanel.add(new JLabel(coefficientNamesNames.h2s.get(i)));
             h2sFields[i] = new JTextField();
-            h2sFields[i].setEditable(false);
+            h2sFields[i].setEditable(true); // Делаем поле редактируемым
             gridPanel.add(h2sFields[i]);
         }
 
         h2sPanel.add(gridPanel);
+
+        // Добавляем кнопку "Задать" для H2S
+        JButton setH2sButton = new JButton("Задать коэффициенты H2S");
+        setH2sButton.addActionListener(e -> setCoefficientsForGas("h2s", h2sFields));
+        h2sPanel.add(setH2sButton);
     }
 
     private void createCh4PressurePanel() {
@@ -197,6 +225,34 @@ public class TabCoefficients extends DeviceTab {
         }
 
         vRangePanel.add(gridPanel);
+    }
+
+    // Метод для установки коэффициентов через cradleController
+    private void setCoefficientsForGas(String gasType, JTextField[] fields) {
+        if (selectedDevice == null) {
+            JOptionPane.showMessageDialog(null, "Устройство не выбрано", "Ошибка", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            double[] coefficients = new double[fields.length];
+            for (int i = 0; i < fields.length; i++) {
+                String forParse = fields[i].getText().replaceAll("\\,", ".");
+                coefficients[i] = Double.parseDouble(forParse);
+            }
+
+            cradleController.setCoefForGas(gasType, coefficients, selectedDevice);
+            JOptionPane.showMessageDialog(null, "Коэффициенты " + gasType.toUpperCase() + " успешно заданы",
+                    "Успех", JOptionPane.INFORMATION_MESSAGE);
+        } catch (NumberFormatException ex) {
+            log.info("Некорректные числовые значения в полях коэффициентов" + ex.getMessage());
+            JOptionPane.showMessageDialog(null, "Некорректные числовые значения в полях коэффициентов",
+                    "Ошибка", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(null, "Ошибка при задании коэффициентов: " + ex.getMessage(),
+                    "Ошибка", JOptionPane.ERROR_MESSAGE);
+            log.error("Ошибка при задании коэффициентов", ex);
+        }
     }
 
     @Override

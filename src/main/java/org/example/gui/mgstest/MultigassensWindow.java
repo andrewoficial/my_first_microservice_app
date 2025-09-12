@@ -35,6 +35,7 @@ public class MultigassensWindow extends JFrame implements Rendeble {
     private TabInfo infoTab;
     private JButton shutdownButton;
     private JButton setCoefficientsButton;
+    private JButton setCoefficientsButtonCo;
     private JButton getInfoButton;
     private JButton opticCommandButton;
     private JButton setSerialNumberButton;
@@ -85,7 +86,7 @@ public class MultigassensWindow extends JFrame implements Rendeble {
         tabs.put("info", infoTab);
         tabbedPane.addTab(infoTab.getTabName(), infoTab.getPanel());
 
-        TabCoefficients coefficientsTab = new TabCoefficients();
+        TabCoefficients coefficientsTab = new TabCoefficients(cradleController, selectedDevice, null);
         tabs.put("coefficients", coefficientsTab);
         tabbedPane.addTab(coefficientsTab.getTabName(), coefficientsTab.getPanel());
 
@@ -112,7 +113,10 @@ public class MultigassensWindow extends JFrame implements Rendeble {
                     if (storageKey != null) {
                         updateDeviceInfo(storageKey);
                         infoTab.setCradleController(cradleController);
+                        coefficientsTab.setCradleController(cradleController);
+
                         infoTab.setSelectedDevice(selectedDevice);
+                        coefficientsTab.setSelectedDevice(selectedDevice);
                         if(stateStorage.get(storageKey) == null){
                             log.error("stateStorage.get(storageKey) == null");
                         }else{
@@ -181,6 +185,24 @@ public class MultigassensWindow extends JFrame implements Rendeble {
             }
         });
         buttonPanel.add(setCoefficientsButton);
+
+        setCoefficientsButtonCo = new SimpleButton("SET CO");
+        setCoefficientsButtonCo.addActionListener(e -> {
+            if (selectedDevice != null) {
+                //cradleController.
+                byte[] coefRaw = null;
+                try {
+                    cradleController.setCoefficientsCO(selectedDevice);
+                } catch (Exception ex) {
+                    log.warn("Ошибка во время выполнения setCoefficientsCO" + ex.getMessage());
+                    //throw new RuntimeException(ex);
+                }
+
+            } else {
+                JOptionPane.showMessageDialog(this, "No device selected");
+            }
+        });
+        buttonPanel.add(setCoefficientsButtonCo);
 
         getInfoButton = new SimpleButton("Get Info");
         getInfoButton.addActionListener(e -> {

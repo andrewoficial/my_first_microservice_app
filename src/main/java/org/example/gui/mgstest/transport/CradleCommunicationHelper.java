@@ -318,7 +318,7 @@ public class CradleCommunicationHelper {
      */
     public void cradleWriteBlock(HidDevice device, byte blockId, byte[] data) {
         if (data.length != 4) {
-            throw new IllegalArgumentException("Data must be 4 bytes");
+            throw new IllegalArgumentException("Data must be 4 bytes! Got:" + data.length + " blockId:" + blockId +" Array:" + MyUtilities.bytesToHex(data));
         }
         hidController.simpleSend(device, new byte[]{(byte) 0x01, (byte) 0x04, (byte) 0x07, (byte) 0x02, (byte) 0x21, blockId, data[0], data[1], data[2], data[3]});
         safetySleep(200);
@@ -333,8 +333,8 @@ public class CradleCommunicationHelper {
         byte[] buffer = new byte[64];
         int bytesRead = device.read(buffer, 1000);
         if (bytesRead > 0) {
-            log.info("Ответ на команду: ");
-            hidController.printArrayLikeDeviceMonitor(buffer);
+            //log.info("Ответ на команду: ");
+            //hidController.printArrayLikeDeviceMonitor(buffer);
         } else {
             log.error("Нет ответа на команду");
         }
@@ -378,8 +378,9 @@ public class CradleCommunicationHelper {
             log.warn("Превышен предел попыток (" + tryLimit + ")");
             return null;
         }
-
-        log.info("Получен корректный ответ после " + (attempts + 1) + " попыток");
+        if(attempts > 0) {
+            log.info("Получен корректный ответ после " + (attempts + 1) + " попыток");
+        }
         return received;
     }
 
