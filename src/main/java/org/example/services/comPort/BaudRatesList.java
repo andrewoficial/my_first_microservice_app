@@ -46,4 +46,19 @@ public enum BaudRatesList {
                 List<Integer> values = BaudRatesList.getValues();
                 return values.get(number);
         }
+
+        public static  Integer getLikeArrayOrderByValue(BaudRatesList value){
+                if(value == null){
+                        return -1;
+                }
+                List<Integer> values = getValues();
+                int num = 0;
+                for (Integer i : values) {
+                        if(value.value == i)
+                                return num;
+
+                        num++;
+                }
+                return -1;
+        }
 }

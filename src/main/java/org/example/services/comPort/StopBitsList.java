@@ -19,6 +19,21 @@ public enum StopBitsList {
         this.value = value;
     }
 
+    public static  Integer getLikeArrayOrderByValue(StopBitsList value){
+        if(value == null){
+            return -1;
+        }
+        List<Integer> values = getValues();
+        int num = 0;
+        for (Integer i : values) {
+            if(value.getValue() == i)
+                return num;
+
+            num++;
+        }
+        return -1;
+    }
+
     public int getValue() {
         return value;
     }

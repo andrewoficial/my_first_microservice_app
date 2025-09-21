@@ -8,6 +8,7 @@ import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 import org.apache.log4j.Logger;
 import org.example.Main;
+import org.example.device.ProtocolComPort;
 import org.example.device.ProtocolsList;
 import org.example.device.SomeDevice;
 import org.example.device.TemplatedAscii;
@@ -118,6 +119,7 @@ public class MainWindow extends JFrame implements Rendeble {
     private JPanel jpParity;
     private JPanel jpComStopBit;
     private JPanel jpOpenClose;
+    private JButton jbSetTypicalParametrs;
 
 
     private void initUI() {
@@ -283,7 +285,6 @@ public class MainWindow extends JFrame implements Rendeble {
 
 
     private void updateComPortList() {
-
         jcbComPorts.removeAllItems();
         for (int i = 0; i < SerialPort.getCommPorts().length; i++) {
             SerialPort currentPort = SerialPort.getCommPorts()[i];
@@ -291,6 +292,36 @@ public class MainWindow extends JFrame implements Rendeble {
             if (currentPort.getSystemPortName().equals(prop.getPorts()[0])) {
                 jcbComPorts.setSelectedIndex(i);
             }
+        }
+    }
+
+    //Подстановка параметров ком-порта для протокола
+    private void setTypicalParameters() {
+        SomeDevice device = createDeviceByProtocol(ProtocolsList.getLikeArrayEnum(jcbProtocol.getSelectedIndex()));
+        if (device instanceof ProtocolComPort) {
+            ProtocolComPort castedDevice = (ProtocolComPort) device;
+
+            log.info("Для выбранного устройства типовая скорость: " + castedDevice.getDefaultBaudRate());
+            int num = BaudRatesList.getLikeArrayOrderByValue(castedDevice.getDefaultBaudRate());
+            log.info("Для выбранного устройства типовая скорость: (номер в списке)" + num);
+            jcbBaudRate.setSelectedIndex(num);
+
+            log.info("Для выбранного устройства стандартное значение dataBit: " + castedDevice.getDefaultDataBit());
+            num = DataBitsList.getLikeArrayOrderByValue(castedDevice.getDefaultDataBit());
+            log.info("Для выбранного устройства стандартное значение dataBit: (номер в списке)" + num);
+            jcbDataBits.setSelectedIndex(num);
+
+            log.info("Для выбранного устройства стандартное значение четности: " + castedDevice.getDefaultParity());
+            num = ParityList.getLikeArrayOrderByValue(castedDevice.getDefaultParity());
+            log.info("Для выбранного устройства стандартное значение четности: (номер в списке)" + num);
+            jcbParity.setSelectedIndex(num);
+
+            log.info("Для выбранного устройства стандартное значение StopBit: " + castedDevice.getDefaultStopBit());
+            num = StopBitsList.getLikeArrayOrderByValue(castedDevice.getDefaultStopBit());
+            log.info("Для выбранного устройства стандартное значение StopBit: (номер в списке)" + num);
+            jcbParity.setSelectedIndex(num);
+        } else {
+            log.info("Для выбранного устройства типовая скорость не задана ");
         }
     }
 
@@ -320,6 +351,7 @@ public class MainWindow extends JFrame implements Rendeble {
         ListenerUtils.addActionListener(jbAddDev, this::addTab);
         ListenerUtils.addActionListener(jbRemoveDev, this::removeTab);
         ListenerUtils.addActionListener(jbComUpdateList, this::updateComPortList);
+        ListenerUtils.addActionListener(jbSetTypicalParametrs, this::setTypicalParameters);
 
         // CheckBoxes
         ListenerUtils.addActionListener(jCbNeedPool, this::updateTextAndSendFromCheckBox);
@@ -904,7 +936,7 @@ public class MainWindow extends JFrame implements Rendeble {
         final Spacer spacer1 = new Spacer();
         jpConnectionType.add(spacer1, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         jpComPortSetup = new JPanel();
-        jpComPortSetup.setLayout(new GridLayoutManager(12, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jpComPortSetup.setLayout(new GridLayoutManager(13, 1, new Insets(0, 0, 0, 0), -1, -1));
         jpComPortSetup.setEnabled(true);
         jpConnectionSettings.add(jpComPortSetup, BorderLayout.CENTER);
         jpDataBits = new JPanel();
@@ -941,7 +973,7 @@ public class MainWindow extends JFrame implements Rendeble {
         jpComStopBit.add(spacer4, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         jpOpenClose = new JPanel();
         jpOpenClose.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(jpOpenClose, new GridConstraints(8, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, 1, new Dimension(240, 29), new Dimension(240, 29), null, 0, false));
+        jpComPortSetup.add(jpOpenClose, new GridConstraints(9, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, 1, new Dimension(240, 29), new Dimension(240, 29), null, 0, false));
         jbComOpen = new JButton();
         jbComOpen.setAlignmentY(0.0f);
         jbComOpen.setHideActionText(false);
@@ -977,7 +1009,7 @@ public class MainWindow extends JFrame implements Rendeble {
         panel3.add(spacer6, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         final JPanel panel4 = new JPanel();
         panel4.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(panel4, new GridConstraints(10, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        jpComPortSetup.add(panel4, new GridConstraints(11, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         jCbNeedPool = new JCheckBox();
         jCbNeedPool.setText("Опрос  ");
         panel4.add(jCbNeedPool, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -989,7 +1021,7 @@ public class MainWindow extends JFrame implements Rendeble {
         panel4.add(jtfPoolDelay, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         jpAddRemove = new JPanel();
         jpAddRemove.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(jpAddRemove, new GridConstraints(11, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, 1, new Dimension(240, 29), new Dimension(240, 29), null, 0, false));
+        jpComPortSetup.add(jpAddRemove, new GridConstraints(12, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, 1, new Dimension(240, 29), new Dimension(240, 29), null, 0, false));
         jbAddDev = new JButton();
         jbAddDev.setAlignmentX(0.0f);
         jbAddDev.setAlignmentY(0.0f);
@@ -1003,14 +1035,14 @@ public class MainWindow extends JFrame implements Rendeble {
         jpAddRemove.add(jbRemoveDev, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(100, 25), new Dimension(119, 25), new Dimension(200, 200), 0, false));
         final JPanel panel5 = new JPanel();
         panel5.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(panel5, new GridConstraints(7, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(-1, 100), new Dimension(-1, 100), new Dimension(-1, 100), 0, false));
+        jpComPortSetup.add(panel5, new GridConstraints(8, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(-1, 100), new Dimension(-1, 100), new Dimension(-1, 100), 0, false));
         jbComUpdateList = new JButton();
         jbComUpdateList.setHideActionText(false);
         jbComUpdateList.setText("Обновить список портов");
         panel5.add(jbComUpdateList, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(260, 25), new Dimension(400, 200), 0, false));
         final JPanel panel6 = new JPanel();
         panel6.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(panel6, new GridConstraints(9, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        jpComPortSetup.add(panel6, new GridConstraints(10, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         jbComSearch = new JButton();
         jbComSearch.setAlignmentY(0.0f);
         jbComSearch.setAutoscrolls(false);
@@ -1045,6 +1077,14 @@ public class MainWindow extends JFrame implements Rendeble {
         jpFolderIconPanel.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
         jpFolderIconPanel.setEnabled(true);
         panel8.add(jpFolderIconPanel, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        final JPanel panel9 = new JPanel();
+        panel9.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jpComPortSetup.add(panel9, new GridConstraints(7, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, 1, 1, null, null, null, 0, false));
+        jbSetTypicalParametrs = new JButton();
+        jbSetTypicalParametrs.setHorizontalTextPosition(0);
+        jbSetTypicalParametrs.setText("Задать стандартные параметры");
+        jbSetTypicalParametrs.setToolTipText("Задает параметры скорости для выбранного протокола");
+        panel9.add(jbSetTypicalParametrs, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
     }
 
     /**

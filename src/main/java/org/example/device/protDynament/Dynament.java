@@ -4,6 +4,7 @@ import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
 import org.apache.log4j.Logger;
 import org.example.device.DeviceCommandListClass;
+import org.example.device.ProtocolComPort;
 import org.example.device.SomeDevice;
 import org.example.device.command.SingleCommand;
 import org.example.device.connectParameters.ComConnectParameters;
@@ -19,11 +20,19 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-public class Dynament implements SomeDevice {
+public class Dynament implements SomeDevice, ProtocolComPort {
     private static final Logger log = Logger.getLogger(Dynament.class);
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора
     private final SerialPort comPort;
+    @Getter
+    private final DataBitsList defaultDataBit = DataBitsList.B8;
+    @Getter
+    private final ParityList defaultParity= ParityList.P_NO;
+    @Getter
+    private final BaudRatesList defaultBaudRate = BaudRatesList.B38400;
+    @Getter
+    private final StopBitsList defaultStopBit = StopBitsList.S1;
 
     private final DeviceCommandListClass commands;
     private final DynamentCommandRegistry commandRegistry;
@@ -52,10 +61,10 @@ public class Dynament implements SomeDevice {
         this.comPort = port;
         this.commandRegistry = new DynamentCommandRegistry();
         this.commands = commandRegistry.getCommandList();
-        comParameters.setDataBits(DataBitsList.B8);
-        comParameters.setParity(ParityList.P_NO);
-        comParameters.setBaudRate(BaudRatesList.B38400); // Default baudrate from Python
-        comParameters.setStopBits(StopBitsList.S1);
+        comParameters.setDataBits(defaultDataBit);
+        comParameters.setParity(defaultParity);
+        comParameters.setBaudRate(defaultBaudRate);
+        comParameters.setStopBits(defaultStopBit);
         comParameters.setStringEndian(StringEndianList.NO);
         comParameters.setMillisLimit(600); // Timeout from Python
         comParameters.setMillisReadLimit(300);

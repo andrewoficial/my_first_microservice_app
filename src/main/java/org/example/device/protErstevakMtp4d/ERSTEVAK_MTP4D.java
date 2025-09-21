@@ -4,19 +4,29 @@ package org.example.device.protErstevakMtp4d;
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
 import org.apache.log4j.Logger;
+import org.example.device.ProtocolComPort;
 import org.example.device.DeviceCommandListClass;
 import org.example.device.SomeDevice;
 import org.example.device.connectParameters.ComConnectParameters;
-import org.example.device.protErstevakMtp4d.ErstevakMtp4dCommandRegistry;
 import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 
 
-public class ERSTEVAK_MTP4D implements SomeDevice {
+public class ERSTEVAK_MTP4D implements SomeDevice, ProtocolComPort {
     private static final Logger log = Logger.getLogger(ERSTEVAK_MTP4D.class);
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора
     private final SerialPort comPort;
+    @Getter
+    private final DataBitsList defaultDataBit = DataBitsList.B8;
+    @Getter
+    private final ParityList defaultParity= ParityList.P_EV;
+    @Getter
+    private final BaudRatesList defaultBaudRate = BaudRatesList.B9600;
+    @Getter
+    private final StopBitsList defaultStopBit = StopBitsList.S1;
+
+
 
     private final DeviceCommandListClass commands;
     private final ErstevakMtp4dCommandRegistry commandRegistry;
@@ -43,10 +53,10 @@ public class ERSTEVAK_MTP4D implements SomeDevice {
         this.comPort = port;
         this.commandRegistry = new ErstevakMtp4dCommandRegistry();
         this.commands = commandRegistry.getCommandList();
-        comParameters.setDataBits(DataBitsList.B8);
-        comParameters.setParity(ParityList.P_EV);
-        comParameters.setBaudRate(BaudRatesList.B9600);
-        comParameters.setStopBits(StopBitsList.S1);
+        comParameters.setDataBits(defaultDataBit);
+        comParameters.setParity(defaultParity);
+        comParameters.setBaudRate(defaultBaudRate);
+        comParameters.setStopBits(defaultStopBit);
         comParameters.setStringEndian(StringEndianList.CR);
         comParameters.setMillisLimit(300);
         comParameters.setRepeatWaitTime(100);
