@@ -3,12 +3,43 @@ package org.example.gui.mgstest.transport;
 import org.apache.log4j.Logger;
 import org.example.utilites.MyUtilities;
 import org.hid4java.HidDevice;
+import org.sonatype.aether.transfer.TransferCancelledException;
+
+import java.util.ArrayList;
 
 public class CradleCommunicationHelper {
     SomeHidController hidController = new SomeHidController();
     private final Logger log = Logger.getLogger(CradleCommunicationHelper.class);
+    public final ArrayList<byte[]> RESET_ZERO_OFFSET_ANSWER_SAMPLES = new ArrayList<>();
+    public final ArrayList<byte[]> WRITE_MAGIK_FIRST_OFFSET_ANSWER_SAMPLES = new ArrayList<>();
+    public final ArrayList<byte[]> WRITE_MAGIK_FIFTH_OFFSET_ANSWER_SAMPLES = new ArrayList<>();
+    public final ArrayList<byte[]> WRITE_MAGIK_SIX_OFFSET_ANSWER_SAMPLES = new ArrayList<>();
+    public final ArrayList<byte[]> ASSEMBLE_C_GET_WRITE_ANSWER_SAMPLES = new ArrayList<>();
+    public final ArrayList<byte[]> CRADLE_ACTIVATE_TRANSMIT_ANSWER_SAMPLES = new ArrayList<>();
 
 
+    public CradleCommunicationHelper() {
+        RESET_ZERO_OFFSET_ANSWER_SAMPLES.add(new byte[]{0x07, (byte)0x80, (byte)0x04, (byte)0x00});
+        RESET_ZERO_OFFSET_ANSWER_SAMPLES.add(new byte[]{0x07, (byte)0x8E, (byte)0x04, (byte)0x00});
+
+        WRITE_MAGIK_FIRST_OFFSET_ANSWER_SAMPLES.add(new byte[]{0x07, (byte)0x80, (byte)0x04, 0x00});
+        WRITE_MAGIK_FIRST_OFFSET_ANSWER_SAMPLES.add(new byte[]{0x07, (byte)0x8E, (byte)0x00, 0x00});
+
+        WRITE_MAGIK_FIFTH_OFFSET_ANSWER_SAMPLES.add(new byte[]{0x07, (byte)0x80, (byte)0x04, 0x00});
+        WRITE_MAGIK_FIFTH_OFFSET_ANSWER_SAMPLES.add(new byte[]{0x07, (byte)0x8E, (byte)0x04, 0x00});
+
+        WRITE_MAGIK_SIX_OFFSET_ANSWER_SAMPLES.add(new byte[]{0x07, (byte)0x80, (byte)0x04, 0x00});
+        WRITE_MAGIK_SIX_OFFSET_ANSWER_SAMPLES.add(new byte[]{0x07, (byte)0x8E, (byte)0x04, 0x00});
+        //WRITE_MAGIK_SIX_OFFSET_ANSWER_SAMPLES.add(new byte[]{0x07, (byte)0x87, (byte)0x00, 0x00});
+
+        ASSEMBLE_C_GET_WRITE_ANSWER_SAMPLES.add(new byte[] {0x07, (byte)0x80, (byte)0x24});
+        ASSEMBLE_C_GET_WRITE_ANSWER_SAMPLES.add(new byte[] {0x00, (byte)0x80, (byte)0x24});
+        //.add(new byte[] {0x07, (byte)0x87, (byte)0x00});
+
+        CRADLE_ACTIVATE_TRANSMIT_ANSWER_SAMPLES.add(new byte[]{0x07, (byte)0x80, (byte)0x04, (byte)0x00, (byte)0x78});
+        CRADLE_ACTIVATE_TRANSMIT_ANSWER_SAMPLES.add(new byte[]{0x07, (byte)0x8E, (byte)0x04, (byte)0x00, (byte)0x78});
+
+    }
 
     //=============CradleCommand================//
 
@@ -33,7 +64,7 @@ public class CradleCommunicationHelper {
         exceptedAns = new byte[]{0x07, (byte)0x00, (byte)0x03};
         answer = waitForResponse(device,
                 () -> simpleSendInitial(device, new byte[]{0x02, (byte)0xBC, (byte)0xCC, (byte) 0xCC}),
-                exceptedAns,"",10, 70);
+                exceptedAns,"",3, 15);
         forReturn = isEqual(answer, exceptedAns, "") && forReturn;
         //07 00 03
 
@@ -42,7 +73,7 @@ public class CradleCommunicationHelper {
         exceptedAns = new byte[]{0x07, (byte)0x00, (byte)0x07};
         answer = waitForResponse(device,
                 () -> simpleSendInitial(device, new byte[]{0x02, (byte)0xB2}),
-                exceptedAns,"",10, 70);
+                exceptedAns,"",3, 15);
         forReturn = isEqual(answer, exceptedAns, "") && forReturn;
         //07 00 03
 
@@ -50,7 +81,7 @@ public class CradleCommunicationHelper {
         exceptedAns = new byte[]{0x07, (byte)0x80, (byte)0x00};
         answer = waitForResponse(device,
                 () -> simpleSendInitial(device, new byte[]{0x02, (byte)0xBD}),
-                exceptedAns,"",10, 70);
+                exceptedAns,"",3, 15);
         forReturn = isEqual(answer, exceptedAns, "") && forReturn;
         //07 80 00
 
@@ -58,7 +89,7 @@ public class CradleCommunicationHelper {
         exceptedAns = new byte[]{0x07, (byte)0x55, (byte)0x00};
         answer = waitForResponse(device,
                 () -> simpleSendInitial(device, new byte[]{0x01, (byte)0x55}),
-                exceptedAns,"",10, 70);
+                exceptedAns,"",3, 15);
         forReturn = isEqual(answer, exceptedAns, "") && forReturn;
         //07 55 00
 
@@ -69,7 +100,7 @@ public class CradleCommunicationHelper {
         exceptedAns = new byte[]{0x07, (byte)0x80, (byte)0x12, 0x00};
         answer = waitForResponse(device,
                 () -> simpleSendInitial(device, new byte[]{0x01, (byte)0x04, 0x02, 0x02, 0x2B}),
-                exceptedAns,"",10, 70);
+                exceptedAns,"",20, 10);
         forReturn = isEqual(answer, exceptedAns, "") && forReturn;
         //07 80 12 00
 
@@ -90,7 +121,7 @@ public class CradleCommunicationHelper {
         exceptedAns = new byte[]{0x07, (byte)0x00, (byte)0x00};
         answer = waitForResponse(device,
                 () -> simpleSend(device, new byte[]{(byte) 0x01, (byte) 0x02, (byte) 0x02, (byte) 0x01, (byte) 0x0D}),
-                exceptedAns,"NFC_ENABLE",5, 70);
+                exceptedAns,"NFC_ENABLE",3, 15);
         //ANS_SAMPLE: 07 00 00 00 78 F0 00 C1 31 12 5A 02 E0 FF 00 7F
     }
 
@@ -105,10 +136,10 @@ public class CradleCommunicationHelper {
         byte [] answer = null;
 
         //REQ_SAMPLE:  01 02 02 00 00 00 00 00 00 00 00 00 00 00 00 00
-        exceptedAns = new byte[]{0x07, (byte)0x00, (byte)0x00};
+        exceptedAns = new byte[]{0x07, (byte)0x00, (byte)0x00, (byte)0x00};
         answer = waitForResponse(device,
                 () -> simpleSend(device, new byte[]{(byte) 0x01, (byte) 0x02, (byte) 0x02}),
-                exceptedAns,"NFC_DISABLE",5, 70);
+                exceptedAns,"NFC_DISABLE",5, 25);
         //ANS_SAMPLE: 07 00 00 00 78 F0 00 C1 31 12 5A 02 E0 FF 00 7F
     }
 
@@ -119,13 +150,15 @@ public class CradleCommunicationHelper {
      *
      */
     public void cradleActivateTransmit(HidDevice device) {
-        byte [] exceptedAns = null;
         byte [] answer = null;
         //REQ_SAMPLE:  01 04 07 02 21 00 E1 40 FF 01 00 00 00 00 00 00
-        exceptedAns = new byte[]{0x07, (byte)0x80, (byte)0x04};
         answer = waitForResponse(device,
-                () -> simpleSend(device, new byte[]{(byte) 0x01, (byte) 0x04, (byte) 0x07, (byte) 0x02, (byte) 0x21, (byte) 0x00, (byte) 0xE1, (byte) 0x40, (byte) 0xFF, (byte) 0x01}),
-                exceptedAns,"NFC_TRANSMIT",10, 100);
+                () -> simpleSend(device,
+                        new byte[]{(byte) 0x01, (byte) 0x04, (byte) 0x07, (byte) 0x02, (byte) 0x21, (byte) 0x00, (byte) 0xE1, (byte) 0x40, (byte) 0xFF, (byte) 0x01}),
+                CRADLE_ACTIVATE_TRANSMIT_ANSWER_SAMPLES,
+                "NFC_TRANSMIT",
+                4, 25,
+                3, 40);
         //ANS_SAMPLE: 07 80 04 00 78 F0 00 C1 31 12 5A 02 E0 FF 00 7F
     }
 
@@ -137,15 +170,16 @@ public class CradleCommunicationHelper {
      * ANS: 07 80 04
      *
      */
-    public void resetZeroOffset(HidDevice device){
-        byte [] exceptedAns = null;
+    public byte[] resetZeroOffset(HidDevice device){
         byte [] answer = null;
-
-        exceptedAns = new byte[]{0x07, (byte)0x80, (byte)0x04};
         answer = waitForResponse(device,
-                () -> cradleWriteBlock(device, (byte) 0x00, new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00}),//Команда из дампа,
-                exceptedAns,"RESET_ZERO_OFFSET",10, 50);
-
+                () -> cradleWriteBlock(device,
+                        (byte) 0x00,
+                        new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00}),//Команда из дампа,
+                RESET_ZERO_OFFSET_ANSWER_SAMPLES,"RESET_ZERO_OFFSET",
+                4, 25,
+                3, 40);
+        return answer;
     }
 
     /**
@@ -156,13 +190,15 @@ public class CradleCommunicationHelper {
      *
      */
     public void writeMagikInFirstOffset(HidDevice device){
-        byte [] exceptedAns = null;
         byte [] answer = null;
         //REQ_SAMPLE:  01 04 07 02 21 01 03 11 D1 01
-        exceptedAns = new byte[]{0x07, (byte)0x80, (byte)0x04};
         answer = waitForResponse(device,
-                () -> cradleWriteBlock(device, (byte) 0x01, new byte[]{(byte) 0x03, (byte) 0x11, (byte) 0xD1, (byte) 0x01}),
-                exceptedAns,"WRITE_FIRST_OFFSET",10, 50);
+                () -> cradleWriteBlock(device, (byte) 0x01,
+                        new byte[]{(byte) 0x03, (byte) 0x11, (byte) 0xD1, (byte) 0x01}),
+                WRITE_MAGIK_FIRST_OFFSET_ANSWER_SAMPLES,
+                "WRITE_FIRST_OFFSET",
+                4, 25,
+                3, 40);
         //ANS_SAMPLE: 07 80 04 00 78 F0 00
     }
 
@@ -174,13 +210,12 @@ public class CradleCommunicationHelper {
      *
      */
     public void writeMagikInSecondOffset(HidDevice device){
-        byte [] exceptedAns = null;
         byte [] answer = null;
         //REQ_SAMPLE:  01 04 07 02 21 02 0D 54 02 65
-        exceptedAns = new byte[]{0x07, (byte)0x80, 0x04, 0x00, 0x78, (byte)0xF0, 0x00};
         answer = waitForResponse(device,
                 () -> cradleWriteBlock(device, (byte) 0x02, new byte[]{0x0D, 0x54, 0x02, 0x65}),
-                exceptedAns,"WRITE_SECOND_OFFSET",10, 70);
+                WRITE_MAGIK_FIFTH_OFFSET_ANSWER_SAMPLES,"WRITE_SECOND_OFFSET",
+                3, 25, 2, 45);
         //ANS_SAMPLE: 07 80 04 00 78 F0 00
     }
 
@@ -198,7 +233,9 @@ public class CradleCommunicationHelper {
         exceptedAns = new byte[]{0x07, (byte)0x80, (byte)0x04};
         answer = waitForResponse(device,
                 () -> cradleSendCount(device, count),
-                exceptedAns,"WRITE_THIRD_OFFSET Установка счётчика",10, 70);
+                WRITE_MAGIK_FIRST_OFFSET_ANSWER_SAMPLES,"WRITE_THIRD_OFFSET Установка счётчика",
+                4, 25,
+                3, 40);
         //07 80 04
     }
 
@@ -211,13 +248,16 @@ public class CradleCommunicationHelper {
      *
      */
     public void writeMagikInFifthOffset(HidDevice device){
-        byte [] exceptedAns = null;
+
         byte [] answer = null;
         //Меняется??? 01 04 07 02 21 05 00 00 00 FE || 01 04 07 02 21 05 01 00 00 FE  //05 01 - Новая версия LongGas; 05 00 - Старая версия LongGas
-        exceptedAns = new byte[]{0x07, (byte)0x80, 0x04, 0x00};
         answer = waitForResponse(device,
-                () -> cradleWriteBlock(device, (byte) 0x05, new byte[]{0x01, 0x00, 0x00, (byte) 0xFE}),
-                exceptedAns,"WRITE_FIFTH_OFFSET",10, 70);
+                () -> cradleWriteBlock(device, (byte) 0x05,
+                        new byte[]{0x01, 0x00, 0x00, (byte) 0xFE}),
+                WRITE_MAGIK_FIFTH_OFFSET_ANSWER_SAMPLES,
+                "WRITE_FIFTH_OFFSET",
+                4, 25,
+                3, 40);
         //07 80 04 00 78 F0 00
     }
 
@@ -236,7 +276,7 @@ public class CradleCommunicationHelper {
         exceptedAns = new byte[]{0x07, (byte)0x80, 0x04, 0x00, 0x78, (byte)0xF0, 0x00};
         answer = waitForResponse(device,
                 () -> cradleWriteBlock(device, (byte) 0x06, new byte[]{0x00, 0x00, 0x00, 0x00}),
-                exceptedAns,"RESET_SIXTH_OFFSET",10, 70);
+                exceptedAns,"RESET_SIXTH_OFFSET",3, 25);
         //07 80 04 00 78 F0 00
     }
 
@@ -251,10 +291,12 @@ public class CradleCommunicationHelper {
         byte [] exceptedAns = null;
         byte [] answer = null;
         // 01 04 07 02 21 06 00 00 00 04 00 00 00 00 00 00
-        exceptedAns = new byte[]{0x07, (byte)0x80, (byte)0x04};
+
         answer = waitForResponse(device,
                 () -> cradleWriteBlock(device, (byte) 0x06, new byte[]{0x00, 0x00, 0x00, (byte) 0x04}),
-                exceptedAns,"WRITE_SIXTH_OFFSET",10, 70);
+                WRITE_MAGIK_SIX_OFFSET_ANSWER_SAMPLES,"WRITE_SIXTH_OFFSET",
+                4, 25,
+                3, 40);
         //07 80 04 00 78 F0 00 C1 31 12 5A 02 E0 FF 00 7F
     }
 
@@ -272,7 +314,7 @@ public class CradleCommunicationHelper {
         exceptedAns = new byte[]{0x07, (byte)0x80, (byte)0x04};
         answer = waitForResponse(device,
                 () -> cradleWriteBlock(device, (byte) 0x07, new byte[]{(byte) 0xFE, (byte) 0x00, (byte) 0x00, (byte) 0x00}),
-                exceptedAns,"WRITE_SEVENTH_OFFSET",10, 70);
+                exceptedAns,"WRITE_SEVENTH_OFFSET",3, 25);
         //
     }
 
@@ -293,6 +335,15 @@ public class CradleCommunicationHelper {
     public void simpleSendInitial(HidDevice device, byte[] msg){
         hidController.simpleSendInitial(device, msg);
     }
+
+    /**
+     *
+     * @param msg
+     */
+    public void printArrayLikeDeviceMonitor(byte[] msg){
+        hidController.printArrayLikeDeviceMonitor(msg);
+    }
+
 
     /**
      *
@@ -321,7 +372,7 @@ public class CradleCommunicationHelper {
             throw new IllegalArgumentException("Data must be 4 bytes! Got:" + data.length + " blockId:" + blockId +" Array:" + MyUtilities.bytesToHex(data));
         }
         hidController.simpleSend(device, new byte[]{(byte) 0x01, (byte) 0x04, (byte) 0x07, (byte) 0x02, (byte) 0x21, blockId, data[0], data[1], data[2], data[3]});
-        safetySleep(200);
+        safetySleep(15);
     }
 
     /**
@@ -351,7 +402,7 @@ public class CradleCommunicationHelper {
      * @param comment   строка для логов
      * @param tryLimit  макс. число попыток
      * @param sleepMs   пауза между попытками
-     * @return          полученный валидный ответ или null
+     * @return          полученный ответ
      */
     public byte[] waitForResponse(HidDevice device,
                                    Runnable action,
@@ -376,7 +427,6 @@ public class CradleCommunicationHelper {
 
         if (attempts >= tryLimit) {
             log.warn("Превышен предел попыток (" + tryLimit + ")");
-            return null;
         }
         if(attempts > 0) {
             log.info("Получен корректный ответ после " + (attempts + 1) + " попыток");
@@ -384,6 +434,97 @@ public class CradleCommunicationHelper {
         return received;
     }
 
+    /**
+     * Универсальный метод ожидания корректного ответа.
+     *
+     * @param device    объект устройства
+     * @param action    команда, которую нужно выполнить (лямбда: () -> sendCommand())
+     * @param expectedValues  набор ожидаемых ответов (варианты)
+     * @param comment   строка для логов
+     * @param readRepeatLimit  макс. число попыток чтения
+     * @param writeRepeatLimit  макс. число попыток записи
+     * @param delayRead   пауза между попытками чтения
+     * @param delayWrite   пауза между попытками записи
+     * @return          полученный ответ
+     */
+    public byte[] waitForResponse(HidDevice device,
+                                  Runnable action,
+                                  ArrayList<byte[]> expectedValues,
+                                  String comment,
+                                  int readRepeatLimit,
+                                  int writeRepeatLimit,
+                                  long delayRead,
+                                  long delayWrite) {
+        int attemptsRead = 0;
+        int attemptsWrite = 0;
+        byte[] received = null;
+        log.info("Начинаю отправку, [" + comment + "]. Ожидаю варианты ответов");
+        for (byte[] value : expectedValues) {
+            MyUtilities.bytesToHex(value);
+        }
+
+        for (int i = 0; i < writeRepeatLimit; i++) {
+            action.run();
+            attemptsWrite++;
+            do{
+                attemptsRead++;
+                safetySleep(delayRead);
+                received = readResponse(device);
+                if (attemptsRead >= readRepeatLimit) {
+                    log.warn("Превышен предел попыток чтения (" + readRepeatLimit + ")");
+                }
+            }while (!isEqual(received, expectedValues, comment) && readRepeatLimit < attemptsRead);
+
+
+            if(isEqual(received, expectedValues, comment)) {
+                log.info("Получен корректный ответ после " + (attemptsRead ) + " попыток чтения и " + (attemptsWrite)+ " попыток записи");
+                return received;
+            }
+            safetySleep(delayWrite);
+        }
+        log.warn("Превышен предел попыток отправки команды (" + readRepeatLimit + ")");
+        return received;
+    }
+
+    /**
+     * Проверка ответа на соответствие заголовка требуемому
+     * @param received - Принятый пакет
+     * @param expectedValues - Требуемый заголовок
+     * @param comment - Комментраий для печати в отладку
+     * @return - boolean. True if first part is equal.
+     */
+    public boolean isEqual(byte[] received, ArrayList<byte []> expectedValues, String comment) {
+        if (expectedValues == null || received == null) {
+            log.warn("[" + comment + "] передан null аргумент");
+            return false;
+        }
+        if (expectedValues.isEmpty() || received.length == 0) {
+            log.warn("[" + comment + "] пустой набор массивов в аргументах");
+            return false;
+        }
+
+        for (byte[] expectedValue : expectedValues) {
+            if (received.length < expectedValue.length) {
+                log.warn("[" + comment + "] полученный массив короче эталонного");
+                continue;
+            }
+            boolean isDifferent = false;
+            for (int i = 0; i < expectedValue.length; i++) {
+                if (received[i] != expectedValue[i]) {
+                    log.info("[" + comment + "] несовпадение на позиции " + i +
+                            " (ожидал " + String.format("%02X", expectedValue[i]) +
+                            ", получил " + String.format("%02X", received[i]) + ")");
+                    isDifferent = true;
+                    break;
+                }
+
+            }
+            if(!isDifferent){
+                return true;
+            }
+        }
+        return false;
+    }
 
     /**
      * Проверка ответа на соответствие заголовка требуемому
@@ -474,7 +615,7 @@ F0 00 00 A7 F0 CF FF FE 00 E0 42 00 00 E2 42 00
      * @param size - Некий размер, в примерах выше это цифра 07
      * @return - массив, со вставками
      */
-    public byte[] assembleCget(HidDevice device, byte[] offsets, byte size) {
+    public byte[] assembleCget(HidDevice device, byte[] offsets, byte size) throws TransferCancelledException {
         /*
         Пример возвращаемого от устройства
         07 80 24 00 00 00 97 43 00 80 97 43 00 00 98 43
@@ -504,13 +645,24 @@ F0 00 00 A7 F0 CF FF FE 00 E0 42 00 00 E2 42 00
             //Мой метод подачи команды и чтения ответа. Проверяет, что заголовок как в примере.
             //Аргументы: HidDevice; function(отправляющая и возвращающая ответ), byte[]{требуемое начало ответа}, String "коммент в для отладки", int количетсов повторов чтения, int сон между попытками ms
             byte[] arrRead = waitForResponse(device,
-                    () -> hidController.simpleSend(device, new byte[]{(byte) 0x01, (byte) 0x04, (byte) 0x04, (byte) 0x02, (byte) 0x23, off, size}),
-                    new byte[] {0x07, (byte)0x80, (byte)0x24},
-                    "",
-                    3, 120);
+                    () -> hidController.simpleSend(device,
+                            new byte[]{(byte) 0x01, (byte) 0x04, (byte) 0x04, (byte) 0x02, (byte) 0x23, off, size}),
+                    ASSEMBLE_C_GET_WRITE_ANSWER_SAMPLES,
+                    "ASSEMBLE_C_GET_"+off,
+                    3, 250,
+                    2, 350);
+            if(! isEqual(arrRead, ASSEMBLE_C_GET_WRITE_ANSWER_SAMPLES, "Проверка на выброс исключения")){
+                log.warn("В процессе отправки адресов:");
+                hidController.printArrayLikeDeviceMonitor(offsets);
+                log.warn("В процессе отправки off:" + off + " и переменной " + size + " получен непредвиденный ответ:");
+                hidController.printArrayLikeDeviceMonitor(arrRead);
+                log.warn("Ожидаемые заголовки:");
+                for (byte[] assembleCGetWriteAnswerSample : ASSEMBLE_C_GET_WRITE_ANSWER_SAMPLES) {
+                    hidController.printArrayLikeDeviceMonitor(assembleCGetWriteAnswerSample);
+                }
 
-            //Если ничего не считалось, продолжаем все равно
-            if (arrRead == null || arrRead.length == 0) continue;
+                throw new TransferCancelledException("Ошибка выполнения пакета команд");
+            }
 
             //Начинается склейка массива
             for (int k = 0; k < nBlockSize; k++) {

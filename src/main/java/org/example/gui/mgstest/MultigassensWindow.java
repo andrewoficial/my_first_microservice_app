@@ -15,6 +15,8 @@ import org.example.gui.mgstest.tabs.DeviceTab;
 import org.example.gui.mgstest.tabs.TabInfo;
 import org.example.gui.mgstest.tabs.TabSettings;
 import org.example.gui.mgstest.transport.CradleController;
+import org.example.gui.mgstest.transport.MipexResponse;
+import org.example.services.comPort.StringEndianList;
 import org.hid4java.HidDevice;
 import org.hid4java.HidManager;
 import org.hid4java.HidServices;
@@ -136,13 +138,14 @@ public class MultigassensWindow extends JFrame implements Rendeble {
 
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        shutdownButton = new SimpleButton("Shutdown");
+        shutdownButton = new JButton("GetCoef");
         shutdownButton.addActionListener(e -> {
             if (selectedDevice != null) {
                 //cradleController.
+
                 byte[] coefRaw = null;
                 try {
-                    coefRaw = cradleController.getAllCoef(selectedDevice);
+                    coefRaw = cradleController.getAllCoefGui(selectedDevice);
                 } catch (Exception ex) {
                     log.warn("Ошибка во время выполнения getAllCoef" + ex.getMessage());
                     //throw new RuntimeException(ex);
@@ -168,7 +171,7 @@ public class MultigassensWindow extends JFrame implements Rendeble {
         });
         buttonPanel.add(shutdownButton);
 
-        setCoefficientsButton = new SimpleButton("SET O2");
+        setCoefficientsButton = new JButton("SET O2");
         setCoefficientsButton.addActionListener(e -> {
             if (selectedDevice != null) {
                 //cradleController.
@@ -186,7 +189,7 @@ public class MultigassensWindow extends JFrame implements Rendeble {
         });
         buttonPanel.add(setCoefficientsButton);
 
-        setCoefficientsButtonCo = new SimpleButton("SET CO");
+        setCoefficientsButtonCo = new JButton("SET CO");
         setCoefficientsButtonCo.addActionListener(e -> {
             if (selectedDevice != null) {
                 //cradleController.
@@ -204,7 +207,7 @@ public class MultigassensWindow extends JFrame implements Rendeble {
         });
         buttonPanel.add(setCoefficientsButtonCo);
 
-        getInfoButton = new SimpleButton("Get Info");
+        getInfoButton = new JButton("Get Info");
         getInfoButton.addActionListener(e -> {
 
         });
@@ -212,16 +215,28 @@ public class MultigassensWindow extends JFrame implements Rendeble {
 
 
 
-        opticCommandButton = new SimpleButton("Send Optic Command");
+        opticCommandButton = new JButton("Send Optic Command");
         opticCommandButton.addActionListener(e -> {
-            String text = JOptionPane.showInputDialog(this, "Enter text for optic command:");
 
+            String text = JOptionPane.showInputDialog(this, "Enter text for optic command:").trim();
+            MipexResponse response = new MipexResponse(0L, "Нет ответа от прибора");
+            try {
+                StringBuilder sb = new StringBuilder();
+                sb.append(text);
+                sb.append('\r');
+                response = cradleController.sendMipex(sb.toString(), selectedDevice);
+            } catch (Exception ex) {
+                log.info(ex.getMessage());
+                response = new MipexResponse(0L, ex.getMessage());
+                //throw new RuntimeException(ex);
+            }
+            JOptionPane.showMessageDialog(this, response.text);
         });
         buttonPanel.add(opticCommandButton);
 
 
 
-        setSerialNumberButton = new SimpleButton("Set Serial Number");
+        setSerialNumberButton = new JButton("Set Serial Number");
         setSerialNumberButton.addActionListener(e -> {
             if (selectedDevice != null) {
                 String input = JOptionPane.showInputDialog(this,

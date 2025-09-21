@@ -7,6 +7,7 @@ import org.example.gui.mgstest.device.DeviceInfo;
 import org.example.gui.mgstest.pool.DeviceState;
 import org.example.gui.mgstest.transport.CradleController;
 import org.hid4java.HidDevice;
+import org.sonatype.aether.transfer.TransferCancelledException;
 
 import javax.swing.*;
 import java.awt.*;
@@ -208,7 +209,16 @@ public class TabInfo extends DeviceTab {
     // Методы-заглушки для обработчиков событий
     private void performBlinkTest() {
         if (selectedDevice != null && selectedDevice.open()) {
-            cradleController.blinkTest(selectedDevice);
+            byte[] success = executeWithRetry(
+                    () -> cradleController.blinkTest(selectedDevice),
+                    2,  // Количество попыток
+                    0   // Задержка между попытками (мс)
+            );
+            if (success == null) {
+                log.warn("Failed to blinkTest after multiple attempts");
+            }else{
+                deviceState.getDeviceInfo().setAlarmEnabled(false);
+            }
         } else {
             JOptionPane.showMessageDialog(null, "Устройство не подключено");
         }
@@ -216,7 +226,16 @@ public class TabInfo extends DeviceTab {
 
     private void performBeepTest() {
         if (selectedDevice != null && selectedDevice.open()) {
-            cradleController.beepTest(selectedDevice);
+            byte[] success = executeWithRetry(
+                    () -> cradleController.beepTest(selectedDevice),
+                    2,  // Количество попыток
+                    0   // Задержка между попытками (мс)
+            );
+            if (success == null) {
+                log.warn("Failed to beepTest after multiple attempts");
+            }else{
+                deviceState.getDeviceInfo().setAlarmEnabled(false);
+            }
         } else {
             JOptionPane.showMessageDialog(null, "Устройство не подключено");
         }
@@ -235,7 +254,16 @@ public class TabInfo extends DeviceTab {
 
     private void rebootDevice() {
         if(selectedDevice.open()){
-            cradleController.rebootCmd(selectedDevice);
+            byte[] success = executeWithRetry(
+                    () -> cradleController.rebootCmd(selectedDevice),
+                    2,  // Количество попыток
+                    0   // Задержка между попытками (мс)
+            );
+            if (success == null) {
+                log.warn("Failed to rebootCmd after multiple attempts");
+            }else{
+                deviceState.getDeviceInfo().setAlarmEnabled(false);
+            }
         }
     }
 
@@ -245,17 +273,64 @@ public class TabInfo extends DeviceTab {
     }
 
     private void resetBattery() {
-        cradleController.resetBatteryCounter(selectedDevice);
+        byte []  success = executeWithRetry(
+                () -> cradleController.resetBatteryCounter(selectedDevice),
+                2,  // Количество попыток
+                0   // Задержка между попытками (мс)
+        );
+        if (success == null) {
+            log.warn("Failed to reset battery after multiple attempts");
+        }
     }
 
+    @FunctionalInterface
+    public interface Executable {
+        byte [] execute() throws TransferCancelledException;
+    }
+
+    private byte[] executeWithRetry(Executable method, int maxAttempts, long delayMs) {
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+
+                return method.execute(); // Успешное выполнение
+            } catch (TransferCancelledException e) {
+                if (attempt == maxAttempts) return null; // Все попытки исчерпаны
+                if (delayMs > 0) {
+                    try {
+                        Thread.sleep(delayMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return null;
+                    }
+                }
+            }
+        }
+        return null;
+    }
     private void switchAlarmState(){
         if(selectedDevice.open()){
             if(alarmCheckBox.isSelected()){
-                deviceState.getDeviceInfo().setAlarmEnabled(true);
-                cradleController.alarmOn(selectedDevice);
+                byte[] success = executeWithRetry(
+                        () -> cradleController.alarmOn(selectedDevice),
+                        2,  // Количество попыток
+                        0   // Задержка между попытками (мс)
+                );
+                if (success != null) {
+                    log.warn("Failed to alarmOn after multiple attempts");
+                }else{
+                    deviceState.getDeviceInfo().setAlarmEnabled(true);
+                }
             }else{
-                deviceState.getDeviceInfo().setAlarmEnabled(false);
-                cradleController.alarmOff(selectedDevice);
+                byte[] success = executeWithRetry(
+                        () -> cradleController.alarmOff(selectedDevice),
+                        2,  // Количество попыток
+                        0   // Задержка между попытками (мс)
+                );
+                if (success != null) {
+                    log.warn("Failed to alarmOff after multiple attempts");
+                }else{
+                    deviceState.getDeviceInfo().setAlarmEnabled(false);
+                }
             }
         }else{
             log.warn("Не удалось подключиться");

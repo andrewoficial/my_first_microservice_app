@@ -5,8 +5,8 @@ import java.awt.*;
 
 // Создаем кастомный UI для TabbedPane
 public class CustomTabbedPaneUI extends BasicTabbedPaneUI {
-    private static final Color TAB_BACKGROUND = new Color(0x2D, 0x2D, 0x2D);
-    private static final Color SELECTED_TAB_BACKGROUND = new Color(118, 149, 110);
+    private static final Color TAB_BACKGROUND = NimbusCustomizer.defBackground;
+    private static final Color SELECTED_TAB_BACKGROUND = NimbusCustomizer.disabledForeground;
     private static final Color TAB_FOREGROUND = Color.WHITE;
     private static final Color BORDER_COLOR = new Color(0x55, 0x55, 0x55);
 
@@ -21,8 +21,8 @@ public class CustomTabbedPaneUI extends BasicTabbedPaneUI {
         tabPane.setForegroundAt(0, TAB_FOREGROUND);
         
         // Настраиваем отступы
-        tabInsets = new Insets(5, 10, 5, 10);
-        selectedTabPadInsets = new Insets(3, 8, 3, 8);
+        tabInsets = new Insets(1, 3, 5, 3);
+        selectedTabPadInsets = new Insets(1, 3, 7, 3);
     }
 
     @Override

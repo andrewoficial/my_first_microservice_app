@@ -5,9 +5,11 @@ import javax.swing.plaf.basic.BasicTabbedPaneUI;
 import java.awt.*;
 
 public class SimpleTabbedPane extends JTabbedPane {
-    private final Color normalColor = new Color(249, 249, 249);
-    private final Color selectedColor = new Color(240, 240, 240);
-    private final Color borderColor = new Color(200, 200, 200);
+    private static final Color TAB_BACKGROUND = NimbusCustomizer.defBackground;
+    private static final Color SELECTED_TAB_BACKGROUND = NimbusCustomizer.disabledForeground;
+    private static final Color TAB_FOREGROUND = Color.WHITE;
+    private static final Color BORDER_COLOR = new Color(0x55, 0x55, 0x55);
+
 
     public SimpleTabbedPane() {
         super();
@@ -15,22 +17,25 @@ public class SimpleTabbedPane extends JTabbedPane {
             @Override
             protected void installDefaults() {
                 super.installDefaults();
-                highlight = borderColor;
-                lightHighlight = borderColor;
-                shadow = borderColor;
-                darkShadow = borderColor;
-                focus = normalColor;
+                highlight = BORDER_COLOR;
+                lightHighlight = BORDER_COLOR;
+                shadow = BORDER_COLOR;
+                darkShadow = BORDER_COLOR;
+                focus = TAB_BACKGROUND;
 
                 // Увеличиваем отступы для вкладок
-                tabInsets = new Insets(5, 10, 5, 10);
-                selectedTabPadInsets = new Insets(5, 10, 5, 10);
-                contentBorderInsets = new Insets(1, 0, 0, 0);
+                tabInsets = new Insets(1, 1, 5, 1);
+                selectedTabPadInsets = new Insets(1, 1, 9, 1);
+                contentBorderInsets = new Insets(0, 0, 0, 0);
+                // Устанавливаем кастомные цвета
+//                tabPane.setBackgroundAt(0, TAB_BACKGROUND);
+//                tabPane.setForegroundAt(0, TAB_FOREGROUND);
             }
 
             @Override
             protected void paintTabBorder(Graphics g, int tabPlacement, int tabIndex,
                                           int x, int y, int w, int h, boolean isSelected) {
-                g.setColor(borderColor);
+                g.setColor(BORDER_COLOR);
                 g.drawRect(x, y, w, h);
             }
 
@@ -52,8 +57,8 @@ public class SimpleTabbedPane extends JTabbedPane {
             }
         });
 
-        setBackground(normalColor);
-        setForeground(Color.BLACK);
+        setBackground(TAB_BACKGROUND);
+        setForeground(TAB_FOREGROUND);
         setFont(getFont().deriveFont(Font.PLAIN, 12f));
     }
 }

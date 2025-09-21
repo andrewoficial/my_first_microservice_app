@@ -6,6 +6,8 @@ import org.example.gui.mgstest.transport.CradleCommunicationHelper;
 import org.example.gui.mgstest.transport.CradleController;
 import org.hid4java.HidDevice;
 
+import java.util.ArrayList;
+
 public class GetDeviceInfoCommand implements CradleCommand {
     private final CradleCommunicationHelper communicator = new CradleCommunicationHelper();
     private final Logger log = Logger.getLogger(GetDeviceInfoCommand.class);
@@ -34,10 +36,14 @@ public class GetDeviceInfoCommand implements CradleCommand {
         communicator.writeCountInThirdOffset(device, 0x00);
 
         // 01 04 07 02 21 04 00 2E 00 01
-        exceptedAns = new byte[]{0x07, (byte)0x80, (byte)0x04};
+        ArrayList<byte[]> answers = new ArrayList<>();
+        answers.add(new byte[]{0x07, (byte)0x80, (byte)0x04});
+        answers.add(new byte[]{0x07, (byte)0x87, (byte)0x00});
         answer = communicator.waitForResponse(device,
                 () -> communicator.cradleWriteBlock(device, (byte) 0x04, new byte[]{0x00, 0x2E, 0x00, 0x01}),
-                exceptedAns,"",10, 70);
+                answers,"",
+                4, 25,
+                3, 40);
         //07 80 04
 
         // 01 04 07 02 21 05 01 00 00 FE
