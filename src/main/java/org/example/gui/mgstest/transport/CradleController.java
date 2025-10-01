@@ -1,21 +1,16 @@
 package org.example.gui.mgstest.transport;
 
 import org.apache.log4j.Logger;
-import org.example.gui.mgstest.device.AdvancedResponseParser;
-import org.example.gui.mgstest.device.ResponseParser;
 import org.example.gui.mgstest.tabs.TabInfo;
 import org.example.gui.mgstest.transport.commands.GetDeviceInfoCommand;
+import org.example.gui.mgstest.transport.commands.SendUartCommand;
 import org.example.utilites.MyUtilities;
 import org.hid4java.HidDevice;
 import org.sonatype.aether.transfer.TransferCancelledException;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.zip.CRC32;
 
 public class CradleController {
@@ -31,7 +26,7 @@ public class CradleController {
 
     private void registerCommands() {
         commands.put("deviceInfo", new GetDeviceInfoCommand());
-        //commands.put("getAllCoef", new GetAllCoefCommand());
+        commands.put("sendUartCommand", new SendUartCommand());
         //commands.put("alarmOff", new AlarmOffCommand());
         // ... другие команды
     }
@@ -45,11 +40,17 @@ public class CradleController {
         if (command == null) {
             throw new IllegalArgumentException("Unknown command: " + "deviceInfo");
         }
-        return command.execute(device);
+        return command.execute(device, null);
     }
-    @FunctionalInterface
-    public interface Executable {
-        void execute() throws TransferCancelledException;
+
+    public byte[] sedUartCommand(HidDevice device, CommandParameters parameters) throws Exception {
+        CradleCommand command = commands.get("sendUartCommand");
+        if (command == null) {
+            throw new IllegalArgumentException("Unknown command: " + "sendUartCommand");
+        }
+        byte[] answer = command.execute(device, parameters);
+        communicator.printArrayLikeDeviceMonitor(answer);
+        return  answer;
     }
 
     private byte[] executeWithRetry(TabInfo.Executable method, int maxAttempts, long delayMs) {
@@ -71,19 +72,11 @@ public class CradleController {
         }
         return null;
     }
-    public byte[] getAllCoefGui(HidDevice device) {
-        byte[] success = executeWithRetry(
-                () -> getAllCoef(device),
-                2,  // Количество попыток
-                0   // Задержка между попытками (мс)
-        );
-        if (success == null) {
-            log.warn("Failed to getAllCoef after multiple attempts");
-        }
-        return success;
-    }
+
     public byte[] getAllCoef(HidDevice device) throws TransferCancelledException {
         log.info("Run get all coef (0x05)");
+        device.close();
+        device.open();
 
         byte[] answer = null;
         byte [] exceptedAns = null;
@@ -434,157 +427,6 @@ public class CradleController {
         communicator.safetySleep(150);
     }
 
-    /**
-     * Sends a MIPEX (optic/UART) command and returns the response.
-     * @param commandText The string command to send (e.g., "CALB 0225")
-     * @param device HidDevice
-     * @return MipexResponse with time and response text
-     * @throws Exception
-     */
-    public MipexResponse sendMipex(String commandText, HidDevice device) throws Exception {
-        device.open();
-        log.info("Начало настройки");
-        log.info("Run send MIPEX command (0x09 SetCommandMIPEXByte)");
-
-        byte[] commandBytes = commandText.getBytes("UTF-8");
-        log.info("Строка для отправки:");
-        log.info("HEX:");
-        log.info(MyUtilities.bytesToHex(commandBytes));
-        log.info("DEC:");
-        log.info(MyUtilities.byteArrayToString(commandBytes));
-        if ( commandBytes.length > 255) {
-            throw new IllegalArgumentException("MIPEX command too long: " +  commandBytes.length);
-        }
-
-        byte[] answer = null;
-        byte[] exceptedAns = new byte[]{0x07, (byte)0x80, 0x04, 0x00, 0x78, (byte)0xF0, 0x00};
-
-
-        //С этого начинается дамп
-        //REQ: 01 02 02 01 0D ANS: 07 00 00 00 00 (ОК)
-        log.info("Начало отправки команды");
-        communicator.cradleSwitchOn(device);
-
-        //REQ: 01 04 07 02 21 00 00 00 00 00 ANS: 07 80 04 (ОК)
-        communicator.resetZeroOffset(device);
-
-        // Сверить с дампом
-        //REQ: 01 04 07 02 21 01 03 09 D1 01 ANS: 07 80 04 00 78 F0 00 (ОК)
-        // Предпологая, что gasCode 0x09 для MIPEX)
-        int gasCode = 0x20;
-        answer = communicator.waitForResponse(device,
-                () -> communicator.cradleWriteBlock(device, (byte) 0x01, new byte[]{0x03, (byte) gasCode, (byte) 0xD1, 0x01}),
-                exceptedAns, "", 3, 150);
-
-        //REQ: 01 04 07 02 21 02 5D 54 02 65 ANS: 07 80 04 00 78 F0 00 (ОК)
-        // assume same as O2; adjust if needed
-        int afterGasCode = 0x1C;
-        answer = communicator.waitForResponse(device,
-                () -> communicator.cradleWriteBlock(device, (byte) 0x02, new byte[]{(byte) afterGasCode, 0x54, 0x02, 0x65}),
-                exceptedAns, "", 3, 150);
-
-        communicator.writeCountInThirdOffset(device, 0x00);
-
-        //REQ: 01 04 07 02 21 04 00 09 00 01 ANS: 07 80 04 00 78 F0 00 (ОК)
-        int commandByte = 0x09;
-        answer = communicator.waitForResponse(device,
-                () -> communicator.cradleWriteBlock(device, (byte) 0x04, new byte[]{0x00, (byte) commandByte, 0x00, 0x01}),
-                exceptedAns, "", 3, 150);
-
-        //REQ: 01 04 07 02 21 05 01 00 00 0A ANS: 07 80 04 00 78 F0 00 (ОК)
-        byte prefixByte = 0x0A;
-        answer = communicator.waitForResponse(device,
-                () -> communicator.cradleWriteBlock(device, (byte) 0x05, new byte[]{0x01, 0x00, 0x00, prefixByte}),
-                exceptedAns, "", 3, 150);
-
-        // 1. Подготовка данных для расчёта CRC: prefixByte + commandBytes
-        byte[] dataForCrc = new byte[1 + commandBytes.length];
-        dataForCrc[0] = prefixByte;
-        System.arraycopy(commandBytes, 0, dataForCrc, 1, commandBytes.length);
-
-        // 2. Расчёт CRC32
-        CRC32 crc = new CRC32();
-        crc.update(dataForCrc);
-        long crcVal = crc.getValue();
-        byte[] crcBytes = ByteBuffer.allocate(4)
-                .order(ByteOrder.LITTLE_ENDIAN)
-                .putInt((int) crcVal)
-                .array();
-
-        // 3. Формирование финального массива: commandBytes + CRC + FE
-        byte[] finalArray = new byte[commandBytes.length + 5];
-        System.arraycopy(commandBytes, 0, finalArray, 0, commandBytes.length);
-        System.arraycopy(crcBytes, 0, finalArray, commandBytes.length, 4);
-        finalArray[finalArray.length - 1] = (byte) 0xFE;
-
-        // Write data blocks starting from 0x06 (4-byte chunks, pad 0x00 if short)
-        /*
-Нужно отправлять:
-        01 04 07 02 21 06 43 41 4C 42
-        01 04 07 02 21 07 20 30 32 32
-        01 04 07 02 21 08 35 0D 12 F3
-        01 04 07 02 21 09 2A 9F FE 00
-         */
-        int addr = 0x06;
-        for (int i = 0; i < finalArray.length; i += 4) {
-            byte[] chunk = new byte[4];
-            int length = Math.min(4, finalArray.length - i);
-            System.arraycopy(finalArray, i, chunk, 0, length);
-
-            // Дополняем последний блок нулями при необходимости
-            if (length < 4) {
-                Arrays.fill(chunk, length, 4, (byte) 0x00);
-            }
-
-            log.info(String.format("Send addr %02X: %s", addr, MyUtilities.bytesToHex(chunk)));
-
-            int finalAddr = addr;
-            answer = communicator.waitForResponse(device,
-                    () -> communicator.cradleWriteBlock(device, (byte) finalAddr, chunk),
-                    exceptedAns, "MIPEX data chunk", 10, 150);
-            addr++;
-        }
-
-        // REQ: 01 04 07 02 21 03 6E 15 00 00 00 синзронизировано с дампом (ОК)
-        // Write total count: 6E + little-endian (expectedNum * 4? But for string, len(commandBytes))
-        // Assume totalBytes = commandBytes.length (raw len, not *4 since bytes not floats)
-        int totalBytes = commandBytes.length;
-        byte low = (byte) (totalBytes & 0xFF);
-        byte high = (byte) ((totalBytes >> 8) & 0xFF);
-        byte sixEcommand = 0x15;  // Исправлено
-        answer = communicator.waitForResponse(device,
-                () -> communicator.simpleSend(device, new byte[]{0x01, 0x04, 0x07, 0x02, 0x21, (byte)0x03, (byte)0x6E, (byte)sixEcommand}),
-                exceptedAns, "", 10, 70);
-
-        // REQ: 01 04 07 02 21 00 E1 40 FF 01 ANS: 07 08 04 (ОК)
-        communicator.cradleActivateTransmit(device);
-
-        // REQ: 01 02 02 ANS: 07 00 00 (ОК)
-        communicator.cradleSwitchOff(device);
-
-        // REQ: 01 02 02 01 0D ANS: 07 00 00 00 00 (ОК)
-        communicator.cradleSwitchOn(device);
-
-        // Read response: multiple reads as in dump (00 twice, 08, etc.), but parse first valid
-        log.info("Начало чтения ответа");
-        byte[] offsets = new byte[]{0x00, 0x08, 0x10};
-
-        //   OK
-        // 01 04 04 02 23 00 07
-        // 01 04 04 02 23 08 07
-        // 01 04 04 02 23 10 07
-        byte[] payloads = communicator.assembleCget(device, offsets, (byte) 0x07);
-
-
-
-        //REQ: 01 02 02 01 0D ANS: 07 00 00 00 00 (ОК)
-        communicator.cradleSwitchOn(device);
-
-        List<String> allTextStrings = AdvancedResponseParser.extractAllTextResponses(payloads);
-        log.info("Все текстовые строки в ответе: " + allTextStrings);
-
-        return new MipexResponse(5L, allTextStrings.toString());
-    }
 
     private void prepareForAlarmChange(HidDevice device) {
         log.info("Начало настройки");
@@ -889,6 +731,15 @@ public class CradleController {
             }
         }
         return ~crc;
+    }
+
+    public byte[] getAllCoefGui(HidDevice selectedDevice) {
+        try {
+            return getAllCoef(selectedDevice);
+        } catch (TransferCancelledException e) {
+            log.warn("Exception when doing getAllCoefGui" + e.getMessage());
+            return null;
+        }
     }
 
 //FixMe: 711 строчек!!!

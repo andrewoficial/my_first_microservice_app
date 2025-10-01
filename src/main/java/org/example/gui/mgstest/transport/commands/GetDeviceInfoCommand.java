@@ -1,9 +1,9 @@
 package org.example.gui.mgstest.transport.commands;
 
 import org.apache.log4j.Logger;
+import org.example.gui.mgstest.transport.CommandParameters;
 import org.example.gui.mgstest.transport.CradleCommand;
 import org.example.gui.mgstest.transport.CradleCommunicationHelper;
-import org.example.gui.mgstest.transport.CradleController;
 import org.hid4java.HidDevice;
 
 import java.util.ArrayList;
@@ -13,8 +13,10 @@ public class GetDeviceInfoCommand implements CradleCommand {
     private final Logger log = Logger.getLogger(GetDeviceInfoCommand.class);
 
     @Override
-    public byte[] execute(HidDevice device) throws Exception {
+    public byte[] execute(HidDevice device, CommandParameters parameters) throws Exception {
         log.info("Run get device info");
+        device.close();
+        device.open();
         byte[] answer = null;
         byte [] exceptedAns = null;
 
@@ -38,12 +40,11 @@ public class GetDeviceInfoCommand implements CradleCommand {
         // 01 04 07 02 21 04 00 2E 00 01
         ArrayList<byte[]> answers = new ArrayList<>();
         answers.add(new byte[]{0x07, (byte)0x80, (byte)0x04});
-        answers.add(new byte[]{0x07, (byte)0x87, (byte)0x00});
         answer = communicator.waitForResponse(device,
                 () -> communicator.cradleWriteBlock(device, (byte) 0x04, new byte[]{0x00, 0x2E, 0x00, 0x01}),
                 answers,"",
-                4, 25,
-                3, 40);
+                4, 3,
+                60, 40);
         //07 80 04
 
         // 01 04 07 02 21 05 01 00 00 FE

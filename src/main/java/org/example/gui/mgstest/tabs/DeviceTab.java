@@ -1,6 +1,6 @@
 package org.example.gui.mgstest.tabs;
 
-import org.example.gui.mgstest.pool.DeviceState;
+import org.example.gui.mgstest.repository.DeviceState;
 
 import javax.swing.*;
 

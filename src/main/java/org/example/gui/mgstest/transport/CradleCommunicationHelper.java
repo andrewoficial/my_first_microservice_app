@@ -33,7 +33,7 @@ public class CradleCommunicationHelper {
         //WRITE_MAGIK_SIX_OFFSET_ANSWER_SAMPLES.add(new byte[]{0x07, (byte)0x87, (byte)0x00, 0x00});
 
         ASSEMBLE_C_GET_WRITE_ANSWER_SAMPLES.add(new byte[] {0x07, (byte)0x80, (byte)0x24});
-        ASSEMBLE_C_GET_WRITE_ANSWER_SAMPLES.add(new byte[] {0x00, (byte)0x80, (byte)0x24});
+        ASSEMBLE_C_GET_WRITE_ANSWER_SAMPLES.add(new byte[] {0x07, (byte)0x87, (byte)0x00});
         //.add(new byte[] {0x07, (byte)0x87, (byte)0x00});
 
         CRADLE_ACTIVATE_TRANSMIT_ANSWER_SAMPLES.add(new byte[]{0x07, (byte)0x80, (byte)0x04, (byte)0x00, (byte)0x78});
@@ -50,47 +50,40 @@ public class CradleCommunicationHelper {
      * REQ: 01 55 CC CC CC CC CC CC CC CC CC CC CC CC CC CC
      * REQ: 01 02 02 01 0D CC CC CC CC CC CC CC CC CC CC CC
      * REQ: 01 04 02 02 2B CC CC CC CC CC CC CC CC CC CC CC
+     *
      * @param device
-     * @return
      */
-    public boolean doSettingsBytes(HidDevice device){
+    public void doSettingsBytes(HidDevice device){
         log.info("Первичная настройка кредла");
-        device.open();
-        boolean forReturn = true;
-        byte[] answer = null;
         byte []exceptedAns = new byte[]{0x07, (byte)0x00, (byte)0x03};
 
         //02 BC CC CC CC CC CC CC CC CC CC CC CC CC CC CC
         exceptedAns = new byte[]{0x07, (byte)0x00, (byte)0x03};
-        answer = waitForResponse(device,
+        waitForResponse(device,
                 () -> simpleSendInitial(device, new byte[]{0x02, (byte)0xBC, (byte)0xCC, (byte) 0xCC}),
-                exceptedAns,"",3, 15);
-        forReturn = isEqual(answer, exceptedAns, "") && forReturn;
+                exceptedAns,"DO SETTINGS BYTES: 02 BC",3, 50);
         //07 00 03
 
 
         //02 B2 CC CC CC CC CC CC CC CC CC CC CC CC CC CC
         exceptedAns = new byte[]{0x07, (byte)0x00, (byte)0x07};
-        answer = waitForResponse(device,
+        waitForResponse(device,
                 () -> simpleSendInitial(device, new byte[]{0x02, (byte)0xB2}),
-                exceptedAns,"",3, 15);
-        forReturn = isEqual(answer, exceptedAns, "") && forReturn;
+                exceptedAns,"DO SETTINGS BYTES: 02 B2",3, 50);
         //07 00 03
 
         //02 BD CC CC CC CC CC CC CC CC CC CC CC CC CC CC
         exceptedAns = new byte[]{0x07, (byte)0x80, (byte)0x00};
-        answer = waitForResponse(device,
+        waitForResponse(device,
                 () -> simpleSendInitial(device, new byte[]{0x02, (byte)0xBD}),
-                exceptedAns,"",3, 15);
-        forReturn = isEqual(answer, exceptedAns, "") && forReturn;
+                exceptedAns,"DO SETTINGS BYTES: 02 BD",3, 50);
         //07 80 00
 
         //01 55 CC CC CC CC CC CC CC CC CC CC CC CC CC CC
         exceptedAns = new byte[]{0x07, (byte)0x55, (byte)0x00};
-        answer = waitForResponse(device,
+        waitForResponse(device,
                 () -> simpleSendInitial(device, new byte[]{0x01, (byte)0x55}),
-                exceptedAns,"",3, 15);
-        forReturn = isEqual(answer, exceptedAns, "") && forReturn;
+                exceptedAns,"DO SETTINGS BYTES: 01 55",3, 50);
         //07 55 00
 
         //01 02 02 01 0D CC CC CC CC CC CC CC CC CC CC CC
@@ -98,13 +91,10 @@ public class CradleCommunicationHelper {
 
         //01 04 02 02 2B CC CC CC CC CC CC CC CC CC CC CC
         exceptedAns = new byte[]{0x07, (byte)0x80, (byte)0x12, 0x00};
-        answer = waitForResponse(device,
+        waitForResponse(device,
                 () -> simpleSendInitial(device, new byte[]{0x01, (byte)0x04, 0x02, 0x02, 0x2B}),
-                exceptedAns,"",20, 10);
-        forReturn = isEqual(answer, exceptedAns, "") && forReturn;
+                exceptedAns,"DO SETTINGS BYTES: 01 04 02 02 2B",3, 50);
         //07 80 12 00
-
-        return forReturn;
     }
 
     /**
@@ -121,7 +111,7 @@ public class CradleCommunicationHelper {
         exceptedAns = new byte[]{0x07, (byte)0x00, (byte)0x00};
         answer = waitForResponse(device,
                 () -> simpleSend(device, new byte[]{(byte) 0x01, (byte) 0x02, (byte) 0x02, (byte) 0x01, (byte) 0x0D}),
-                exceptedAns,"NFC_ENABLE",3, 15);
+                exceptedAns,"NFC_ENABLE",3, 55);
         //ANS_SAMPLE: 07 00 00 00 78 F0 00 C1 31 12 5A 02 E0 FF 00 7F
     }
 
@@ -157,8 +147,8 @@ public class CradleCommunicationHelper {
                         new byte[]{(byte) 0x01, (byte) 0x04, (byte) 0x07, (byte) 0x02, (byte) 0x21, (byte) 0x00, (byte) 0xE1, (byte) 0x40, (byte) 0xFF, (byte) 0x01}),
                 CRADLE_ACTIVATE_TRANSMIT_ANSWER_SAMPLES,
                 "NFC_TRANSMIT",
-                4, 25,
-                3, 40);
+                3, 3,
+                70, 110);
         //ANS_SAMPLE: 07 80 04 00 78 F0 00 C1 31 12 5A 02 E0 FF 00 7F
     }
 
@@ -177,8 +167,8 @@ public class CradleCommunicationHelper {
                         (byte) 0x00,
                         new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00}),//Команда из дампа,
                 RESET_ZERO_OFFSET_ANSWER_SAMPLES,"RESET_ZERO_OFFSET",
-                4, 25,
-                3, 40);
+                3, 3,
+                70, 110);
         return answer;
     }
 
@@ -197,8 +187,8 @@ public class CradleCommunicationHelper {
                         new byte[]{(byte) 0x03, (byte) 0x11, (byte) 0xD1, (byte) 0x01}),
                 WRITE_MAGIK_FIRST_OFFSET_ANSWER_SAMPLES,
                 "WRITE_FIRST_OFFSET",
-                4, 25,
-                3, 40);
+                3, 3,
+                70, 110);
         //ANS_SAMPLE: 07 80 04 00 78 F0 00
     }
 
@@ -215,7 +205,8 @@ public class CradleCommunicationHelper {
         answer = waitForResponse(device,
                 () -> cradleWriteBlock(device, (byte) 0x02, new byte[]{0x0D, 0x54, 0x02, 0x65}),
                 WRITE_MAGIK_FIFTH_OFFSET_ANSWER_SAMPLES,"WRITE_SECOND_OFFSET",
-                3, 25, 2, 45);
+                3, 3,
+                70, 110);
         //ANS_SAMPLE: 07 80 04 00 78 F0 00
     }
 
@@ -234,8 +225,8 @@ public class CradleCommunicationHelper {
         answer = waitForResponse(device,
                 () -> cradleSendCount(device, count),
                 WRITE_MAGIK_FIRST_OFFSET_ANSWER_SAMPLES,"WRITE_THIRD_OFFSET Установка счётчика",
-                4, 25,
-                3, 40);
+                3, 3,
+                70, 110);
         //07 80 04
     }
 
@@ -256,8 +247,8 @@ public class CradleCommunicationHelper {
                         new byte[]{0x01, 0x00, 0x00, (byte) 0xFE}),
                 WRITE_MAGIK_FIFTH_OFFSET_ANSWER_SAMPLES,
                 "WRITE_FIFTH_OFFSET",
-                4, 25,
-                3, 40);
+                2, 2,
+                50, 80);
         //07 80 04 00 78 F0 00
     }
 
@@ -295,8 +286,8 @@ public class CradleCommunicationHelper {
         answer = waitForResponse(device,
                 () -> cradleWriteBlock(device, (byte) 0x06, new byte[]{0x00, 0x00, 0x00, (byte) 0x04}),
                 WRITE_MAGIK_SIX_OFFSET_ANSWER_SAMPLES,"WRITE_SIXTH_OFFSET",
-                4, 25,
-                3, 40);
+                2, 4,
+                70, 100);
         //07 80 04 00 78 F0 00 C1 31 12 5A 02 E0 FF 00 7F
     }
 
@@ -372,25 +363,10 @@ public class CradleCommunicationHelper {
             throw new IllegalArgumentException("Data must be 4 bytes! Got:" + data.length + " blockId:" + blockId +" Array:" + MyUtilities.bytesToHex(data));
         }
         hidController.simpleSend(device, new byte[]{(byte) 0x01, (byte) 0x04, (byte) 0x07, (byte) 0x02, (byte) 0x21, blockId, data[0], data[1], data[2], data[3]});
-        safetySleep(15);
+        safetySleep(25);
     }
 
-    /**
-     *
-     * @param device
-     * @return
-     */
-    public byte[] readResponse(HidDevice device) {
-        byte[] buffer = new byte[64];
-        int bytesRead = device.read(buffer, 1000);
-        if (bytesRead > 0) {
-            //log.info("Ответ на команду: ");
-            //hidController.printArrayLikeDeviceMonitor(buffer);
-        } else {
-            log.error("Нет ответа на команду");
-        }
-        return buffer;
-    }
+
 
 
     /**
@@ -400,7 +376,7 @@ public class CradleCommunicationHelper {
      * @param action    команда, которую нужно выполнить (лямбда: () -> sendCommand())
      * @param expected  эталонный ответ
      * @param comment   строка для логов
-     * @param tryLimit  макс. число попыток
+     * @param attemptsLimit  макс. число попыток
      * @param sleepMs   пауза между попытками
      * @return          полученный ответ
      */
@@ -408,27 +384,30 @@ public class CradleCommunicationHelper {
                                    Runnable action,
                                    byte[] expected,
                                    String comment,
-                                   int tryLimit,
+                                   int attemptsLimit,
                                    long sleepMs) {
         int attempts = 0;
-        byte[] received = null;
+        byte[] received;
         log.info("Начинаю отправку, [" + comment + "]. Ожидаю заголовок " + MyUtilities.bytesToHex(expected));
 
         // выполняем действие перед первой проверкой
         action.run();
         safetySleep(sleepMs);
-        received = readResponse(device);
+        received = hidController.readResponse(device);
 
-        while (!isEqual(received, expected, comment) && attempts < tryLimit) {
+        for (int i = 0; i < attemptsLimit; i++) {
             attempts++;
             safetySleep(sleepMs);
-            received = readResponse(device);
+            received = hidController.readResponse(device);
+            if(isEqual(received, expected, comment)){
+                break;
+            }
         }
 
-        if (attempts >= tryLimit) {
-            log.warn("Превышен предел попыток (" + tryLimit + ")");
+        if (attempts >= attemptsLimit) {
+            log.warn("Превышен предел попыток (" + attemptsLimit + ")");
         }
-        if(attempts > 0) {
+        if(isEqual(received, expected, comment)) {
             log.info("Получен корректный ответ после " + (attempts + 1) + " попыток");
         }
         return received;
@@ -455,34 +434,41 @@ public class CradleCommunicationHelper {
                                   int writeRepeatLimit,
                                   long delayRead,
                                   long delayWrite) {
+        log.info("Начинаю отправку [" + comment + "] команды и чтения ответа readRepeatLimit " + readRepeatLimit +" writeRepeatLimit " + writeRepeatLimit + " delayRead " + delayRead + " delayWrite " + delayWrite);
         int attemptsRead = 0;
         int attemptsWrite = 0;
         byte[] received = null;
-        log.info("Начинаю отправку, [" + comment + "]. Ожидаю варианты ответов");
-        for (byte[] value : expectedValues) {
-            MyUtilities.bytesToHex(value);
-        }
+        //log.info("Начинаю отправку, [" + comment + "]. Ожидаю варианты ответов");
+        //for (byte[] value : expectedValues) {
+            //MyUtilities.bytesToHex(value);
+        //}
 
         for (int i = 0; i < writeRepeatLimit; i++) {
             action.run();
             attemptsWrite++;
-            do{
+            for(int j = 0; j < readRepeatLimit; j++){
                 attemptsRead++;
                 safetySleep(delayRead);
-                received = readResponse(device);
-                if (attemptsRead >= readRepeatLimit) {
-                    log.warn("Превышен предел попыток чтения (" + readRepeatLimit + ")");
+                received = hidController.readResponse(device);
+                if(isEqual(received, expectedValues, comment)){
+                    break;
                 }
-            }while (!isEqual(received, expectedValues, comment) && readRepeatLimit < attemptsRead);
-
-
-            if(isEqual(received, expectedValues, comment)) {
-                log.info("Получен корректный ответ после " + (attemptsRead ) + " попыток чтения и " + (attemptsWrite)+ " попыток записи");
-                return received;
+            }
+            if(isEqual(received, expectedValues, comment)){
+                break;
+            }else{
+                log.warn("Превышен предел попыток чтения attemptsRead: " +  attemptsRead + " readRepeatLimit: " + readRepeatLimit);
             }
             safetySleep(delayWrite);
         }
-        log.warn("Превышен предел попыток отправки команды (" + readRepeatLimit + ")");
+
+        if(isEqual(received, expectedValues, comment)) {
+            log.info("Получен корректный ответ после " + (attemptsRead ) + " попыток чтения и " + (attemptsWrite)+ " попыток записи");
+            return received;
+        }else{
+            log.warn("Превышен предел попыток повтора отправки команды (" + readRepeatLimit + ")");
+        }
+
         return received;
     }
 
@@ -649,8 +635,10 @@ F0 00 00 A7 F0 CF FF FE 00 E0 42 00 00 E2 42 00
                             new byte[]{(byte) 0x01, (byte) 0x04, (byte) 0x04, (byte) 0x02, (byte) 0x23, off, size}),
                     ASSEMBLE_C_GET_WRITE_ANSWER_SAMPLES,
                     "ASSEMBLE_C_GET_"+off,
-                    3, 250,
-                    2, 350);
+                    2, 4,
+                    250, 350);
+            log.info("Получена валидная часть ответа ");
+            //printArrayLikeDeviceMonitor(arrRead);
             if(! isEqual(arrRead, ASSEMBLE_C_GET_WRITE_ANSWER_SAMPLES, "Проверка на выброс исключения")){
                 log.warn("В процессе отправки адресов:");
                 hidController.printArrayLikeDeviceMonitor(offsets);
@@ -684,4 +672,7 @@ F0 00 00 A7 F0 CF FF FE 00 E0 42 00 00 E2 42 00
         return result;
     }
 
+    public void readResponse(HidDevice device) {
+        hidController.readResponse(device);
+    }
 }

@@ -2,17 +2,18 @@ package org.example.device.protDvk4rd;
 
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.example.device.DeviceCommandListClass;
 import org.example.device.SomeDevice;
 import org.example.device.connectParameters.ComConnectParameters;
-import org.example.device.protArdBadVlt.ARD_BAD_VLT;
 import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 
 
 public class DVK_4RD  implements SomeDevice {
-    private static final Logger log = Logger.getLogger(DVK_4RD.class);
+    private static final Logger log = LoggerFactory.getLogger(DVK_4RD.class);
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора
     private final SerialPort comPort;

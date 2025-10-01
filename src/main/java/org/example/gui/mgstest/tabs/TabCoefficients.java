@@ -2,9 +2,8 @@ package org.example.gui.mgstest.tabs;
 
 import lombok.Setter;
 import org.apache.log4j.Logger;
-import org.example.gui.mgstest.device.AllCoef;
-import org.example.gui.mgstest.device.DeviceInfo;
-import org.example.gui.mgstest.pool.DeviceState;
+import org.example.gui.mgstest.model.answer.GetAllCoefficients;
+import org.example.gui.mgstest.repository.DeviceState;
 import org.example.gui.mgstest.transport.CradleController;
 import org.hid4java.HidDevice;
 
@@ -261,45 +260,45 @@ public class TabCoefficients extends DeviceTab {
         if(state == null){
             log.warn("Пустой объект state");
         }
-        if( state.getAllCoef() == null){
+        if( state.getAllCoefficients() == null){
             log.warn("Пустой объект coef внутри state");
         }
-        if (state != null && state.getAllCoef() != null) {
-            AllCoef coef = state.getAllCoef();
+        if (state != null && state.getAllCoefficients() != null) {
+            GetAllCoefficients coef = state.getAllCoefficients();
 
             // Обновляем поля O2 коэффициентов
             for (int i = 0; i < 19; i++) {
-                o2Fields[i].setText(decimalFormat.format(coef.o2Coef[i]));
+                o2Fields[i].setText(decimalFormat.format(coef.getO2Coef()[i]));
             }
 
             // Обновляем поля CO коэффициентов
             for (int i = 0; i < 14; i++) {
-                coFields[i].setText(decimalFormat.format(coef.coCoef[i]));
+                coFields[i].setText(decimalFormat.format(coef.getCoCoef()[i]));
             }
 
             // Обновляем поля H2S коэффициентов
             for (int i = 0; i < 14; i++) {
-                h2sFields[i].setText(decimalFormat.format(coef.h2sCoef[i]));
+                h2sFields[i].setText(decimalFormat.format(coef.getH2sCoef()[i]));
             }
 
             // Обновляем поля CH4 Pressure коэффициентов
             for (int i = 0; i < 7; i++) {
-                ch4PressureFields[i].setText(decimalFormat.format(coef.ch4Pressure[i]));
+                ch4PressureFields[i].setText(decimalFormat.format(coef.getCh4Pressure()[i]));
             }
 
             // Обновляем поля Acceleration коэффициентов
             for (int i = 0; i < 4; i++) {
-                accelerationFields[i].setText(decimalFormat.format(coef.acceleration[i]));
+                accelerationFields[i].setText(decimalFormat.format(coef.getAcceleration()[i]));
             }
 
             // Обновляем поля PPM Mg коэффициентов
             for (int i = 0; i < 4; i++) {
-                ppmMgKoefsFields[i].setText(decimalFormat.format(coef.ppmMgKoefs[i]));
+                ppmMgKoefsFields[i].setText(decimalFormat.format(coef.getPpmMgKoefs()[i]));
             }
 
             // Обновляем поля V Range коэффициентов
             for (int i = 0; i < 6; i++) {
-                vRangeFields[i].setText(decimalFormat.format(coef.vRange[i]));
+                vRangeFields[i].setText(decimalFormat.format(coef.getVRange()[i]));
             }
         } else {
             // Очищаем все поля, если данных нет

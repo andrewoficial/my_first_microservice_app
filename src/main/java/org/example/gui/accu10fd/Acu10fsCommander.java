@@ -14,14 +14,13 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Acu10fsCommander {
-    private static final byte DEVICE_ADDRESS = 0x01;
+    private static byte DEVICE_ADDRESS = 0x01;
     private static final int RESPONSE_TIMEOUT_MS = 500;
-    private static final int READ_RETRIES = 5;
+    private static final int READ_RETRIES = 10;
     private static final int[] TEST_BAUD_RATES = {
-            55, 75, 110, 150, 300, 600, 1200, 2400, 4800,
-            9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600
+            4800, 9600, 19200, 38400, 57600, 115200, 9600
     };
-    private static final int TEST_REGISTER = 0x0010; // Instantaneous Flow
+    private static final int TEST_REGISTER = 0x0078; // DevAddr
 
     private int detectedBaudRate = -1;
     @Getter @Setter
@@ -61,13 +60,18 @@ public class Acu10fsCommander {
                 log.debug("Testing baud rate: " + baud);
                 comPort.setBaudRate(baud);
                 comPort.flushIOBuffers();
+                for(byte adr = 0; adr < 3; adr++) {
+                    DEVICE_ADDRESS = adr;
+                    for (int i = 0; i < READ_RETRIES; i++) {
+                        try {
+                            float value = readRegisterValue(TEST_REGISTER);
+                            log.info("Device found at " + baud + " baud, test value=" + value + " address " + DEVICE_ADDRESS + " retries " + i);
+                            detectedBaudRate = baud;
+                            return baud;
+                        } catch (Exception ignored) {
+                        }
+                    }
 
-                try {
-                    float value = readRegisterValue(TEST_REGISTER);
-                    log.info("Device found at " + baud + " baud, test value=" + value);
-                    detectedBaudRate = baud;
-                    return baud;
-                } catch (Exception ignored) {
                 }
             }
         } finally {
@@ -181,11 +185,11 @@ public class Acu10fsCommander {
 
     private byte[] sendModbusRequest(byte[] request, boolean waitForAnswer) throws Exception {
         if (!isPortConsistent()){
-            log.info("Попытка отправки при закрытом ком-порту");
-            throw new Exception("COM port not initialized");
+            log.info("COM port not open");
+            throw new Exception("COM port not open");
         }
         if(busyStatus.get()){
-            log.warn("Попытка обращения к занятому соединению");
+            log.warn("COM connection busy");
             return null;
         }
         this.busyStatus.set(true);
@@ -193,16 +197,10 @@ public class Acu10fsCommander {
         comPort.flushIOBuffers();
         Thread.sleep(50L);
         comPort.writeBytes(request, request.length);
-        log.info("Отправлено: " + bytesToHex(request) + " ожидатся ответ? " + waitForAnswer);
+        log.info("Sent: " + bytesToHex(request) + " wait for answer? " + waitForAnswer);
         if(waitForAnswer) {
             byte[] response = null;
             response = readResponse(request[0], request[1]);
-//            for (int i = 0; i < READ_RETRIES; i++) {
-//
-//                if (response != null) break;
-//                Thread.sleep(70);
-//            }
-
             if (response == null){
                 this.busyStatus.set(false);
                 log.warn("Нет ответа от прибора");
@@ -228,7 +226,7 @@ public class Acu10fsCommander {
         while (System.currentTimeMillis() - startTime <= RESPONSE_TIMEOUT_MS) {
             int available = comPort.bytesAvailable();
             if (available == 0) {
-                Thread.sleep(10); // Ждем, если данных нет
+                Thread.sleep(20); // Ждем, если данных нет
                 continue;
             }
 
@@ -242,7 +240,7 @@ public class Acu10fsCommander {
                         ", Accumulated: " + bytesToHex(accumulatedBuffer.toByteArray()));
             } else {
                 log.warn("Read returned 0 bytes despite available=" + available);
-                Thread.sleep(10);
+                Thread.sleep(20);
                 continue;
             }
 
@@ -254,13 +252,12 @@ public class Acu10fsCommander {
                 log.debug("Valid packet received: " + bytesToHex(currentData));
                 return currentData;
             } else {
-//                log.info("Accumulated data invalid: length=" + currentData.length +
-//                        ", address=" + (currentData.length > 0 ? currentData[0] : "N/A") +
-//                        ", function=" + (currentData.length > 1 ? currentData[1] : "N/A"));
+                log.info("Accumulated data invalid: length=" + currentData.length +
+                        ", address=" + (currentData.length > 0 ? currentData[0] : "N/A") +
+                        ", function=" + (currentData.length > 1 ? currentData[1] : "N/A"));
             }
 
-            // Небольшая пауза перед следующей попыткой чтения
-            Thread.sleep(10);
+            Thread.sleep(70);
         }
 
         log.error("Timeout reached or no valid data received. Accumulated: " +

@@ -2,9 +2,8 @@ package org.example.gui.mgstest.tabs;
 
 import lombok.Setter;
 import org.apache.log4j.Logger;
-import org.example.gui.components.SimpleButton;
-import org.example.gui.mgstest.device.DeviceInfo;
-import org.example.gui.mgstest.pool.DeviceState;
+import org.example.gui.mgstest.model.answer.GetDeviceInfo;
+import org.example.gui.mgstest.repository.DeviceState;
 import org.example.gui.mgstest.transport.CradleController;
 import org.hid4java.HidDevice;
 import org.sonatype.aether.transfer.TransferCancelledException;
@@ -93,9 +92,9 @@ public class TabInfo extends DeviceTab {
         contentPanel.add(timeField, BorderLayout.CENTER);
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        JButton setTimeButton = new SimpleButton("Задать");
+        JButton setTimeButton = new JButton("Задать");
         setTimeButton.setEnabled(false);
-        JButton setPcTimeButton = new SimpleButton("Задать как на компьютере");
+        JButton setPcTimeButton = new JButton("Задать как на компьютере");
         setPcTimeButton.setEnabled(false);
         buttonPanel.add(setTimeButton);
         buttonPanel.add(setPcTimeButton);
@@ -137,8 +136,8 @@ public class TabInfo extends DeviceTab {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         panel.setBorder(BorderFactory.createTitledBorder("Проверка индикации"));
 
-        JButton blinkTestButton = new SimpleButton("Blink Test");
-        JButton beepTestButton = new SimpleButton("Beep Test");
+        JButton blinkTestButton = new JButton("Blink Test");
+        JButton beepTestButton = new JButton("Beep Test");
 
         blinkTestButton.addActionListener(e -> performBlinkTest());
         beepTestButton.addActionListener(e -> performBeepTest());
@@ -156,8 +155,8 @@ public class TabInfo extends DeviceTab {
 
         // Первая строка кнопок
         JPanel buttonRow1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
-        JButton refreshButton = new SimpleButton("Обновить информацию");
-        JButton rebootButton = new SimpleButton("Перезагрузить прибор");
+        JButton refreshButton = new JButton("Обновить информацию");
+        JButton rebootButton = new JButton("Перезагрузить прибор");
         buttonRow1.add(refreshButton);
         buttonRow1.add(rebootButton);
 
@@ -165,12 +164,12 @@ public class TabInfo extends DeviceTab {
         JPanel modePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
         modePanel.add(new JLabel("Режим:"));
         modePanel.add(modeComboBox);
-        JButton setModeButton = new SimpleButton("Задать");
+        JButton setModeButton = new JButton("Задать");
         modePanel.add(setModeButton);
 
         // Третья строка - сброс батареи
         JPanel batteryPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
-        JButton resetBatteryButton = new SimpleButton("Сбросить состояние батареи");
+        JButton resetBatteryButton = new JButton("Сбросить состояние батареи");
         batteryPanel.add(resetBatteryButton);
 
         // Добавляем обработчики
@@ -339,7 +338,7 @@ public class TabInfo extends DeviceTab {
     @Override
     public void updateData(DeviceState state) {
         if (state != null && state.getDeviceInfo() != null) {
-            DeviceInfo info = state.getDeviceInfo();
+            GetDeviceInfo info = state.getDeviceInfo();
             cpuIdField.setText(info.getCpuId());
             serialNumberField.setText(String.valueOf(info.getSerialNumber()));
             swVersionField.setText(info.getSwMaj() + "." + info.getSwMin());

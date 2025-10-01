@@ -1,7 +1,7 @@
 package org.example.gui.mgstest.tabs;
 
-import org.example.gui.mgstest.device.DeviceInfo;
-import org.example.gui.mgstest.pool.DeviceState;
+import org.example.gui.mgstest.model.answer.GetDeviceInfo;
+import org.example.gui.mgstest.repository.DeviceState;
 
 import javax.swing.*;
 import java.awt.*;
@@ -34,7 +34,7 @@ public class TabSettings extends DeviceTab{
     @Override
     public void updateData(DeviceState state) {
         if (state != null && state.getDeviceInfo() != null) {
-            DeviceInfo info = state.getDeviceInfo();
+            GetDeviceInfo info = state.getDeviceInfo();
             cpuIdLabel.setText(info.getCpuId());
             serialNumberLabel.setText(String.valueOf(info.getSerialNumber()));
             // ... обновление других полей

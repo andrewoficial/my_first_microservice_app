@@ -4,25 +4,27 @@ import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import org.apache.log4j.Logger;
 import org.example.gui.Rendeble;
-import org.example.gui.components.SimpleButton;
 import org.example.gui.components.SimpleTabbedPane;
-import org.example.gui.mgstest.device.AllCoef;
-import org.example.gui.mgstest.device.DeviceInfo;
-import org.example.gui.mgstest.pool.DeviceState;
-import org.example.gui.mgstest.pool.DeviceStateStorage;
+import org.example.gui.mgstest.device.AdvancedResponseParser;
+import org.example.gui.mgstest.model.answer.GetAllCoefficients;
+import org.example.gui.mgstest.model.answer.GetDeviceInfo;
+import org.example.gui.mgstest.parser.answer.GetAllCoefficientsParser;
+import org.example.gui.mgstest.parser.answer.GetDeviceInfoParser;
+import org.example.gui.mgstest.repository.DeviceState;
+import org.example.gui.mgstest.repository.DeviceStateRepository;
 import org.example.gui.mgstest.tabs.TabCoefficients;
 import org.example.gui.mgstest.tabs.DeviceTab;
 import org.example.gui.mgstest.tabs.TabInfo;
 import org.example.gui.mgstest.tabs.TabSettings;
+import org.example.gui.mgstest.transport.CommandParameters;
 import org.example.gui.mgstest.transport.CradleController;
-import org.example.gui.mgstest.transport.MipexResponse;
-import org.example.services.comPort.StringEndianList;
 import org.hid4java.HidDevice;
 import org.hid4java.HidManager;
 import org.hid4java.HidServices;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,7 +53,7 @@ public class MultigassensWindow extends JFrame implements Rendeble {
     private Map<String, String> deviceIdToSerialMap = new HashMap<>();
     private Map<String, String> serialToDeviceIdMap = new HashMap<>();
     private Map<String, HidDevice> deviceMap = new HashMap<>();
-    private DeviceStateStorage stateStorage = DeviceStateStorage.getInstance();
+    private DeviceStateRepository stateStorage = DeviceStateRepository.getInstance();
     private JTabbedPane tabbedPane;
     private Map<String, DeviceTab> tabs = new HashMap<>();
 
@@ -151,12 +153,12 @@ public class MultigassensWindow extends JFrame implements Rendeble {
                     //throw new RuntimeException(ex);
                 }
                 if(coefRaw != null){
-                    AllCoef coef = AllCoef.parseAllCoef(coefRaw);
+                    GetAllCoefficients coef = GetAllCoefficientsParser.parseAllCoef(coefRaw);
                     if(stateStorage.get(generateStorageKey(selectedDevice)) != null){
-                        stateStorage.get(generateStorageKey(selectedDevice)).setAllCoef(coef);
+                        stateStorage.get(generateStorageKey(selectedDevice)).setAllCoefficients(coef);
                     }else{
                         DeviceState state = new DeviceState();
-                        state.setAllCoef(coef);
+                        state.setAllCoefficients(coef);
                         stateStorage.put(generateStorageKey(selectedDevice), state);
                     }
                     coefficientsTab.updateData(stateStorage.get(generateStorageKey(selectedDevice)));
@@ -219,18 +221,23 @@ public class MultigassensWindow extends JFrame implements Rendeble {
         opticCommandButton.addActionListener(e -> {
 
             String text = JOptionPane.showInputDialog(this, "Enter text for optic command:").trim();
-            MipexResponse response = new MipexResponse(0L, "Нет ответа от прибора");
+            List<AdvancedResponseParser.ParsedBlock> allTextStrings = new ArrayList<>();
+            log.info("Все текстовые строки в ответе: " + allTextStrings);
             try {
                 StringBuilder sb = new StringBuilder();
                 sb.append(text);
                 sb.append('\r');
-                response = cradleController.sendMipex(sb.toString(), selectedDevice);
+                CommandParameters parameters = new CommandParameters();
+                parameters.setType(String.class.getSimpleName());
+                parameters.setStringArgument(sb.toString());
+                byte[] ans = cradleController.sedUartCommand(selectedDevice, parameters);
+                allTextStrings = AdvancedResponseParser.parseStructuredResponse(ans);
+                log.info(AdvancedResponseParser.extractAllTextResponses(ans));
             } catch (Exception ex) {
                 log.info(ex.getMessage());
-                response = new MipexResponse(0L, ex.getMessage());
                 //throw new RuntimeException(ex);
             }
-            JOptionPane.showMessageDialog(this, response.text);
+            JOptionPane.showMessageDialog(this, allTextStrings);
         });
         buttonPanel.add(opticCommandButton);
 
@@ -297,7 +304,7 @@ public class MultigassensWindow extends JFrame implements Rendeble {
         hidServices.stop();
         MGS_CreadleFound = false;
         for (HidDevice device : devices) {
-            if (device != null && Integer.toHexString(device.getProductId()).equalsIgnoreCase("d0d0")) {
+            if (device != null && device.getProductId() == 53456) {
                 String deviceKey = device.getPath();
                 String serialNumber = device.getSerialNumber();
 
@@ -328,6 +335,18 @@ public class MultigassensWindow extends JFrame implements Rendeble {
                 MGS_CreadleFound = true;
                 MGS_found = true;
                 MGS_status = " кредл найден";
+            }else{
+                if(device == null){
+                    log.info("device is null");
+                }else{
+                    log.info("getId getProductId: " + device.getProductId() +
+                            "getProduct skipped: " + device.getProduct() +
+                            "device getSerialNumber: " + device.getSerialNumber() +
+                            "device getManufacturer: " + device.getManufacturer() +
+                            "device getUsage: " + device.getUsage() +
+                            "device skipped: " + device.getProductId() + " integer ID: " + Integer.toHexString(device.getProductId()) + " expected: " + "d0d0");
+                }
+
             }
         }
 
@@ -352,7 +371,7 @@ public class MultigassensWindow extends JFrame implements Rendeble {
     }
 
     // При получении информации об устройстве
-    private void onDeviceInfoReceived(HidDevice device, DeviceInfo info) {
+    private void onDeviceInfoReceived(HidDevice device, GetDeviceInfo info) {
         String deviceKey = device.getPath();
         String oldStorageKey = deviceIdToSerialMap.get(deviceKey);
         String newStorageKey = String.valueOf(info.getSerialNumber());
@@ -404,7 +423,7 @@ public class MultigassensWindow extends JFrame implements Rendeble {
                 }
                 log.info("Завершил получение данных");
                 DeviceState state = null;
-                DeviceInfo info = null;
+                GetDeviceInfo info = null;
                 String storageKey = null;
                 try {
                     if(deviceInfoRaw == null){
@@ -413,7 +432,8 @@ public class MultigassensWindow extends JFrame implements Rendeble {
                         return;
                     }
                     log.info("Начал парсинг массива данных");
-                    info = DeviceInfo.parseDeviceInfo(deviceInfoRaw);
+
+                    info = GetDeviceInfoParser.parse(deviceInfoRaw);
                     // Сохраняем информацию в хранилище
                     String deviceKey = selectedDevice.getPath();
                     storageKey = deviceIdToSerialMap.get(deviceKey);
@@ -432,7 +452,7 @@ public class MultigassensWindow extends JFrame implements Rendeble {
                 }
 
                 try {
-                    log.info("Для состояния обновляю данные " + info.serialNumber);
+                    log.info("Для состояния обновляю данные " + info.getSerialNumber());
                     state.setDeviceInfo(info);
                 }catch (Exception ex){
                     log.warn("Failed to get device info: " + ex.getMessage());
