@@ -1,4 +1,4 @@
-package org.example.gui.mgstest.tabs;
+package org.example.gui.mgstest.gui.tabs;
 
 import org.example.gui.mgstest.repository.DeviceState;
 

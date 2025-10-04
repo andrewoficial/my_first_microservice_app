@@ -1,7 +1,7 @@
 package org.example.gui.mgstest.parser.answer;
 
 import org.apache.log4j.Logger;
-import org.example.gui.mgstest.model.answer.GetDeviceInfo;
+import org.example.gui.mgstest.model.answer.GetDeviceInfoModel;
 import org.example.gui.mgstest.util.CrcValidator;
 
 import java.nio.ByteBuffer;
@@ -17,11 +17,11 @@ public class GetDeviceInfoParser {
     private static final int HW_RTC_CLOCK_QUARZ = 0x04;
     private static final int HW_RTC_CLOCK_LSI = 0x08;
 
-    public static GetDeviceInfo parse(byte[] data) {
+    public static GetDeviceInfoModel parse(byte[] data) {
         validateDataLength(data);
         validateCrc(data); // Добавляем проверку CRC
 
-        GetDeviceInfo info = new GetDeviceInfo();
+        GetDeviceInfoModel info = new GetDeviceInfoModel();
         info.setLoaded(false);
 
         try {
@@ -60,7 +60,7 @@ public class GetDeviceInfoParser {
          }
     }
 
-    private static void parseCpuId(GetDeviceInfo info, byte[] data) {
+    private static void parseCpuId(GetDeviceInfoModel info, byte[] data) {
         StringBuilder cpuIdBuilder = new StringBuilder();
         for (int i = 27; i <= 38; i++) {
             cpuIdBuilder.append(String.format("%02x", data[i] & 0xFF));
@@ -69,7 +69,7 @@ public class GetDeviceInfoParser {
         log.info("CPU ID: " + info.getCpuId());
     }
 
-    private static void parseSerialNumber(GetDeviceInfo info, byte[] data) {
+    private static void parseSerialNumber(GetDeviceInfoModel info, byte[] data) {
         info.setSerialNumber(ByteBuffer.wrap(data, 39, 4).order(ByteOrder.LITTLE_ENDIAN).getInt());
         log.info("Serial number: " + info.getSerialNumber());
 
@@ -83,7 +83,7 @@ public class GetDeviceInfoParser {
         log.info("Serial expected at position 39");
     }
 
-    private static void parseCompatibilityAndReplaceCount(GetDeviceInfo info, byte[] data) {
+    private static void parseCompatibilityAndReplaceCount(GetDeviceInfoModel info, byte[] data) {
         byte btCompatibility = 0;
         info.setReplaceCount((byte) 0);
 
@@ -99,7 +99,7 @@ public class GetDeviceInfoParser {
         info.setVerControl(btCompatibility); // Временно используем это поле
     }
 
-    private static void parseSoftwareVersions(GetDeviceInfo info, byte[] data) {
+    private static void parseSoftwareVersions(GetDeviceInfoModel info, byte[] data) {
         byte compatibility = calculateCompatibility(data);
         info.setSwMin(data[51 - compatibility] & 0xFF);
         info.setSwMaj(data[52 - compatibility] & 0xFF);
@@ -110,14 +110,14 @@ public class GetDeviceInfoParser {
         log.info("Computed nSWVer: " + nSWVer + ", Version control: " + info.getVerControl());
     }
 
-    private static void parseHardwareVersions(GetDeviceInfo info, byte[] data) {
+    private static void parseHardwareVersions(GetDeviceInfoModel info, byte[] data) {
         byte compatibility = calculateCompatibility(data);
         info.setHwMin(data[53 - compatibility] & 0xFF);
         info.setHwMaj(data[54 - compatibility] & 0xFF);
         log.info("Hardware raw: " + info.getHwMaj() + "." + info.getHwMin());
     }
 
-    private static void parseEnabledHardware(GetDeviceInfo info, byte[] data) {
+    private static void parseEnabledHardware(GetDeviceInfoModel info, byte[] data) {
         int nSWVer = info.getSwMaj() * 100 + info.getSwMin();
         StringBuilder strHW = new StringBuilder(" ");
         
@@ -146,7 +146,7 @@ public class GetDeviceInfoParser {
             return 4;
         }
     }
-    private static void parseTime(GetDeviceInfo info, byte[] data) {
+    private static void parseTime(GetDeviceInfoModel info, byte[] data) {
         byte compatibility = calculateCompatibility(data);
 
         int rawTime = ByteBuffer.wrap(data, 55 - compatibility, 4).order(ByteOrder.LITTLE_ENDIAN).getInt();
@@ -165,7 +165,7 @@ public class GetDeviceInfoParser {
         }
     }
 
-    private static void parseSettings(GetDeviceInfo info, byte[] data) {
+    private static void parseSettings(GetDeviceInfoModel info, byte[] data) {
         byte compatibility = calculateCompatibility(data);
 
         // Validate bytes 59-61
@@ -187,7 +187,7 @@ public class GetDeviceInfoParser {
         log.info("Alarm enabled: " + info.isAlarmEnabled());
     }
 
-    private static void parseAdditionalSettings(GetDeviceInfo info, byte[] data) {
+    private static void parseAdditionalSettings(GetDeviceInfoModel info, byte[] data) {
         byte compatibility = calculateCompatibility(data);
 
         info.setDaylightSaving((data[67 - compatibility] & 0xFF) != 0);

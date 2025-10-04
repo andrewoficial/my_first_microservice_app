@@ -1,12 +1,12 @@
 package org.example.gui.mgstest.transport;
 
 import org.apache.log4j.Logger;
-import org.example.gui.mgstest.tabs.TabInfo;
+import org.example.gui.mgstest.transport.commands.DoRebootDevice;
+import org.example.gui.mgstest.transport.commands.GetAllCoefficients;
 import org.example.gui.mgstest.transport.commands.GetDeviceInfoCommand;
 import org.example.gui.mgstest.transport.commands.SendUartCommand;
 import org.example.utilites.MyUtilities;
 import org.hid4java.HidDevice;
-import org.sonatype.aether.transfer.TransferCancelledException;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -17,7 +17,7 @@ public class CradleController {
 
     private final Logger log = Logger.getLogger(CradleController.class);
     private CradleCommunicationHelper communicator;
-    private final Map<String, CradleCommand> commands = new HashMap<>();
+    private final Map<String, DeviceCommand> commands = new HashMap<>();
 
     public CradleController() {
         communicator = new CradleCommunicationHelper();
@@ -26,130 +26,35 @@ public class CradleController {
 
     private void registerCommands() {
         commands.put("deviceInfo", new GetDeviceInfoCommand());
+        commands.put("getAllCoefficients", new GetAllCoefficients());
         commands.put("sendUartCommand", new SendUartCommand());
+        commands.put("DoRebootDevice", new DoRebootDevice());
         //commands.put("alarmOff", new AlarmOffCommand());
         // ... другие команды
     }
 
-
-
-
-    // Получение данных о приборе (0x2E)
-    public byte[] getDeviceInfo(HidDevice device) throws Exception {
-        CradleCommand command = commands.get("deviceInfo");
-        if (command == null) {
-            throw new IllegalArgumentException("Unknown command: " + "deviceInfo");
+    public byte[] executeCommand(HidDevice device, String commandName, CommandParameters parameters) throws Exception {
+        log.info("run executeCommand [" + commandName + "] parameters [" + parameters + "] ");
+        if(! device.open()){
+            throw new IllegalStateException("Cant open device: " + commandName);
         }
-        return command.execute(device, null);
-    }
-
-    public byte[] sedUartCommand(HidDevice device, CommandParameters parameters) throws Exception {
-        CradleCommand command = commands.get("sendUartCommand");
-        if (command == null) {
-            throw new IllegalArgumentException("Unknown command: " + "sendUartCommand");
-        }
-        byte[] answer = command.execute(device, parameters);
-        communicator.printArrayLikeDeviceMonitor(answer);
-        return  answer;
-    }
-
-    private byte[] executeWithRetry(TabInfo.Executable method, int maxAttempts, long delayMs) {
-        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-            try {
-                ;
-                return method.execute(); // Успешное выполнение
-            } catch (TransferCancelledException e) {
-                if (attempt == maxAttempts) return null; // Все попытки исчерпаны
-                if (delayMs > 0) {
-                    try {
-                        Thread.sleep(delayMs);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        return null;
-                    }
-                }
+        if(commands.containsKey(commandName)){
+            DeviceCommand command = commands.get(commandName);
+            if (command == null) {
+                throw new IllegalArgumentException("Unknown command: " + commandName);
             }
+//            byte[] answer = command.execute(device, parameters);
+//            communicator.printArrayLikeDeviceMonitor(answer);
+//            device.close();
+//            return  answer;
+            return  null;
         }
-        return null;
+        throw new IllegalArgumentException("Exception when during: " + commandName);
     }
 
-    public byte[] getAllCoef(HidDevice device) throws TransferCancelledException {
-        log.info("Run get all coef (0x05)");
-        device.close();
-        device.open();
-
-        byte[] answer = null;
-        byte [] exceptedAns = null;
-
-        communicator.doSettingsBytes(device);
-
-        // 01 02 02 01 0D
-        communicator.cradleSwitchOn(device); //NOTE: 0x07, 0x00, 0x00, 0x00, (byte)0xDC DC Похоже на запрос последней команды
-        //07 00 00 00 00
-
-        // 01 04 07 02 21 00 00 00
-        communicator.resetZeroOffset(device);
-
-        // 01 04 07 02 21 01 03 11 d1 01
-        communicator.writeMagikInFirstOffset(device);
-
-        // 01 04 07 02 21 02 0D 54 02 65
-        communicator.writeMagikInSecondOffset(device);
-
-        // 01 04 07 02 21 03 6E 00 00 00
-        communicator.writeCountInThirdOffset(device, 0x00);
-
-        // 01 04 07 02 21 04 00 05 00 01
-        exceptedAns = new byte[]{0x07, (byte)0x80, 0x04, 0x00, 0x78, (byte)0xF0, 0x00};
-        answer = communicator.waitForResponse(device,
-                () -> communicator.cradleWriteBlock(device, (byte) 0x04, new byte[]{0x00, 0x05, 0x00, 0x01}),  // Команда 0x05 GetAllCoefByte,
-                exceptedAns,"",10, 70);
-        //07 80 04 00 78 F0 00
-
-        //01 04 07 02 21 05 01 00 00 FE
-        communicator.writeMagikInFifthOffset(device);
-
-        // 01 04 07 02 21 06 00 00 00 00
-        communicator.writeZeroInSixthOffset(device);
-
-        // 01 04 07 02 21 03 6E 06
-        communicator.writeCountInThirdOffset(device, 0x06);
-
-        // 01 04 07 02 21 00 E1 40 FF 01
-        communicator.cradleActivateTransmit(device);
-
-        // 01 02 02 00 00
-        communicator.cradleSwitchOff(device);
-
-        // 01 02 02 01 0D
-        communicator.cradleSwitchOn(device); //NOTE: 0x07, 0x00, 0x00, 0x00, (byte)0xDC DC Похоже на запрос последней команды
-        //07 00 00 00 00
-
-        // 01 04 04 02 23 00 07
-        // 01 04 04 02 23 08 07
-        // 01 04 04 02 23 10 07
-        // 01 04 04 02 23 18 07
-        // 01 04 04 02 23 20 07
-        // 01 04 04 02 23 28 07
-        // 01 04 04 02 23 30 07
-        // 01 04 04 02 23 38 07
-        // 01 04 04 02 23 40 07
-        // 01 04 04 02 23 48 07
-        log.info("Начинаю считывание блоков");
-        //Добавлено после отладки с 200 до 650
-        communicator.safetySleep(650);
-        byte[] offsets = new byte[]{0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38, 0x40, 0x48};
-        byte[] payloads = communicator.assembleCget(device, offsets, (byte) 0x07);
-        //Ответ зависит от состояния прибора
-
-        // 01 02 02 00 00
-        communicator.cradleSwitchOff(device);
-
-        return payloads;
-    }
 
     // Выключение звука (SwitchBeepByte, command 0x22, X=0x01)
-    public byte[] alarmOff(HidDevice device) throws TransferCancelledException {
+    public byte[] alarmOff(HidDevice device) throws Exception {
         // 01 02 02 01 0D
         prepareForAlarmChange(device);
 
@@ -187,7 +92,7 @@ public class CradleController {
     }
 
     // Включение звука (SwitchBeepByte, command 0x22, X=0x00)
-    public byte[] alarmOn(HidDevice device) throws TransferCancelledException {
+    public byte[] alarmOn(HidDevice device) throws Exception {
         prepareForAlarmChange(device);
 
         //01 04 07 02 21 05 01 00 00 00
@@ -450,7 +355,7 @@ public class CradleController {
     }
 
     // Тест мигания (BlinkByte, command 0x27)
-    public byte[] blinkTest(HidDevice device) throws TransferCancelledException {
+    public byte[] blinkTest(HidDevice device) throws Exception {
         // 01 02 02 01 0D
         communicator.cradleSwitchOn(device);
 
@@ -494,7 +399,7 @@ public class CradleController {
 
 
     // Тест звукового сигнала (OneBeepByte, command 0x2F)
-    public byte[] beepTest(HidDevice device) throws TransferCancelledException {
+    public byte[] beepTest(HidDevice device) throws Exception {
         // 01 02 02 01 0D
         communicator.cradleSwitchOn(device);
 
@@ -536,7 +441,9 @@ public class CradleController {
         return payloads;
     }
 
-    private void prepareForRunAlarmTest(HidDevice device) {
+    // Сброс счётчика батареи (ReplButtByte, command 0x46)
+    public byte[] resetBatteryCounter(HidDevice device) throws Exception {
+
         // 01 02 02 01 0D
         communicator.cradleSwitchOn(device);
 
@@ -551,64 +458,6 @@ public class CradleController {
 
         //01 04 07 02 21 03 6E 00 00 00
         communicator.writeCountInThirdOffset(device, 0x00);
-    }
-
-    // Перезагрузка устройства (RebootByte, command 0x17)
-    public byte[] rebootCmd(HidDevice device) throws TransferCancelledException {
-        // 01 02 02 01 0D
-        communicator.cradleSwitchOn(device);
-
-        // 01 04 07 02 21 00 00 00 00 00
-        communicator.resetZeroOffset(device);
-
-        // 01 04 07 02 21 01 03 17 D1 01
-        communicator.cradleWriteBlock(device, (byte) 0x01, new byte[]{(byte) 0x03, (byte) 0x17, (byte) 0xD1, (byte) 0x01});
-
-        // 01 04 07 02 21 02 13 54 02 65
-        communicator.cradleWriteBlock(device, (byte) 0x02, new byte[]{(byte) 0x13, (byte) 0x54, (byte) 0x02, (byte) 0x65});
-
-        // 01 04 07 02 21 03 6E 00 00 00
-        communicator.writeCountInThirdOffset(device, 0x00);
-
-        // 01 04 07 02 21 04 00 17 00 01
-        communicator.cradleWriteBlock(device, (byte) 0x04, new byte[]{(byte) 0x00, (byte) 0x17, (byte) 0x00, (byte) 0x01});
-
-        // 01 04 07 02 21 05 01 00 00 B9
-        communicator.cradleWriteBlock(device, (byte) 0x05, new byte[]{(byte) 0x01, (byte) 0x00, (byte) 0x00, (byte) 0xB9});
-
-        // 01 04 07 02 21 06 A9 42 1C D4
-        communicator.cradleWriteBlock(device, (byte) 0x06, new byte[]{(byte) 0xA9, (byte) 0x42, (byte) 0x1C, (byte) 0xD4});
-
-        // 01 04 07 02 21 07 DB FE 00 00
-        communicator.cradleWriteBlock(device, (byte) 0x07, new byte[]{(byte) 0xDB, (byte) 0xFE, (byte) 0x00, (byte) 0x00});
-
-        // 01 04 07 02 21 03 6E yy yy 00
-        communicator.writeCountInThirdOffset(device, 0x0C);
-
-        //01 04 07 02 21 00 E1 40 FF 01
-        communicator.cradleActivateTransmit(device);
-
-        //01 02 02 00 00
-        communicator.cradleSwitchOff(device);
-
-        //01 02 02 01 0D
-        communicator.cradleSwitchOn(device);
-
-        // 01 04 04 02 23 00 07
-        // 01 04 04 02 23 08 07
-        // 01 04 04 02 23 10 07
-        byte[] offsets = new byte[]{0x00, 0x08, 0x10};
-        byte[] payloads = communicator.assembleCget(device, offsets, (byte) 0x07);
-        // Ответ зависит от настроек прибора
-
-        // 01 02 02 00 00
-        communicator.cradleSwitchOff(device);
-        return payloads;
-    }
-
-    // Сброс счётчика батареи (ReplButtByte, command 0x46)
-    public byte[] resetBatteryCounter(HidDevice device) throws TransferCancelledException {
-        prepareForRunAlarmTest(device);
 
         // 01 04 07 02 21 04 00 46 00 01
         communicator.cradleWriteBlock(device, (byte) 0x04, new byte[]{(byte) 0x00, (byte) 0x46, (byte) 0x00, (byte) 0x01});
@@ -733,14 +582,6 @@ public class CradleController {
         return ~crc;
     }
 
-    public byte[] getAllCoefGui(HidDevice selectedDevice) {
-        try {
-            return getAllCoef(selectedDevice);
-        } catch (TransferCancelledException e) {
-            log.warn("Exception when doing getAllCoefGui" + e.getMessage());
-            return null;
-        }
-    }
 
 //FixMe: 711 строчек!!!
 }

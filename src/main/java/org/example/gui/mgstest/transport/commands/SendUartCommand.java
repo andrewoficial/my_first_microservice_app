@@ -1,11 +1,11 @@
 package org.example.gui.mgstest.transport.commands;
 
 import org.apache.log4j.Logger;
-import org.example.gui.mgstest.device.AdvancedResponseParser;
+import org.example.gui.mgstest.service.MgsExecutionListener;
 import org.example.gui.mgstest.transport.CommandParameters;
-import org.example.gui.mgstest.transport.CradleCommand;
+import org.example.gui.mgstest.transport.DeviceCommand;
 import org.example.gui.mgstest.transport.CradleCommunicationHelper;
-import org.example.gui.mgstest.transport.MipexResponse;
+import org.example.gui.mgstest.transport.HidCommandName;
 import org.example.utilites.MyUtilities;
 import org.hid4java.HidDevice;
 
@@ -13,17 +13,18 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.zip.CRC32;
 
-public class SendUartCommand implements CradleCommand {
+public class SendUartCommand implements DeviceCommand {
     private final CradleCommunicationHelper communicator = new CradleCommunicationHelper();
     private final Logger log = Logger.getLogger(SendUartCommand.class);
 
     @Override
-    public byte[] execute(HidDevice device, CommandParameters parameters) throws Exception {
+    public void execute(HidDevice device, CommandParameters parameters, MgsExecutionListener progress) throws Exception {
         log.info("Run get device info");
-        return sendMipex(parameters.getStringArgument(), device);
+        device.open();
+        byte[] answer =  sendMipex(parameters.getStringArgument(), device);
+        progress.onExecutionFinished(device, 95, answer, this.getName());
     }
 
     @Override
@@ -39,11 +40,14 @@ public class SendUartCommand implements CradleCommand {
      * @throws Exception
      */
     private byte[] sendMipex(String commandText, HidDevice device) throws Exception {
-        device.open();
         log.info("Начало настройки");
         log.info("Run send MIPEX command (0x09 SetCommandMIPEXByte)");
-
+        commandText = commandText.trim();
+        if (!commandText.endsWith("\r")) {
+            commandText += "\r";
+        }
         byte[] commandBytes = commandText.getBytes("UTF-8");
+
         log.info("Строка для отправки:");
         log.info("HEX:");
         log.info(MyUtilities.bytesToHex(commandBytes));
@@ -83,7 +87,7 @@ public class SendUartCommand implements CradleCommand {
         // 01 04 07 02 21 01 03 20 D1 01 00 00 00 00 00 00
         // SRAL?\r [1C] (28)
         // 01 04 07 02 21 01 03 1C D1 01 00 00 00 00 00 00
-        int gasCode = 22 + commandBytes.length;
+        int gasCode = 17 + commandBytes.length;//было проверено на 22
         answer = communicator.waitForResponse(device,
                 () -> communicator.cradleWriteBlock(device, (byte) 0x01, new byte[]{0x03, (byte) gasCode, (byte) 0xD1, 0x01}),
                 answerExamples, "",
@@ -99,7 +103,7 @@ public class SendUartCommand implements CradleCommand {
         //SREV? =       18 (18 + 6 = 24 = 18)
         //CALB 0225 =   1C (18 + 10 = 28 = 1С)
         //SRAL? =       18 (18 + 6 = 24 = 18)
-        int afterGasCode = 18 + commandBytes.length;
+        int afterGasCode = 13 + commandBytes.length;//было проверено на 18
         answer = communicator.waitForResponse(device,
                 () -> communicator.cradleWriteBlock(device, (byte) 0x02, new byte[]{(byte) afterGasCode, 0x54, 0x02, 0x65}),
                 answerExamples, "",
@@ -213,14 +217,15 @@ CALB 9999
 
         // REQ: 01 02 02 ANS: 07 00 00 (ОК)
         communicator.cradleSwitchOff(device);
-
+        Thread.sleep(300);  // Match nSwitchOffWait
         // REQ: 01 02 02 01 0D ANS: 07 00 00 00 00 (ОК)
         communicator.cradleSwitchOn(device);
 
+        Thread.sleep(400);  // Match nSwitchOnWait
         // Read response: multiple reads as in dump (00 twice, 08, etc.), but parse first valid
         log.info("Начало чтения ответа");
         //byte[] offsets = new byte[]{0x00, 0x08, 0x10};
-        byte[] offsets = new byte[]{0x00, 0x08, 0x10};
+        byte[] offsets = new byte[]{0x00, 0x08, 0x10, 0x18, 0x20};
 
         //   OK
         // 01 04 04 02 23 00 07
@@ -228,17 +233,14 @@ CALB 9999
         // 01 04 04 02 23 10 07
         byte[] payloads = communicator.assembleCget(device, offsets, (byte) 0x07);
 
-
-
         //REQ: 01 02 02 01 0D ANS: 07 00 00 00 00 (ОК)
         communicator.cradleSwitchOn(device);
-
-//        List<String> allTextStrings = AdvancedResponseParser.extractAllTextResponses(payloads);
-//        log.info("Все текстовые строки в ответе: " + allTextStrings);
-
-        //return new MipexResponse(5L, allTextStrings.toString());
 
         return payloads;
     }
 
+    @Override
+    public HidCommandName getName() {
+        return HidCommandName.SENT_URT;
+    }
 }

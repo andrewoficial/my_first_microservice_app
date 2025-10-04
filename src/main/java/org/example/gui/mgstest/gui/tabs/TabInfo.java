@@ -1,12 +1,11 @@
-package org.example.gui.mgstest.tabs;
+package org.example.gui.mgstest.gui.tabs;
 
 import lombok.Setter;
 import org.apache.log4j.Logger;
-import org.example.gui.mgstest.model.answer.GetDeviceInfo;
+import org.example.gui.mgstest.model.answer.GetDeviceInfoModel;
 import org.example.gui.mgstest.repository.DeviceState;
 import org.example.gui.mgstest.transport.CradleController;
 import org.hid4java.HidDevice;
-import org.sonatype.aether.transfer.TransferCancelledException;
 
 import javax.swing.*;
 import java.awt.*;
@@ -64,6 +63,8 @@ public class TabInfo extends DeviceTab {
 
         // Раздел: Состояние прибора
         panel.add(createStatusPanel());
+
+        clearFields();
     }
 
     private JPanel createDeviceInfoPanel() {
@@ -209,7 +210,13 @@ public class TabInfo extends DeviceTab {
     private void performBlinkTest() {
         if (selectedDevice != null && selectedDevice.open()) {
             byte[] success = executeWithRetry(
-                    () -> cradleController.blinkTest(selectedDevice),
+                    () -> {
+                        try {
+                            return cradleController.blinkTest(selectedDevice);
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    },
                     2,  // Количество попыток
                     0   // Задержка между попытками (мс)
             );
@@ -226,7 +233,13 @@ public class TabInfo extends DeviceTab {
     private void performBeepTest() {
         if (selectedDevice != null && selectedDevice.open()) {
             byte[] success = executeWithRetry(
-                    () -> cradleController.beepTest(selectedDevice),
+                    () -> {
+                        try {
+                            return cradleController.beepTest(selectedDevice);
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    },
                     2,  // Количество попыток
                     0   // Задержка между попытками (мс)
             );
@@ -243,26 +256,17 @@ public class TabInfo extends DeviceTab {
     private void refreshInfo() {
         // TODO: Добавить логику обновления информации
         try {
-            cradleController.getDeviceInfo(selectedDevice);
+            cradleController.executeCommand(selectedDevice, "deviceInfo", null);;
         } catch (Exception e) {
             log.warn("Ошибка обновления данных" + e.getMessage());
-            //throw new RuntimeException(e);
         }
-
     }
 
     private void rebootDevice() {
-        if(selectedDevice.open()){
-            byte[] success = executeWithRetry(
-                    () -> cradleController.rebootCmd(selectedDevice),
-                    2,  // Количество попыток
-                    0   // Задержка между попытками (мс)
-            );
-            if (success == null) {
-                log.warn("Failed to rebootCmd after multiple attempts");
-            }else{
-                deviceState.getDeviceInfo().setAlarmEnabled(false);
-            }
+        try {
+            cradleController.executeCommand(selectedDevice, "DoRebootDevice", null);
+        } catch (Exception e) {
+            log.warn("Ошибка перезагрузки прибора" + e.getMessage());
         }
     }
 
@@ -273,7 +277,13 @@ public class TabInfo extends DeviceTab {
 
     private void resetBattery() {
         byte []  success = executeWithRetry(
-                () -> cradleController.resetBatteryCounter(selectedDevice),
+                () -> {
+                    try {
+                        return cradleController.resetBatteryCounter(selectedDevice);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                },
                 2,  // Количество попыток
                 0   // Задержка между попытками (мс)
         );
@@ -284,7 +294,7 @@ public class TabInfo extends DeviceTab {
 
     @FunctionalInterface
     public interface Executable {
-        byte [] execute() throws TransferCancelledException;
+        byte [] execute() throws Exception;
     }
 
     private byte[] executeWithRetry(Executable method, int maxAttempts, long delayMs) {
@@ -292,7 +302,7 @@ public class TabInfo extends DeviceTab {
             try {
 
                 return method.execute(); // Успешное выполнение
-            } catch (TransferCancelledException e) {
+            } catch (Exception e) {
                 if (attempt == maxAttempts) return null; // Все попытки исчерпаны
                 if (delayMs > 0) {
                     try {
@@ -337,8 +347,9 @@ public class TabInfo extends DeviceTab {
     }
     @Override
     public void updateData(DeviceState state) {
+        log.info("Обновляю данные для tabInfo");
         if (state != null && state.getDeviceInfo() != null) {
-            GetDeviceInfo info = state.getDeviceInfo();
+            GetDeviceInfoModel info = state.getDeviceInfo();
             cpuIdField.setText(info.getCpuId());
             serialNumberField.setText(String.valueOf(info.getSerialNumber()));
             swVersionField.setText(info.getSwMaj() + "." + info.getSwMin());
@@ -355,19 +366,31 @@ public class TabInfo extends DeviceTab {
             vibroCheckBox.setSelected(info.isVibroEnabled());
             alarmCheckBox.setSelected(info.isAlarmEnabled());
         } else {
+            log.info("Очищаю поля");
             clearFields();
         }
     }
 
     private void clearFields() {
-        Component[] components = panel.getComponents();
-        for (Component comp : components) {
-            if (comp instanceof JTextField) {
-                ((JTextField) comp).setText("Нет данных");
-            } else if (comp instanceof JCheckBox) {
-                ((JCheckBox) comp).setSelected(false);
-            }
-        }
+    cpuIdField.setText("Нет данных");
+    serialNumberField.setText("Нет данных");
+    swVersionField.setText("Нет данных");
+    hwVersionField.setText("Нет данных");
+    timeField.setText("Нет данных");
+    beepCheckBox.setSelected(false);
+    vibroCheckBox.setSelected(false);
+    alarmCheckBox.setSelected(false);
+    skipAlarmTestCheckBox.setSelected(false);
+    //     modeComboBox = new JComboBox<>(new String[]{"stop mode", "transport mode"});
+    //        Component[] components = panel.getComponents();
+    //        for (Component comp : components) {
+    //            if (comp instanceof JTextField) {
+    //                ((JTextField) comp).setText("Нет данных");
+    //            } else if (comp instanceof JCheckBox) {
+    //                ((JCheckBox) comp).setSelected(false);
+    //            }
+    //        }
+
     }
 
     @Override

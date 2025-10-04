@@ -1,8 +1,9 @@
-package org.example.gui.mgstest.device;
+package org.example.gui.mgstest.parser.answer;
 
 import org.apache.log4j.Logger;
-import org.example.gui.mgstest.transport.CradleController;
+import org.example.gui.mgstest.model.answer.ParsedBlock;
 import org.example.utilites.LittleEndianUtils;
+import org.example.utilites.MyUtilities;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -16,9 +17,75 @@ public class AdvancedResponseParser {
     private static final byte END_MARKER = (byte)0xFE; // Признак конца блока
 
     /**
+     * Парсит ответ от MIPEX и извлекает строку ответа, проверяя CRC.
+     * @param data Массив байт с сырым ответом (конкатенированный из блоков, начиная с arrRead[3] первого блока)
+     * @return Строка ответа (например, "00101032")
+     * @throws Exception Если ошибка валидации или парсинга
+     */
+    public String parseMipexResponse(byte[] data) throws Exception {
+        if (data.length < 30) {
+            throw new Exception("Данные слишком короткие");
+        }
+
+        // Извлечение nSize (arr[8], возможно с arr[9] если BITLEN16)
+        int sizeIndex = 27; // Позиция arr[8] в data (если data начинается с arrRead[3] = data[0] = packet[0])
+        int nSize = data[sizeIndex] & 0xFF;
+        System.out.println("Предпологаю длинну посылки " + nSize);
+
+        // Начало данных (arr[27] соответствует data[24], если нет padding)
+        int dataStart = 27;
+        int payloadLen = 2 + nSize;//[длинна_псылки  непонятное][посылка]
+        if (payloadLen + 27 > data.length) {
+            throw new Exception("Неверная длина пакета");
+        }
+
+        // Извлечение payload
+        byte[] payload = new byte[payloadLen];
+        System.arraycopy(data, 27, payload, 0, payloadLen);
+        System.out.println(MyUtilities.bytesToHex(payload));
+        // Извлечение CRC
+        byte[] crcBytes = new byte[4];
+        System.arraycopy(data, dataStart + payloadLen, crcBytes, 0, 4);
+        long receivedCrc = ByteBuffer.wrap(crcBytes).order(ByteOrder.LITTLE_ENDIAN).getInt() & 0xFFFFFFFFL;
+
+        // Проверка FE
+        if (data[dataStart + payloadLen + 4] != (byte) 0xFE) {
+            //throw new Exception(" 0xFE");
+
+        }
+
+        // Вычисление CRC
+        CRC32 crcObj = new CRC32();
+        crcObj.update(payload);
+        long calculatedCrc = crcObj.getValue();
+        if (calculatedCrc != receivedCrc) {
+            throw new Exception(String.format("Ошибка CRC: рассчитанный %08X, полученный %08X", calculatedCrc, receivedCrc));
+        }
+
+        // Извлечение под-длины, extra и строки
+        if (payload.length < 3) {
+            throw new Exception("Payload слишком короткий");
+        }
+        int subLen = payload[0] & 0xFF;
+        if (subLen + 2 > payload.length) {
+            throw new Exception("Неверная под-длина");
+        }
+        byte extra = payload[1];
+        byte[] strBytes = new byte[subLen];
+        System.arraycopy(payload, 2, strBytes, 0, subLen);
+
+        // Преобразование в строку, удаление \r если нужно
+        String response = new String(strBytes, "US-ASCII").replace("\r", "");
+
+        return response;
+    }
+
+
+
+    /**
      * Основной метод парсинга: ищет структурированные блоки и проверяет CRC
      */
-    public static List<ParsedBlock> parseStructuredResponse(byte[] data) {
+    public List<ParsedBlock> parseStructuredResponse(byte[] data) {
         final Logger log = Logger.getLogger(AdvancedResponseParser.class);
         List<ParsedBlock> result = new ArrayList<>();
         int index = 0;
@@ -48,7 +115,7 @@ public class AdvancedResponseParser {
     /**
      * Парсит один блок данных начиная с указанной позиции
      */
-    private static ParsedBlock parseBlock(byte[] data, int startIndex) throws InvalidBlockException {
+    private ParsedBlock parseBlock(byte[] data, int startIndex) throws InvalidBlockException {
         if (startIndex + 7 >= data.length) {
             throw new InvalidBlockException("Недостаточно данных для парсинга блока");
         }
@@ -87,14 +154,14 @@ public class AdvancedResponseParser {
     /**
      * Вычисляет CRC32 для данных
      */
-    public static long calculateCrc32(byte[] data) {
+    public long calculateCrc32(byte[] data) {
         return LittleEndianUtils.calculateCrc32(data);
     }
 
     /**
      * Преобразует массив байт (little-endian) в long
      */
-    public static long bytesToLongLE(byte[] bytes, int offset) {
+    public long bytesToLongLE(byte[] bytes, int offset) {
         return ByteBuffer.wrap(bytes, offset, 4)
                 .order(ByteOrder.LITTLE_ENDIAN)
                 .getInt() & 0xFFFFFFFFL;
@@ -103,7 +170,7 @@ public class AdvancedResponseParser {
     /**
      * Преобразует long в массив байт (little-endian)
      */
-    public static byte[] longToBytesLE(long value) {
+    public byte[] longToBytesLE(long value) {
         return ByteBuffer.allocate(4)
                 .order(ByteOrder.LITTLE_ENDIAN)
                 .putInt((int) value)
@@ -113,7 +180,7 @@ public class AdvancedResponseParser {
     /**
      * Старый метод для обратной совместимости и отладки
      */
-    public static List<String> extractAllTextResponses(byte[] data) {
+    public List<String> extractAllTextResponses(byte[] data) {
         List<String> result = new ArrayList<>();
         StringBuilder currentString = new StringBuilder();
         boolean inString = false;
@@ -143,48 +210,6 @@ public class AdvancedResponseParser {
         return result;
     }
 
-    /**
-     * Класс для хранения распарсенного блока
-     */
-    public static class ParsedBlock {
-        private final int startIndex;
-        private final int length;
-        private final byte[] payload;
-        private final long receivedCrc;
-        private final long calculatedCrc;
-        private final int nextIndex;
-        private final boolean crcValid;
-
-        public ParsedBlock(int startIndex, int length, byte[] payload,
-                           long receivedCrc, long calculatedCrc, int nextIndex) {
-            this.startIndex = startIndex;
-            this.length = length;
-            this.payload = payload;
-            this.receivedCrc = receivedCrc;
-            this.calculatedCrc = calculatedCrc;
-            this.nextIndex = nextIndex;
-            this.crcValid = (receivedCrc == calculatedCrc);
-        }
-
-        // Getters
-        public int getStartIndex() { return startIndex; }
-        public int getLength() { return length; }
-        public byte[] getPayload() { return payload; }
-        public long getReceivedCrc() { return receivedCrc; }
-        public long getCalculatedCrc() { return calculatedCrc; }
-        public int getNextIndex() { return nextIndex; }
-        public boolean isCrcValid() { return crcValid; }
-
-        public String getPayloadAsString() {
-            return new String(payload, java.nio.charset.StandardCharsets.US_ASCII);
-        }
-
-        @Override
-        public String toString() {
-            return String.format("Block[start=%d, length=%d, crcValid=%b, data='%s']",
-                    startIndex, length, crcValid, getPayloadAsString());
-        }
-    }
 
     /**
      * Исключение для некорректных блоков

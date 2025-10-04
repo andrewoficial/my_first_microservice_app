@@ -1,9 +1,10 @@
 package org.example.gui.mgstest.transport;
 
 import org.apache.log4j.Logger;
+import org.example.gui.mgstest.transport.hid.SomeHidController;
 import org.example.utilites.MyUtilities;
 import org.hid4java.HidDevice;
-import org.sonatype.aether.transfer.TransferCancelledException;
+
 
 import java.util.ArrayList;
 
@@ -41,7 +42,7 @@ public class CradleCommunicationHelper {
 
     }
 
-    //=============CradleCommand================//
+    //=============DeviceCommand================//
 
     /**
      * REQ: 02 BC CC CC CC CC CC CC CC CC CC CC CC CC CC CC
@@ -57,11 +58,21 @@ public class CradleCommunicationHelper {
         log.info("Первичная настройка кредла");
         byte []exceptedAns = new byte[]{0x07, (byte)0x00, (byte)0x03};
 
+        log.warn("Is device closed:"  + device.isClosed());
+        log.warn("Run for device: " + device.getManufacturer());
+        log.warn("Run for device: " + device.getProductId());
+        log.warn("Run for device: " + device.getPath());
+
+
+        hidController.simpleSend(device, new byte[]{0x02, (byte)0xBC, (byte)0xCC, (byte) 0xCC});
+        safetySleep(300);
+        hidController.printArrayLikeDeviceMonitor(hidController.readResponse(device));
+        safetySleep(1300);
         //02 BC CC CC CC CC CC CC CC CC CC CC CC CC CC CC
         exceptedAns = new byte[]{0x07, (byte)0x00, (byte)0x03};
         waitForResponse(device,
                 () -> simpleSendInitial(device, new byte[]{0x02, (byte)0xBC, (byte)0xCC, (byte) 0xCC}),
-                exceptedAns,"DO SETTINGS BYTES: 02 BC",3, 50);
+                exceptedAns,"DO SETTINGS BYTES: 02 BC",5, 300);
         //07 00 03
 
 
@@ -387,14 +398,10 @@ public class CradleCommunicationHelper {
                                    int attemptsLimit,
                                    long sleepMs) {
         int attempts = 0;
-        byte[] received;
-        log.info("Начинаю отправку, [" + comment + "]. Ожидаю заголовок " + MyUtilities.bytesToHex(expected));
+        byte[] received = null;
+        log.info("Начинаю отправку [" + comment + "]. Ожидаю заголовок " + MyUtilities.bytesToHex(expected));
 
-        // выполняем действие перед первой проверкой
         action.run();
-        safetySleep(sleepMs);
-        received = hidController.readResponse(device);
-
         for (int i = 0; i < attemptsLimit; i++) {
             attempts++;
             safetySleep(sleepMs);
@@ -446,6 +453,7 @@ public class CradleCommunicationHelper {
         for (int i = 0; i < writeRepeatLimit; i++) {
             action.run();
             attemptsWrite++;
+            attemptsRead = 0;
             for(int j = 0; j < readRepeatLimit; j++){
                 attemptsRead++;
                 safetySleep(delayRead);
@@ -497,7 +505,7 @@ public class CradleCommunicationHelper {
             boolean isDifferent = false;
             for (int i = 0; i < expectedValue.length; i++) {
                 if (received[i] != expectedValue[i]) {
-                    log.info("[" + comment + "] несовпадение на позиции " + i +
+                    log.info("[" + comment + "] несовпадение на позиции для одного из вариантов ответа" + i +
                             " (ожидал " + String.format("%02X", expectedValue[i]) +
                             ", получил " + String.format("%02X", received[i]) + ")");
                     isDifferent = true;
@@ -557,21 +565,21 @@ public class CradleCommunicationHelper {
     byte[] assembled = assembleCget(device, offsets, (byte)0x07);
 
     Данные для написания теста.
-2025-09-09 11:35:09.376 INFO  [AWT-EventQueue-0] org.example.gui.mgstest.transport.SomeHidController - Полезная нагрузка: 01 04 04 02 23 00 07 остальное заполнено 00 до 64 байт
+2025-09-09 11:35:09.376 INFO  [AWT-EventQueue-0] org.example.gui.mgstest.transport.hid.SomeHidController - Полезная нагрузка: 01 04 04 02 23 00 07 остальное заполнено 00 до 64 байт
 2025-09-09 11:35:09.505 INFO  [AWT-EventQueue-0] org.example.gui.mgstest.transport.CradleController - Ответ на команду:
 07 80 24 00 E1 40 FF 01 03 3D D1 01 39 54 02 65
 6E 06 00 00 00 2E 01 00 00 00 01 01 30 30 47 0C
 32 39 38 32 13 14 00 00 61 50 00 08 0C 00 00 20
 06 06 06 06 03 00 00 00 04 10 00 20 00 00 00 00
 2025-09-09 11:35:09.506 INFO  [AWT-EventQueue-0] org.example.gui.mgstest.transport.CradleController - [] получен корректный ответ после 1 попыток
-2025-09-09 11:35:09.508 INFO  [AWT-EventQueue-0] org.example.gui.mgstest.transport.SomeHidController - Полезная нагрузка: 01 04 04 02 23 08 07 остальное заполнено 00 до 64 байт
+2025-09-09 11:35:09.508 INFO  [AWT-EventQueue-0] org.example.gui.mgstest.transport.hid.SomeHidController - Полезная нагрузка: 01 04 04 02 23 08 07 остальное заполнено 00 до 64 байт
 2025-09-09 11:35:09.637 INFO  [AWT-EventQueue-0] org.example.gui.mgstest.transport.CradleController - Ответ на команду:
 07 80 24 00 03 B4 FC 4B 4D 61 BC 00 67 00 00 00
 0E 02 5D 03 27 20 BF 68 00 00 00 00 0E EE E7 61
 01 F0 00 00 C2 5D 00 00 61 50 00 08 0C 00 00 20
 06 06 06 06 03 00 00 00 04 10 00 20 00 00 00 00
 2025-09-09 11:35:09.637 INFO  [AWT-EventQueue-0] org.example.gui.mgstest.transport.CradleController - [] получен корректный ответ после 1 попыток
-2025-09-09 11:35:09.641 INFO  [AWT-EventQueue-0] org.example.gui.mgstest.transport.SomeHidController - Полезная нагрузка: 01 04 04 02 23 10 07 остальное заполнено 00 до 64 байт
+2025-09-09 11:35:09.641 INFO  [AWT-EventQueue-0] org.example.gui.mgstest.transport.hid.SomeHidController - Полезная нагрузка: 01 04 04 02 23 10 07 остальное заполнено 00 до 64 байт
 2025-09-09 11:35:09.770 INFO  [AWT-EventQueue-0] org.example.gui.mgstest.transport.CradleController - Ответ на команду:
 07 80 24 00 A7 F0 CF FF FE 00 E0 42 00 00 E2 42
 00 00 E4 42 00 00 E6 42 00 00 E8 42 00 00 EA 42
@@ -583,7 +591,7 @@ public class CradleCommunicationHelper {
 00 00 EC 42 | 40 92 00 00 61 50 00 08 0C 00 00 20
 06 06 06 06 03 00 00 00 04 10 00 20 00 00 00 00
 2025-09-09 11:35:09.770 INFO  [AWT-EventQueue-0] org.example.gui.mgstest.transport.CradleController - [] получен корректный ответ после 1 попыток
-2025-09-09 11:35:09.771 WARN  [AWT-EventQueue-0] org.example.gui.mgstest.transport.SomeHidController - Большой массив на вывод
+2025-09-09 11:35:09.771 WARN  [AWT-EventQueue-0] org.example.gui.mgstest.transport.hid.SomeHidController - Большой массив на вывод
 00 00 00 E1 40 FF 01 03 3D D1 01 39 54 02 65 6E
 06 00 00 00 2E 01 00 00 00 01 01 30 30 47 0C 32
 39 38 32 03 B4 FC 4B 4D 61 BC 00 67 00 00 00 0E
@@ -601,7 +609,7 @@ F0 00 00 A7 F0 CF FF FE 00 E0 42 00 00 E2 42 00
      * @param size - Некий размер, в примерах выше это цифра 07
      * @return - массив, со вставками
      */
-    public byte[] assembleCget(HidDevice device, byte[] offsets, byte size) throws TransferCancelledException {
+    public byte[] assembleCget(HidDevice device, byte[] offsets, byte size) throws Exception {
         /*
         Пример возвращаемого от устройства
         07 80 24 00 00 00 97 43 00 80 97 43 00 00 98 43
@@ -649,7 +657,7 @@ F0 00 00 A7 F0 CF FF FE 00 E0 42 00 00 E2 42 00
                     hidController.printArrayLikeDeviceMonitor(assembleCGetWriteAnswerSample);
                 }
 
-                throw new TransferCancelledException("Ошибка выполнения пакета команд");
+                throw new Exception("Ошибка выполнения пакета команд");
             }
 
             //Начинается склейка массива

@@ -1,8 +1,8 @@
-package org.example.gui.mgstest.tabs;
+package org.example.gui.mgstest.gui.tabs;
 
 import lombok.Setter;
 import org.apache.log4j.Logger;
-import org.example.gui.mgstest.model.answer.GetAllCoefficients;
+import org.example.gui.mgstest.model.answer.GetAllCoefficientsModel;
 import org.example.gui.mgstest.repository.DeviceState;
 import org.example.gui.mgstest.transport.CradleController;
 import org.hid4java.HidDevice;
@@ -258,13 +258,13 @@ public class TabCoefficients extends DeviceTab {
     public void updateData(DeviceState state) {
         log.info("Обновляю данные для коэффициентов...");
         if(state == null){
-            log.warn("Пустой объект state");
+            log.warn("null объект state");
+        }else if(state.getAllCoefficients() == null){
+            log.warn("null объект getAllCoefficients внутри state");
         }
-        if( state.getAllCoefficients() == null){
-            log.warn("Пустой объект coef внутри state");
-        }
+
         if (state != null && state.getAllCoefficients() != null) {
-            GetAllCoefficients coef = state.getAllCoefficients();
+            GetAllCoefficientsModel coef = state.getAllCoefficients();
 
             // Обновляем поля O2 коэффициентов
             for (int i = 0; i < 19; i++) {

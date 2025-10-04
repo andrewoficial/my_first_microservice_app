@@ -6,7 +6,7 @@ import java.util.Date;
 
 @Getter
 @Setter
-public class GetDeviceInfo {
+public class GetDeviceInfoModel {
     private String cpuId;
     private int serialNumber;
     private int swMin;

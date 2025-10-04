@@ -1,10 +1,10 @@
-package org.example.gui.mgstest.transport;
+package org.example.gui.mgstest.model.answer;
 
-public class MipexResponse {
+public class MipexResponseModel {
     public long time;
     public String text;
 
-    public MipexResponse(long time, String text) {
+    public MipexResponseModel(long time, String text) {
         this.time = time;
         this.text = text;
     }

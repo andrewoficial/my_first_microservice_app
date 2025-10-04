@@ -1,37 +1,41 @@
 // DeviceStateRepository.java
 package org.example.gui.mgstest.repository;
 
-import java.util.HashMap;
-import java.util.Map;
+import org.hid4java.HidDevice;
 
-public class DeviceStateRepository implements DeviceRepository{
-    private static DeviceStateRepository instance;
-    private Map<String, DeviceState> storage = new HashMap<>();
-    
-    public static DeviceStateRepository getInstance() {
-        if (instance == null) {
-            instance = new DeviceStateRepository();
-        }
-        return instance;
-    }
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+
+public class DeviceStateRepository implements DeviceRepository {
+    private final Map<HidDevice, DeviceState> storage = new ConcurrentHashMap<>();
 
     @Override
-    public void put(String deviceId, DeviceState state) {
+    public void put(HidDevice deviceId, DeviceState state) {
         storage.put(deviceId, state);
     }
 
     @Override
-    public DeviceState get(String deviceId) {
+    public DeviceState get(HidDevice deviceId) {
         return storage.get(deviceId);
     }
 
     @Override
-    public void remove(String deviceId){
+    public void remove(HidDevice deviceId) {
         storage.remove(deviceId);
     }
 
     @Override
-    public boolean contains(String deviceId) {
+    public boolean contains(HidDevice deviceId) {
         return storage.containsKey(deviceId);
+    }
+
+    // Дополнительные методы, если нужны
+    public int size() {
+        return storage.size();
+    }
+
+    public void clear() {
+        storage.clear();
     }
 }

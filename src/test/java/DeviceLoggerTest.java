@@ -1,4 +1,3 @@
-import net.sf.saxon.trans.SymbolicName;
 import org.apache.log4j.Logger;
 import org.example.services.AnswerValues;
 import org.example.services.DeviceAnswer;

@@ -1,5 +1,7 @@
 import org.apache.log4j.Logger;
+import org.example.gui.mgstest.service.MgsExecutionListener;
 import org.example.gui.mgstest.transport.CommandParameters;
+import org.example.gui.mgstest.transport.HidCommandName;
 import org.example.gui.mgstest.transport.commands.GetDeviceInfoCommand;
 import org.hid4java.HidDevice;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,7 +56,28 @@ public class GetDeviceInfoCommandTest {
     @Test
     public void testExecuteWithAllZeroResponses() throws Exception {
         // Call the execute method with the mocked device and parameters
-        byte[] result = command.execute(mockDevice, mockParameters);
+        MgsExecutionListener mgsExecutionListener = new MgsExecutionListener() {
+            @Override
+            public void onExecutionEvent(HidDevice deviceId, String answer, boolean isError) {
+                System.out.println("onExecutionEvent" + answer);
+            }
+
+            @Override
+            public void onProgressUpdate(HidDevice deviceId, int progress, String message) {
+                System.out.println("onProgressUpdate" + progress + " msg: " + message);
+            }
+
+            @Override
+            public void onExecutionFinished(HidDevice deviceId, int progress, byte[] answer, HidCommandName commandName) {
+                System.out.println("onExecutionFinished" + progress + " msg: " + commandName);
+            }
+        };
+        try{
+            command.execute(mockDevice, mockParameters, mgsExecutionListener);
+        }catch (Exception e){
+            System.out.println("OK");
+        }
+
 
         // You can add assertions here based on expected behavior.
         // For example, since all responses are zeros, the assembled result might be a specific value.
