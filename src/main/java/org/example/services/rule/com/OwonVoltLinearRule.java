@@ -78,10 +78,6 @@ public class OwonVoltLinearRule implements ComRule, Serializable {
 
     }
 
-    @Override
-    public String getRuleId() {
-        return this.ruleId;
-    }
 
     @Override
     public RuleType getRuleType() {

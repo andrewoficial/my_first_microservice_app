@@ -126,68 +126,50 @@ public class MyProperties {
     private int syncSavingAnswerWindowMS = 100000; //100 sec
 
     // CSV Logging
-    @Setter
     @Getter
     private boolean csvLogState = true;
 
-    @Setter
     @Getter
     private String csvLogSeparator = ";";
 
-    @Setter
     @Getter
     private boolean csvLogOutputASCII = false;
 
-    @Setter
     @Getter
     private boolean csvLogInputASCII = false;
 
-    @Setter
     @Getter
     private boolean csvLogInputParsed = false;
 
     // TXT Logging
-    @Setter
     @Getter
     private boolean dbgLogState = false;
 
-    @Setter
     @Getter
     private String dbgLogSeparator = "\t";
 
-    @Setter
     @Getter
     private boolean dbgLogOutputASCII = false;
 
-    @Setter
     @Getter
     private boolean dbgLogOutputHEX = false;
 
-    @Setter
     @Getter
     private boolean dbgLogInputASCII = false;
 
-    @Setter
     @Getter
     private boolean dbgLogInputHEX = false;
 
-    @Setter
     @Getter
     private boolean dbgLogInputParsed = false;
-
-
 
     @Getter
     private MainLeftPanelStateCollection leftPanelStateCollection;
 
 
-
-
     private final MyPropertiesFileHandler fileHandler = new MyPropertiesFileHandler();
     private MyPropertiesSettingsLoader settingsLoader;
-
     private java.util.Properties properties;
-
 
     // Приватный конструктор для Singleton
     private MyProperties() {
