@@ -34,7 +34,7 @@ public class CradleCommunicationHelper {
         //WRITE_MAGIK_SIX_OFFSET_ANSWER_SAMPLES.add(new byte[]{0x07, (byte)0x87, (byte)0x00, 0x00});
 
         ASSEMBLE_C_GET_WRITE_ANSWER_SAMPLES.add(new byte[] {0x07, (byte)0x80, (byte)0x24});
-        ASSEMBLE_C_GET_WRITE_ANSWER_SAMPLES.add(new byte[] {0x07, (byte)0x87, (byte)0x00});
+        //ASSEMBLE_C_GET_WRITE_ANSWER_SAMPLES.add(new byte[] {0x07, (byte)0x87, (byte)0x00});
         //.add(new byte[] {0x07, (byte)0x87, (byte)0x00});
 
         CRADLE_ACTIVATE_TRANSMIT_ANSWER_SAMPLES.add(new byte[]{0x07, (byte)0x80, (byte)0x04, (byte)0x00, (byte)0x78});
@@ -67,34 +67,49 @@ public class CradleCommunicationHelper {
         hidController.simpleSend(device, new byte[]{0x02, (byte)0xBC, (byte)0xCC, (byte) 0xCC});
         safetySleep(300);
         hidController.printArrayLikeDeviceMonitor(hidController.readResponse(device));
-        safetySleep(1300);
+        safetySleep(300);
+
+        ArrayList <byte []> answers = new ArrayList<>();
+        answers.add(new byte[]{0x07, (byte)0x00, (byte)0x03});
+        answers.add(new byte[]{0x07, (byte)0x00, (byte)0x07});
+        answers.add(new byte[]{0x07, (byte)0x55, (byte)0x00});
+        answers.add(new byte[]{0x07, (byte)0x80, (byte)0x00});
+        answers.add(new byte[]{0x07, (byte)0x80, (byte)0x03});
+        answers.add(new byte[]{0x07, (byte)0x80, (byte)0x04, 0x00});
+        answers.add(new byte[]{0x07, (byte)0x80, (byte)0x07});
+        answers.add(new byte[]{0x07, (byte)0x80, (byte)0x12});
+
         //02 BC CC CC CC CC CC CC CC CC CC CC CC CC CC CC
-        exceptedAns = new byte[]{0x07, (byte)0x00, (byte)0x03};
         waitForResponse(device,
                 () -> simpleSendInitial(device, new byte[]{0x02, (byte)0xBC, (byte)0xCC, (byte) 0xCC}),
-                exceptedAns,"DO SETTINGS BYTES: 02 BC",5, 300);
+                answers,"DO SETTINGS BYTES: 02 BC",
+                5, 3, 350, 400);
         //07 00 03
 
 
         //02 B2 CC CC CC CC CC CC CC CC CC CC CC CC CC CC
         exceptedAns = new byte[]{0x07, (byte)0x00, (byte)0x07};
         waitForResponse(device,
-                () -> simpleSendInitial(device, new byte[]{0x02, (byte)0xB2}),
-                exceptedAns,"DO SETTINGS BYTES: 02 B2",3, 50);
+                () -> simpleSendInitial(device, new byte[]{0x02, (byte)0xB2, (byte)0xCC, (byte) 0xCC}),
+                answers,"DO SETTINGS BYTES: 02 B2",
+                5, 3, 350, 400);
         //07 00 03
 
         //02 BD CC CC CC CC CC CC CC CC CC CC CC CC CC CC
         exceptedAns = new byte[]{0x07, (byte)0x80, (byte)0x00};
         waitForResponse(device,
                 () -> simpleSendInitial(device, new byte[]{0x02, (byte)0xBD}),
-                exceptedAns,"DO SETTINGS BYTES: 02 BD",3, 50);
+                answers,"DO SETTINGS BYTES: 02 BD",
+                5, 3, 350, 400);
         //07 80 00
 
         //01 55 CC CC CC CC CC CC CC CC CC CC CC CC CC CC
         exceptedAns = new byte[]{0x07, (byte)0x55, (byte)0x00};
+
         waitForResponse(device,
                 () -> simpleSendInitial(device, new byte[]{0x01, (byte)0x55}),
-                exceptedAns,"DO SETTINGS BYTES: 01 55",3, 50);
+                answers,"DO SETTINGS BYTES: 01 55",
+                5, 3, 350, 400);
         //07 55 00
 
         //01 02 02 01 0D CC CC CC CC CC CC CC CC CC CC CC
@@ -104,7 +119,8 @@ public class CradleCommunicationHelper {
         exceptedAns = new byte[]{0x07, (byte)0x80, (byte)0x12, 0x00};
         waitForResponse(device,
                 () -> simpleSendInitial(device, new byte[]{0x01, (byte)0x04, 0x02, 0x02, 0x2B}),
-                exceptedAns,"DO SETTINGS BYTES: 01 04 02 02 2B",3, 50);
+                answers,"DO SETTINGS BYTES: 01 04 02 02 2B",
+                5, 3, 350, 400);
         //07 80 12 00
     }
 
@@ -120,9 +136,14 @@ public class CradleCommunicationHelper {
 
         //REQ_SAMPLE:  01 02 02 01 0D 00 00 00 00 00 00 00 00 00 00 00
         exceptedAns = new byte[]{0x07, (byte)0x00, (byte)0x00};
-        answer = waitForResponse(device,
-                () -> simpleSend(device, new byte[]{(byte) 0x01, (byte) 0x02, (byte) 0x02, (byte) 0x01, (byte) 0x0D}),
-                exceptedAns,"NFC_ENABLE",3, 55);
+        ArrayList <byte []> answers = new ArrayList<>();
+        answers.add(exceptedAns);
+        waitForResponse(device,
+                () -> simpleSendInitial(device,new byte[]{(byte) 0x01, (byte) 0x02, (byte) 0x02, (byte) 0x01, (byte) 0x0D}),
+                answers,"NFC_ENABLE",
+                5, 3, 350, 400);
+
+
         //ANS_SAMPLE: 07 00 00 00 78 F0 00 C1 31 12 5A 02 E0 FF 00 7F
     }
 
@@ -137,10 +158,15 @@ public class CradleCommunicationHelper {
         byte [] answer = null;
 
         //REQ_SAMPLE:  01 02 02 00 00 00 00 00 00 00 00 00 00 00 00 00
-        exceptedAns = new byte[]{0x07, (byte)0x00, (byte)0x00, (byte)0x00};
-        answer = waitForResponse(device,
-                () -> simpleSend(device, new byte[]{(byte) 0x01, (byte) 0x02, (byte) 0x02}),
-                exceptedAns,"NFC_DISABLE",5, 25);
+        ArrayList <byte []> answers = new ArrayList<>();
+        answers.add(new byte[]{0x07, (byte)0x00, (byte)0x00, (byte)0x00});
+        answers.add(new byte[]{0x07, (byte)0x80});
+        answers.add(new byte[]{0x07, (byte)0x83});
+
+        waitForResponse(device,
+                () -> simpleSendInitial(device,new byte[]{(byte) 0x01, (byte) 0x02, (byte) 0x02}),
+                answers,"NFC_DISABLE",
+                5, 3, 350, 400);
         //ANS_SAMPLE: 07 00 00 00 78 F0 00 C1 31 12 5A 02 E0 FF 00 7F
     }
 
@@ -158,8 +184,8 @@ public class CradleCommunicationHelper {
                         new byte[]{(byte) 0x01, (byte) 0x04, (byte) 0x07, (byte) 0x02, (byte) 0x21, (byte) 0x00, (byte) 0xE1, (byte) 0x40, (byte) 0xFF, (byte) 0x01}),
                 CRADLE_ACTIVATE_TRANSMIT_ANSWER_SAMPLES,
                 "NFC_TRANSMIT",
-                3, 3,
-                70, 110);
+                5, 3,
+                200, 300);
         //ANS_SAMPLE: 07 80 04 00 78 F0 00 C1 31 12 5A 02 E0 FF 00 7F
     }
 
@@ -178,8 +204,8 @@ public class CradleCommunicationHelper {
                         (byte) 0x00,
                         new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00}),//Команда из дампа,
                 RESET_ZERO_OFFSET_ANSWER_SAMPLES,"RESET_ZERO_OFFSET",
-                3, 3,
-                70, 110);
+                5, 3,
+                200, 300);
         return answer;
     }
 
@@ -198,8 +224,8 @@ public class CradleCommunicationHelper {
                         new byte[]{(byte) 0x03, (byte) 0x11, (byte) 0xD1, (byte) 0x01}),
                 WRITE_MAGIK_FIRST_OFFSET_ANSWER_SAMPLES,
                 "WRITE_FIRST_OFFSET",
-                3, 3,
-                70, 110);
+                5, 3,
+                200, 300);
         //ANS_SAMPLE: 07 80 04 00 78 F0 00
     }
 
@@ -216,8 +242,8 @@ public class CradleCommunicationHelper {
         answer = waitForResponse(device,
                 () -> cradleWriteBlock(device, (byte) 0x02, new byte[]{0x0D, 0x54, 0x02, 0x65}),
                 WRITE_MAGIK_FIFTH_OFFSET_ANSWER_SAMPLES,"WRITE_SECOND_OFFSET",
-                3, 3,
-                70, 110);
+                5, 3,
+                200, 300);
         //ANS_SAMPLE: 07 80 04 00 78 F0 00
     }
 
@@ -236,8 +262,8 @@ public class CradleCommunicationHelper {
         answer = waitForResponse(device,
                 () -> cradleSendCount(device, count),
                 WRITE_MAGIK_FIRST_OFFSET_ANSWER_SAMPLES,"WRITE_THIRD_OFFSET Установка счётчика",
-                3, 3,
-                70, 110);
+                5, 3,
+                200, 300);
         //07 80 04
     }
 
@@ -259,7 +285,7 @@ public class CradleCommunicationHelper {
                 WRITE_MAGIK_FIFTH_OFFSET_ANSWER_SAMPLES,
                 "WRITE_FIFTH_OFFSET",
                 2, 2,
-                50, 80);
+                200, 300);
         //07 80 04 00 78 F0 00
     }
 
@@ -297,8 +323,8 @@ public class CradleCommunicationHelper {
         answer = waitForResponse(device,
                 () -> cradleWriteBlock(device, (byte) 0x06, new byte[]{0x00, 0x00, 0x00, (byte) 0x04}),
                 WRITE_MAGIK_SIX_OFFSET_ANSWER_SAMPLES,"WRITE_SIXTH_OFFSET",
-                2, 4,
-                70, 100);
+                5, 3,
+                200, 300);
         //07 80 04 00 78 F0 00 C1 31 12 5A 02 E0 FF 00 7F
     }
 
@@ -472,11 +498,9 @@ public class CradleCommunicationHelper {
 
         if(isEqual(received, expectedValues, comment)) {
             log.info("Получен корректный ответ после " + (attemptsRead ) + " попыток чтения и " + (attemptsWrite)+ " попыток записи");
-            return received;
         }else{
             log.warn("Превышен предел попыток повтора отправки команды (" + readRepeatLimit + ")");
         }
-
         return received;
     }
 
@@ -503,6 +527,7 @@ public class CradleCommunicationHelper {
                 continue;
             }
             boolean isDifferent = false;
+            log.info("Просматриваю вариант: " + MyUtilities.bytesToHex(expectedValue));
             for (int i = 0; i < expectedValue.length; i++) {
                 if (received[i] != expectedValue[i]) {
                     log.info("[" + comment + "] несовпадение на позиции для одного из вариантов ответа" + i +
@@ -511,9 +536,10 @@ public class CradleCommunicationHelper {
                     isDifferent = true;
                     break;
                 }
-
             }
+            //log.info("Завершил проверку, есть разница:" + isDifferent);
             if(!isDifferent){
+                log.info("Прерываю проверку и отдаю результат true");
                 return true;
             }
         }
@@ -556,7 +582,8 @@ public class CradleCommunicationHelper {
         try {
             Thread.sleep(ms);
         } catch (InterruptedException ex) {
-            log.error("Sleep error " + ex.getMessage());
+            log.error("SLEEP ERROR!!! " + ex.getMessage());
+            System.out.println("SLEEP ERROR!! "  + ex.getMessage());
         }
     }
 
@@ -640,11 +667,11 @@ F0 00 00 A7 F0 CF FF FE 00 E0 42 00 00 E2 42 00
             //Аргументы: HidDevice; function(отправляющая и возвращающая ответ), byte[]{требуемое начало ответа}, String "коммент в для отладки", int количетсов повторов чтения, int сон между попытками ms
             byte[] arrRead = waitForResponse(device,
                     () -> hidController.simpleSend(device,
-                            new byte[]{(byte) 0x01, (byte) 0x04, (byte) 0x04, (byte) 0x02, (byte) 0x23, off, size}),
+                            new byte[]{(byte) 0x01, (byte) 0x04, (byte) 0x04, (byte) 0x02, (byte) 0x23, (byte) off, (byte) size}),
                     ASSEMBLE_C_GET_WRITE_ANSWER_SAMPLES,
                     "ASSEMBLE_C_GET_"+off,
-                    2, 4,
-                    250, 350);
+                    6, 10,
+                    310, 500);
             log.info("Получена валидная часть ответа ");
             //printArrayLikeDeviceMonitor(arrRead);
             if(! isEqual(arrRead, ASSEMBLE_C_GET_WRITE_ANSWER_SAMPLES, "Проверка на выброс исключения")){

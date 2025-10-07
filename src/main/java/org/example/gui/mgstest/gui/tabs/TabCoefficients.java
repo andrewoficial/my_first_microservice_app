@@ -43,7 +43,8 @@ public class TabCoefficients extends DeviceTab {
     private JTextField[] vRangeFields;
 
     // Формат для отображения чисел
-    private DecimalFormat decimalFormat = new DecimalFormat("0.##########");
+    //private DecimalFormat decimalFormat = new DecimalFormat("0.##########");
+    private DecimalFormat decimalFormat = new DecimalFormat();
 
     public TabCoefficients(CradleController cradleController, HidDevice selectedDevice, DeviceState deviceState) {
         super("Коэффициенты");
@@ -268,22 +269,27 @@ public class TabCoefficients extends DeviceTab {
 
             // Обновляем поля O2 коэффициентов
             for (int i = 0; i < 19; i++) {
-                o2Fields[i].setText(decimalFormat.format(coef.getO2Coef()[i]));
+                //o2Fields[i].setText(decimalFormat.format(coef.getO2Coef()[i]));
+                o2Fields[i].setText(String.valueOf((float) coef.getO2Coef()[i]));
+                //o2Fields[i].setText(String.valueOf(coef.getO2Coef()[i]));
             }
 
             // Обновляем поля CO коэффициентов
             for (int i = 0; i < 14; i++) {
-                coFields[i].setText(decimalFormat.format(coef.getCoCoef()[i]));
+                //coFields[i].setText(decimalFormat.format(coef.getCoCoef()[i]));
+                coFields[i].setText(String.valueOf((float) coef.getCoCoef()[i]));
             }
 
             // Обновляем поля H2S коэффициентов
             for (int i = 0; i < 14; i++) {
-                h2sFields[i].setText(decimalFormat.format(coef.getH2sCoef()[i]));
+                //h2sFields[i].setText(decimalFormat.format(coef.getH2sCoef()[i]));
+                h2sFields[i].setText(String.valueOf((float) coef.getH2sCoef()[i]));
             }
 
             // Обновляем поля CH4 Pressure коэффициентов
             for (int i = 0; i < 7; i++) {
-                ch4PressureFields[i].setText(decimalFormat.format(coef.getCh4Pressure()[i]));
+                //ch4PressureFields[i].setText(decimalFormat.format(coef.getCh4Pressure()[i]));
+                ch4PressureFields[i].setText(String.valueOf((float) coef.getCh4Pressure()[i]));
             }
 
             // Обновляем поля Acceleration коэффициентов

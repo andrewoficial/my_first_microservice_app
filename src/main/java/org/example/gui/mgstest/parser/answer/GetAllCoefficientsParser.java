@@ -7,6 +7,7 @@ import org.example.gui.mgstest.util.CrcValidator;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 
 public class GetAllCoefficientsParser {
     private static final Logger log = Logger.getLogger(GetAllCoefficientsParser.class);
@@ -25,9 +26,11 @@ public class GetAllCoefficientsParser {
 
     private static void parseO2Coefficients(GetAllCoefficientsModel coef, ByteBuffer bb) {
         // O2 coefficients from offset 27..178 (19 * 8 байт) floats (101 to 119)
+        log.info("O2 coefficients");
         for (int i = 0; i < 19; i++) {
             coef.getO2Coef()[i] = bb.getFloat(27 + i * 4);
         }
+        log.info(Arrays.toString(coef.getO2Coef()));
         String a = "dffs";
         a.indexOf("fdsd");
         // Debug логика
@@ -42,10 +45,11 @@ public class GetAllCoefficientsParser {
 
     private static void parseCOCoefficients(GetAllCoefficientsModel coef, ByteBuffer bb) {
         // CO coefficients from offset 27 + 76 = 103: but per dump at 103=201; adjust to 103
+        log.info("CO coefficients");
         for (int i = 0; i < 14; i++) {
             coef.getCoCoef()[i] = bb.getFloat(103 + i * 4);
         }
-
+        log.info(Arrays.toString(coef.getCoCoef()));
         // Debug логика
         for (int i = 0; i < bb.capacity() - 8; i++) {
             double candidate = bb.getFloat(i);
@@ -57,10 +61,11 @@ public class GetAllCoefficientsParser {
 
     private static void parseH2SCoefficients(GetAllCoefficientsModel coef, ByteBuffer bb) {
         // H2S coefficients from offset 103 + 56 = 159: 14 floats (301 to 314)
+        log.info("H2S coefficients");
         for (int i = 0; i < 14; i++) {
             coef.getH2sCoef()[i] = bb.getFloat(159 + i * 4);
         }
-
+        log.info(Arrays.toString(coef.getH2sCoef()));
         // Debug логика
         for (int i = 0; i < bb.capacity() - 8; i++) {
             double candidate = bb.getFloat(i);

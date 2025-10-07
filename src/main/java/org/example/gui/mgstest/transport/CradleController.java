@@ -53,74 +53,6 @@ public class CradleController {
     }
 
 
-    // Выключение звука (SwitchBeepByte, command 0x22, X=0x01)
-    public byte[] alarmOff(HidDevice device) throws Exception {
-        // 01 02 02 01 0D
-        prepareForAlarmChange(device);
-
-        //01 04 07 02 21 05 01 00 00 01
-        communicator.cradleWriteBlock(device, (byte) 0x05, new byte[]{(byte) 0x01, (byte) 0x00, (byte) 0x00, (byte) 0x01});
-
-        //01 04 07 02 21 06 1B DF 05 A5
-        communicator.cradleWriteBlock(device, (byte) 0x06, new byte[]{(byte) 0x1B, (byte) 0xDF, (byte) 0x05, (byte) 0xA5});
-
-        //01 04 07 02 21 07 FE 00 00 00
-        communicator.writeMagikInSeventhOffset(device);
-
-        //01 04 07 02 21 03 6E yy yy 00
-        communicator.writeCountInThirdOffset(device, 0x0B);
-
-        // 01 04 07 02 21 00 E1 40 FF 01
-        communicator.cradleActivateTransmit(device);
-
-        // 01 02 02 00 00
-        communicator.cradleSwitchOff(device);
-
-        // 01 02 02 01 0D
-        communicator.cradleSwitchOn(device);
-        //07 00 00 00 00
-
-        // 01 04 04 02 23 00 07
-        // 01 04 04 02 23 08 07
-        // 01 04 04 02 23 10 07
-        byte [] offsets = {(byte) 0x00, (byte) 0x08, (byte) 0x10};
-        byte [] answer = communicator.assembleCget(device, offsets, (byte) 0x07);
-
-        // 01 02 02 00 00
-        communicator.cradleSwitchOff(device);
-        return answer;
-    }
-
-    // Включение звука (SwitchBeepByte, command 0x22, X=0x00)
-    public byte[] alarmOn(HidDevice device) throws Exception {
-        prepareForAlarmChange(device);
-
-        //01 04 07 02 21 05 01 00 00 00
-        communicator.cradleWriteBlock(device, (byte) 0x05, new byte[]{(byte) 0x01, (byte) 0x00, (byte) 0x00, (byte) 0x00});
-
-        //01 04 07 02 21 06 8D EF 02 D2
-        communicator.cradleWriteBlock(device, (byte) 0x06, new byte[]{(byte) 0x8D, (byte) 0xEF, (byte) 0x02, (byte) 0xD2});
-
-        //01 04 07 02 21 07 FE 00 00 00
-        communicator.writeMagikInSeventhOffset(device);
-
-        // 01 04 07 02 21 03 6E LL HH 00
-        communicator.writeCountInThirdOffset(device, 0x0B);
-
-        // 01 04 07 02 21 00 E1 40 FF 01
-        communicator.cradleActivateTransmit(device);
-
-        // 01 02 02 00 00
-        communicator.cradleSwitchOff(device);
-
-        // 01 02 02 01 0D
-        communicator.cradleSwitchOn(device);
-
-        byte[] offsets = new byte[]{0x00, 0x08, 0x10};
-        byte[] payloads = communicator.assembleCget(device, offsets, (byte) 0x07);
-        communicator.cradleSwitchOff(device);
-        return payloads;
-    }
 
     public void setCoefficientsO2(HidDevice device) throws Exception {
         double[] coefs = new double[19];
@@ -333,26 +265,7 @@ public class CradleController {
     }
 
 
-    private void prepareForAlarmChange(HidDevice device) {
-        log.info("Начало настройки");
-        // 01 02 02 01 0D
-        communicator.cradleSwitchOn(device);
 
-        // 01 04 07 02 21 00 00 00 00 00
-        communicator.resetZeroOffset(device);
-
-        // 01 04 07 02 21 01 03 16 D1 01
-        communicator.cradleWriteBlock(device, (byte) 0x01, new byte[]{(byte) 0x03, (byte) 0x16, (byte) 0xD1, (byte) 0x01});
-
-        // 01 04 07 02 21 02 12 54 02 65
-        communicator.cradleWriteBlock(device, (byte) 0x02, new byte[]{(byte) 0x12, (byte) 0x54, (byte) 0x02, (byte) 0x65});
-
-        // 01 04 07 02 21 03 6E 00 00 00
-        communicator.writeCountInThirdOffset(device, 0x00);
-
-        // 01 04 07 02 21 04 00 22 00 01
-        communicator.cradleWriteBlock(device, (byte) 0x04, new byte[]{(byte) 0x00, (byte) 0x22, (byte) 0x00, (byte) 0x01});
-    }
 
     // Тест мигания (BlinkByte, command 0x27)
     public byte[] blinkTest(HidDevice device) throws Exception {

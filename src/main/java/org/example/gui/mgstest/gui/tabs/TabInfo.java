@@ -4,7 +4,13 @@ import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.gui.mgstest.model.answer.GetDeviceInfoModel;
 import org.example.gui.mgstest.repository.DeviceState;
+import org.example.gui.mgstest.service.DeviceAsyncExecutor;
 import org.example.gui.mgstest.transport.CradleController;
+import org.example.gui.mgstest.transport.DeviceCommand;
+import org.example.gui.mgstest.transport.commands.DoRebootDevice;
+import org.example.gui.mgstest.transport.commands.GetAllCoefficients;
+import org.example.gui.mgstest.transport.commands.SetAlarmOff;
+import org.example.gui.mgstest.transport.commands.SetAlarmOn;
 import org.hid4java.HidDevice;
 
 import javax.swing.*;
@@ -20,6 +26,7 @@ public class TabInfo extends DeviceTab {
     private HidDevice selectedDevice;
     @Setter
     private DeviceState deviceState;
+    private final DeviceAsyncExecutor asyncExecutor;
 
     // Компоненты для разделов
     private JTextField cpuIdField = new JTextField();
@@ -33,11 +40,12 @@ public class TabInfo extends DeviceTab {
     private JCheckBox skipAlarmTestCheckBox = new JCheckBox();
     private JComboBox<String> modeComboBox = new JComboBox<>(new String[]{"stop mode", "transport mode"});
 
-    public TabInfo(CradleController cradleController, HidDevice selectedDevice, DeviceState deviceState) {
+    public TabInfo(CradleController cradleController, HidDevice selectedDevice, DeviceState deviceState, DeviceAsyncExecutor asyncExecutor) {
         super("Информация");
         this.selectedDevice = selectedDevice;
         this.cradleController = cradleController;
         this.deviceState = deviceState;
+        this.asyncExecutor = asyncExecutor;
         initComponents();
     }
 
@@ -264,7 +272,13 @@ public class TabInfo extends DeviceTab {
 
     private void rebootDevice() {
         try {
-            cradleController.executeCommand(selectedDevice, "DoRebootDevice", null);
+            if(asyncExecutor.isDeviceBusy(selectedDevice)){
+                throw new IllegalStateException("Устройство занято");
+            }
+            DeviceCommand command = new DoRebootDevice();
+            asyncExecutor.executeCommand(command, null, selectedDevice);
+
+           // cradleController.executeCommand(selectedDevice, "DoRebootDevice", null);
         } catch (Exception e) {
             log.warn("Ошибка перезагрузки прибора" + e.getMessage());
         }
@@ -317,32 +331,18 @@ public class TabInfo extends DeviceTab {
         return null;
     }
     private void switchAlarmState(){
-        if(selectedDevice.open()){
-            if(alarmCheckBox.isSelected()){
-                byte[] success = executeWithRetry(
-                        () -> cradleController.alarmOn(selectedDevice),
-                        2,  // Количество попыток
-                        0   // Задержка между попытками (мс)
-                );
-                if (success != null) {
-                    log.warn("Failed to alarmOn after multiple attempts");
-                }else{
-                    deviceState.getDeviceInfo().setAlarmEnabled(true);
-                }
+        if(selectedDevice != null){
+            if(asyncExecutor.isDeviceBusy(selectedDevice)){
+                throw new IllegalStateException("Busy");
             }else{
-                byte[] success = executeWithRetry(
-                        () -> cradleController.alarmOff(selectedDevice),
-                        2,  // Количество попыток
-                        0   // Задержка между попытками (мс)
-                );
-                if (success != null) {
-                    log.warn("Failed to alarmOff after multiple attempts");
-                }else{
-                    deviceState.getDeviceInfo().setAlarmEnabled(false);
+                if(alarmCheckBox.isSelected()){
+                    SetAlarmOn setAlarmOn = new SetAlarmOn();
+                    asyncExecutor.executeCommand(setAlarmOn, null, selectedDevice);
+                }else {
+                    SetAlarmOff setAlarmOff = new SetAlarmOff();
+                    asyncExecutor.executeCommand(setAlarmOff, null, selectedDevice);
                 }
             }
-        }else{
-            log.warn("Не удалось подключиться");
         }
     }
     @Override

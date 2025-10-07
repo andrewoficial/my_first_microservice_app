@@ -21,16 +21,16 @@ public class SendUartCommand implements DeviceCommand {
 
     @Override
     public void execute(HidDevice device, CommandParameters parameters, MgsExecutionListener progress) throws Exception {
-        log.info("Run get device info");
+        setStatusExecution(device, progress, "Opening device", 5);
         device.open();
-        byte[] answer =  sendMipex(parameters.getStringArgument(), device);
-        progress.onExecutionFinished(device, 95, answer, this.getName());
+
+        byte[] answer =  sendMipex(parameters.getStringArgument(), device, progress);
+
+        setStatusExecution(device, progress, "done", 100);
+        progress.onExecutionFinished(device, 100, answer, this.getName());
     }
 
-    @Override
-    public String getDescription() {
-        return "Send string to uart";
-    }
+
 
     /**
      * Sends a MIPEX (optic/UART) command and returns the response.
@@ -39,9 +39,8 @@ public class SendUartCommand implements DeviceCommand {
      * @return MipexResponse with time and response text
      * @throws Exception
      */
-    private byte[] sendMipex(String commandText, HidDevice device) throws Exception {
-        log.info("Начало настройки");
-        log.info("Run send MIPEX command (0x09 SetCommandMIPEXByte)");
+    private byte[] sendMipex(String commandText, HidDevice device, MgsExecutionListener progress) throws Exception {
+
         commandText = commandText.trim();
         if (!commandText.endsWith("\r")) {
             commandText += "\r";
@@ -66,10 +65,11 @@ public class SendUartCommand implements DeviceCommand {
 
         //С этого начинается дамп
         //REQ: 01 02 02 01 0D ANS: 07 00 00 00 00 (ОК)
-        log.info("Начало отправки команды");
+        setStatusExecution(device, progress, "cradleSwitchOn", 10);
         communicator.cradleSwitchOn(device);
 
         //REQ: 01 04 07 02 21 00 00 00 00 00 ANS: 07 80 04 (ОК)
+        setStatusExecution(device, progress, "resetZeroOffset", 12);
         communicator.resetZeroOffset(device);
 
         // Сверить с дампом
@@ -88,7 +88,8 @@ public class SendUartCommand implements DeviceCommand {
         // SRAL?\r [1C] (28)
         // 01 04 07 02 21 01 03 1C D1 01 00 00 00 00 00 00
         int gasCode = 17 + commandBytes.length;//было проверено на 22
-        answer = communicator.waitForResponse(device,
+        setStatusExecution(device, progress, "cradleWriteBlock 0x01", 14);
+        communicator.waitForResponse(device,
                 () -> communicator.cradleWriteBlock(device, (byte) 0x01, new byte[]{0x03, (byte) gasCode, (byte) 0xD1, 0x01}),
                 answerExamples, "",
                 2, 4,
@@ -104,18 +105,21 @@ public class SendUartCommand implements DeviceCommand {
         //CALB 0225 =   1C (18 + 10 = 28 = 1С)
         //SRAL? =       18 (18 + 6 = 24 = 18)
         int afterGasCode = 13 + commandBytes.length;//было проверено на 18
-        answer = communicator.waitForResponse(device,
+        setStatusExecution(device, progress, "cradleWriteBlock 0x02", 16);
+        communicator.waitForResponse(device,
                 () -> communicator.cradleWriteBlock(device, (byte) 0x02, new byte[]{(byte) afterGasCode, 0x54, 0x02, 0x65}),
                 answerExamples, "",
                 2, 4,
                 250, 350);
 
         //REQ: 01 04 07 02 21 03 6E ANS: 07 80 04
+        setStatusExecution(device, progress, "writeCountInThirdOffset", 18);
         communicator.writeCountInThirdOffset(device, 0x00);
 
         //REQ: 01 04 07 02 21 04 00 09 00 01 ANS: 07 80 04 00 78 F0 00 (STATIC VALUE)
         int commandByte = 0x09;
-        answer = communicator.waitForResponse(device,
+        setStatusExecution(device, progress, "cradleWriteBlock 0x04", 20);
+        communicator.waitForResponse(device,
                 () -> communicator.cradleWriteBlock(device, (byte) 0x04, new byte[]{0x00, (byte) commandByte, 0x00, 0x01}),
                 answerExamples, "",
                 2, 4,
@@ -131,7 +135,8 @@ public class SendUartCommand implements DeviceCommand {
         //CCS = 01 04 07 02 21 05 01 00 00 04 00 00 00 00 00 00         (04)
         //F = 01 04 07 02 21 05 01 00 00 02 00 00 00 00 00 00           (02)
         byte prefixByte = (byte)commandBytes.length;
-        answer = communicator.waitForResponse(device,
+        setStatusExecution(device, progress, "cradleWriteBlock 0x05", 22);
+        communicator.waitForResponse(device,
                 () -> communicator.cradleWriteBlock(device, (byte) 0x05, new byte[]{0x01, 0x00, 0x00, prefixByte}),
                 answerExamples, "",
                 2, 4,
@@ -179,6 +184,7 @@ CALB 9999
          */
         int addr = 0x06;
         for (int i = 0; i < finalArray.length; i += 4) {
+            setStatusExecution(device, progress, "cradleWriteBlock with command [" + i + "] of [" + finalArray.length + "]", 23 + i);
             byte[] chunk = new byte[4];
             int length = Math.min(4, finalArray.length - i);
             System.arraycopy(finalArray, i, chunk, 0, length);
@@ -191,7 +197,7 @@ CALB 9999
             log.info(String.format("Send addr %02X: %s", addr, MyUtilities.bytesToHex(chunk)));
 
             int finalAddr = addr;
-            answer = communicator.waitForResponse(device,
+            communicator.waitForResponse(device,
                     () -> communicator.cradleWriteBlock(device, (byte) finalAddr, chunk),
                     answerExamples, "UART_DATA_CHUNK",
                     2, 4,
@@ -206,24 +212,28 @@ CALB 9999
         byte lowByte = (byte) (nCount & 0xFF);
         byte highByte = (byte) ((nCount >> 8) & 0xFF);
         //byte sixEcommand = (byte) (commandBytes.length + 6);  // Исправлено
-        answer = communicator.waitForResponse(device,
+        setStatusExecution(device, progress, "writeCountInThirdOffset", 32);
+        communicator.waitForResponse(device,
                 () -> communicator.simpleSend(device, new byte[]{0x01, 0x04, 0x07, 0x02, 0x21, (byte)0x03, (byte)0x6E, lowByte, highByte, 0x00}),
                 answerExamples, "",
                 2, 4,
                 250, 350);
 
         // REQ: 01 04 07 02 21 00 E1 40 FF 01 ANS: 07 08 04 (ОК)
+        setStatusExecution(device, progress, "cradleActivateTransmit", 35);
         communicator.cradleActivateTransmit(device);
 
         // REQ: 01 02 02 ANS: 07 00 00 (ОК)
+        setStatusExecution(device, progress, "cradleSwitchOff", 37);
         communicator.cradleSwitchOff(device);
         Thread.sleep(300);  // Match nSwitchOffWait
+
+        setStatusExecution(device, progress, "cradleSwitchOn", 39);
         // REQ: 01 02 02 01 0D ANS: 07 00 00 00 00 (ОК)
         communicator.cradleSwitchOn(device);
-
         Thread.sleep(400);  // Match nSwitchOnWait
+
         // Read response: multiple reads as in dump (00 twice, 08, etc.), but parse first valid
-        log.info("Начало чтения ответа");
         //byte[] offsets = new byte[]{0x00, 0x08, 0x10};
         byte[] offsets = new byte[]{0x00, 0x08, 0x10, 0x18, 0x20};
 
@@ -231,12 +241,24 @@ CALB 9999
         // 01 04 04 02 23 00 07
         // 01 04 04 02 23 08 07
         // 01 04 04 02 23 10 07
+        setStatusExecution(device, progress, "get device answer", 70);
         byte[] payloads = communicator.assembleCget(device, offsets, (byte) 0x07);
 
         //REQ: 01 02 02 01 0D ANS: 07 00 00 00 00 (ОК)
+        setStatusExecution(device, progress, "cradleSwitchOn", 95);
         communicator.cradleSwitchOn(device);
 
         return payloads;
+    }
+
+    private void setStatusExecution(HidDevice device, MgsExecutionListener progress, String comment, int percent){
+        log.info("Do [" + getDescription() + "]... ["+comment+"]:" + percent);
+        progress.onProgressUpdate(device, percent, "Do [" + getDescription() + "]... ["+comment+"]");
+    }
+
+    @Override
+    public String getDescription() {
+        return "Send string to uart";
     }
 
     @Override

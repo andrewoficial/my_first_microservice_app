@@ -110,7 +110,7 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
     private void initTabs() {
         tabbedPane = new SimpleTabbedPane();
 
-        TabInfo infoTab = new TabInfo(cradleController, selectedDevice, null);
+        TabInfo infoTab = new TabInfo(cradleController, selectedDevice, null, asyncExecutor);
         tabs.put("info", infoTab);
         tabbedPane.addTab(infoTab.getTabName(), infoTab.getPanel());
 
@@ -308,7 +308,7 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
     }
 
     private boolean isDevBusy(HidDevice device){
-        if(asyncExecutor.isDeviceBusy(selectedDevice)){
+        if(asyncExecutor.isDeviceBusy(device)){
             JOptionPane.showMessageDialog(this, "Busy");
             return true;
         }
