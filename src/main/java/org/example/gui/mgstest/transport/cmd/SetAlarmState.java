@@ -8,7 +8,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 
-public class SetAlarmOff implements CommandModel, DeviceCommand {
+public class SetAlarmState implements CommandModel, DeviceCommand {
     private byte commandNumber = 0x22;
     private ArrayList<Byte> arguments = new ArrayList<>();
 
@@ -62,7 +62,7 @@ public class SetAlarmOff implements CommandModel, DeviceCommand {
         this.addArgument(parameters.getIntArgument());
         //this.addArgument((byte) 0x01);
         PayLoadSender sender  = new PayLoadSender();
-        sender.writeDataHid(device, PayloadBuilder.build(this), progress, "Set Alarm");
+        sender.writeDataHid(device, PayloadBuilder.build(this), progress, getDescription());
     }
 
     @Override
@@ -72,6 +72,15 @@ public class SetAlarmOff implements CommandModel, DeviceCommand {
 
     @Override
     public HidCommandName getName() {
-        return null;
+        return HidCommandName.SET_ALARM_STATE;
+    }
+
+    @Override
+    public void addArgument(long arg) {
+        ByteBuffer bb = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(arg);
+        byte[] bytes = bb.array();
+        for (byte b : bytes) {
+            arguments.add(b);
+        }
     }
 }

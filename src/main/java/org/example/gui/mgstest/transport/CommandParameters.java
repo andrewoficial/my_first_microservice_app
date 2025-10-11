@@ -9,5 +9,5 @@ public class CommandParameters {
     String stringArgument;
     Long longArgument;
     int intArgument;
-    double [] coefficients;
+    float [] coefficients;
 }

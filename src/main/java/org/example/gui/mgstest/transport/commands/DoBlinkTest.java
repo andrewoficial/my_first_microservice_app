@@ -100,6 +100,6 @@ public class DoBlinkTest implements DeviceCommand {
 
     @Override
     public HidCommandName getName() {
-        return HidCommandName.SET_ALARM_ON;
+        return HidCommandName.DO_TEST_BLINK;
     }
 }

@@ -41,11 +41,8 @@ public class DeviceAnswerParser {
             parseDeviceInfo(data, device);
         }else if(HidCommandName.SENT_URT == commandName){
             parseUartAnswer(data, device);
-        }else if(HidCommandName.SET_ALARM_ON == commandName){
+        }else if(HidCommandName.SET_ALARM_STATE == commandName){
             stateRepository.get(device).getDeviceInfo().setAlarmEnabled(true);
-            updateDeviceState(device, state -> state.setDeviceInfo(stateRepository.get(device).getDeviceInfo()));
-        } else if (HidCommandName.SET_ALARM_OFF == commandName) {
-            stateRepository.get(device).getDeviceInfo().setAlarmEnabled(false);
             updateDeviceState(device, state -> state.setDeviceInfo(stateRepository.get(device).getDeviceInfo()));
         }
 

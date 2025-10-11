@@ -99,6 +99,6 @@ public class DoBatteryCounterReset implements DeviceCommand {
 
     @Override
     public HidCommandName getName() {
-        return HidCommandName.SET_ALARM_ON;
+        return HidCommandName.DO_BATTERY_COUNTER_RESET;
     }
 }

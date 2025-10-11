@@ -3,7 +3,6 @@ package org.example.gui.mgstest.transport;
 import org.apache.log4j.Logger;
 import org.example.gui.mgstest.exception.MessageDoesNotDeliveredToHidDevice;
 import org.example.gui.mgstest.service.MgsExecutionListener;
-import org.example.gui.mgstest.transport.commands.DoBeepTest;
 import org.example.gui.mgstest.util.CrcValidator;
 import org.hid4java.HidDevice;
 
@@ -61,7 +60,8 @@ public class PayLoadSender {
         // 01 04 04 02 23 00 07
         // 01 04 04 02 23 08 07
         // 01 04 04 02 23 10 07
-        byte[] offsets = new byte[]{0x00, 0x08, 0x10};
+        //byte[] offsets = new byte[]{0x00, 0x08, 0x10};
+        byte[] offsets = new byte[]{0x00, 0x08, 0x10, 0x18, 0x20};
         byte[] payloads = communicator.assembleCgetNew(device, offsets, (byte) 0x07, progress);
         setStatusExecution(device, progress, description, "Done reading device answer", 85);
         communicator.cradleSwitchOff(device);

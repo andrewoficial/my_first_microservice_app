@@ -9,10 +9,11 @@ import org.example.gui.mgstest.transport.CommandParameters;
 
 import org.example.gui.mgstest.transport.DeviceCommand;
 
+import org.example.gui.mgstest.transport.cmd.SetAlarmState;
+import org.example.gui.mgstest.transport.cmd.SetSerialNumber;
 import org.example.gui.mgstest.transport.commands.*;
 
 
-import org.example.gui.mgstest.transport.cmd.SetAlarmOff;
 import org.example.gui.mgstest.util.CrcValidator;
 import org.hid4java.HidDevice;
 
@@ -256,15 +257,13 @@ public class TabInfo extends DeviceTab {
         checkDeviceState(selectedDevice);
         CommandParameters parameters = new CommandParameters();
         if (alarmCheckBox.isSelected()) {
-//            SetAlarmOn setAlarmOn = new SetAlarmOn();
-//            asyncExecutor.executeCommand(setAlarmOn, null, selectedDevice);
             parameters.setIntArgument(0);
-            org.example.gui.mgstest.transport.cmd.SetAlarmOff setAlarmOff = new SetAlarmOff();
-            asyncExecutor.executeCommand(setAlarmOff, parameters, selectedDevice);
+            SetAlarmState setAlarmState = new SetAlarmState();
+            asyncExecutor.executeCommand(setAlarmState, parameters, selectedDevice);
         } else {
             parameters.setIntArgument(1);
-            org.example.gui.mgstest.transport.cmd.SetAlarmOff setAlarmOff = new SetAlarmOff();
-            asyncExecutor.executeCommand(setAlarmOff, parameters, selectedDevice);
+            SetAlarmState setAlarmState = new SetAlarmState();
+            asyncExecutor.executeCommand(setAlarmState, parameters, selectedDevice);
         }
     }
 

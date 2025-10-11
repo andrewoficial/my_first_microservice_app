@@ -6,9 +6,10 @@ import org.example.gui.mgstest.model.answer.GetAllCoefficientsModel;
 import org.example.gui.mgstest.repository.DeviceState;
 import org.example.gui.mgstest.service.DeviceAsyncExecutor;
 import org.example.gui.mgstest.transport.CommandParameters;
-import org.example.gui.mgstest.transport.CradleController;
 import org.example.gui.mgstest.transport.DeviceCommand;
-import org.example.gui.mgstest.transport.commands.SetEChemCoefficients;
+import org.example.gui.mgstest.transport.cmd.SetCOCoefs;
+import org.example.gui.mgstest.transport.cmd.SetH2SCoefs;
+import org.example.gui.mgstest.transport.cmd.SetO2Polys;
 import org.hid4java.HidDevice;
 
 import javax.swing.*;
@@ -47,7 +48,9 @@ public class TabCoefficients extends DeviceTab {
     // Формат для отображения чисел
     //private DecimalFormat decimalFormat = new DecimalFormat("0.##########");
     private DecimalFormat decimalFormat = new DecimalFormat();
-
+    enum CHANNELS {
+        O2, CO, H2S, CH4_PRESSURE, ACCELERATION, PPM_MG_KOEFS, V_RANGE;
+    }
     public TabCoefficients(HidDevice selectedDevice, DeviceAsyncExecutor asyncExecutor) {
         super("Коэффициенты");
         this.selectedDevice = selectedDevice;
@@ -105,7 +108,7 @@ public class TabCoefficients extends DeviceTab {
 
         // Добавляем кнопку "Задать" для O2
         JButton setO2Button = new JButton("Задать коэффициенты O2");
-        setO2Button.addActionListener(e -> setCoefficientsForGas("o2", o2Fields));
+        setO2Button.addActionListener(e -> setCoefficientsForGas(CHANNELS.O2, o2Fields));
         o2Panel.add(setO2Button);
     }
 
@@ -128,7 +131,7 @@ public class TabCoefficients extends DeviceTab {
 
         // Добавляем кнопку "Задать" для CO
         JButton setCoButton = new JButton("Задать коэффициенты CO");
-        setCoButton.addActionListener(e -> setCoefficientsForGas("co", coFields));
+        setCoButton.addActionListener(e -> setCoefficientsForGas(CHANNELS.CO, coFields));
         coPanel.add(setCoButton);
     }
 
@@ -151,7 +154,7 @@ public class TabCoefficients extends DeviceTab {
 
         // Добавляем кнопку "Задать" для H2S
         JButton setH2sButton = new JButton("Задать коэффициенты H2S");
-        setH2sButton.addActionListener(e -> setCoefficientsForGas("h2s", h2sFields));
+        setH2sButton.addActionListener(e -> setCoefficientsForGas(CHANNELS.H2S, h2sFields));
         h2sPanel.add(setH2sButton);
     }
 
@@ -229,23 +232,33 @@ public class TabCoefficients extends DeviceTab {
     }
 
     // Метод для установки коэффициентов через cradleController
-    private void setCoefficientsForGas(String gasType, JTextField[] fields) {
+    private void setCoefficientsForGas(CHANNELS channel, JTextField[] fields) {
         checkDeviceState(selectedDevice);
-        double[] coefficients = new double[fields.length];
+        float[] coefficients = new float[fields.length];
         try {
             for (int i = 0; i < fields.length; i++) {
                 String forParse = fields[i].getText().replaceAll("\\,", ".");
-                coefficients[i] = Double.parseDouble(forParse);
+                coefficients[i] = Float.parseFloat(forParse);
             }
         }catch (NumberFormatException | NullPointerException ex){
             throw new IllegalArgumentException("Неверно заполнены поля с коэффициентами!" + ex.getMessage());
         }
-
-        DeviceCommand command = new SetEChemCoefficients();
-        CommandParameters parameters = new CommandParameters();
-        parameters.setStringArgument(gasType);
-        parameters.setCoefficients(coefficients);
-        asyncExecutor.executeCommand(command, parameters, selectedDevice);
+        if(channel == CHANNELS.O2){
+            DeviceCommand command = new SetO2Polys();
+            CommandParameters parameters = new CommandParameters();
+            parameters.setCoefficients(coefficients);
+            asyncExecutor.executeCommand(command, parameters, selectedDevice);
+        } else if (channel == CHANNELS.CO) {
+            DeviceCommand command = new SetCOCoefs();
+            CommandParameters parameters = new CommandParameters();
+            parameters.setCoefficients(coefficients);
+            asyncExecutor.executeCommand(command, parameters, selectedDevice);
+        } else if(channel == CHANNELS.H2S){
+            DeviceCommand command = new SetH2SCoefs();
+            CommandParameters parameters = new CommandParameters();
+            parameters.setCoefficients(coefficients);
+            asyncExecutor.executeCommand(command, parameters, selectedDevice);
+        }
     }
 
     private void checkDeviceState(HidDevice device) {

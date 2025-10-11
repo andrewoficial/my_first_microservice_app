@@ -1,10 +1,14 @@
 package org.example.gui.mgstest.transport.cmd;
 
+import org.example.gui.mgstest.service.MgsExecutionListener;
+import org.example.gui.mgstest.transport.*;
+import org.hid4java.HidDevice;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 
-class SetO2Polys implements CommandModel {
+public class SetO2Polys implements CommandModel, DeviceCommand {
     private byte commandNumber = 0x06;
     private ArrayList<Byte> arguments = new ArrayList<>();
 
@@ -50,5 +54,33 @@ class SetO2Polys implements CommandModel {
         for (float arg : args) {
             addArgument(arg);
         }
+    }
+
+    @Override
+    public void addArgument(long arg) {
+        ByteBuffer bb = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(arg);
+        byte[] bytes = bb.array();
+        for (byte b : bytes) {
+            arguments.add(b);
+        }
+    }
+
+    @Override
+    public void execute(HidDevice device, CommandParameters parameters, MgsExecutionListener progress) throws Exception {
+        for (float coefficient : parameters.getCoefficients()) {
+            this.addArgument(coefficient);
+        }
+        PayLoadSender sender  = new PayLoadSender();
+        sender.writeDataHid(device, PayloadBuilder.build(this), progress, getDescription());
+    }
+
+    @Override
+    public String getDescription() {
+        return "Set E-CHEM coefficients";
+    }
+
+    @Override
+    public HidCommandName getName() {
+        return HidCommandName.SET_ECHEM_COEFF;
     }
 }

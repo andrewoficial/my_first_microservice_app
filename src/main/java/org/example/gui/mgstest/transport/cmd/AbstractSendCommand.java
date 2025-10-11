@@ -1,5 +1,8 @@
 package org.example.gui.mgstest.transport.cmd;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+
 public abstract class AbstractSendCommand implements CommandModel {
     protected byte commandNumber; // Set in subclasses
     private byte[] commandBytes;
@@ -40,6 +43,11 @@ public abstract class AbstractSendCommand implements CommandModel {
 
     @Override
     public void addArguments(float[] args) {
+        // Not used for Send commands
+    }
+
+    @Override
+    public void addArgument(long arg) {
         // Not used for Send commands
     }
 }
