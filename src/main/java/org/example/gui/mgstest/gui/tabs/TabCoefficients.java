@@ -4,7 +4,11 @@ import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.gui.mgstest.model.answer.GetAllCoefficientsModel;
 import org.example.gui.mgstest.repository.DeviceState;
+import org.example.gui.mgstest.service.DeviceAsyncExecutor;
+import org.example.gui.mgstest.transport.CommandParameters;
 import org.example.gui.mgstest.transport.CradleController;
+import org.example.gui.mgstest.transport.DeviceCommand;
+import org.example.gui.mgstest.transport.commands.SetEChemCoefficients;
 import org.hid4java.HidDevice;
 
 import javax.swing.*;
@@ -15,11 +19,9 @@ public class TabCoefficients extends DeviceTab {
     private Logger log = Logger.getLogger(TabCoefficients.class);
     private CoefficientNames coefficientNamesNames = new CoefficientNames();
     @Setter
-    private CradleController cradleController;
-    @Setter
     private HidDevice selectedDevice;
-    @Setter
-    private DeviceState deviceState;
+
+    private final DeviceAsyncExecutor asyncExecutor;
 
     private JPanel mainPanel;
     private JScrollPane scrollPane;
@@ -46,11 +48,10 @@ public class TabCoefficients extends DeviceTab {
     //private DecimalFormat decimalFormat = new DecimalFormat("0.##########");
     private DecimalFormat decimalFormat = new DecimalFormat();
 
-    public TabCoefficients(CradleController cradleController, HidDevice selectedDevice, DeviceState deviceState) {
+    public TabCoefficients(HidDevice selectedDevice, DeviceAsyncExecutor asyncExecutor) {
         super("Коэффициенты");
         this.selectedDevice = selectedDevice;
-        this.cradleController = cradleController;
-        this.deviceState = deviceState;
+        this.asyncExecutor = asyncExecutor;
         initComponents();
     }
 
@@ -229,29 +230,31 @@ public class TabCoefficients extends DeviceTab {
 
     // Метод для установки коэффициентов через cradleController
     private void setCoefficientsForGas(String gasType, JTextField[] fields) {
-        if (selectedDevice == null) {
-            JOptionPane.showMessageDialog(null, "Устройство не выбрано", "Ошибка", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
+        checkDeviceState(selectedDevice);
+        double[] coefficients = new double[fields.length];
         try {
-            double[] coefficients = new double[fields.length];
             for (int i = 0; i < fields.length; i++) {
                 String forParse = fields[i].getText().replaceAll("\\,", ".");
                 coefficients[i] = Double.parseDouble(forParse);
             }
+        }catch (NumberFormatException | NullPointerException ex){
+            throw new IllegalArgumentException("Неверно заполнены поля с коэффициентами!" + ex.getMessage());
+        }
 
-            cradleController.setCoefForGas(gasType, coefficients, selectedDevice);
-            JOptionPane.showMessageDialog(null, "Коэффициенты " + gasType.toUpperCase() + " успешно заданы",
-                    "Успех", JOptionPane.INFORMATION_MESSAGE);
-        } catch (NumberFormatException ex) {
-            log.info("Некорректные числовые значения в полях коэффициентов" + ex.getMessage());
-            JOptionPane.showMessageDialog(null, "Некорректные числовые значения в полях коэффициентов",
-                    "Ошибка", JOptionPane.ERROR_MESSAGE);
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(null, "Ошибка при задании коэффициентов: " + ex.getMessage(),
-                    "Ошибка", JOptionPane.ERROR_MESSAGE);
-            log.error("Ошибка при задании коэффициентов", ex);
+        DeviceCommand command = new SetEChemCoefficients();
+        CommandParameters parameters = new CommandParameters();
+        parameters.setStringArgument(gasType);
+        parameters.setCoefficients(coefficients);
+        asyncExecutor.executeCommand(command, parameters, selectedDevice);
+    }
+
+    private void checkDeviceState(HidDevice device) {
+        if (device == null) {
+            log.warn("device == null");
+            throw new IllegalStateException("device == null");
+        }
+        if (asyncExecutor.isDeviceBusy(selectedDevice)) {
+            throw new IllegalStateException("Busy");
         }
     }
 

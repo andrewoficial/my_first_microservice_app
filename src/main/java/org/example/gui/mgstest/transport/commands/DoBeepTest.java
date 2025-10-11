@@ -8,9 +8,9 @@ import org.example.gui.mgstest.transport.CradleCommunicationHelper;
 import org.example.gui.mgstest.transport.HidCommandName;
 import org.hid4java.HidDevice;
 
-public class DoRebootDevice implements DeviceCommand {
+public class DoBeepTest implements DeviceCommand {
     private final CradleCommunicationHelper communicator = new CradleCommunicationHelper();
-    private final Logger log = Logger.getLogger(DoRebootDevice.class);
+    private final Logger log = Logger.getLogger(DoBeepTest.class);
 
     @Override
     public void execute(HidDevice device, CommandParameters parameters, MgsExecutionListener progress) throws Exception {
@@ -28,39 +28,39 @@ public class DoRebootDevice implements DeviceCommand {
         setStatusExecution(device, progress, "resetZeroOffset", 15);
         communicator.resetZeroOffset(device);
 
-        // 01 04 07 02 21 01 03 17 D1 01
-        setStatusExecution(device, progress, "cradleWriteBlock 01", 19);
-        communicator.cradleWriteBlock(device, (byte) 0x01, new byte[]{(byte) 0x03, (byte) 0x17, (byte) 0xD1, (byte) 0x01});
+        // 01 04 07 02 21 01 03 11 D1 01
+        setStatusExecution(device, progress, "writeMagikInFirstOffset", 19);
+        communicator.writeMagikInFirstOffset(device);
 
-        // 01 04 07 02 21 02 13 54 02 65
-        setStatusExecution(device, progress, "cradleWriteBlock 02", 23);
-        communicator.cradleWriteBlock(device, (byte) 0x02, new byte[]{(byte) 0x13, (byte) 0x54, (byte) 0x02, (byte) 0x65});
+        // 01 04 07 02 21 02 0D 54 02 65
+        setStatusExecution(device, progress, "writeMagikInSecondOffset", 23);
+        communicator.writeMagikInSecondOffset(device);
 
-        // 01 04 07 02 21 03 6E LL HH 00
+        // 01 04 07 02 21 03 6E 00 00 00
         setStatusExecution(device, progress, "writeCountInThirdOffset", 28);
         communicator.writeCountInThirdOffset(device, 0x00);
 
-        // 01 04 07 02 21 04 00 17 00 01
+        // 01 04 07 02 21 04 00 2F 00 01
         setStatusExecution(device, progress, "cradleWriteBlock 04", 35);
-        communicator.cradleWriteBlock(device, (byte) 0x04, new byte[]{(byte) 0x00, (byte) 0x17, (byte) 0x00, (byte) 0x01});
+        communicator.cradleWriteBlock(device, (byte) 0x04, new byte[]{(byte) 0x00, (byte) 0x2F, (byte) 0x00, (byte) 0x01});
 
-        // 01 04 07 02 21 05 01 00 00 B9
+        //01 04 07 02 21 05 01 00 00 FE
         setStatusExecution(device, progress, "cradleWriteBlock 05", 37);
-        communicator.cradleWriteBlock(device, (byte) 0x05, new byte[]{(byte) 0x01, (byte) 0x00, (byte) 0x00, (byte) 0xB9});
+        communicator.cradleWriteBlock(device, (byte) 0x05, new byte[]{(byte) 0x01, (byte) 0x00, (byte) 0x00, (byte) 0xFE});
 
-        // 01 04 07 02 21 06 A9 42 1C D4
+        //01 04 07 02 21 06 00 00 00 BD
         setStatusExecution(device, progress, "cradleWriteBlock 06", 43);
-        communicator.cradleWriteBlock(device, (byte) 0x06, new byte[]{(byte) 0xA9, (byte) 0x42, (byte) 0x1C, (byte) 0xD4});
+        communicator.cradleWriteBlock(device, (byte) 0x06, new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0xBD});
 
-        // 01 04 07 02 21 07 DB FE 00 00
+        // 01 04 07 02 21 07 FE 00 00 00
         setStatusExecution(device, progress, "cradleWriteBlock 07", 53);
-        communicator.cradleWriteBlock(device, (byte) 0x07, new byte[]{(byte) 0xDB, (byte) 0xFE, (byte) 0x00, (byte) 0x00});
+        communicator.cradleWriteBlock(device, (byte) 0x07, new byte[]{(byte) 0xFE, (byte) 0x00, (byte) 0x00, (byte) 0x00});
 
-        // 01 04 07 02 21 03 6E LL HH 00
-        setStatusExecution(device, progress, "writeCountInThirdOffset 0xOC", 58);
-        communicator.writeCountInThirdOffset(device, 0x0C);
+        // 01 04 07 02 21 03 6E yy yy 00
+        setStatusExecution(device, progress, "writeCountInThirdOffset 0xO6", 58);
+        communicator.writeCountInThirdOffset(device, 0x06);
 
-        // 01 04 07 02 21 00 E1 40 FF 01
+        //01 04 07 02 21 03 6E LL HH 00 (0x06)
         setStatusExecution(device, progress, "cradleActivateTransmit", 61);
         communicator.cradleActivateTransmit(device);
 
@@ -95,11 +95,11 @@ public class DoRebootDevice implements DeviceCommand {
 
     @Override
     public String getDescription() {
-        return "Reboot command (0x17 to 0x01)";
+        return "Blink test command (0x27)";
     }
 
     @Override
     public HidCommandName getName() {
-        return HidCommandName.DO_REBOOT;
+        return HidCommandName.SET_ALARM_ON;
     }
 }

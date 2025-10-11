@@ -5,12 +5,15 @@ import org.apache.log4j.Logger;
 import org.example.gui.mgstest.model.answer.GetDeviceInfoModel;
 import org.example.gui.mgstest.repository.DeviceState;
 import org.example.gui.mgstest.service.DeviceAsyncExecutor;
-import org.example.gui.mgstest.transport.CradleController;
+import org.example.gui.mgstest.transport.CommandParameters;
+
 import org.example.gui.mgstest.transport.DeviceCommand;
-import org.example.gui.mgstest.transport.commands.DoRebootDevice;
-import org.example.gui.mgstest.transport.commands.GetAllCoefficients;
-import org.example.gui.mgstest.transport.commands.SetAlarmOff;
-import org.example.gui.mgstest.transport.commands.SetAlarmOn;
+
+import org.example.gui.mgstest.transport.commands.*;
+
+
+import org.example.gui.mgstest.transport.cmd.SetAlarmOff;
+import org.example.gui.mgstest.util.CrcValidator;
 import org.hid4java.HidDevice;
 
 import javax.swing.*;
@@ -20,12 +23,10 @@ import java.util.Date;
 
 public class TabInfo extends DeviceTab {
     private Logger log = Logger.getLogger(TabInfo.class);
-    @Setter
-    private CradleController cradleController;
+
     @Setter
     private HidDevice selectedDevice;
-    @Setter
-    private DeviceState deviceState;
+
     private final DeviceAsyncExecutor asyncExecutor;
 
     // Компоненты для разделов
@@ -40,11 +41,9 @@ public class TabInfo extends DeviceTab {
     private JCheckBox skipAlarmTestCheckBox = new JCheckBox();
     private JComboBox<String> modeComboBox = new JComboBox<>(new String[]{"stop mode", "transport mode"});
 
-    public TabInfo(CradleController cradleController, HidDevice selectedDevice, DeviceState deviceState, DeviceAsyncExecutor asyncExecutor) {
+    public TabInfo(HidDevice selectedDevice, DeviceAsyncExecutor asyncExecutor) {
         super("Информация");
         this.selectedDevice = selectedDevice;
-        this.cradleController = cradleController;
-        this.deviceState = deviceState;
         this.asyncExecutor = asyncExecutor;
         initComponents();
     }
@@ -86,11 +85,15 @@ public class TabInfo extends DeviceTab {
         int row = 0;
         addLabelAndField(panel, gbc, "CPU ID:", cpuIdField, row++, false);
         addLabelAndField(panel, gbc, "Серийный номер:", serialNumberField, row++, false);
-        addLabelAndField(panel, gbc, "Версия ПО:", swVersionField, row++, false);
-        addLabelAndField(panel, gbc, "Версия железа:", hwVersionField, row++, false);
+        addLabelAndField(panel, gbc, "Версия S.V.:", swVersionField, row++, false);
+        addLabelAndField(panel, gbc, "Версия H.V.:", hwVersionField, row++, false);
+
+
 
         return panel;
     }
+
+
 
     private JPanel createDateTimePanel() {
         JPanel panel = new JPanel(new BorderLayout(10, 5));
@@ -181,12 +184,19 @@ public class TabInfo extends DeviceTab {
         JButton resetBatteryButton = new JButton("Сбросить состояние батареи");
         batteryPanel.add(resetBatteryButton);
 
+        JPanel setSerialPane = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+        JButton setSerialNumberButton = new JButton("Задать серийный номер");
+        batteryPanel.add(setSerialNumberButton);
+
+
+
         // Добавляем обработчики
         refreshButton.addActionListener(e -> refreshInfo());
         rebootButton.addActionListener(e -> rebootDevice());
         setModeButton.addActionListener(e -> setDeviceMode());
         resetBatteryButton.addActionListener(e -> resetBattery());
         alarmCheckBox.addActionListener(e -> switchAlarmState());
+        setSerialNumberButton.addActionListener(e -> onSetSerialNumber());
 
         // Компоновка
         panel.add(buttonRow1);
@@ -214,74 +224,60 @@ public class TabInfo extends DeviceTab {
         panel.add(field, gbc);
     }
 
-    // Методы-заглушки для обработчиков событий
+    private void onSetSerialNumber() {
+        checkDeviceState(selectedDevice);
+        String input = JOptionPane.showInputDialog(this.getPanel(),
+                "Enter serial number (8 digits):",
+                "Set Serial Number",
+                JOptionPane.QUESTION_MESSAGE);
+        CrcValidator.validateSerialNumber(input);
+        long number = Long.parseLong(input);
+        CommandParameters parameters = new CommandParameters();
+        parameters.setLongArgument(number);
+        DeviceCommand command = new SetSerialNumber();
+        asyncExecutor.executeCommand(command, parameters, selectedDevice);
+    }
+
+
+
     private void performBlinkTest() {
-        if (selectedDevice != null && selectedDevice.open()) {
-            byte[] success = executeWithRetry(
-                    () -> {
-                        try {
-                            return cradleController.blinkTest(selectedDevice);
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
-                    },
-                    2,  // Количество попыток
-                    0   // Задержка между попытками (мс)
-            );
-            if (success == null) {
-                log.warn("Failed to blinkTest after multiple attempts");
-            }else{
-                deviceState.getDeviceInfo().setAlarmEnabled(false);
-            }
-        } else {
-            JOptionPane.showMessageDialog(null, "Устройство не подключено");
-        }
+        checkDeviceState(selectedDevice);
+        DeviceCommand command = new DoBlinkTest();
+        asyncExecutor.executeCommand(command, null, selectedDevice);
     }
 
     private void performBeepTest() {
-        if (selectedDevice != null && selectedDevice.open()) {
-            byte[] success = executeWithRetry(
-                    () -> {
-                        try {
-                            return cradleController.beepTest(selectedDevice);
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
-                    },
-                    2,  // Количество попыток
-                    0   // Задержка между попытками (мс)
-            );
-            if (success == null) {
-                log.warn("Failed to beepTest after multiple attempts");
-            }else{
-                deviceState.getDeviceInfo().setAlarmEnabled(false);
-            }
+        checkDeviceState(selectedDevice);
+        DeviceCommand command = new DoBeepTest();
+        asyncExecutor.executeCommand(command, null, selectedDevice);
+    }
+
+    private void switchAlarmState() {
+        checkDeviceState(selectedDevice);
+        CommandParameters parameters = new CommandParameters();
+        if (alarmCheckBox.isSelected()) {
+//            SetAlarmOn setAlarmOn = new SetAlarmOn();
+//            asyncExecutor.executeCommand(setAlarmOn, null, selectedDevice);
+            parameters.setIntArgument(0);
+            org.example.gui.mgstest.transport.cmd.SetAlarmOff setAlarmOff = new SetAlarmOff();
+            asyncExecutor.executeCommand(setAlarmOff, parameters, selectedDevice);
         } else {
-            JOptionPane.showMessageDialog(null, "Устройство не подключено");
+            parameters.setIntArgument(1);
+            org.example.gui.mgstest.transport.cmd.SetAlarmOff setAlarmOff = new SetAlarmOff();
+            asyncExecutor.executeCommand(setAlarmOff, parameters, selectedDevice);
         }
     }
 
     private void refreshInfo() {
-        // TODO: Добавить логику обновления информации
-        try {
-            cradleController.executeCommand(selectedDevice, "deviceInfo", null);;
-        } catch (Exception e) {
-            log.warn("Ошибка обновления данных" + e.getMessage());
-        }
+        checkDeviceState(selectedDevice);
+        DeviceCommand command = new GetDeviceInfoCommand();
+        asyncExecutor.executeCommand(command, null, selectedDevice);
     }
 
     private void rebootDevice() {
-        try {
-            if(asyncExecutor.isDeviceBusy(selectedDevice)){
-                throw new IllegalStateException("Устройство занято");
-            }
-            DeviceCommand command = new DoRebootDevice();
-            asyncExecutor.executeCommand(command, null, selectedDevice);
-
-           // cradleController.executeCommand(selectedDevice, "DoRebootDevice", null);
-        } catch (Exception e) {
-            log.warn("Ошибка перезагрузки прибора" + e.getMessage());
-        }
+        checkDeviceState(selectedDevice);
+        DeviceCommand command = new DoRebootDevice();
+        asyncExecutor.executeCommand(command, null, selectedDevice);
     }
 
     private void setDeviceMode() {
@@ -290,61 +286,21 @@ public class TabInfo extends DeviceTab {
     }
 
     private void resetBattery() {
-        byte []  success = executeWithRetry(
-                () -> {
-                    try {
-                        return cradleController.resetBatteryCounter(selectedDevice);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                },
-                2,  // Количество попыток
-                0   // Задержка между попытками (мс)
-        );
-        if (success == null) {
-            log.warn("Failed to reset battery after multiple attempts");
+        checkDeviceState(selectedDevice);
+        DeviceCommand command = new DoBatteryCounterReset();
+        asyncExecutor.executeCommand(command, null, selectedDevice);
+    }
+
+    private void checkDeviceState(HidDevice device) {
+        if (device == null) {
+            log.warn("device == null");
+            throw new IllegalStateException("device == null");
+        }
+        if (asyncExecutor.isDeviceBusy(selectedDevice)) {
+            throw new IllegalStateException("Busy");
         }
     }
 
-    @FunctionalInterface
-    public interface Executable {
-        byte [] execute() throws Exception;
-    }
-
-    private byte[] executeWithRetry(Executable method, int maxAttempts, long delayMs) {
-        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-            try {
-
-                return method.execute(); // Успешное выполнение
-            } catch (Exception e) {
-                if (attempt == maxAttempts) return null; // Все попытки исчерпаны
-                if (delayMs > 0) {
-                    try {
-                        Thread.sleep(delayMs);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        return null;
-                    }
-                }
-            }
-        }
-        return null;
-    }
-    private void switchAlarmState(){
-        if(selectedDevice != null){
-            if(asyncExecutor.isDeviceBusy(selectedDevice)){
-                throw new IllegalStateException("Busy");
-            }else{
-                if(alarmCheckBox.isSelected()){
-                    SetAlarmOn setAlarmOn = new SetAlarmOn();
-                    asyncExecutor.executeCommand(setAlarmOn, null, selectedDevice);
-                }else {
-                    SetAlarmOff setAlarmOff = new SetAlarmOff();
-                    asyncExecutor.executeCommand(setAlarmOff, null, selectedDevice);
-                }
-            }
-        }
-    }
     @Override
     public void updateData(DeviceState state) {
         log.info("Обновляю данные для tabInfo");
@@ -372,25 +328,15 @@ public class TabInfo extends DeviceTab {
     }
 
     private void clearFields() {
-    cpuIdField.setText("Нет данных");
-    serialNumberField.setText("Нет данных");
-    swVersionField.setText("Нет данных");
-    hwVersionField.setText("Нет данных");
-    timeField.setText("Нет данных");
-    beepCheckBox.setSelected(false);
-    vibroCheckBox.setSelected(false);
-    alarmCheckBox.setSelected(false);
-    skipAlarmTestCheckBox.setSelected(false);
-    //     modeComboBox = new JComboBox<>(new String[]{"stop mode", "transport mode"});
-    //        Component[] components = panel.getComponents();
-    //        for (Component comp : components) {
-    //            if (comp instanceof JTextField) {
-    //                ((JTextField) comp).setText("Нет данных");
-    //            } else if (comp instanceof JCheckBox) {
-    //                ((JCheckBox) comp).setSelected(false);
-    //            }
-    //        }
-
+        cpuIdField.setText("Нет данных");
+        serialNumberField.setText("Нет данных");
+        swVersionField.setText("Нет данных");
+        hwVersionField.setText("Нет данных");
+        timeField.setText("Нет данных");
+        beepCheckBox.setSelected(false);
+        vibroCheckBox.setSelected(false);
+        alarmCheckBox.setSelected(false);
+        skipAlarmTestCheckBox.setSelected(false);
     }
 
     @Override

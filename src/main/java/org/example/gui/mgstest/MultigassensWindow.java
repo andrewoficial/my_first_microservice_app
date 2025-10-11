@@ -110,11 +110,11 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
     private void initTabs() {
         tabbedPane = new SimpleTabbedPane();
 
-        TabInfo infoTab = new TabInfo(cradleController, selectedDevice, null, asyncExecutor);
+        TabInfo infoTab = new TabInfo(selectedDevice, asyncExecutor);
         tabs.put("info", infoTab);
         tabbedPane.addTab(infoTab.getTabName(), infoTab.getPanel());
 
-        TabCoefficients coefficientsTab = new TabCoefficients(cradleController, selectedDevice, null);
+        TabCoefficients coefficientsTab = new TabCoefficients(selectedDevice, asyncExecutor);
         tabs.put("coefficients", coefficientsTab);
         tabbedPane.addTab(coefficientsTab.getTabName(), coefficientsTab.getPanel());
 
@@ -183,10 +183,6 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
         opticCommandButton = new JButton("Send Optic Command");
         opticCommandButton.addActionListener(e -> onSendOpticCommand());
         buttonPanel.add(opticCommandButton);
-
-        setSerialNumberButton = new JButton("Set Serial Number");
-        setSerialNumberButton.addActionListener(e -> onSetSerialNumber());
-        buttonPanel.add(setSerialNumberButton);
 
         contentPane.add(buttonPanel, BorderLayout.NORTH);
     }
@@ -263,42 +259,6 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
 
 
 
-    private void onSetSerialNumber() {
-        if (selectedDevice == null) {
-            JOptionPane.showMessageDialog(this, "No device connected");
-            return;
-        }
-
-        String input = JOptionPane.showInputDialog(this,
-                "Enter serial number (8 digits):",
-                "Set Serial Number",
-                JOptionPane.QUESTION_MESSAGE);
-
-        if (input != null && !input.trim().isEmpty()) {
-            try {
-                deviceAnswerParser.validateSerialNumber(input);
-                long serialNumber = deviceAnswerParser.parseSerialNumber(input);
-                deviceAnswerParser.setSerialNumber(selectedDevice, serialNumber);
-
-                JOptionPane.showMessageDialog(this,
-                        "Serial number set successfully: " + serialNumber,
-                        "Success",
-                        JOptionPane.INFORMATION_MESSAGE);
-
-            } catch (IllegalArgumentException ex) {
-                JOptionPane.showMessageDialog(this,
-                        ex.getMessage(),
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this,
-                        "Error setting serial number: " + ex.getMessage(),
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
-
     private boolean isDevNull(HidDevice dev){
         if (selectedDevice == null) {
             JOptionPane.showMessageDialog(this, "No device selected");
@@ -341,8 +301,7 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
             UartHistory uartHistory = (UartHistory) tabs.get("uartHistory");
             updateDeviceInfo(selectedDevice);
 
-            infoTab.setCradleController(cradleController);
-            coefficientsTab.setCradleController(cradleController);
+            //ToDo remove it
             uartHistory.setCradleController(cradleController);
 
             infoTab.setSelectedDevice(selectedDevice);

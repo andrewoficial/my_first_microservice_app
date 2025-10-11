@@ -7,5 +7,7 @@ import lombok.Setter;
 public class CommandParameters {
     String type;
     String stringArgument;
-
+    Long longArgument;
+    int intArgument;
+    double [] coefficients;
 }

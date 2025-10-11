@@ -21,6 +21,13 @@ public class SendUartCommand implements DeviceCommand {
 
     @Override
     public void execute(HidDevice device, CommandParameters parameters, MgsExecutionListener progress) throws Exception {
+        if(parameters == null){
+            throw new Exception("Parameters are null");
+        }
+        if(parameters.getStringArgument() == null || parameters.getStringArgument().isEmpty()){
+            throw new Exception("String for sending is empty or null");
+        }
+
         setStatusExecution(device, progress, "Opening device", 5);
         device.open();
 
@@ -64,11 +71,11 @@ public class SendUartCommand implements DeviceCommand {
         answerExamples.add(exceptedAns2);
 
         //С этого начинается дамп
-        //REQ: 01 02 02 01 0D ANS: 07 00 00 00 00 (ОК)
+        //REQ: 01 02 02 01 0D
         setStatusExecution(device, progress, "cradleSwitchOn", 10);
         communicator.cradleSwitchOn(device);
 
-        //REQ: 01 04 07 02 21 00 00 00 00 00 ANS: 07 80 04 (ОК)
+        //REQ: 01 04 07 02 21 00 00 00 00 00
         setStatusExecution(device, progress, "resetZeroOffset", 12);
         communicator.resetZeroOffset(device);
 

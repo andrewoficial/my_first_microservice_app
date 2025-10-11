@@ -30,6 +30,9 @@ public class GetDeviceInfoCommand implements DeviceCommand {
         setStatusExecution(device, progress, "resetZeroOffset", 20);
         communicator.resetZeroOffset(device);
 
+        //01 04 07 02 21 00 00 00 00 00
+        setStatusExecution(device, progress, "writeMagikInFirstOffset", 21);
+        communicator.resetZeroOffset(device);
 
         //01 04 07 02 21 01 03 11 D1 01
         setStatusExecution(device, progress, "writeMagikInFirstOffset", 23);
@@ -39,10 +42,9 @@ public class GetDeviceInfoCommand implements DeviceCommand {
         setStatusExecution(device, progress, "writeMagikInSecondOffset", 25);
         communicator.writeMagikInSecondOffset(device);
 
-        // 01 04 07 02 21 03 6E 00 00 00
+        // 01 04 07 02 21 03 6E LL HH 00
         setStatusExecution(device, progress, "writeCountInThirdOffset", 27);
         communicator.writeCountInThirdOffset(device, 0x00);
-
 
         // 01 04 07 02 21 04 00 2E 00 01
         setStatusExecution(device, progress, "write command block  0x2E in addr 0x04", 30);
@@ -54,21 +56,21 @@ public class GetDeviceInfoCommand implements DeviceCommand {
                 5, 3,
                 200, 300);
 
-        // 01 04 07 02 21 05 01 00 00 FE
+        // 01 04 07 02 21 05 01 00 00 00
         setStatusExecution(device, progress, "writeMagikInFifthOffset", 35);
         communicator.writeMagikInFifthOffset(device);
 
         //01 04 07 02 21 03 6E LL HH 00
         setStatusExecution(device, progress, "writeCountInThirdOffset", 47);
-        communicator.writeCountInThirdOffset(device, 6);
-
-        // 01 04 07 02 21 06 00 00 00 04 00 00 00 00 00 00
-        setStatusExecution(device, progress, "writeMagikInSixthOffset", 50);
-        communicator.writeMagikInSixthOffset(device);
-
-        // 01 04 07 02 21 03 6E 06 00 00 00 00 00 00 00 00
-        setStatusExecution(device, progress, "writeCountInThirdOffset", 55);
         communicator.writeCountInThirdOffset(device, 0x06);
+
+//        // 01 04 07 02 21 06 00 00 00 04
+//        setStatusExecution(device, progress, "writeMagikInSixthOffset", 50);
+//        communicator.writeMagikInSixthOffset(device);
+
+//        // 01 04 07 02 21 03 6E LL HH 00
+//        setStatusExecution(device, progress, "writeCountInThirdOffset", 55);
+//        communicator.writeCountInThirdOffset(device, 0x06);
 
         // 01 04 07 02 21 00 E1 40 FF 01 00 00 00 00 00 00
         communicator.cradleActivateTransmit(device);
@@ -93,9 +95,9 @@ public class GetDeviceInfoCommand implements DeviceCommand {
         setStatusExecution(device, progress, "cradleSwitchOff", 95);
         communicator.cradleSwitchOff(device);
 
-        // 01 02 02 01 0D 00 00 00 00 00 00 00 00 00 00 00
-        setStatusExecution(device, progress, "cradleSwitchOn", 98);
-        communicator.cradleSwitchOn(device);
+//        // 01 02 02 01 0D 00 00 00 00 00 00 00 00 00 00 00
+//        setStatusExecution(device, progress, "cradleSwitchOn", 98);
+//        communicator.cradleSwitchOn(device);
 
         setStatusExecution(device, progress, "done", 100);
         progress.onExecutionFinished(device, 100, assembled, this.getName());

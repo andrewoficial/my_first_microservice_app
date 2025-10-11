@@ -27,20 +27,20 @@ public class GetAllCoefficients implements DeviceCommand {
         // 01 02 02 01 0D
         communicator.cradleSwitchOn(device); //NOTE: 0x07, 0x00, 0x00, 0x00, (byte)0xDC DC Похоже на запрос последней команды
 
-        setStatusExecution(device, progress, "resetZeroOffset", 20);
         // 01 04 07 02 21 00 00 00
+        setStatusExecution(device, progress, "resetZeroOffset", 20);
         communicator.resetZeroOffset(device);
 
+        // 01 04 07 02 21 01 03 11 D1 01
         setStatusExecution(device, progress, "writeMagikInFirstOffset", 25);
-        // 01 04 07 02 21 01 03 11 d1 01
         communicator.writeMagikInFirstOffset(device);
 
-        setStatusExecution(device, progress, "writeMagikInSecondOffset", 30);
         // 01 04 07 02 21 02 0D 54 02 65
+        setStatusExecution(device, progress, "writeMagikInSecondOffset", 30);
         communicator.writeMagikInSecondOffset(device);
 
+        //01 04 07 02 21 03 6E LL HH 00
         setStatusExecution(device, progress, "writeCountInThirdOffset", 35);
-        // 01 04 07 02 21 03 6E 00 00 00
         communicator.writeCountInThirdOffset(device, 0x00);
 
         setStatusExecution(device, progress, "write command byte at addr 04", 40);
@@ -62,7 +62,7 @@ public class GetAllCoefficients implements DeviceCommand {
         communicator.writeZeroInSixthOffset(device);
 
         setStatusExecution(device, progress, "writeCountInThirdOffset", 55);
-        // 01 04 07 02 21 03 6E 06
+        //  01 04 07 02 21 03 6E LL HH 00 (01 04 07 02 21 03 6E 06)
         communicator.writeCountInThirdOffset(device, 0x06);
 
         setStatusExecution(device, progress, "cradleActivateTransmit", 60);

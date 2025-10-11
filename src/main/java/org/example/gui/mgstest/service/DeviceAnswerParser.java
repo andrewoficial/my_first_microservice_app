@@ -95,20 +95,12 @@ public class DeviceAnswerParser {
     
     public void setSerialNumber(HidDevice device, long serialNumber) throws Exception {
         log.info("Executing setSerialNumber command: " + serialNumber);
-        cradleController.setSerialNumber(device, serialNumber);
+        //cradleController.setSerialNumber(device, serialNumber);
         log.info("Successfully set serial number");
     }
 
     
-    public void validateSerialNumber(String input) throws IllegalArgumentException {
-        if (input == null || input.trim().isEmpty()) {
-            throw new IllegalArgumentException("Serial number cannot be empty");
-        }
-        
-        if (!input.matches("\\d{8}")) {
-            throw new IllegalArgumentException("Please enter exactly 8 digits");
-        }
-    }
+
     
     public long parseSerialNumber(String input) throws NumberFormatException {
         return Long.parseLong(input);

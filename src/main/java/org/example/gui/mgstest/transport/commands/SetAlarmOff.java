@@ -28,11 +28,11 @@ public class SetAlarmOff implements DeviceCommand {
         setStatusExecution(device, progress, "resetZeroOffset", 15);
         communicator.resetZeroOffset(device);
 
-        // 01 04 07 02 21 01 03 17 D1 01
+        // 01 04 07 02 21 01 03 16 D1 01
         setStatusExecution(device, progress, "cradleWriteBlock 01", 19);
         communicator.cradleWriteBlock(device, (byte) 0x01, new byte[]{(byte) 0x03, (byte) 0x16, (byte) 0xD1, (byte) 0x01});
 
-        // 01 04 07 02 21 02 13 54 02 65
+        // 01 04 07 02 21 02 12 54 02 65
         setStatusExecution(device, progress, "cradleWriteBlock 02", 23);
         communicator.cradleWriteBlock(device, (byte) 0x02, new byte[]{(byte) 0x12, (byte) 0x54, (byte) 0x02, (byte) 0x65});
 
@@ -40,23 +40,23 @@ public class SetAlarmOff implements DeviceCommand {
         setStatusExecution(device, progress, "writeCountInThirdOffset", 28);
         communicator.writeCountInThirdOffset(device, 0x00);
 
-        // 01 04 07 02 21 04 00 17 00 01
+        // 01 04 07 02 21 04 00 22 00 01
         setStatusExecution(device, progress, "cradleWriteBlock 04", 35);
         communicator.cradleWriteBlock(device, (byte) 0x04, new byte[]{(byte) 0x00, (byte) 0x22, (byte) 0x00, (byte) 0x01});
 
-        // 01 04 07 02 21 05 01 00 00 B9
+        // 01 04 07 02 21 05 01 00 00 01
         setStatusExecution(device, progress, "cradleWriteBlock 05", 37);
         communicator.cradleWriteBlock(device, (byte) 0x05, new byte[]{(byte) 0x01, (byte) 0x00, (byte) 0x00, (byte) 0x01});
 
-        // 01 04 07 02 21 06 A9 42 1C D4
+        // 01 04 07 02 21 06 1B DF 05 A5
         setStatusExecution(device, progress, "cradleWriteBlock 06", 43);
         communicator.cradleWriteBlock(device, (byte) 0x06, new byte[]{(byte) 0x1B, (byte) 0xDF, (byte) 0x05, (byte) 0xA5});
 
-        // 01 04 07 02 21 07 DB FE 00 00
+        // 01 04 07 02 21 07 FE 00 00 00
         setStatusExecution(device, progress, "writeMagikInSeventhOffset", 53);
         communicator.writeMagikInSeventhOffset(device);
 
-        // 01 04 07 02 21 03 6E yy yy 00
+        // 01 04 07 02 21 03 6E LL HH 00
         setStatusExecution(device, progress, "writeCountInThirdOffset 0xOB", 58);
         communicator.writeCountInThirdOffset(device, 0x0B);
 
@@ -78,7 +78,6 @@ public class SetAlarmOff implements DeviceCommand {
         byte[] offsets = new byte[]{0x00, 0x08, 0x10};
         setStatusExecution(device, progress, "get device answer", 70);
         byte[] payloads = communicator.assembleCget(device, offsets, (byte) 0x07);
-        // Ответ зависит от настроек прибора
 
         // 01 02 02 00 00
         setStatusExecution(device, progress, "cradleSwitchOff", 95);
