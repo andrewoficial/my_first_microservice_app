@@ -3,6 +3,7 @@ package org.example.gui.mgstest.transport;
 import org.apache.log4j.Logger;
 import org.example.gui.mgstest.exception.MessageDoesNotDeliveredToHidDevice;
 import org.example.gui.mgstest.service.MgsExecutionListener;
+import org.example.gui.mgstest.transport.cmd.CommandModel;
 import org.example.gui.mgstest.util.CrcValidator;
 import org.hid4java.HidDevice;
 
@@ -22,7 +23,7 @@ public class PayLoadSender {
         }
     }
 
-    public void writeDataHid(HidDevice device, byte [] payload, MgsExecutionListener progress, String description) throws MessageDoesNotDeliveredToHidDevice {
+    public byte[] writeDataHid(HidDevice device, byte [] payload, MgsExecutionListener progress, String description, CommandModel model) throws MessageDoesNotDeliveredToHidDevice {
         device.open();
         ArrayList<byte[]> parts = CrcValidator.addPrefixWriteToParts(payload);
         int percent = 0;
@@ -57,15 +58,19 @@ public class PayLoadSender {
         communicator.cradleSwitchOff(device);
         communicator.cradleSwitchOn(device);
         setStatusExecution(device, progress, description, "Reboot cradle", 40);
+
+
         // 01 04 04 02 23 00 07
         // 01 04 04 02 23 08 07
         // 01 04 04 02 23 10 07
         //byte[] offsets = new byte[]{0x00, 0x08, 0x10};
-        byte[] offsets = new byte[]{0x00, 0x08, 0x10, 0x18, 0x20};
-        byte[] payloads = communicator.assembleCgetNew(device, offsets, (byte) 0x07, progress);
+        byte[] payloads = communicator.assembleCgetNew(device, model.getAnswerOffsets(), (byte) 0x07, progress);
         setStatusExecution(device, progress, description, "Done reading device answer", 85);
         communicator.cradleSwitchOff(device);
         setStatusExecution(device, progress, description, "cradleSwitchOff", 100);
+        return payloads;
+
+
     }
     private void setStatusExecution(HidDevice device, MgsExecutionListener progress,String description, String comment, int percent){
         log.info("Do [" + description + "]... ["+comment+"]:" + percent);

@@ -10,9 +10,10 @@ import org.hid4java.HidDevice;
 
 import java.util.ArrayList;
 
-public class GetDeviceInfoCommand implements DeviceCommand {
+@Deprecated
+public class GetDeviceInfoCommandOLD implements DeviceCommand {
     private final CradleCommunicationHelper communicator = new CradleCommunicationHelper();
-    private final Logger log = Logger.getLogger(GetDeviceInfoCommand.class);
+    private final Logger log = Logger.getLogger(GetDeviceInfoCommandOLD.class);
 
     @Override
     public void execute(HidDevice device, CommandParameters parameters, MgsExecutionListener progress) throws Exception {

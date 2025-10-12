@@ -10,6 +10,7 @@ import org.hid4java.HidDevice;
 
 import java.util.ArrayList;
 
+@Deprecated
 public class GetAllCoefficients implements DeviceCommand {
     private final CradleCommunicationHelper communicator = new CradleCommunicationHelper();
     private final Logger log = Logger.getLogger(GetAllCoefficients.class);

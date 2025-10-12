@@ -2,6 +2,7 @@ package org.example.gui.mgstest.transport.cmd;
 
 import org.example.gui.mgstest.service.MgsExecutionListener;
 import org.example.gui.mgstest.transport.*;
+import org.example.services.comPort.StringEndianList;
 import org.hid4java.HidDevice;
 
 import java.nio.ByteBuffer;
@@ -24,6 +25,11 @@ public class SetSerialNumber implements CommandModel, DeviceCommand {
             args[i] = arguments.get(i);
         }
         return args;
+    }
+
+    @Override
+    public byte[] getAnswerOffsets() {
+        return new byte[]{0x00, 0x08, 0x10, 0x18, 0x20};
     }
 
     @Override
@@ -65,12 +71,16 @@ public class SetSerialNumber implements CommandModel, DeviceCommand {
         }
     }
 
+    public void addArgument(String text, StringEndianList endian ) {
+
+    }
+
     @Override
     public void execute(HidDevice device, CommandParameters parameters, MgsExecutionListener progress) throws Exception {
         this.addArgument(parameters.getLongArgument());
         //this.addArgument((byte) 0x01);
         PayLoadSender sender  = new PayLoadSender();
-        sender.writeDataHid(device, PayloadBuilder.build(this), progress, getDescription());
+        sender.writeDataHid(device, PayloadBuilder.build(this), progress, getDescription(), this);
     }
 
     @Override

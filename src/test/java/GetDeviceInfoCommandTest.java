@@ -1,8 +1,7 @@
-import org.apache.log4j.Logger;
 import org.example.gui.mgstest.service.MgsExecutionListener;
 import org.example.gui.mgstest.transport.CommandParameters;
 import org.example.gui.mgstest.transport.HidCommandName;
-import org.example.gui.mgstest.transport.commands.GetDeviceInfoCommand;
+import org.example.gui.mgstest.transport.commands.GetDeviceInfoCommandOLD;
 import org.hid4java.HidDevice;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -29,12 +28,12 @@ public class GetDeviceInfoCommandTest {
     @Mock
     private CommandParameters mockParameters;
 
-    private GetDeviceInfoCommand command;
+    private GetDeviceInfoCommandOLD command;
 
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
-        command = new GetDeviceInfoCommand();
+        command = new GetDeviceInfoCommandOLD();
 
         // Mock device.open() to return true (since it returns boolean)
         Mockito.when(mockDevice.open()).thenReturn(true);

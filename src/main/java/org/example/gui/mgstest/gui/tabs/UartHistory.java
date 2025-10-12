@@ -8,7 +8,13 @@ import org.example.gui.mgstest.repository.DeviceStateRepository;
 import org.example.gui.mgstest.service.DeviceAsyncExecutor;
 import org.example.gui.mgstest.transport.CommandParameters;
 import org.example.gui.mgstest.transport.CradleController;
-import org.example.gui.mgstest.transport.commands.SendUartCommand;
+import org.example.gui.mgstest.transport.DeviceCommand;
+import org.example.services.comPort.StringEndianList;
+import org.example.gui.mgstest.transport.cmd.SendExternalUartCommand;
+import org.example.gui.mgstest.transport.cmd.SendSpiCommand;
+import org.example.gui.mgstest.transport.cmd.SendUartCommand;
+import org.example.gui.mgstest.transport.commands.*;
+import org.example.services.comPort.StringEndianList;
 import org.hid4java.HidDevice;
 
 import javax.swing.*;
@@ -33,6 +39,17 @@ public class UartHistory extends DeviceTab {
     private String lastSentCommand = null;
     private long lastResponseTime = 0;
 
+    // Выпадающие списки для настроек
+    private JComboBox<StringEndianList> lineEndingComboBox;
+    private JComboBox<TransportDirection> directionComboBox;
+
+    // Enum для направлений отправки
+    public enum TransportDirection {
+        UART,
+        SPI,
+        EXTERNAL_UART
+    }
+
     public UartHistory(CradleController cradleController, HidDevice selectedDevice, DeviceState deviceState,
                        DeviceStateRepository stateRepository, DeviceAsyncExecutor asyncExecutor) {
         super("UART History");
@@ -52,6 +69,19 @@ public class UartHistory extends DeviceTab {
         JPanel inputPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         inputPanel.add(new JLabel("Команда:"));
         inputPanel.add(commandField);
+
+        // Выбор окончания строки
+        inputPanel.add(new JLabel("Окончание:"));
+        lineEndingComboBox = new JComboBox<>(StringEndianList.values());
+        lineEndingComboBox.setSelectedItem(StringEndianList.CR_LF);
+        inputPanel.add(lineEndingComboBox);
+
+        // Выбор направления отправки
+        inputPanel.add(new JLabel("Направление:"));
+        directionComboBox = new JComboBox<>(TransportDirection.values());
+        directionComboBox.setSelectedItem(TransportDirection.UART);
+        inputPanel.add(directionComboBox);
+
         inputPanel.add(sendButton);
 
         panel.add(inputPanel, BorderLayout.NORTH);
@@ -88,12 +118,32 @@ public class UartHistory extends DeviceTab {
         lastSentCommand = command;
         appendToHistory("Команда: " + command, "Ожидание ответа...");
 
+        // Получаем выбранные значения из выпадающих списков
+        org.example.services.comPort.StringEndianList ending = (org.example.services.comPort.StringEndianList) lineEndingComboBox.getSelectedItem();
+        TransportDirection direction = (TransportDirection) directionComboBox.getSelectedItem();
+
+        // Создаем соответствующую команду в зависимости от направления
         CommandParameters param = new CommandParameters();
         param.setStringArgument(command);
-        SendUartCommand uartCommand = new SendUartCommand();
-        asyncExecutor.executeCommand(uartCommand, param, selectedDevice);
+        param.setEndian(ending);
+        DeviceCommand sender = createCommandForDirection(direction);
+
+        // Выполняем команду
+        asyncExecutor.executeCommand(sender, param, selectedDevice);
 
         commandField.setText("");
+    }
+
+    private DeviceCommand createCommandForDirection(TransportDirection direction) {
+        switch (direction) {
+            case SPI:
+                return new SendSpiCommand();
+            case EXTERNAL_UART:
+                return new SendExternalUartCommand();
+            case UART:
+            default:
+                return new SendUartCommand();
+        }
     }
 
     private void appendToHistory(String sent, String received) {

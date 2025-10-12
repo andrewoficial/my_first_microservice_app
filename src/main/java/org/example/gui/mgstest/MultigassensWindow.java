@@ -16,14 +16,12 @@ import org.example.gui.mgstest.gui.tabs.DeviceTab;
 import org.example.gui.mgstest.gui.tabs.TabInfo;
 import org.example.gui.mgstest.gui.tabs.TabSettings;
 import org.example.gui.mgstest.gui.tabs.UartHistory;
-import org.example.gui.mgstest.transport.CommandParameters;
 import org.example.gui.mgstest.transport.CradleController;
 import org.example.gui.mgstest.transport.DeviceCommand;
 
-import org.example.gui.mgstest.transport.commands.GetAllCoefficients;
-import org.example.gui.mgstest.transport.commands.GetDeviceInfoCommand;
+import org.example.gui.mgstest.transport.cmd.GetAllCoefficients;
 import org.example.gui.mgstest.transport.HidCommandName;
-import org.example.gui.mgstest.transport.commands.SendUartCommand;
+
 import org.hid4java.HidDevice;
 
 import javax.swing.*;
@@ -42,8 +40,6 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
     private JButton setCoefficientsButton;
     private JButton setCoefficientsButtonCo;
     private JButton getInfoButton;
-    private JButton opticCommandButton;
-    private JButton setSerialNumberButton;
 
 
     private HidDevice selectedDevice;
@@ -174,16 +170,6 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
         setCoefficientsButtonCo.addActionListener(e -> onSetCoefficientsCO());
         buttonPanel.add(setCoefficientsButtonCo);
 
-        getInfoButton = new JButton("Get Info");
-        getInfoButton.addActionListener(e -> {
-            onGetInfo();
-        });
-        buttonPanel.add(getInfoButton);
-
-        opticCommandButton = new JButton("Send Optic Command");
-        opticCommandButton.addActionListener(e -> onSendOpticCommand());
-        buttonPanel.add(opticCommandButton);
-
         contentPane.add(buttonPanel, BorderLayout.NORTH);
     }
 
@@ -195,34 +181,6 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
         DeviceCommand command = new GetAllCoefficients();
         asyncExecutor.executeCommand(command, null, selectedDevice);
     }
-
-    private void onGetInfo() {
-        if(isDevNull(selectedDevice)) {return;}
-        checkStateRepo(selectedDevice);
-        if(isDevBusy(selectedDevice)) {return;}
-
-        DeviceCommand command = new GetDeviceInfoCommand();
-        //DeviceCommand<byte[]> command = new DoRebootDevice(); работает
-        asyncExecutor.executeCommand(command, null, selectedDevice);
-    }
-
-
-    private void onSendOpticCommand() {
-        if(isDevNull(selectedDevice)) {return;}
-        checkStateRepo(selectedDevice);
-        if(isDevBusy(selectedDevice)) {return;}
-
-        String text = JOptionPane.showInputDialog(this, "Enter text for optic command:");
-        if (text == null || text.trim().isEmpty()) {
-            return;
-        }
-        CommandParameters param = new CommandParameters();
-        param.setStringArgument(text);
-        SendUartCommand command = new SendUartCommand();
-        asyncExecutor.executeCommand(command, param, selectedDevice);
-    }
-
-
 
 
     private void onSetCoefficientsO2() {

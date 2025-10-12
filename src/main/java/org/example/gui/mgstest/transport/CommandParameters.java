@@ -2,6 +2,7 @@ package org.example.gui.mgstest.transport;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.example.services.comPort.StringEndianList;
 
 @Getter @Setter
 public class CommandParameters {
@@ -10,4 +11,5 @@ public class CommandParameters {
     Long longArgument;
     int intArgument;
     float [] coefficients;
+    StringEndianList endian;
 }

@@ -39,7 +39,8 @@ public class DeviceAnswerParser {
             parseAllCoefficients(data, device);
         }else if(HidCommandName.GET_DEV_INFO == commandName){
             parseDeviceInfo(data, device);
-        }else if(HidCommandName.SENT_URT == commandName){
+        }else if(HidCommandName.SENT_URT == commandName || HidCommandName.SENT_EXTERNAL_URT == commandName || HidCommandName.SENT_SPI == commandName){
+            log.info("Run parse some direction");
             parseUartAnswer(data, device);
         }else if(HidCommandName.SET_ALARM_STATE == commandName){
             stateRepository.get(device).getDeviceInfo().setAlarmEnabled(true);

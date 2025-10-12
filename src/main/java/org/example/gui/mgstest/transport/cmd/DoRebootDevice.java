@@ -9,8 +9,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 
-public class SetCOCoefs implements CommandModel, DeviceCommand {
-    private byte commandNumber = 0x07;
+public class DoRebootDevice implements CommandModel, DeviceCommand {
+    private byte commandNumber = 0x17;
     private ArrayList<Byte> arguments = new ArrayList<>();
 
     @Override
@@ -56,18 +56,18 @@ public class SetCOCoefs implements CommandModel, DeviceCommand {
     }
 
     @Override
-    public void addArguments(float[] args) {
-        for (float arg : args) {
-            addArgument(arg);
+    public void addArgument(long arg) {
+        ByteBuffer bb = ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN).putLong(arg);
+        byte[] bytes = bb.array();
+        for (byte b : bytes) {
+            arguments.add(b);
         }
     }
 
     @Override
-    public void addArgument(long arg) {
-        ByteBuffer bb = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(arg);
-        byte[] bytes = bb.array();
-        for (byte b : bytes) {
-            arguments.add(b);
+    public void addArguments(float[] args) {
+        for (float arg : args) {
+            addArgument(arg);
         }
     }
 
@@ -77,20 +77,18 @@ public class SetCOCoefs implements CommandModel, DeviceCommand {
 
     @Override
     public void execute(HidDevice device, CommandParameters parameters, MgsExecutionListener progress) throws Exception {
-        for (float coefficient : parameters.getCoefficients()) {
-            this.addArgument(coefficient);
-        }
         PayLoadSender sender  = new PayLoadSender();
-        sender.writeDataHid(device, PayloadBuilder.build(this), progress, getDescription(), this);
+        byte [] answer = sender.writeDataHid(device, PayloadBuilder.build(this), progress, getDescription(), this);
+        progress.onExecutionFinished(device, 100, answer, this.getName());
     }
 
     @Override
     public String getDescription() {
-        return "Set E-CHEM coefficients";
+        return "Do Reboot Device";
     }
 
     @Override
     public HidCommandName getName() {
-        return HidCommandName.SET_ECHEM_COEFF;
+        return HidCommandName.DO_REBOOT;
     }
 }

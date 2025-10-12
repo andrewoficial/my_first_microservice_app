@@ -8,6 +8,8 @@ public enum  HidCommandName {
     GET_COEFF("getAllCoefficients"),
     GET_DEV_INFO("getDeviceInfo"),
     SENT_URT("sendUartCommand"),
+    SENT_EXTERNAL_URT("sendExternalUartCommand"),
+    SENT_SPI("sendSpiCommand"),
     SET_ALARM_STATE("setAlarmState"),
     SET_SERIAL_NUMBER("setSerialNumber"),
     SET_ECHEM_COEFF("setEChemCoefficients");

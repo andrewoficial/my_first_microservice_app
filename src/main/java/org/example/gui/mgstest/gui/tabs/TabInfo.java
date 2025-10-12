@@ -9,9 +9,14 @@ import org.example.gui.mgstest.transport.CommandParameters;
 
 import org.example.gui.mgstest.transport.DeviceCommand;
 
+import org.example.gui.mgstest.transport.cmd.GetDeviceInformation;
 import org.example.gui.mgstest.transport.cmd.SetAlarmState;
 import org.example.gui.mgstest.transport.cmd.SetSerialNumber;
-import org.example.gui.mgstest.transport.commands.*;
+import org.example.gui.mgstest.transport.cmd.DoBeepTest;
+import org.example.gui.mgstest.transport.cmd.DoBlinkTest;
+import org.example.gui.mgstest.transport.cmd.DoRebootDevice;
+import org.example.gui.mgstest.transport.cmd.DoBatteryCounterReset;
+
 
 
 import org.example.gui.mgstest.util.CrcValidator;
@@ -269,7 +274,7 @@ public class TabInfo extends DeviceTab {
 
     private void refreshInfo() {
         checkDeviceState(selectedDevice);
-        DeviceCommand command = new GetDeviceInfoCommand();
+        DeviceCommand command = new GetDeviceInformation();
         asyncExecutor.executeCommand(command, null, selectedDevice);
     }
 

@@ -8,6 +8,7 @@ import org.example.gui.mgstest.transport.CradleCommunicationHelper;
 import org.example.gui.mgstest.transport.HidCommandName;
 import org.hid4java.HidDevice;
 
+@Deprecated
 public class DoBlinkTest implements DeviceCommand {
     private final CradleCommunicationHelper communicator = new CradleCommunicationHelper();
     private final Logger log = Logger.getLogger(DoBlinkTest.class);
