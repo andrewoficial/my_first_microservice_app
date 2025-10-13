@@ -39,7 +39,6 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
     private JButton getCoefficientsButton;
     private JButton setCoefficientsButton;
     private JButton setCoefficientsButtonCo;
-    private JButton getInfoButton;
 
 
     private HidDevice selectedDevice;
@@ -114,7 +113,7 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
         tabs.put("coefficients", coefficientsTab);
         tabbedPane.addTab(coefficientsTab.getTabName(), coefficientsTab.getPanel());
 
-        TabSettings settingsTab = new TabSettings();
+        TabSettings settingsTab = new TabSettings(selectedDevice, asyncExecutor);
         tabs.put("settings", settingsTab);
         tabbedPane.addTab(settingsTab.getTabName(), settingsTab.getPanel());
 
@@ -257,24 +256,27 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
             TabInfo infoTab = (TabInfo) tabs.get("info");
             TabCoefficients coefficientsTab = (TabCoefficients) tabs.get("coefficients");
             UartHistory uartHistory = (UartHistory) tabs.get("uartHistory");
+            TabSettings tabSettings = (TabSettings) tabs.get("settings");
             updateDeviceInfo(selectedDevice);
 
-            //ToDo remove it
-            uartHistory.setCradleController(cradleController);
+            //uartHistory.setCradleController(cradleController);
 
             infoTab.setSelectedDevice(selectedDevice);
             coefficientsTab.setSelectedDevice(selectedDevice);
             uartHistory.setSelectedDevice(selectedDevice);
+            tabSettings.setSelectedDevice(selectedDevice);
 
             if (stateRepository.contains(selectedDevice)) {
                 DeviceState state = stateRepository.get(selectedDevice);
                 infoTab.updateData(state);
                 coefficientsTab.updateData(state);
                 uartHistory.updateData(state);
+                tabSettings.updateData(state);
             } else {
                 infoTab.updateData(null);
                 coefficientsTab.updateData(null);
                 coefficientsTab.updateData(null);
+                tabSettings.updateData(null);
             }
     }
     private void updateDeviceInfo(HidDevice deviceKey) {

@@ -6,25 +6,15 @@ import org.example.gui.mgstest.model.answer.GetDeviceInfoModel;
 import org.example.gui.mgstest.repository.DeviceState;
 import org.example.gui.mgstest.service.DeviceAsyncExecutor;
 import org.example.gui.mgstest.transport.CommandParameters;
-
 import org.example.gui.mgstest.transport.DeviceCommand;
-
-import org.example.gui.mgstest.transport.cmd.GetDeviceInformation;
-import org.example.gui.mgstest.transport.cmd.SetAlarmState;
-import org.example.gui.mgstest.transport.cmd.SetSerialNumber;
-import org.example.gui.mgstest.transport.cmd.DoBeepTest;
-import org.example.gui.mgstest.transport.cmd.DoBlinkTest;
-import org.example.gui.mgstest.transport.cmd.DoRebootDevice;
-import org.example.gui.mgstest.transport.cmd.DoBatteryCounterReset;
-
-
-
+import org.example.gui.mgstest.transport.cmd.*;
 import org.example.gui.mgstest.util.CrcValidator;
 import org.hid4java.HidDevice;
 
 import javax.swing.*;
 import java.awt.*;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 
 public class TabInfo extends DeviceTab {
@@ -46,6 +36,10 @@ public class TabInfo extends DeviceTab {
     private JCheckBox alarmCheckBox = new JCheckBox();
     private JCheckBox skipAlarmTestCheckBox = new JCheckBox();
     private JComboBox<String> modeComboBox = new JComboBox<>(new String[]{"stop mode", "transport mode"});
+
+    // Компоненты для выбора даты и времени
+    private JSpinner dateSpinner;
+    private JSpinner timeSpinner;
 
     public TabInfo(HidDevice selectedDevice, DeviceAsyncExecutor asyncExecutor) {
         super("Информация");
@@ -91,33 +85,48 @@ public class TabInfo extends DeviceTab {
         int row = 0;
         addLabelAndField(panel, gbc, "CPU ID:", cpuIdField, row++, false);
         addLabelAndField(panel, gbc, "Серийный номер:", serialNumberField, row++, false);
-        addLabelAndField(panel, gbc, "Версия S.V.:", swVersionField, row++, false);
-        addLabelAndField(panel, gbc, "Версия H.V.:", hwVersionField, row++, false);
-
-
+        addLabelAndField(panel, gbc, "SW Version:", swVersionField, row++, false);
+        addLabelAndField(panel, gbc, "HW Version:", hwVersionField, row++, false);
+        addLabelAndField(panel, gbc, "Время устройства:", timeField, row++, false);
 
         return panel;
     }
 
-
-
     private JPanel createDateTimePanel() {
         JPanel panel = new JPanel(new BorderLayout(10, 5));
-        panel.setBorder(BorderFactory.createTitledBorder("Дата/время"));
+        panel.setBorder(BorderFactory.createTitledBorder("Установка даты/времени"));
 
-        JPanel contentPanel = new JPanel(new BorderLayout(5, 5));
-        contentPanel.add(new JLabel("Время:"), BorderLayout.WEST);
-        contentPanel.add(timeField, BorderLayout.CENTER);
+        // Панель для выбора даты и времени
+        JPanel datetimePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
 
+        // Выбор даты
+        datetimePanel.add(new JLabel("Дата:"));
+        dateSpinner = new JSpinner(new SpinnerDateModel());
+        JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(dateSpinner, "dd.MM.yyyy");
+        dateSpinner.setEditor(dateEditor);
+        dateSpinner.setValue(new Date()); // текущая дата по умолчанию
+        datetimePanel.add(dateSpinner);
+
+        // Выбор времени
+        datetimePanel.add(new JLabel("Время:"));
+        timeSpinner = new JSpinner(new SpinnerDateModel());
+        JSpinner.DateEditor timeEditor = new JSpinner.DateEditor(timeSpinner, "HH:mm:ss");
+        timeSpinner.setEditor(timeEditor);
+        timeSpinner.setValue(new Date()); // текущее время по умолчанию
+        datetimePanel.add(timeSpinner);
+
+        // Панель кнопок
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        JButton setTimeButton = new JButton("Задать");
-        setTimeButton.setEnabled(false);
-        JButton setPcTimeButton = new JButton("Задать как на компьютере");
-        setPcTimeButton.setEnabled(false);
-        buttonPanel.add(setTimeButton);
+        JButton setSelectedTimeButton = new JButton("Установить выбранное время");
+        JButton setPcTimeButton = new JButton("Установить время компьютера");
+
+        setSelectedTimeButton.addActionListener(e -> performSetSelectedTime());
+        setPcTimeButton.addActionListener(e -> performSetPcTime());
+
+        buttonPanel.add(setSelectedTimeButton);
         buttonPanel.add(setPcTimeButton);
 
-        panel.add(contentPanel, BorderLayout.NORTH);
+        panel.add(datetimePanel, BorderLayout.NORTH);
         panel.add(buttonPanel, BorderLayout.CENTER);
 
         return panel;
@@ -194,14 +203,14 @@ public class TabInfo extends DeviceTab {
         JButton setSerialNumberButton = new JButton("Задать серийный номер");
         batteryPanel.add(setSerialNumberButton);
 
-
-
         // Добавляем обработчики
         refreshButton.addActionListener(e -> refreshInfo());
         rebootButton.addActionListener(e -> rebootDevice());
         setModeButton.addActionListener(e -> setDeviceMode());
         resetBatteryButton.addActionListener(e -> resetBattery());
         alarmCheckBox.addActionListener(e -> switchAlarmState());
+        beepCheckBox.addActionListener(e -> switchSoundState());
+        vibroCheckBox.addActionListener(e -> switchVibrationState());
         setSerialNumberButton.addActionListener(e -> onSetSerialNumber());
 
         // Компоновка
@@ -244,7 +253,68 @@ public class TabInfo extends DeviceTab {
         asyncExecutor.executeCommand(command, parameters, selectedDevice);
     }
 
+    private void performSetSelectedTime() {
+        checkDeviceState(selectedDevice);
 
+        // Получаем выбранные дату и время
+        Date selectedDate = (Date) dateSpinner.getValue();
+        Date selectedTime = (Date) timeSpinner.getValue();
+
+        // Объединяем дату и время
+        Calendar dateCal = Calendar.getInstance();
+        dateCal.setTime(selectedDate);
+
+        Calendar timeCal = Calendar.getInstance();
+        timeCal.setTime(selectedTime);
+
+        Calendar combinedCal = Calendar.getInstance();
+        combinedCal.set(dateCal.get(Calendar.YEAR),
+                dateCal.get(Calendar.MONTH),
+                dateCal.get(Calendar.DAY_OF_MONTH),
+                timeCal.get(Calendar.HOUR_OF_DAY),
+                timeCal.get(Calendar.MINUTE),
+                timeCal.get(Calendar.SECOND));
+
+        long unixTime = combinedCal.getTimeInMillis() / 1000L;
+
+        CommandParameters timeParams = new CommandParameters();
+        timeParams.setLongArgument(unixTime);
+
+        SetDeviceTime timeCommand = new SetDeviceTime();
+        asyncExecutor.executeCommand(timeCommand, timeParams, selectedDevice);
+
+        // Показываем информацию о устанавливаемом времени
+        SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+        JOptionPane.showMessageDialog(this.getPanel(),
+                "Устанавливается время: " + sdf.format(combinedCal.getTime()),
+                "Установка времени",
+                JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void performSetPcTime() {
+        checkDeviceState(selectedDevice);
+
+        // Получаем текущее время в Unix timestamp (секунды)
+        long currentUnixTime = System.currentTimeMillis() / 1000L;
+
+        CommandParameters timeParams = new CommandParameters();
+        timeParams.setLongArgument(currentUnixTime);
+
+        SetDeviceTime timeCommand = new SetDeviceTime();
+        asyncExecutor.executeCommand(timeCommand, timeParams, selectedDevice);
+
+        // Обновляем спиннеры текущим временем
+        Date now = new Date();
+        dateSpinner.setValue(now);
+        timeSpinner.setValue(now);
+
+        // Показываем информацию об устанавливаемом времени
+        SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+        JOptionPane.showMessageDialog(this.getPanel(),
+                "Устанавливается текущее время компьютера: " + sdf.format(now),
+                "Установка времени",
+                JOptionPane.INFORMATION_MESSAGE);
+    }
 
     private void performBlinkTest() {
         checkDeviceState(selectedDevice);
@@ -268,6 +338,34 @@ public class TabInfo extends DeviceTab {
         } else {
             parameters.setIntArgument(1);
             SetAlarmState setAlarmState = new SetAlarmState();
+            asyncExecutor.executeCommand(setAlarmState, parameters, selectedDevice);
+        }
+    }
+
+    private void switchSoundState() {
+        checkDeviceState(selectedDevice);
+        CommandParameters parameters = new CommandParameters();
+        if (beepCheckBox.isSelected()) {
+            parameters.setIntArgument(0);
+            SetSoundState setAlarmState = new SetSoundState();
+            asyncExecutor.executeCommand(setAlarmState, parameters, selectedDevice);
+        } else {
+            parameters.setIntArgument(1);
+            SetSoundState setAlarmState = new SetSoundState();
+            asyncExecutor.executeCommand(setAlarmState, parameters, selectedDevice);
+        }
+    }
+
+    private void switchVibrationState() {
+        checkDeviceState(selectedDevice);
+        CommandParameters parameters = new CommandParameters();
+        if (vibroCheckBox.isSelected()) {
+            parameters.setIntArgument(0);
+            SetVibrationState setAlarmState = new SetVibrationState();
+            asyncExecutor.executeCommand(setAlarmState, parameters, selectedDevice);
+        } else {
+            parameters.setIntArgument(1);
+            SetVibrationState setAlarmState = new SetVibrationState();
             asyncExecutor.executeCommand(setAlarmState, parameters, selectedDevice);
         }
     }
@@ -318,6 +416,10 @@ public class TabInfo extends DeviceTab {
             if (info.getTime() > 0) {
                 Date date = new Date(info.getTime() * 1000L);
                 timeField.setText(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date));
+
+                // Также обновляем спиннеры временем устройства
+                dateSpinner.setValue(date);
+                timeSpinner.setValue(date);
             } else {
                 timeField.setText("Нет данных");
             }
@@ -341,6 +443,11 @@ public class TabInfo extends DeviceTab {
         vibroCheckBox.setSelected(false);
         alarmCheckBox.setSelected(false);
         skipAlarmTestCheckBox.setSelected(false);
+
+        // Устанавливаем спиннеры на текущее время
+        Date now = new Date();
+        dateSpinner.setValue(now);
+        timeSpinner.setValue(now);
     }
 
     @Override

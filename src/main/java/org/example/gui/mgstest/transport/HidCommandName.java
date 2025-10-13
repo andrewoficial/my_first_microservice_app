@@ -6,12 +6,16 @@ public enum  HidCommandName {
     DO_TEST_BLINK("doBlinkTest"),
     DO_TEST_BEEP("doBlinkTest"),
     GET_COEFF("getAllCoefficients"),
+    GET_SETTINGS("getAllSettings"),
     GET_DEV_INFO("getDeviceInfo"),
     SENT_URT("sendUartCommand"),
     SENT_EXTERNAL_URT("sendExternalUartCommand"),
     SENT_SPI("sendSpiCommand"),
     SET_ALARM_STATE("setAlarmState"),
+    SET_SOUND_STATE("setSoundState"),
+    SET_VIBRATION_STATE("setVibrationState"),
     SET_SERIAL_NUMBER("setSerialNumber"),
+    SET_DEVICE_TIME("setDeviceTime"),
     SET_ECHEM_COEFF("setEChemCoefficients");
 
     private final String name;

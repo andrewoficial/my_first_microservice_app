@@ -1,4 +1,4 @@
-package org.example.gui.mgstest.gui.tabs;
+package org.example.gui.mgstest.gui.names;
 
 import java.util.ArrayList;
 
@@ -8,7 +8,7 @@ public class CoefficientNames {
     public final ArrayList <String> coDt;
     public final ArrayList <String> h2s;
 
-    CoefficientNames(){
+    public CoefficientNames(){
         oxygen = new ArrayList<>();
         oxygen.add("initOfs");
         oxygen.add("initAmp");

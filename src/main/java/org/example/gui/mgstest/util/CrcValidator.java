@@ -33,6 +33,8 @@ public class CrcValidator {
         calculatedCrcBytes[2] = (byte) ((crcValue >> 16) & 0xFF);
         calculatedCrcBytes[3] = (byte) ((crcValue >> 24) & 0xFF);
         log.warn("Calculated: " + bytesToHexNoSpace(calculatedCrcBytes));
+        log.warn("Got: " + bytesToHexNoSpace(exceptedCryBytes));
+        log.warn("Payload: " + bytesToHexNoSpace(payload));
         return Arrays.equals(calculatedCrcBytes, exceptedCryBytes);
     }
 

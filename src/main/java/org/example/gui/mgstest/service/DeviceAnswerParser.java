@@ -2,12 +2,10 @@
 package org.example.gui.mgstest.service;
 
 import org.apache.log4j.Logger;
-import org.example.gui.mgstest.model.answer.MipexResponseModel;
-import org.example.gui.mgstest.model.answer.ParsedBlock;
+import org.example.gui.mgstest.model.answer.*;
 import org.example.gui.mgstest.parser.answer.AdvancedResponseParser;
-import org.example.gui.mgstest.model.answer.GetAllCoefficientsModel;
-import org.example.gui.mgstest.model.answer.GetDeviceInfoModel;
 import org.example.gui.mgstest.parser.answer.GetAllCoefficientsParser;
+import org.example.gui.mgstest.parser.answer.GetAllSettingsParser;
 import org.example.gui.mgstest.parser.answer.GetDeviceInfoParser;
 import org.example.gui.mgstest.repository.DeviceState;
 import org.example.gui.mgstest.repository.DeviceStateRepository;
@@ -40,11 +38,12 @@ public class DeviceAnswerParser {
         }else if(HidCommandName.GET_DEV_INFO == commandName){
             parseDeviceInfo(data, device);
         }else if(HidCommandName.SENT_URT == commandName || HidCommandName.SENT_EXTERNAL_URT == commandName || HidCommandName.SENT_SPI == commandName){
-            log.info("Run parse some direction");
             parseUartAnswer(data, device);
         }else if(HidCommandName.SET_ALARM_STATE == commandName){
             stateRepository.get(device).getDeviceInfo().setAlarmEnabled(true);
             updateDeviceState(device, state -> state.setDeviceInfo(stateRepository.get(device).getDeviceInfo()));
+        }else if(HidCommandName.GET_SETTINGS == commandName){
+            parseDeviceSettings(data, device);
         }
 
     }
@@ -63,6 +62,14 @@ public class DeviceAnswerParser {
         stateRepository.get(device).setLastMipexResponse(responseModel);
         updateDeviceState(device, state -> state.setLastMipexResponse(responseModel));
     }
+    public void parseDeviceSettings(byte[] deviceInfoRaw, HidDevice device) throws Exception {
+        isInputEmpty(deviceInfoRaw);
+        log.info("Started parsing device settings data");
+        GetAllSettingsModel settings = GetAllSettingsParser.parse(deviceInfoRaw);
+        stateRepository.get(device).setAllSettings(settings);
+        updateDeviceState(device, state -> state.setAllSettings(settings));
+    }
+
     public void parseDeviceInfo(byte[] deviceInfoRaw, HidDevice device) throws Exception {
         isInputEmpty(deviceInfoRaw);
         log.info("Started parsing device info data");
