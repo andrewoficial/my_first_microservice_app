@@ -384,7 +384,19 @@ public class TabInfo extends DeviceTab {
 
     private void setDeviceMode() {
         String selectedMode = (String) modeComboBox.getSelectedItem();
-        // TODO: Добавить логику установки режима
+        checkDeviceState(selectedDevice);
+        CommandParameters parameters = new CommandParameters();
+        if(selectedMode != null && selectedMode.equals("stop mode")) {
+            parameters.setIntArgument(1);
+            SetDevMode setDevMode = new SetDevMode();
+            asyncExecutor.executeCommand(setDevMode, parameters, selectedDevice);
+        } else if (selectedMode != null && selectedMode.equals("transport mode")) {
+            parameters.setIntArgument(2);
+            SetDevMode setDevMode = new SetDevMode();
+            asyncExecutor.executeCommand(setDevMode, parameters, selectedDevice);
+        }else{
+            throw new IllegalStateException("Unknown mode");
+        }
     }
 
     private void resetBattery() {

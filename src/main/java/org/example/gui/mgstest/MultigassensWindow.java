@@ -5,17 +5,13 @@ import com.intellij.uiDesigner.core.GridLayoutManager;
 import org.apache.log4j.Logger;
 import org.example.gui.Rendeble;
 import org.example.gui.components.SimpleTabbedPane;
+import org.example.gui.mgstest.gui.tabs.*;
 import org.example.gui.mgstest.service.MgsExecutionListener;
 import org.example.gui.mgstest.repository.DeviceState;
 import org.example.gui.mgstest.repository.DeviceStateRepository;
 import org.example.gui.mgstest.service.DeviceAnswerParser;
 import org.example.gui.mgstest.service.DeviceAsyncExecutor;
 import org.example.gui.mgstest.service.DeviceManager;
-import org.example.gui.mgstest.gui.tabs.TabCoefficients;
-import org.example.gui.mgstest.gui.tabs.DeviceTab;
-import org.example.gui.mgstest.gui.tabs.TabInfo;
-import org.example.gui.mgstest.gui.tabs.TabSettings;
-import org.example.gui.mgstest.gui.tabs.UartHistory;
 import org.example.gui.mgstest.transport.CradleController;
 import org.example.gui.mgstest.transport.DeviceCommand;
 
@@ -112,6 +108,10 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
         TabCoefficients coefficientsTab = new TabCoefficients(selectedDevice, asyncExecutor);
         tabs.put("coefficients", coefficientsTab);
         tabbedPane.addTab(coefficientsTab.getTabName(), coefficientsTab.getPanel());
+
+        TabMetrology tabMetrology = new TabMetrology(selectedDevice, asyncExecutor);
+        tabs.put("tabMetrology", tabMetrology);
+        tabbedPane.addTab(tabMetrology.getTabName(), tabMetrology.getPanel());
 
         TabSettings settingsTab = new TabSettings(selectedDevice, asyncExecutor);
         tabs.put("settings", settingsTab);
@@ -256,6 +256,7 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
             TabInfo infoTab = (TabInfo) tabs.get("info");
             TabCoefficients coefficientsTab = (TabCoefficients) tabs.get("coefficients");
             UartHistory uartHistory = (UartHistory) tabs.get("uartHistory");
+            TabMetrology tabMetrology = (TabMetrology) tabs.get("tabMetrology");
             TabSettings tabSettings = (TabSettings) tabs.get("settings");
             updateDeviceInfo(selectedDevice);
 
@@ -264,6 +265,7 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
             infoTab.setSelectedDevice(selectedDevice);
             coefficientsTab.setSelectedDevice(selectedDevice);
             uartHistory.setSelectedDevice(selectedDevice);
+            tabMetrology.setSelectedDevice(selectedDevice);
             tabSettings.setSelectedDevice(selectedDevice);
 
             if (stateRepository.contains(selectedDevice)) {
@@ -271,11 +273,13 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
                 infoTab.updateData(state);
                 coefficientsTab.updateData(state);
                 uartHistory.updateData(state);
+                tabMetrology.updateData(state);
                 tabSettings.updateData(state);
             } else {
                 infoTab.updateData(null);
                 coefficientsTab.updateData(null);
-                coefficientsTab.updateData(null);
+                uartHistory.updateData(null);
+                tabMetrology.updateData(null);
                 tabSettings.updateData(null);
             }
     }

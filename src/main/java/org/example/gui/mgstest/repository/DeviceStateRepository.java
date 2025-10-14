@@ -17,6 +17,9 @@ public class DeviceStateRepository implements DeviceRepository {
 
     @Override
     public DeviceState get(HidDevice deviceId) {
+        if(!storage.containsKey(deviceId)) {
+            storage.put(deviceId, new DeviceState());
+        }
         return storage.get(deviceId);
     }
 

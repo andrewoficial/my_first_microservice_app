@@ -11,5 +11,7 @@ public class CommandParameters {
     Long longArgument;
     int intArgument;
     float [] coefficients;
+    int [] intArguments;
+    short [] shortArguments;
     StringEndianList endian;
 }

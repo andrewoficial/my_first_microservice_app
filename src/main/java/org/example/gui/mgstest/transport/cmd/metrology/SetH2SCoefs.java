@@ -1,7 +1,8 @@
-package org.example.gui.mgstest.transport.cmd;
+package org.example.gui.mgstest.transport.cmd.metrology;
 
 import org.example.gui.mgstest.service.MgsExecutionListener;
 import org.example.gui.mgstest.transport.*;
+import org.example.gui.mgstest.transport.cmd.CommandModel;
 import org.example.services.comPort.StringEndianList;
 import org.hid4java.HidDevice;
 
@@ -9,8 +10,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 
-public class SetCOCoefs implements CommandModel, DeviceCommand {
-    private byte commandNumber = 0x07;
+public class SetH2SCoefs implements CommandModel, DeviceCommand {
+    private byte commandNumber = 0x08;
     private ArrayList<Byte> arguments = new ArrayList<>();
 
     @Override
@@ -30,6 +31,7 @@ public class SetCOCoefs implements CommandModel, DeviceCommand {
     @Override
     public byte[] getAnswerOffsets() {
         return new byte[]{0x00};
+
     }
 
     @Override

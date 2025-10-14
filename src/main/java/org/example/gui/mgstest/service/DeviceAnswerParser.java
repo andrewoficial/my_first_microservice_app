@@ -3,13 +3,9 @@ package org.example.gui.mgstest.service;
 
 import org.apache.log4j.Logger;
 import org.example.gui.mgstest.model.answer.*;
-import org.example.gui.mgstest.parser.answer.AdvancedResponseParser;
-import org.example.gui.mgstest.parser.answer.GetAllCoefficientsParser;
-import org.example.gui.mgstest.parser.answer.GetAllSettingsParser;
-import org.example.gui.mgstest.parser.answer.GetDeviceInfoParser;
+import org.example.gui.mgstest.parser.answer.*;
 import org.example.gui.mgstest.repository.DeviceState;
 import org.example.gui.mgstest.repository.DeviceStateRepository;
-import org.example.gui.mgstest.transport.CommandParameters;
 import org.example.gui.mgstest.transport.CradleController;
 import org.example.gui.mgstest.transport.HidCommandName;
 import org.hid4java.HidDevice;
@@ -44,6 +40,10 @@ public class DeviceAnswerParser {
             updateDeviceState(device, state -> state.setDeviceInfo(stateRepository.get(device).getDeviceInfo()));
         }else if(HidCommandName.GET_SETTINGS == commandName){
             parseDeviceSettings(data, device);
+        }else if(HidCommandName.GET_V_RANGE == commandName){
+            parseVRange(data, device);
+        }else if(HidCommandName.GET_ALARMS == commandName){
+            parseAlarms(data, device);
         }
 
     }
@@ -68,6 +68,25 @@ public class DeviceAnswerParser {
         GetAllSettingsModel settings = GetAllSettingsParser.parse(deviceInfoRaw);
         stateRepository.get(device).setAllSettings(settings);
         updateDeviceState(device, state -> state.setAllSettings(settings));
+    }
+    public void parseVRange(byte[] deviceInfoRaw, HidDevice device) throws Exception {
+        isInputEmpty(deviceInfoRaw);
+        log.info("Started parsing vRange");
+        GetVRangeModel vRangeModel = GetVRangeParser.parse(deviceInfoRaw);
+        if(vRangeModel == null){
+            log.error("vRange is null after parsing");
+        }
+        stateRepository.get(device).setVRangeModel(vRangeModel);
+        updateDeviceState(device, state -> state.setVRangeModel(vRangeModel));
+    }
+
+    public void parseAlarms(byte[] deviceInfoRaw, HidDevice device) throws Exception {
+        isInputEmpty(deviceInfoRaw);
+        log.info("Started parsing alarms");
+        GetAlarmsModel vRangeModel = GetAlarmsParser.parse(deviceInfoRaw);
+
+        stateRepository.get(device).setAlarmsModel(vRangeModel);
+        updateDeviceState(device, state -> state.setAlarmsModel(vRangeModel));
     }
 
     public void parseDeviceInfo(byte[] deviceInfoRaw, HidDevice device) throws Exception {
@@ -111,11 +130,10 @@ public class DeviceAnswerParser {
         return Long.parseLong(input);
     }
 
-    private boolean isInputEmpty(byte[] data) throws Exception {
+    private void isInputEmpty(byte[] data) throws Exception {
         if (data == null) {
             throw new Exception("Failed to get device info - null response");
         }
-        return false;
     }
     @FunctionalInterface
     private interface StateUpdater {

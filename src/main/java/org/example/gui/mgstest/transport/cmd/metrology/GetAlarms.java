@@ -1,7 +1,8 @@
-package org.example.gui.mgstest.transport.cmd;
+package org.example.gui.mgstest.transport.cmd.metrology;
 
 import org.example.gui.mgstest.service.MgsExecutionListener;
 import org.example.gui.mgstest.transport.*;
+import org.example.gui.mgstest.transport.cmd.CommandModel;
 import org.example.services.comPort.StringEndianList;
 import org.hid4java.HidDevice;
 
@@ -9,8 +10,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 
-public class SetO2Polys implements CommandModel, DeviceCommand {
-    private byte commandNumber = 0x06;
+public class GetAlarms implements CommandModel, DeviceCommand {
+    private final byte commandNumber = 0x10;
     private ArrayList<Byte> arguments = new ArrayList<>();
 
     @Override
@@ -29,7 +30,7 @@ public class SetO2Polys implements CommandModel, DeviceCommand {
 
     @Override
     public byte[] getAnswerOffsets() {
-        return new byte[]{0x00, 0x08, 0x10, 0x18, 0x20};
+        return new byte[]{0x00, 0x08, 0x10, 0x18};
     }
 
     @Override
@@ -62,6 +63,29 @@ public class SetO2Polys implements CommandModel, DeviceCommand {
         }
     }
 
+    public void addArgument(String text, StringEndianList endian ) {
+
+    }
+
+    @Override
+    public void execute(HidDevice device, CommandParameters parameters, MgsExecutionListener progress) throws Exception {
+        this.addArgument((byte) 0);
+        PayLoadSender sender  = new PayLoadSender();
+        byte [] answer = sender.writeDataHid(device, PayloadBuilder.build(this), progress, getDescription(), this);
+        progress.onExecutionFinished(device, 100, answer, this.getName());
+
+    }
+
+    @Override
+    public String getDescription() {
+        return "getAlarms";
+    }
+
+    @Override
+    public HidCommandName getName() {
+        return HidCommandName.GET_ALARMS;
+    }
+
     @Override
     public void addArgument(long arg) {
         ByteBuffer bb = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(arg);
@@ -69,28 +93,5 @@ public class SetO2Polys implements CommandModel, DeviceCommand {
         for (byte b : bytes) {
             arguments.add(b);
         }
-    }
-
-    public void addArgument(String text, StringEndianList endian ) {
-
-    }
-
-    @Override
-    public void execute(HidDevice device, CommandParameters parameters, MgsExecutionListener progress) throws Exception {
-        for (float coefficient : parameters.getCoefficients()) {
-            this.addArgument(coefficient);
-        }
-        PayLoadSender sender  = new PayLoadSender();
-        sender.writeDataHid(device, PayloadBuilder.build(this), progress, getDescription(), this);
-    }
-
-    @Override
-    public String getDescription() {
-        return "Set E-CHEM coefficients";
-    }
-
-    @Override
-    public HidCommandName getName() {
-        return HidCommandName.SET_ECHEM_COEFF;
     }
 }

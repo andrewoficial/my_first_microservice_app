@@ -8,9 +8,9 @@ import org.example.gui.mgstest.repository.DeviceState;
 import org.example.gui.mgstest.service.DeviceAsyncExecutor;
 import org.example.gui.mgstest.transport.CommandParameters;
 import org.example.gui.mgstest.transport.DeviceCommand;
-import org.example.gui.mgstest.transport.cmd.SetCOCoefs;
-import org.example.gui.mgstest.transport.cmd.SetH2SCoefs;
-import org.example.gui.mgstest.transport.cmd.SetO2Polys;
+import org.example.gui.mgstest.transport.cmd.metrology.SetCOCoefs;
+import org.example.gui.mgstest.transport.cmd.metrology.SetH2SCoefs;
+import org.example.gui.mgstest.transport.cmd.metrology.SetO2Polys;
 import org.example.gui.mgstest.transport.cmd.GetAllCoefficients;
 import org.hid4java.HidDevice;
 
@@ -52,7 +52,7 @@ public class TabCoefficients extends DeviceTab {
     private DecimalFormat decimalFormat = new DecimalFormat();
 
     // Количество столбцов для коэффициентов
-    private final int COLUMNS_COUNT = 3;
+    private final int COLUMNS_COUNT = 4;
 
     enum CHANNELS {
         O2, CO, H2S, CH4_PRESSURE, ACCELERATION, PPM_MG_KOEFS, V_RANGE;
@@ -296,8 +296,6 @@ public class TabCoefficients extends DeviceTab {
         log.info("Обновляю данные для коэффициентов...");
         if(state == null){
             log.warn("null объект state");
-        }else if(state.getAllCoefficients() == null){
-            log.warn("null объект getAllCoefficients внутри state");
         }
 
         if (state != null && state.getAllCoefficients() != null) {
@@ -338,7 +336,6 @@ public class TabCoefficients extends DeviceTab {
                 vRangeFields[i].setText(decimalFormat.format(coef.getVRange()[i]));
             }
         } else {
-            // Очищаем все поля, если данных нет
             log.warn("Передано пустое состояние");
             clearAllFields();
         }

@@ -8,6 +8,8 @@ public enum  HidCommandName {
     GET_COEFF("getAllCoefficients"),
     GET_SETTINGS("getAllSettings"),
     GET_DEV_INFO("getDeviceInfo"),
+    GET_ALARMS("getAlarms"),
+    GET_V_RANGE("getVRange"),
     SENT_URT("sendUartCommand"),
     SENT_EXTERNAL_URT("sendExternalUartCommand"),
     SENT_SPI("sendSpiCommand"),
@@ -16,6 +18,8 @@ public enum  HidCommandName {
     SET_VIBRATION_STATE("setVibrationState"),
     SET_SERIAL_NUMBER("setSerialNumber"),
     SET_DEVICE_TIME("setDeviceTime"),
+    SET_V_RANGE("setVRange"),
+    SET_ALARMS("setAlarms"),
     SET_ECHEM_COEFF("setEChemCoefficients");
 
     private final String name;

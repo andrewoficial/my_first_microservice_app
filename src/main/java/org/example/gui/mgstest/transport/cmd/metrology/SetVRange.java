@@ -1,7 +1,8 @@
-package org.example.gui.mgstest.transport.cmd;
+package org.example.gui.mgstest.transport.cmd.metrology;
 
 import org.example.gui.mgstest.service.MgsExecutionListener;
 import org.example.gui.mgstest.transport.*;
+import org.example.gui.mgstest.transport.cmd.CommandModel;
 import org.example.services.comPort.StringEndianList;
 import org.hid4java.HidDevice;
 
@@ -9,8 +10,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 
-public class SetH2SCoefs implements CommandModel, DeviceCommand {
-    private byte commandNumber = 0x08;
+public class SetVRange implements CommandModel, DeviceCommand {
+    private byte commandNumber = 0x31;
     private ArrayList<Byte> arguments = new ArrayList<>();
 
     @Override
@@ -30,7 +31,6 @@ public class SetH2SCoefs implements CommandModel, DeviceCommand {
     @Override
     public byte[] getAnswerOffsets() {
         return new byte[]{0x00};
-
     }
 
     @Override
@@ -41,6 +41,14 @@ public class SetH2SCoefs implements CommandModel, DeviceCommand {
     @Override
     public void addArgument(int arg) {
         ByteBuffer bb = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putInt(arg);
+        byte[] bytes = bb.array();
+        for (byte b : bytes) {
+            arguments.add(b);
+        }
+    }
+
+    public void addArgument(short arg) {
+        ByteBuffer bb = ByteBuffer.allocate(2).order(ByteOrder.LITTLE_ENDIAN).putShort(arg);
         byte[] bytes = bb.array();
         for (byte b : bytes) {
             arguments.add(b);
@@ -78,8 +86,8 @@ public class SetH2SCoefs implements CommandModel, DeviceCommand {
 
     @Override
     public void execute(HidDevice device, CommandParameters parameters, MgsExecutionListener progress) throws Exception {
-        for (float coefficient : parameters.getCoefficients()) {
-            this.addArgument(coefficient);
+        for (int coefficient : parameters.getIntArguments()) {
+            this.addArgument((short)coefficient);
         }
         PayLoadSender sender  = new PayLoadSender();
         sender.writeDataHid(device, PayloadBuilder.build(this), progress, getDescription(), this);
@@ -87,11 +95,11 @@ public class SetH2SCoefs implements CommandModel, DeviceCommand {
 
     @Override
     public String getDescription() {
-        return "Set E-CHEM coefficients";
+        return "setVRange";
     }
 
     @Override
     public HidCommandName getName() {
-        return HidCommandName.SET_ECHEM_COEFF;
+        return HidCommandName.SET_V_RANGE;
     }
 }
