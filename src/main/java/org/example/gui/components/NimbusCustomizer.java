@@ -93,7 +93,18 @@ public class NimbusCustomizer {
         defaults.put("FormattedTextField.selectionForeground", Color.WHITE); // Цвет текста при выделении
         defaults.put("FormattedTextField.inactiveForeground", new Color(191, 191, 191)); // Цвет неактивного текста
         defaults.put("FormattedTextField.border", BorderFactory.createEmptyBorder(5, 5, 5, 5)); // Отступы
-
+        // Настройки для FormattedTextField
+        UIManager.put("Spinner[Enabled].backgroundPainter", null);
+        UIManager.put("FormattedTextField[Enabled].backgroundPainter", null);
+        UIManager.put("Spinner:FormattedTextField[Enabled].background", NimbusCustomizer.defBackground);
+        UIManager.put("Spinner:FormattedTextField[Enabled].opaque", true);
+//        defaults.put("FormattedTextField.background", defBackground); // Темный фон
+//        defaults.put("FormattedTextField.foreground", Color.WHITE); // Белый текст
+//        defaults.put("FormattedTextField.caretForeground", Color.WHITE); // Цвет курсора
+//        defaults.put("FormattedTextField.selectionBackground", accent); // Цвет выделения текста
+//        defaults.put("FormattedTextField.selectionForeground", Color.WHITE); // Цвет текста при выделении
+//        defaults.put("FormattedTextField.inactiveForeground", new Color(191, 191, 191)); // Цвет неактивного текста
+//        defaults.put("FormattedTextField.border", BorderFactory.createEmptyBorder(5, 5, 5, 5)); // Отступы
 
 
 
@@ -104,9 +115,9 @@ public class NimbusCustomizer {
         defaults.put("TextPane[Disabled].foregroundPainter", null);
 
         // Для полного контроля можно также настроить связанные компоненты
-        defaults.put("EditorPane.background", new Color(0x2D, 0x2D, 0x2D));
+        defaults.put("EditorPane.background", defBackground);
         defaults.put("EditorPane.foreground", Color.WHITE);
-        defaults.put("TextComponent.background", new Color(0x2D, 0x2D, 0x2D));
+        defaults.put("TextComponent.background", defBackground);
         defaults.put("TextComponent.foreground", Color.WHITE);
 
         // Настройки ComboBox

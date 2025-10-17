@@ -2,14 +2,19 @@ package org.example.gui.mgstest.gui.tabs;
 
 import lombok.Setter;
 import org.apache.log4j.Logger;
+import org.example.gui.mgstest.model.HidSupportedDevice;
 import org.example.gui.mgstest.model.answer.GetDeviceInfoModel;
-import org.example.gui.mgstest.repository.DeviceState;
+import org.example.gui.mgstest.model.DeviceState;
 import org.example.gui.mgstest.service.DeviceAsyncExecutor;
 import org.example.gui.mgstest.transport.CommandParameters;
 import org.example.gui.mgstest.transport.DeviceCommand;
-import org.example.gui.mgstest.transport.cmd.*;
+import org.example.gui.mgstest.transport.cmd.mgs.*;
+import org.example.gui.mgstest.transport.cmd.mgs.settings.DoBatteryCounterReset;
+import org.example.gui.mgstest.transport.cmd.mgs.settings.SetSerialNumber;
+import org.example.gui.mgstest.transport.cmd.mkrs.GetInfo;
 import org.example.gui.mgstest.util.CrcValidator;
-import org.hid4java.HidDevice;
+import org.example.gui.utilites.GuiUtilities;
+import org.example.utilites.Constants;
 
 import javax.swing.*;
 import java.awt.*;
@@ -21,7 +26,7 @@ public class TabInfo extends DeviceTab {
     private Logger log = Logger.getLogger(TabInfo.class);
 
     @Setter
-    private HidDevice selectedDevice;
+    private HidSupportedDevice selectedDevice;
 
     private final DeviceAsyncExecutor asyncExecutor;
 
@@ -41,7 +46,7 @@ public class TabInfo extends DeviceTab {
     private JSpinner dateSpinner;
     private JSpinner timeSpinner;
 
-    public TabInfo(HidDevice selectedDevice, DeviceAsyncExecutor asyncExecutor) {
+    public TabInfo(HidSupportedDevice selectedDevice, DeviceAsyncExecutor asyncExecutor) {
         super("Информация");
         this.selectedDevice = selectedDevice;
         this.asyncExecutor = asyncExecutor;
@@ -103,6 +108,7 @@ public class TabInfo extends DeviceTab {
         datetimePanel.add(new JLabel("Дата:"));
         dateSpinner = new JSpinner(new SpinnerDateModel());
         JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(dateSpinner, "dd.MM.yyyy");
+        GuiUtilities.changeFont(dateEditor.getTextField());
         dateSpinner.setEditor(dateEditor);
         dateSpinner.setValue(new Date()); // текущая дата по умолчанию
         datetimePanel.add(dateSpinner);
@@ -111,7 +117,10 @@ public class TabInfo extends DeviceTab {
         datetimePanel.add(new JLabel("Время:"));
         timeSpinner = new JSpinner(new SpinnerDateModel());
         JSpinner.DateEditor timeEditor = new JSpinner.DateEditor(timeSpinner, "HH:mm:ss");
+        GuiUtilities.changeFont(timeEditor.getTextField());
+
         timeSpinner.setEditor(timeEditor);
+
         timeSpinner.setValue(new Date()); // текущее время по умолчанию
         datetimePanel.add(timeSpinner);
 
@@ -225,7 +234,7 @@ public class TabInfo extends DeviceTab {
                                   String labelText, JTextField field,
                                   int row, boolean editable) {
         field.setEditable(editable);
-        field.setBackground(editable ? Color.WHITE : Color.LIGHT_GRAY);
+        field.setBackground(editable ? Color.LIGHT_GRAY : Color.GRAY);
 
         gbc.gridx = 0;
         gbc.gridy = row;
@@ -372,8 +381,16 @@ public class TabInfo extends DeviceTab {
 
     private void refreshInfo() {
         checkDeviceState(selectedDevice);
-        DeviceCommand command = new GetDeviceInformation();
-        asyncExecutor.executeCommand(command, null, selectedDevice);
+        if(selectedDevice.getDeviceType() == Constants.SupportedHidDeviceType.MIKROSENSE) {
+            DeviceCommand command = new GetInfo();
+            asyncExecutor.executeCommand(command, null, selectedDevice);
+        }else if(selectedDevice.getDeviceType() == Constants.SupportedHidDeviceType.MULTIGASSENSE) {
+            DeviceCommand command = new GetDeviceInformation();
+            asyncExecutor.executeCommand(command, null, selectedDevice);
+        }else{
+            throw new IllegalStateException("Unknown device type");
+        }
+
     }
 
     private void rebootDevice() {
@@ -405,7 +422,7 @@ public class TabInfo extends DeviceTab {
         asyncExecutor.executeCommand(command, null, selectedDevice);
     }
 
-    private void checkDeviceState(HidDevice device) {
+    private void checkDeviceState(HidSupportedDevice device) {
         if (device == null) {
             log.warn("device == null");
             throw new IllegalStateException("device == null");

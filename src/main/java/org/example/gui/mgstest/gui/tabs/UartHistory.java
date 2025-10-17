@@ -2,20 +2,20 @@ package org.example.gui.mgstest.gui.tabs;
 
 import lombok.Setter;
 import org.apache.log4j.Logger;
+import org.example.gui.mgstest.model.HidSupportedDevice;
 import org.example.gui.mgstest.model.answer.MipexResponseModel;
-import org.example.gui.mgstest.repository.DeviceState;
+import org.example.gui.mgstest.model.DeviceState;
 import org.example.gui.mgstest.repository.DeviceStateRepository;
 import org.example.gui.mgstest.service.DeviceAsyncExecutor;
 import org.example.gui.mgstest.transport.CommandParameters;
 import org.example.gui.mgstest.transport.CradleController;
 import org.example.gui.mgstest.transport.DeviceCommand;
+import org.example.gui.mgstest.transport.cmd.mkrs.transfer.SendCommandMkrs;
 import org.example.services.comPort.StringEndianList;
-import org.example.gui.mgstest.transport.cmd.SendExternalUartCommand;
-import org.example.gui.mgstest.transport.cmd.SendSpiCommand;
-import org.example.gui.mgstest.transport.cmd.SendUartCommand;
-import org.example.gui.mgstest.transport.commands.*;
-import org.example.services.comPort.StringEndianList;
-import org.hid4java.HidDevice;
+import org.example.gui.mgstest.transport.cmd.mgs.transfer.SendExternalUartCommand;
+import org.example.gui.mgstest.transport.cmd.mgs.transfer.SendSpiCommand;
+import org.example.gui.mgstest.transport.cmd.mgs.transfer.SendUartCommand;
+import org.example.utilites.Constants;
 
 import javax.swing.*;
 import java.awt.*;
@@ -27,7 +27,7 @@ public class UartHistory extends DeviceTab {
     @Setter
     private CradleController cradleController;
     @Setter
-    private HidDevice selectedDevice;
+    private HidSupportedDevice selectedDevice;
     @Setter
     private DeviceState deviceState;
     private DeviceStateRepository stateRepository;
@@ -50,7 +50,7 @@ public class UartHistory extends DeviceTab {
         EXTERNAL_UART
     }
 
-    public UartHistory(CradleController cradleController, HidDevice selectedDevice, DeviceState deviceState,
+    public UartHistory(CradleController cradleController, HidSupportedDevice selectedDevice, DeviceState deviceState,
                        DeviceStateRepository stateRepository, DeviceAsyncExecutor asyncExecutor) {
         super("UART History");
         this.cradleController = cradleController;
@@ -122,16 +122,34 @@ public class UartHistory extends DeviceTab {
         org.example.services.comPort.StringEndianList ending = (org.example.services.comPort.StringEndianList) lineEndingComboBox.getSelectedItem();
         TransportDirection direction = (TransportDirection) directionComboBox.getSelectedItem();
 
-        // Создаем соответствующую команду в зависимости от направления
-        CommandParameters param = new CommandParameters();
-        param.setStringArgument(command);
-        param.setEndian(ending);
-        DeviceCommand sender = createCommandForDirection(direction);
+        if(selectedDevice.getDeviceType() == Constants.SupportedHidDeviceType.MULTIGASSENSE) {
+            // Создаем соответствующую команду в зависимости от направления
+            CommandParameters param = new CommandParameters();
+            param.setStringArgument(command);
+            param.setEndian(ending);
+            DeviceCommand sender = createCommandForDirection(direction);
 
-        // Выполняем команду
-        asyncExecutor.executeCommand(sender, param, selectedDevice);
+            // Выполняем команду
+            asyncExecutor.executeCommand(sender, param, selectedDevice);
+        }else if(selectedDevice.getDeviceType() == Constants.SupportedHidDeviceType.MIKROSENSE) {
+            CommandParameters param = new CommandParameters();
+            param.setStringArgument(command);
+            param.setEndian(ending);
+            if(direction == TransportDirection.UART){
+                param.setIntArgument(0x01);
+            }else if(direction == TransportDirection.EXTERNAL_UART){
+                param.setIntArgument(0x02);
+            }else if(direction == TransportDirection.SPI){
+                JOptionPane.showMessageDialog(null, "Не доступно для данного устройства");
+                return;
+            }
+            DeviceCommand sender = new SendCommandMkrs();
 
-        commandField.setText("");
+            // Выполняем команду
+            asyncExecutor.executeCommand(sender, param, selectedDevice);
+        }
+
+
     }
 
     private DeviceCommand createCommandForDirection(TransportDirection direction) {

@@ -1,10 +1,10 @@
 package org.example.gui.mgstest.gui.tabs;
 
-import org.example.gui.mgstest.repository.DeviceState;
+import org.example.gui.mgstest.model.DeviceState;
 
 import javax.swing.*;
 
-public abstract class DeviceTab {
+public abstract class DeviceTab implements DeviceSettable {
     protected JPanel panel;
     protected String tabName;
     

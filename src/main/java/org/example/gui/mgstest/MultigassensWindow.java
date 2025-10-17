@@ -6,30 +6,30 @@ import org.apache.log4j.Logger;
 import org.example.gui.Rendeble;
 import org.example.gui.components.SimpleTabbedPane;
 import org.example.gui.mgstest.gui.tabs.*;
+import org.example.gui.mgstest.model.HidSupportedDevice;
 import org.example.gui.mgstest.service.MgsExecutionListener;
-import org.example.gui.mgstest.repository.DeviceState;
+import org.example.gui.mgstest.model.DeviceState;
 import org.example.gui.mgstest.repository.DeviceStateRepository;
 import org.example.gui.mgstest.service.DeviceAnswerParser;
 import org.example.gui.mgstest.service.DeviceAsyncExecutor;
-import org.example.gui.mgstest.service.DeviceManager;
+import org.example.gui.mgstest.repository.DeviceRepository;
 import org.example.gui.mgstest.transport.CradleController;
 import org.example.gui.mgstest.transport.DeviceCommand;
 
-import org.example.gui.mgstest.transport.cmd.GetAllCoefficients;
+import org.example.gui.mgstest.transport.cmd.mgs.GetAllCoefficients;
 import org.example.gui.mgstest.transport.HidCommandName;
-
-import org.hid4java.HidDevice;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 public class MultigassensWindow extends JFrame implements Rendeble, MgsExecutionListener {
-    private Logger log = Logger.getLogger(MultigassensWindow.class);
+    private final Logger log = Logger.getLogger(MultigassensWindow.class);
 
-    private JList<String> cradleList;
-    private DefaultListModel<String> listModel;
+    private JList<HidSupportedDevice> deviceList;
+    private DefaultListModel<HidSupportedDevice> listModel = new DefaultListModel<>();
     private JPanel contentPane;
 
     private JButton getCoefficientsButton;
@@ -37,29 +37,30 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
     private JButton setCoefficientsButtonCo;
 
 
-    private HidDevice selectedDevice;
+    private HidSupportedDevice selectedDevice;
     CradleController cradleController = new CradleController();
-    private DeviceManager deviceManager = new DeviceManager();
-    private DeviceStateRepository stateRepository = new DeviceStateRepository();
-    private DeviceAnswerParser deviceAnswerParser;
+    private final DeviceRepository deviceRepository;
+    private final DeviceStateRepository stateRepository = new DeviceStateRepository();
+    private final DeviceAnswerParser deviceAnswerParser;
     private JTabbedPane tabbedPane;
     private final Map<String, DeviceTab> tabs = new HashMap<>();
     private JPanel progressPanel;
     private JProgressBar progressBar;
     private JLabel statusLabel;
-    private DeviceAsyncExecutor asyncExecutor;
+    private final DeviceAsyncExecutor asyncExecutor;
     public MultigassensWindow() {
         setTitle("MGS Test");
         this.deviceAnswerParser = new DeviceAnswerParser(cradleController, stateRepository);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(800, 600);
-        Dimension maxSize = new Dimension(1000, 700);
+        setSize(1100, 850);
+        Dimension maxSize = new Dimension(1100, 850);
         setMaximumSize(maxSize);
         this.asyncExecutor = new DeviceAsyncExecutor(stateRepository);
         this.asyncExecutor.addListener(this);
         contentPane = new JPanel();
+        contentPane.setPreferredSize(new Dimension(1100, 850));
         setContentPane(contentPane);
-
+        deviceRepository = new DeviceRepository(stateRepository);
         initComponents();
 
 
@@ -79,7 +80,22 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
 
     @Override
     public void renderData() {
-        updateDeviceList();
+        log.info("Обновляю список приборов");
+        deviceRepository.updateDeviceList();
+        //listModel.removeAllElements();//Потеря ссылок, а та та
+        HashSet<HidSupportedDevice> list = deviceRepository.getDeviceList();
+        for (HidSupportedDevice supportedDevice : list) {
+            if(listModel.contains(supportedDevice)){
+                //listModel.addElement(supportedDevice);
+                //log.info("Вот тут с новым именем " + supportedDevice.getHidDevice().getSerialNumber());
+            }else{
+                listModel.addElement(supportedDevice);
+                //log.info("Не содержится " + supportedDevice.getHidDevice().getSerialNumber());
+            }
+        }
+
+        revalidate();
+        repaint();
     }
 
     @Override
@@ -95,7 +111,7 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
         initDeviceList();
         initButtons();
         initProgressPanel();
-        updateDeviceList();
+        renderData();
     }
 
     private void initTabs() {
@@ -128,30 +144,22 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
         JPanel leftPanel = new JPanel(new BorderLayout());
         leftPanel.setPreferredSize(new Dimension(200, 400));
 
-        listModel = new DefaultListModel<>();
-        cradleList = new JList<>(listModel);
-        cradleList.addListSelectionListener(e -> onDeviceSelected());
+
+        deviceList = new JList<>(listModel);
+        deviceList.addListSelectionListener(e -> onDeviceSelected());
 
         leftPanel.add(new JLabel("Cradles:"), BorderLayout.NORTH);
-        leftPanel.add(new JScrollPane(cradleList), BorderLayout.CENTER);
+        leftPanel.add(new JScrollPane(deviceList), BorderLayout.CENTER);
         contentPane.add(leftPanel, BorderLayout.WEST);
     }
 
     private void onDeviceSelected() {
-
-        String selectedDisplayName = cradleList.getSelectedValue();
-        int selectedNumber = cradleList.getSelectedIndex();
-        // Обновляем вкладки с новым устройством
-        log.info("Меняю устройство для отображения:" + selectedNumber);
-
-        if (selectedDisplayName != null) {
-            log.info("Выбрано " + selectedDisplayName);
-            tabbedPane.setVisible(true);
-            selectedDevice = deviceManager.getDeviceByDisplayName(selectedDisplayName);
-            if (selectedDevice != null) {
-                refreshGui();
-            }
+        log.info("Set selected device deviceList " + deviceList.getSelectedValue());
+        if(deviceList.getSelectedValue() == null ){
+            log.warn("Выбрано NULL!!");
         }
+        selectedDevice = deviceList.getSelectedValue();
+        refreshGui();
     }
 
     private void initButtons() {
@@ -216,7 +224,7 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
 
 
 
-    private boolean isDevNull(HidDevice dev){
+    private boolean isDevNull(HidSupportedDevice dev){
         if (selectedDevice == null) {
             JOptionPane.showMessageDialog(this, "No device selected");
             return true;
@@ -224,7 +232,7 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
         return false;
     }
 
-    private boolean isDevBusy(HidDevice device){
+    private boolean isDevBusy(HidSupportedDevice device){
         if(asyncExecutor.isDeviceBusy(device)){
             JOptionPane.showMessageDialog(this, "Busy");
             return true;
@@ -232,76 +240,62 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
         return false;
     }
 
-    private void checkStateRepo(HidDevice device){
+    private void checkStateRepo(HidSupportedDevice device){
         if(!stateRepository.contains(device)){
             stateRepository.put(device, new DeviceState());
         }
     }
 
-    private void updateDeviceList() {
-        listModel.clear();
-        deviceManager.updateDeviceList();
 
-        Map<String, HidDevice> deviceMap = deviceManager.getDeviceMap();
-        for (Map.Entry<String, HidDevice> stringHidDeviceEntry : deviceMap.entrySet()) {
-            if(stateRepository.contains(stringHidDeviceEntry.getValue()) && stateRepository.get(stringHidDeviceEntry.getValue()).getShowedName() != null ){
-                listModel.addElement(stateRepository.get(stringHidDeviceEntry.getValue()).getShowedName());
-            }
-            listModel.addElement(stringHidDeviceEntry.getKey());
-        }
-    }
 
     private void refreshGui(){
-            updateDeviceList();
-            TabInfo infoTab = (TabInfo) tabs.get("info");
-            TabCoefficients coefficientsTab = (TabCoefficients) tabs.get("coefficients");
-            UartHistory uartHistory = (UartHistory) tabs.get("uartHistory");
-            TabMetrology tabMetrology = (TabMetrology) tabs.get("tabMetrology");
-            TabSettings tabSettings = (TabSettings) tabs.get("settings");
-            updateDeviceInfo(selectedDevice);
-
-            //uartHistory.setCradleController(cradleController);
-
-            infoTab.setSelectedDevice(selectedDevice);
-            coefficientsTab.setSelectedDevice(selectedDevice);
-            uartHistory.setSelectedDevice(selectedDevice);
-            tabMetrology.setSelectedDevice(selectedDevice);
-            tabSettings.setSelectedDevice(selectedDevice);
+            for (DeviceTab value : tabs.values()) {
+                value.setSelectedDevice(selectedDevice);
+            }
 
             if (stateRepository.contains(selectedDevice)) {
                 DeviceState state = stateRepository.get(selectedDevice);
-                infoTab.updateData(state);
-                coefficientsTab.updateData(state);
-                uartHistory.updateData(state);
-                tabMetrology.updateData(state);
-                tabSettings.updateData(state);
+                for (DeviceTab tab : tabs.values()) {
+                    log.info("Updating tab for values " + tab.getTabName());
+                    tab.updateData(state);
+                }
             } else {
-                infoTab.updateData(null);
-                coefficientsTab.updateData(null);
-                uartHistory.updateData(null);
-                tabMetrology.updateData(null);
-                tabSettings.updateData(null);
+                for (DeviceTab tab : tabs.values()) {
+                    log.info("Updating tab for empty values " + tab.getTabName());
+                    tab.updateData(null);
+                }
             }
     }
-    private void updateDeviceInfo(HidDevice deviceKey) {
-        DeviceState state = stateRepository.get(deviceKey);
-        log.info("Called updateDeviceInfo for key " + deviceKey);
 
-        if (state != null && state.getDeviceInfo() != null) {
-            log.info("Found device with number " + state.getDeviceInfo().getSerialNumber());
-        } else {
-            log.info("Empty data");
-        }
+    private boolean isSelectedDevice(HidSupportedDevice deviceId) {
+        if (selectedDevice == null)
+            return false;
 
-        for (DeviceTab tab : tabs.values()) {
-            log.info("Updating tab " + tab.getTabName());
-            tab.updateData(state);
+        return selectedDevice.equals(deviceId);
+    }
+
+    // Обновление полей State у выбранного Device
+    private void updateUIForSelectedDevice() {
+        if (selectedDevice != null) {
+            DeviceState state = stateRepository.get(selectedDevice);
+
+            if (state != null) {
+                progressBar.setValue(state.getProgressPercent());
+                statusLabel.setText(state.getProgressMessage());
+                progressPanel.setVisible(state.getIsBusy());
+            }
         }
+    }
+
+    @Override
+    public void dispose() {
+        asyncExecutor.shutdown();
+        super.dispose();
     }
 
     // Реализация ExecutionListener
     @Override
-    public void onExecutionFinished(HidDevice device, int progress, byte[] answer, HidCommandName commandName){
+    public void onExecutionFinished(HidSupportedDevice device, int progress, byte[] answer, HidCommandName commandName){
         log.info("Вот тут надо начать парсинг");
         try {
             deviceAnswerParser.parseByName(answer, commandName, device);
@@ -315,45 +309,27 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
     }
 
     @Override
-    public void onExecutionEvent(HidDevice deviceId, String message, boolean isError) {
-        log.info("Вот тут отображать событие, но пока не важно");
+    public void onExecutionEvent(HidSupportedDevice deviceId, String message, boolean isError) {
+        log.info("Событие " + message);
+        renderData();
+        if(isError){
+            log.info(message + " is error " + isError);
+            JOptionPane.showMessageDialog(this, "Ошибка выполнения команды " + message + " ");
+        }
+
     }
 
     @Override
-    public void onProgressUpdate(HidDevice deviceId, int progress, String message) {
-        log.info("Вот тут надо двигать прогрессбар");
+    public void onProgressUpdate(HidSupportedDevice deviceId, int progress, String message) {
+        log.info("Изменение прогресса " + message);
         if(stateRepository.contains(deviceId)){
             stateRepository.get(deviceId).setProgressPercent(progress);
             stateRepository.get(deviceId).setProgressMessage(message);
         }
         if(isSelectedDevice(deviceId)){
             updateUIForSelectedDevice();
+            renderData();
         }
-    }
-
-    private boolean isSelectedDevice(HidDevice deviceId) {
-        if (selectedDevice == null) return false;
-        return selectedDevice.equals(deviceId);
-    }
-
-    // В методе обновления UI при выборе устройства
-    private void updateUIForSelectedDevice() {
-        if (selectedDevice != null) {
-            DeviceState state = stateRepository.get(selectedDevice);
-
-            // Обновляем прогресс-бар и статус
-            if (state != null) {
-                progressBar.setValue(state.getProgressPercent());
-                statusLabel.setText(state.getProgressMessage());
-                progressPanel.setVisible(state.getIsBusy());
-            }
-        }
-    }
-
-    @Override
-    public void dispose() {
-        asyncExecutor.shutdown();
-        super.dispose();
     }
 
     {

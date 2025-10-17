@@ -2,9 +2,12 @@
 package org.example.gui.mgstest.service;
 
 import org.apache.log4j.Logger;
+import org.example.gui.mgstest.model.HidSupportedDevice;
 import org.example.gui.mgstest.model.answer.*;
-import org.example.gui.mgstest.parser.answer.*;
-import org.example.gui.mgstest.repository.DeviceState;
+import org.example.gui.mgstest.model.DeviceState;
+import org.example.gui.mgstest.parser.answer.mgs.*;
+import org.example.gui.mgstest.parser.answer.mkrs.AdvancedResponseParserMKRS;
+import org.example.gui.mgstest.parser.answer.mkrs.GetDeviceInfoParserMkrs;
 import org.example.gui.mgstest.repository.DeviceStateRepository;
 import org.example.gui.mgstest.transport.CradleController;
 import org.example.gui.mgstest.transport.HidCommandName;
@@ -24,7 +27,7 @@ public class DeviceAnswerParser {
     }
 
     //Пишу с нарушением  open/closed из-за нехватки времени
-    public void parseByName(byte[] data, HidCommandName commandName, HidDevice device) throws Exception {
+    public void parseByName(byte[] data, HidCommandName commandName, HidSupportedDevice device) throws Exception {
         if(commandName == null ){
             return;
         }
@@ -44,11 +47,28 @@ public class DeviceAnswerParser {
             parseVRange(data, device);
         }else if(HidCommandName.GET_ALARMS == commandName){
             parseAlarms(data, device);
+        }else if(HidCommandName.GET_GAS_RANGE == commandName){
+            parseGasRange(data, device);
+        }else if(HidCommandName.GET_SENS_STATUS == commandName){
+            parseSensStatus(data, device);
+        }else if(HidCommandName.MKRS_GET_INFO == commandName){
+            parseGetDevInfoMkrs(data, device);
+        }else if(HidCommandName.MKRS_SEND_UART == commandName){
+            parseUartAnswerMKRS(data, device);
         }
 
     }
+    public void parseUartAnswerMKRS(byte[] rawData, HidSupportedDevice device) throws Exception {
+        isInputEmpty(rawData);
 
-    public void parseUartAnswer(byte[] rawData, HidDevice device) throws Exception {
+        AdvancedResponseParserMKRS parser = new AdvancedResponseParserMKRS();
+        String answers = parser.parseMkrsResponse(rawData);
+
+        MipexResponseModel responseModel = new MipexResponseModel(System.currentTimeMillis(), answers);
+        stateRepository.get(device).setLastMipexResponse(responseModel);
+        updateDeviceState(device, state -> state.setLastMipexResponse(responseModel));
+    }
+    public void parseUartAnswer(byte[] rawData, HidSupportedDevice device) throws Exception {
         isInputEmpty(rawData);
         AdvancedResponseParser parser = new AdvancedResponseParser();
         List<String> answers = parser.extractAllTextResponses(rawData);
@@ -62,14 +82,28 @@ public class DeviceAnswerParser {
         stateRepository.get(device).setLastMipexResponse(responseModel);
         updateDeviceState(device, state -> state.setLastMipexResponse(responseModel));
     }
-    public void parseDeviceSettings(byte[] deviceInfoRaw, HidDevice device) throws Exception {
+    public void parseSensStatus(byte[] deviceInfoRaw, HidSupportedDevice device) throws Exception {
+        isInputEmpty(deviceInfoRaw);
+        log.info("Started parsing device sens status");
+        GetSensStatusModel status = GetSensStatusParser.parse(deviceInfoRaw);
+        stateRepository.get(device).setSensStatusModel(status);
+        updateDeviceState(device, state -> state.setSensStatusModel(status));
+    }
+    public void parseGasRange(byte[] deviceInfoRaw, HidSupportedDevice device) throws Exception {
+        isInputEmpty(deviceInfoRaw);
+        log.info("Started parsing device gas range");
+        GetGasRangeModel settings = GetGasRangeParser.parse(deviceInfoRaw);
+        stateRepository.get(device).setGasRangeModel(settings);
+        updateDeviceState(device, state -> state.setGasRangeModel(settings));
+    }
+    public void parseDeviceSettings(byte[] deviceInfoRaw, HidSupportedDevice device) throws Exception {
         isInputEmpty(deviceInfoRaw);
         log.info("Started parsing device settings data");
         GetAllSettingsModel settings = GetAllSettingsParser.parse(deviceInfoRaw);
         stateRepository.get(device).setAllSettings(settings);
         updateDeviceState(device, state -> state.setAllSettings(settings));
     }
-    public void parseVRange(byte[] deviceInfoRaw, HidDevice device) throws Exception {
+    public void parseVRange(byte[] deviceInfoRaw, HidSupportedDevice device) throws Exception {
         isInputEmpty(deviceInfoRaw);
         log.info("Started parsing vRange");
         GetVRangeModel vRangeModel = GetVRangeParser.parse(deviceInfoRaw);
@@ -80,7 +114,7 @@ public class DeviceAnswerParser {
         updateDeviceState(device, state -> state.setVRangeModel(vRangeModel));
     }
 
-    public void parseAlarms(byte[] deviceInfoRaw, HidDevice device) throws Exception {
+    public void parseAlarms(byte[] deviceInfoRaw, HidSupportedDevice device) throws Exception {
         isInputEmpty(deviceInfoRaw);
         log.info("Started parsing alarms");
         GetAlarmsModel vRangeModel = GetAlarmsParser.parse(deviceInfoRaw);
@@ -89,7 +123,7 @@ public class DeviceAnswerParser {
         updateDeviceState(device, state -> state.setAlarmsModel(vRangeModel));
     }
 
-    public void parseDeviceInfo(byte[] deviceInfoRaw, HidDevice device) throws Exception {
+    public void parseDeviceInfo(byte[] deviceInfoRaw, HidSupportedDevice device) throws Exception {
         isInputEmpty(deviceInfoRaw);
         log.info("Started parsing device info data");
         GetDeviceInfoModel info = GetDeviceInfoParser.parse(deviceInfoRaw);
@@ -97,7 +131,15 @@ public class DeviceAnswerParser {
         updateDeviceState(device, state -> state.setDeviceInfo(info));
     }
 
-    public void parseAllCoefficients(byte[] deviceInfoRaw, HidDevice device) throws Exception {
+    public void parseGetDevInfoMkrs(byte[] deviceInfoRaw, HidSupportedDevice device) throws Exception {
+        isInputEmpty(deviceInfoRaw);
+        log.info("Started parsing device info data");
+        GetDeviceInfoModel info = GetDeviceInfoParserMkrs.parse(deviceInfoRaw);
+        stateRepository.get(device).setDeviceInfo(info);
+        updateDeviceState(device, state -> state.setDeviceInfo(info));
+    }
+
+    public void parseAllCoefficients(byte[] deviceInfoRaw, HidSupportedDevice device) throws Exception {
         isInputEmpty(deviceInfoRaw);
         log.info("Started parsing all coefficients data");
         GetAllCoefficientsModel info = GetAllCoefficientsParser.parseAllCoef(deviceInfoRaw);
@@ -105,13 +147,13 @@ public class DeviceAnswerParser {
         updateDeviceState(device, state -> state.setAllCoefficients(info));
     }
 
-    public void setCoefficientsO2(HidDevice device) throws Exception {
+    public void setCoefficientsO2(HidSupportedDevice device) throws Exception {
         log.info("Executing setCoefficientsO2 command");
         cradleController.setCoefficientsO2(device);
         log.info("Successfully set O2 coefficients");
     }
     
-    public void setCoefficientsCO(HidDevice device) throws Exception {
+    public void setCoefficientsCO(HidSupportedDevice device) throws Exception {
         log.info("Executing setCoefficientsCO command");
         cradleController.setCoefficientsCO(device);
         log.info("Successfully set CO coefficients");
@@ -140,14 +182,17 @@ public class DeviceAnswerParser {
         void update(DeviceState state);
     }
 
-    private void updateDeviceState(HidDevice device, StateUpdater updater) {
+    private void updateDeviceState(HidSupportedDevice device, StateUpdater updater) {
         DeviceState state = stateRepository.get(device);
         if (state == null) {
             state = new DeviceState();
             stateRepository.put(device, state);
             updater.update(state);
+            log.info("Try update NULL device state");
         }else{
-            log.warn("Try update null device state");
+            stateRepository.put(device, state);
+            updater.update(state);
+            log.info("Try update not null device state");
         }
 
     }

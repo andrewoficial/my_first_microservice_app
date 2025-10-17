@@ -3,16 +3,18 @@ package org.example.gui.mgstest.gui.tabs;
 import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.gui.mgstest.gui.names.CoefficientNames;
+import org.example.gui.mgstest.gui.names.CoefficientToolTipsText;
+import org.example.gui.mgstest.model.HidSupportedDevice;
 import org.example.gui.mgstest.model.answer.GetAllCoefficientsModel;
-import org.example.gui.mgstest.repository.DeviceState;
+import org.example.gui.mgstest.model.DeviceState;
 import org.example.gui.mgstest.service.DeviceAsyncExecutor;
 import org.example.gui.mgstest.transport.CommandParameters;
 import org.example.gui.mgstest.transport.DeviceCommand;
-import org.example.gui.mgstest.transport.cmd.metrology.SetCOCoefs;
-import org.example.gui.mgstest.transport.cmd.metrology.SetH2SCoefs;
-import org.example.gui.mgstest.transport.cmd.metrology.SetO2Polys;
-import org.example.gui.mgstest.transport.cmd.GetAllCoefficients;
-import org.hid4java.HidDevice;
+import org.example.gui.mgstest.transport.cmd.mgs.metrology.SetCOCoefs;
+import org.example.gui.mgstest.transport.cmd.mgs.metrology.SetH2SCoefs;
+import org.example.gui.mgstest.transport.cmd.mgs.metrology.SetO2Polys;
+import org.example.gui.mgstest.transport.cmd.mgs.GetAllCoefficients;
+import org.example.gui.mgstest.transport.cmd.mgs.metrology.SetSensorsAccel;
 
 import javax.swing.*;
 import java.awt.*;
@@ -21,8 +23,9 @@ import java.text.DecimalFormat;
 public class TabCoefficients extends DeviceTab {
     private Logger log = Logger.getLogger(TabCoefficients.class);
     private CoefficientNames coefficientNamesNames = new CoefficientNames();
+    private CoefficientToolTipsText сoefficientToolTipsText = new CoefficientToolTipsText();
     @Setter
-    private HidDevice selectedDevice;
+    private HidSupportedDevice selectedDevice;
 
     private final DeviceAsyncExecutor asyncExecutor;
 
@@ -51,14 +54,7 @@ public class TabCoefficients extends DeviceTab {
     // Формат для отображения чисел
     private DecimalFormat decimalFormat = new DecimalFormat();
 
-    // Количество столбцов для коэффициентов
-    private final int COLUMNS_COUNT = 4;
-
-    enum CHANNELS {
-        O2, CO, H2S, CH4_PRESSURE, ACCELERATION, PPM_MG_KOEFS, V_RANGE;
-    }
-
-    public TabCoefficients(HidDevice selectedDevice, DeviceAsyncExecutor asyncExecutor) {
+    public TabCoefficients(HidSupportedDevice selectedDevice, DeviceAsyncExecutor asyncExecutor) {
         super("Коэффициенты");
         this.selectedDevice = selectedDevice;
         this.asyncExecutor = asyncExecutor;
@@ -117,7 +113,7 @@ public class TabCoefficients extends DeviceTab {
     }
 
     private JPanel createCoefficientGrid(String[] labels, JTextField[] fields, boolean editable) {
-        JPanel gridPanel = new JPanel(new GridLayout(0, COLUMNS_COUNT * 2, 5, 5));
+        JPanel gridPanel = new JPanel(new GridLayout(0, 4, 5, 5));
 
         for (int i = 0; i < labels.length; i++) {
             gridPanel.add(new JLabel(labels[i]));
@@ -135,7 +131,8 @@ public class TabCoefficients extends DeviceTab {
         o2Panel.setBorder(BorderFactory.createTitledBorder("O2 Coefficients (101-119)"));
 
         o2Fields = new JTextField[19];
-        JPanel gridPanel = createCoefficientGrid(coefficientNamesNames.oxygen.toArray(new String[0]), o2Fields, true);
+        JPanel gridPanel = createO2Grid(coefficientNamesNames.oxygen.toArray(new String[0]),
+                сoefficientToolTipsText.oxygen.toArray(new String[0]), o2Fields, true);
 
         o2Panel.add(gridPanel);
 
@@ -147,13 +144,38 @@ public class TabCoefficients extends DeviceTab {
         o2Panel.add(setO2Button);
     }
 
+    private JPanel createO2Grid(String[] labels, String[] tooltips, JTextField[] fields, boolean editable) {
+        // Главная панель с горизонтальным расположением для 4 колонок
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 20, 5)); // Отступы между колонками 20px
+
+        // Создаем 4 колонки
+        JPanel column1 = createColumnPanel(labels, tooltips, fields, 0, 4, editable);   // Коэффициенты 1-4
+        JPanel column2 = createColumnPanel(labels, tooltips, fields, 5, 4, editable);   // Коэффициенты 5-9
+        JPanel column3 = createColumnPanel(labels, tooltips, fields, 9, 4, editable);   // Коэффициенты 10-13
+        JPanel column4 = createColumnPanel(labels, tooltips, fields, 14, 5, editable);  // Коэффициенты 14-19
+        JPanel column5 = createColumnPanel(labels, tooltips, fields, new int[] {4, 13}, editable);  // Коэффициенты 5 и 15
+
+        // Добавляем колонки на главную панель
+        mainPanel.add(column1);
+        mainPanel.add(column2);
+        mainPanel.add(column3);
+        mainPanel.add(column4);
+        mainPanel.add(column5);
+
+        return mainPanel;
+    }
+
+
     private void createCoPanel() {
         coPanel = new JPanel();
         coPanel.setLayout(new BoxLayout(coPanel, BoxLayout.Y_AXIS));
         coPanel.setBorder(BorderFactory.createTitledBorder("CO Coefficients (201-214)"));
 
         coFields = new JTextField[14];
-        JPanel gridPanel = createCoefficientGrid(coefficientNamesNames.coDt.toArray(new String[0]), coFields, true);
+        JPanel gridPanel = createCoGrid(coefficientNamesNames.coDt.toArray(new String[0]),
+                сoefficientToolTipsText.coDt.toArray(new String[0]), coFields, true);
+
 
         coPanel.add(gridPanel);
 
@@ -165,13 +187,37 @@ public class TabCoefficients extends DeviceTab {
         coPanel.add(setCoButton);
     }
 
+    private JPanel createCoGrid(String[] labels, String[] tooltips, JTextField[] fields, boolean editable) {
+        // Главная панель с горизонтальным расположением для 4 колонок
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 20, 5)); // Отступы между колонками 20px
+
+        // Создаем 4 колонки
+        JPanel column1 = createColumnPanel(labels, tooltips, fields, 0, 4, editable);   // Коэффициенты 1-4
+        JPanel column2 = createColumnPanel(labels, tooltips, fields, 5, 2, editable);   // Коэффициенты 5-9
+        JPanel column3 = createColumnPanel(labels, tooltips, fields, 7, 4, editable);   // Коэффициенты 10-13
+        JPanel column4 = createColumnPanel(labels, tooltips, fields, 11, 3, editable);  // Коэффициенты 14-19
+        JPanel column5 = createColumnPanel(labels, tooltips, fields, new int[] {4}, editable);  // Коэффициенты dT
+
+        // Добавляем колонки на главную панель
+        mainPanel.add(column1);
+        mainPanel.add(column2);
+        mainPanel.add(column3);
+        mainPanel.add(column4);
+        mainPanel.add(column5);
+
+        return mainPanel;
+
+    }
+
     private void createH2sPanel() {
         h2sPanel = new JPanel();
         h2sPanel.setLayout(new BoxLayout(h2sPanel, BoxLayout.Y_AXIS));
         h2sPanel.setBorder(BorderFactory.createTitledBorder("H2S Coefficients (301-314)"));
 
         h2sFields = new JTextField[14];
-        JPanel gridPanel = createCoefficientGrid(coefficientNamesNames.h2s.toArray(new String[0]), h2sFields, true);
+        JPanel gridPanel = createCoGrid(coefficientNamesNames.h2s.toArray(new String[0]),
+                сoefficientToolTipsText.coDt.toArray(new String[0]), h2sFields, true);
 
         h2sPanel.add(gridPanel);
 
@@ -181,6 +227,94 @@ public class TabCoefficients extends DeviceTab {
         setH2sButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         h2sPanel.add(Box.createRigidArea(new Dimension(0, 5)));
         h2sPanel.add(setH2sButton);
+    }
+
+    private JPanel createH2sGrid(String[] labels, JTextField[] fields, boolean editable) {
+        JPanel mainGridPanel = new JPanel(new GridLayout(0, 8, 5, 5)); // 8 колонок (4 пары label+field)
+
+        // Столбец 1: коэффициенты 1,2,3,4
+        for (int i = 0; i < 4; i++) {
+            mainGridPanel.add(new JLabel(labels[i]));
+            fields[i] = new JTextField();
+            fields[i].setEditable(editable);
+            mainGridPanel.add(fields[i]);
+        }
+
+        // Столбец 2: коэффициенты 5,6,7
+        for (int i = 4; i < 7; i++) {
+            mainGridPanel.add(new JLabel(labels[i]));
+            fields[i] = new JTextField();
+            fields[i].setEditable(editable);
+            mainGridPanel.add(fields[i]);
+        }
+
+        // Столбец 3: коэффициенты 8,9,10,11
+        for (int i = 7; i < 11; i++) {
+            mainGridPanel.add(new JLabel(labels[i]));
+            fields[i] = new JTextField();
+            fields[i].setEditable(editable);
+            mainGridPanel.add(fields[i]);
+        }
+
+        // Столбец 4: коэффициенты 12,13,14
+        for (int i = 11; i < 14; i++) {
+            mainGridPanel.add(new JLabel(labels[i]));
+            fields[i] = new JTextField();
+            fields[i].setEditable(editable);
+            mainGridPanel.add(fields[i]);
+        }
+
+        return mainGridPanel;
+    }
+
+    // Вспомогательный метод для создания одной колонки (последовательные индексы)
+    private JPanel createColumnPanel(String[] labels, String[] tooltips, JTextField[] fields, int startIndex, int count, boolean editable) {
+        JPanel columnPanel = new JPanel();
+        columnPanel.setLayout(new GridLayout(0, 2, 5, 5)); // 2 колонки: метка и поле
+
+        for (int i = startIndex; i < startIndex + count; i++) {
+            if (i < labels.length) {
+                JLabel label = new JLabel(labels[i]);
+                label.setHorizontalAlignment(SwingConstants.RIGHT);
+
+                // Добавляем всплывающую подсказку
+                if (tooltips != null && i < tooltips.length && tooltips[i] != null) {
+                    label.setToolTipText(tooltips[i]);
+                }
+
+                columnPanel.add(label);
+                fields[i] = new JTextField();
+                fields[i].setEditable(editable);
+                fields[i].setColumns(8); // Ширина поля
+                columnPanel.add(fields[i]);
+            }
+        }
+
+        return columnPanel;
+    }
+
+    // Вспомогательный метод для создания одной колонки (произвольные индексы)
+    private JPanel createColumnPanel(String[] labels, String[] tooltips, JTextField[] fields, int[] indexes, boolean editable) {
+        JPanel columnPanel = new JPanel();
+        columnPanel.setLayout(new GridLayout(0, 2, 5, 5)); // 2 колонки: метка и поле
+        for (int index : indexes) {
+            if (index < labels.length) {
+                JLabel label = new JLabel(labels[index]);
+                label.setHorizontalAlignment(SwingConstants.RIGHT);
+
+                // Добавляем всплывающую подсказку
+                if (tooltips != null && index < tooltips.length && tooltips[index] != null) {
+                    label.setToolTipText(tooltips[index]);
+                }
+
+                columnPanel.add(label);
+                fields[index] = new JTextField();
+                fields[index].setEditable(editable);
+                fields[index].setColumns(8); // Ширина поля
+                columnPanel.add(fields[index]);
+            }
+        }
+        return columnPanel;
     }
 
     private void createCh4PressurePanel() {
@@ -210,9 +344,17 @@ public class TabCoefficients extends DeviceTab {
         }
 
         accelerationFields = new JTextField[4];
-        JPanel gridPanel = createCoefficientGrid(labels, accelerationFields, false);
+        JPanel gridPanel = createCoefficientGrid(labels, accelerationFields, true);
 
         accelerationPanel.add(gridPanel);
+
+
+        JButton setAccelerationButton = new JButton("Задать Acceleration");
+        setAccelerationButton.addActionListener(e -> setAcceleration(accelerationFields));
+        setAccelerationButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        accelerationPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        accelerationPanel.add(setAccelerationButton);
+
     }
 
     private void createPpmMgKoefsPanel() {
@@ -281,7 +423,26 @@ public class TabCoefficients extends DeviceTab {
         }
     }
 
-    private void checkDeviceState(HidDevice device) {
+    private void setAcceleration(JTextField[] fields) {
+        checkDeviceState(selectedDevice);
+        float[] coefficients = new float[fields.length];
+        try {
+            for (int i = 0; i < fields.length; i++) {
+                String forParse = fields[i].getText().replaceAll("\\,", ".");
+                coefficients[i] = Float.parseFloat(forParse);
+            }
+        }catch (NumberFormatException | NullPointerException ex){
+            throw new IllegalArgumentException("Неверно заполнены поля с коэффициентами!" + ex.getMessage());
+        }
+
+        DeviceCommand command = new SetSensorsAccel();
+        CommandParameters parameters = new CommandParameters();
+        parameters.setCoefficients(coefficients);
+        asyncExecutor.executeCommand(command, parameters, selectedDevice);
+
+    }
+
+    private void checkDeviceState(HidSupportedDevice device) {
         if (device == null) {
             log.warn("device == null");
             throw new IllegalStateException("device == null");
@@ -362,5 +523,9 @@ public class TabCoefficients extends DeviceTab {
     public void saveData(DeviceState state) {
         // Для коэффициентов обычно не требуется сохранение через UI
         // Но если потребуется, можно реализовать здесь
+    }
+
+    enum CHANNELS {
+        O2, CO, H2S, CH4_PRESSURE, ACCELERATION, PPM_MG_KOEFS, V_RANGE;
     }
 }

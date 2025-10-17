@@ -1,8 +1,9 @@
 package org.example.gui.mgstest.transport;
 
-import org.example.gui.mgstest.transport.cmd.AbstractSendCommand;
+import org.example.gui.mgstest.transport.cmd.mgs.transfer.AbstractSendCommand;
 import org.example.gui.mgstest.transport.cmd.CommandModel;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -19,7 +20,7 @@ public class PayloadBuilder {
 
     private static byte[] CRC_PART = {(byte) 0x1B, (byte) 0xDF, (byte) 0x05, (byte) 0xA5};
 
-    public static byte[] build(CommandModel command) {
+    public static byte[] buildMgs(CommandModel command) {
 
         byte[] containsArguments = command.getArguments();
         boolean isUart = command instanceof AbstractSendCommand;
@@ -100,5 +101,115 @@ public class PayloadBuilder {
         byte[] result = bb.array();
         System.out.println("Final array: " + bytesToHex(result));
         return result;
+    }
+
+    public static byte[] buildMkrs(byte channel, byte[] commandBytes) {
+        // Подсчёт длины блока
+        int dataLength = 10 + commandBytes.length;
+        int commandLength = commandBytes.length + 2; // канал + команда
+
+        ByteBuffer bb = ByteBuffer.allocate(64).order(ByteOrder.LITTLE_ENDIAN);
+
+        // Заголовок
+        bb.put((byte) 0x01);
+        bb.put((byte) 0x01);
+        ByteBuffer shortBuffer = ByteBuffer.allocate(2).order(ByteOrder.BIG_ENDIAN).putShort((short) dataLength);
+        bb.put(shortBuffer.array());
+
+        // --- Фиксированная часть ---
+        bb.put((byte) 0x55);
+        bb.put((byte) 0x00);
+        bb.put((byte) commandLength); // длина команды (данные + канал)
+        bb.put((byte) 0xFF);
+        bb.put((byte) 0xFF);
+        bb.put((byte) 0x02);
+        bb.put((byte) 0x18);
+
+        // --- Канал и команда ---
+        bb.put(channel);
+        bb.put(commandBytes);
+
+        // --- Формируем данные для CRC ---
+        int crcLen = 7 + 1 + commandBytes.length; // 55 00 len ff ff 02 18 + channel + command
+        byte[] crcData = new byte[crcLen];
+        int p = 0;
+        crcData[p++] = 0x55;
+        crcData[p++] = 0x00;
+        crcData[p++] = (byte) commandLength;
+        crcData[p++] = (byte) 0xFF;
+        crcData[p++] = (byte) 0xFF;
+        crcData[p++] = 0x02;
+        crcData[p++] = 0x18;
+        crcData[p++] = channel;
+        System.arraycopy(commandBytes, 0, crcData, p, commandBytes.length);
+
+        int crc = computeCRC16(crcData);
+        byte crcLo = (byte) (crc & 0xFF);
+        byte crcHi = (byte) ((crc >> 8) & 0xFF);
+
+        // --- CRC ---
+        bb.put(crcLo);
+        bb.put(crcHi);
+
+        // --- Конец команды ---
+        bb.put((byte) 0x12);
+
+        // --- Остальная фиксированная часть (как у тебя было) ---
+        bb.put((byte) 0x00);
+        bb.put((byte) 0x00);
+        bb.put((byte) 0x80);
+
+        bb.put((byte) 0x00);
+        bb.put((byte) 0x00);
+        bb.put((byte) 0x00);
+        bb.put((byte) 0x00);
+        bb.put((byte) 0x00);
+        bb.put((byte) 0x00);
+        bb.put((byte) 0x00);
+        bb.put((byte) 0x00);
+
+        bb.put((byte) 0x48);
+        bb.put((byte) 0x13);
+        bb.put((byte) 0x1E);
+
+        for (int i = 0; i < 13; i++) {
+            bb.put((byte) 0x00);
+        }
+
+        bb.put((byte) 0x40);
+        bb.put((byte) 0x39);
+        bb.put((byte) 0xBB);
+        bb.put((byte) 0x6E);
+
+        bb.put((byte) 0x00);
+        bb.put((byte) 0x00);
+        bb.put((byte) 0x00);
+        bb.put((byte) 0x00);
+        bb.put((byte) 0x01);
+
+        while (bb.position() < 64) {
+            bb.put((byte) 0x00);
+        }
+
+        return bb.array();
+    }
+
+
+    private static short computeCRC16(byte[] data) {
+        int crc = 0xFFFF; // начальное значение
+
+        for (byte b : data) {
+            crc ^= (b & 0xFF);
+            for (int i = 0; i < 8; i++) {
+                if ((crc & 0x0001) != 0) {
+                    crc = (crc >>> 1) ^ 0xA001; // полином CRC16-MODBUS (обратный 0x8005)
+                } else {
+                    crc = crc >>> 1;
+                }
+            }
+        }
+
+        // В MODBUS порядок байт little-endian, но если нужно в виде [LSB, MSB]:
+        return (short) (crc & 0xFFFF);
     }
 }

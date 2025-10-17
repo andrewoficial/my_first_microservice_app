@@ -3,12 +3,12 @@ package org.example.gui.mgstest.gui.tabs;
 import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.example.gui.mgstest.gui.names.SettingNames;
+import org.example.gui.mgstest.model.HidSupportedDevice;
 import org.example.gui.mgstest.model.answer.GetAllSettingsModel;
-import org.example.gui.mgstest.repository.DeviceState;
+import org.example.gui.mgstest.model.DeviceState;
 import org.example.gui.mgstest.service.DeviceAsyncExecutor;
 import org.example.gui.mgstest.transport.DeviceCommand;
-import org.example.gui.mgstest.transport.cmd.GetAllSettings;
-import org.hid4java.HidDevice;
+import org.example.gui.mgstest.transport.cmd.mgs.GetAllSettings;
 
 import javax.swing.*;
 import java.awt.*;
@@ -18,7 +18,7 @@ public class TabSettings extends DeviceTab {
     private Logger log = Logger.getLogger(TabSettings.class);
     private SettingNames settingNames = new SettingNames();
     @Setter
-    private HidDevice selectedDevice;
+    private HidSupportedDevice selectedDevice;
 
     private final DeviceAsyncExecutor asyncExecutor;
 
@@ -29,7 +29,7 @@ public class TabSettings extends DeviceTab {
     // Массив полей для настроек
     private JTextField[] settingFields;
 
-    public TabSettings(HidDevice selectedDevice, DeviceAsyncExecutor asyncExecutor) {
+    public TabSettings(HidSupportedDevice selectedDevice, DeviceAsyncExecutor asyncExecutor) {
         super("Настройки");
         this.selectedDevice = selectedDevice;
         this.asyncExecutor = asyncExecutor;
@@ -125,7 +125,7 @@ public class TabSettings extends DeviceTab {
 
     @Override
     public void updateData(DeviceState state) {
-        log.info("Обновляю данные для настроек...");
+        log.info("Updating settings tab");
 
         if (state == null) {
             log.warn("null объект state");
@@ -191,9 +191,9 @@ public class TabSettings extends DeviceTab {
         } else {
             clearAllFields();
             if (state.getAllSettings() == null) {
-                log.warn("GetAllSettings model is null");
+                log.info("GetAllSettings model is null");
             } else {
-                log.warn("GetAllSettings model is not loaded");
+                log.info("GetAllSettings model is not loaded");
             }
         }
     }

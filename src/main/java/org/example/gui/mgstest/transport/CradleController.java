@@ -1,6 +1,7 @@
 package org.example.gui.mgstest.transport;
 
 import org.apache.log4j.Logger;
+import org.example.gui.mgstest.model.HidSupportedDevice;
 import org.hid4java.HidDevice;
 
 
@@ -12,7 +13,7 @@ public class CradleController {
 
 
 
-    public void setCoefficientsO2(HidDevice device) throws Exception {
+    public void setCoefficientsO2(HidSupportedDevice device) throws Exception {
         double[] coefs = new double[19];
         for (int i = 0; i < coefs.length; i++) {
             coefs[i] = i + 4620010.5;
@@ -21,7 +22,7 @@ public class CradleController {
         //setCoefForGas("o2", coefs, device);
     }
 
-    public void setCoefficientsCO(HidDevice device) throws Exception {
+    public void setCoefficientsCO(HidSupportedDevice device) throws Exception {
         double[] coefs = new double[14];
         for (int i = 0; i < coefs.length; i++) {
             coefs[i] = i + 201.0;
@@ -30,7 +31,7 @@ public class CradleController {
         //setCoefForGas("co", coefs, device);
     }
 
-    public void setCoefficientsH2S(HidDevice device) throws Exception {
+    public void setCoefficientsH2S(HidSupportedDevice device) throws Exception {
         double[] coefs = new double[14];
         for (int i = 0; i < coefs.length; i++) {
             coefs[i] = i + 401.0;

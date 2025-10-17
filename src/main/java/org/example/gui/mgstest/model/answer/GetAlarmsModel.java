@@ -15,5 +15,4 @@ public class GetAlarmsModel {
     private short h2sTo;
     private short ch4From;
     private short ch4To;
-
 }
