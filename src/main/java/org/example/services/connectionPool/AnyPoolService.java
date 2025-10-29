@@ -93,7 +93,7 @@ public class AnyPoolService {
             handleTabInExistingCollector(psSearch, clientId, state, pool, isBtn, poolDelay);
         } else {
             log.info("Клинет не содержится в потоке");
-            addDeviceToCollector(psSearch, clientId, state, isBtn, pool);
+            addDeviceToCollector(psSearch, clientId, state, isBtn, pool, poolDelay);
         }
     }
 
@@ -130,13 +130,13 @@ public class AnyPoolService {
         }
     }
 
-    private void addDeviceToCollector(ComDataCollector psSearch, int clientId, MainLeftPanelStateCollection state, boolean isBtn, boolean pool) {
+    private void addDeviceToCollector(ComDataCollector psSearch, int clientId, MainLeftPanelStateCollection state, boolean isBtn, boolean pool, long poolDelay) {
         if (!isBtn) {
             log.info("Для текущей вкладки устройство не существует в потоке опроса (по чек-боксу)");
-            psSearch.addDeviceToService(clientId, state.getPrefix(clientId), state.getCommand(clientId), false, true);
+            psSearch.addDeviceToService(clientId, state.getPrefix(clientId), state.getCommand(clientId), false, true, poolDelay);
         } else {
             log.info("Для текущей вкладки устройство не существует в потоке опроса (по кнопке)");
-            psSearch.addDeviceToService(clientId, state.getPrefix(clientId), state.getCommand(clientId), false, false);
+            psSearch.addDeviceToService(clientId, state.getPrefix(clientId), state.getCommand(clientId), false, false, poolDelay);
         }
     }
 

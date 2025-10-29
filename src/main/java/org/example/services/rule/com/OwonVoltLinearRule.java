@@ -1,26 +1,30 @@
 package org.example.services.rule.com;
 
 import lombok.Getter;
+import org.apache.log4j.Logger;
 import org.example.device.SomeDevice;
 import org.example.device.protOwonSpe3051.OWON_SPE3051;
+import org.example.services.connectionPool.ComDataCollector;
 
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.UUID;
 
-public class OwonVoltLinearRule implements ComRule, Serializable {
+public class OwonVoltLinearRule implements ComRule {
+    private final static Logger log = Logger.getLogger(OwonVoltLinearRule.class); // Объект логера
     @Getter
     private final String ruleId;
 
     private final float startVoltage;
+    @Getter
     private final float endVoltage;
     private final float step;
     private final long delayMs;
     private float currentVoltage;
     private boolean isWaitingForAnswer;
     private long millisPrev;
-    private String ruleDescription;
+    private final String ruleDescription;
     public OwonVoltLinearRule(
             @RuleParameter(name = "Start Voltage", type = "FLOAT", min = 0, max = 24, description = "Initial voltage in volts")
             float start,
@@ -46,15 +50,15 @@ public class OwonVoltLinearRule implements ComRule, Serializable {
         this.ruleDescription = ruleDescription;
         millisPrev = System.currentTimeMillis() - (delayMs * 100);
         ruleId = UUID.randomUUID().toString();
-        System.out.println("Created rule with id: " + ruleId);
+        log.info("Created rule with id: " + ruleId);
     }
     
     @Override
     public String generateCommand() {
-        System.out.println("Run cmd generation ");
+        log.info("Run cmd generation ");
         StringBuilder sb = new StringBuilder();
         sb.append("VOLT ");
-        System.out.println("current voltage " + currentVoltage);
+        log.info("current voltage " + currentVoltage);
         sb.append(String.format("%.2f", currentVoltage));
         byte [] strEnd = getTargetDevice().getStrEndian();
         for (byte b : strEnd) {
@@ -127,10 +131,10 @@ public class OwonVoltLinearRule implements ComRule, Serializable {
         long delta = now - millisPrev;
 
 
-        System.out.println("delayMs: " + delayMs);
-        System.out.println("delta: " + delta);
-        System.out.println("now: " + now);
-        System.out.println("Is time for action: " + (delta > delayMs));
+        //log.info("delayMs: " + delayMs);
+        //log.info("delta: " + delta);
+        //log.info("now: " + now);
+        //log.info("Is time for action: " + (delta > delayMs));
 
         boolean result = delta > delayMs;
         if(result){
@@ -140,8 +144,4 @@ public class OwonVoltLinearRule implements ComRule, Serializable {
         return result;
     }
 
-    public float getEndVoltage(){
-        return endVoltage;
-    }
-    // Остальные методы интерфейса...
 }

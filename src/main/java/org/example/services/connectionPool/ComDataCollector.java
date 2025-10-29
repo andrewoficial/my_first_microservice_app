@@ -44,6 +44,8 @@ public class ComDataCollector implements Runnable{
     private final AtomicInteger currentDirection = new AtomicInteger();
     @Getter
     private final AtomicBoolean comDataCollectorBusy = new AtomicBoolean(false);// Признак того, что текущее соединение по ком-порту занято
+    @Getter
+    private final AtomicBoolean comDataCollectorWaitingForAnswer = new AtomicBoolean(false);// Признак того, что текущее в ожидании ответа
     private SomeDevice device = null;//Объект устройства, содержащий особенности обработки команд. Задается на основе выбранного протоколаё
     @Getter
     private SerialPort comPort;//Объект, обслуживающий соединение по ком-порту. Библиотека fazecast.
@@ -55,9 +57,8 @@ public class ComDataCollector implements Runnable{
     private long millisPrev = System.currentTimeMillis() - (poolDelay * 100);//Обслуживание таймера в миллисекундах (основная переменная poolDelay).
     private final ConcurrentHashMap<Integer, ClientData> clientsMap = new ConcurrentHashMap<>();
     private final ConcurrentLinkedQueue<ReceivedData> incomingMessages = new ConcurrentLinkedQueue<>();
-    private volatile boolean responseRequested = false;
     private volatile long requestTimestamp = 0;
-    private final long RESPONSE_TIMEOUT_MS = 3000; // Таймаут ожидания ответа
+    private final long RESPONSE_TIMEOUT_MS = 1500; // Таймаут ожидания ответа
     private volatile DeviceAnswer deviceAnswer;
     private volatile ComRule currentComRule;
 
@@ -106,7 +107,7 @@ public class ComDataCollector implements Runnable{
         this.clientId = clientId;
         this.collection = state;
         this.poolDelay = poolDelay;
-        clientsMap.put(clientId, new ClientData(clientId, needLog, true, "", "", null));
+        clientsMap.put(clientId, new ClientData(clientId, needLog, true, "", "", null, poolDelay));
 
         serialPortDataListener = new SerialPortDataListener() {
             @Override
@@ -177,7 +178,8 @@ public class ComDataCollector implements Runnable{
             byte[] receivedBytes = buffer.toByteArray();
             if (receivedBytes.length > 0) {
                 // 5. Добавляем массив байтов в очередь
-                incomingMessages.add(new ReceivedData(receivedBytes, responseRequested, System.currentTimeMillis()));
+
+                incomingMessages.add(new ReceivedData(receivedBytes, comDataCollectorWaitingForAnswer.get(), System.currentTimeMillis()));
                 //log.info("Добавлено сообщение в очередь: " + MyUtilities.bytesToHex(receivedBytes));
             }
         } catch (Exception e) {  // Или конкретнее, напр. IOException | RuntimeException
@@ -222,19 +224,31 @@ public class ComDataCollector implements Runnable{
         while ((!Thread.currentThread().isInterrupted()) && alive) {
             if ( ! clientsMap.isEmpty() && shouldPollBecauseTimer()) {
                 millisPrev = System.currentTimeMillis();
-                pollCommands();
-                poolRules();
-                processIncomingMessages();
-                if(counter < limit) {
-                    if(comPort.bytesAvailable() > 0){
-                        handleDataAvailableEvent();
-                        comPort.flushIOBuffers();
-                    }
-                    //log.info("Слушатель будет добавлен еще " + (limit - counter) + " раз (отключено)");
-                    counter++;
-                    //comPort.addDataListener(serialPortDataListener);
-                }
+                //log.info("Run  flopBusyFlag");
                 flopBusyFlag();
+                //log.info("Run  processIncomingMessages");
+                processIncomingMessages();
+
+                //log.info("Run  poolRules");
+                poolRules();
+                //log.info("Run  processIncomingMessages");
+                processIncomingMessages();
+
+                //log.info("Run  pollCommands");
+                pollCommands();
+                //log.info("Run  processIncomingMessages");
+                processIncomingMessages();
+
+//                if(counter < limit) {
+//                    if(comPort.bytesAvailable() > 0){
+//                        handleDataAvailableEvent();
+//                        comPort.flushIOBuffers();
+//                    }
+//                    //log.info("Слушатель будет добавлен еще " + (limit - counter) + " раз (отключено)");
+//                    counter++;
+//                    //comPort.addDataListener(serialPortDataListener);
+//                }
+
             } else {
                 processIncomingMessages();
                 sleepSafely(Math.min(poolDelay / 5, 100L));
@@ -242,17 +256,20 @@ public class ComDataCollector implements Runnable{
         }
     }
     private boolean shouldPollBecauseTimer() {
-        return System.currentTimeMillis() - millisPrev > poolDelay;
+        return System.currentTimeMillis() - millisPrev > 100;
     }
 
     private void flopBusyFlag(){
         if(((System.currentTimeMillis() - requestTimestamp) > RESPONSE_TIMEOUT_MS) || ((System.currentTimeMillis() - requestTimestamp) < 0)){
-            responseRequested = false;
             comDataCollectorBusy.set(false);
-
+            comDataCollectorWaitingForAnswer.set(false);
         }
     }
     private void poolRules(){
+        if(comDataCollectorWaitingForAnswer.get()){//Ожидаю ответ
+            // in saveReceivedByEvent already executed parsing answer (currentComRul is not null -> currentComRule is waiting for anser -> currentComRule.processResponse())
+            return;
+        }
         for (ClientData client : clientsMap.values()) {
             //log.info("Во внутренней очереди устройств опрос по правилам для устройства clientId " + client.clientId + " командой " + client.command);
             RuleStorage ruleStorage = RuleStorage.getInstance();
@@ -263,40 +280,71 @@ public class ComDataCollector implements Runnable{
             }
             for (ComRule rule : rules) {
                 if(rule == null) continue;
-                if(rule.isTimeForAction() == false) continue;
+                if(!rule.isTimeForAction()){
+                    log.info("Время НЕ наступило для правила " + rule.getRuleId() + " (" + rule.getDescription() + ")");
+                    continue;
+                }
                 log.info("Время наступило для правила " + rule.getRuleId() + " (" + rule.getDescription() + ")");
-
-                client.command = rule.generateCommand();
+                client.backupCurrentCommand();
+                client.setCommand(rule.generateCommand());
                 log.info("Sending to client {"+client.clientId+"}: {"+client.command+"}");
                 sendOnce(client.prefix, client.command, client.clientId, true);
 
-                if(rule.getNextPoolDelay() == 0){
+                if(rule.getNextPoolDelay() == 0){//Нужна обработка ответа
+                    log.warn("Ожидание ответа на команду " + rule.getRuleId() + " (" + rule.getDescription() + ")");
                     rule.setWaitingForAnswer(true);
                     currentComRule = rule;
-                    responseRequested = true;
-                    this.run();//ToDo потенциально кроличья нора. Поправить
+                    comDataCollectorWaitingForAnswer.set(true);
                 }else{
+                    log.warn("Отключаю ожидание ответа на команду " + rule.getRuleId() + " (" + rule.getDescription() + ")");
+                    client.restoreMainCommand();
+                    comDataCollectorWaitingForAnswer.set(false);
+                    comDataCollectorBusy.set(false);
                     currentComRule = null;
                 }
-                comPort.addDataListener(serialPortDataListener);
+
             }
+            comPort.addDataListener(serialPortDataListener);
         }
+
     }
     private void pollCommands() {
-        millisPrev = System.currentTimeMillis();
         for (ClientData client : clientsMap.values()) {
-            if(client.needPool){
-                //log.info("Во внутренней очереди устройств отправляю для устройства clientId " + client.clientId + " командой " + client.command);
+            if(client.needPool && (System.currentTimeMillis() - client.getMillisPrev() > (client.millisInterval * 3))){
+                log.warn("Сброшен флаг ожидания ответа на команду по превышению времени ожидания");
+                comDataCollectorWaitingForAnswer.set(false);
+                log.warn("Сброшен флаг ожидания освобождения ком-порта по превышению времени ожидания");
+                comDataCollectorBusy.set(false);
+            }else{
+                //log.info("Нет причин для принудительного сброса флага /n needPool = " + client.needPool + " /n System.currentTimeMillis() - client.getMillisPrev() > client.millisInterval * 3 = " + (System.currentTimeMillis() - client.getMillisPrev() > (client.millisInterval * 3)));
+                log.info(System.currentTimeMillis() - client.getMillisPrev());
+                log.info(client.millisInterval * 3);
+            }
+            if(client.needPool && System.currentTimeMillis() - client.getMillisPrev() > client.millisInterval && !comDataCollectorWaitingForAnswer.get()) {
+                client.setMillisPrev(System.currentTimeMillis());
+                log.info("Во внутренней очереди устройств отправляю для устройства clientId " + client.clientId + " командой " + client.getCommand());
+
                 sendOnce(client.prefix, client.command, client.clientId, true);
                 comPort.addDataListener(serialPortDataListener);
+                //waitForComDataCollectorWaitingAnswer(1500);
+                //comDataCollectorWaitingForAnswer.set(false);//Разрешаю по таймауту
             }
         }
+
     }
 
     private void waitForComDataCollectorBusy(int totalLimit) {
         if(totalLimit < 20) totalLimit = 20;
         int i = totalLimit / 20;
         while (comDataCollectorBusy.get() && i < totalLimit) {
+            sleepSafely(20);
+            i++;
+        }
+    }
+    private void waitForComDataCollectorWaitingAnswer(int totalLimit) {
+        if(totalLimit < 20) totalLimit = 20;
+        int i = totalLimit / 20;
+        while (comDataCollectorWaitingForAnswer.get() && i < totalLimit) {
             sleepSafely(20);
             i++;
         }
@@ -332,6 +380,8 @@ public class ComDataCollector implements Runnable{
             return;
         }
 
+        comDataCollectorBusy.set(true);
+
         if (cmd == null || cmd.isEmpty()) {
             log.info("Прервал отправку. Нет текста команды");
             comDataCollectorBusy.set(false);
@@ -355,7 +405,7 @@ public class ComDataCollector implements Runnable{
                 return;
             }
         }
-        responseRequested = true;
+        comDataCollectorWaitingForAnswer.set(true);//Запрещаю следующую отправку
         requestTimestamp = System.currentTimeMillis();
 
         String textToSend = pref+cmd;
@@ -414,6 +464,7 @@ public class ComDataCollector implements Runnable{
                 currentComRule.setWaitingForAnswer(false);
                 currentComRule.processResponse(message); //Передаю ответ от устроиства правилу, завершаю обработку ответа
                 currentComRule.updateState();
+                //ToDO client.backupCurrentCommand();
                 return;
             }
             if(collection != null && collection.containClientId(clientId)){
@@ -428,7 +479,6 @@ public class ComDataCollector implements Runnable{
 
         int tabDirection = clientId;
         device.setLastAnswer(message);
-        deviceAnswer.changeTabNum(tabDirection);
 
         try{
             deviceAnswer.setDeviceType(device);
@@ -472,6 +522,7 @@ public class ComDataCollector implements Runnable{
             deviceAnswer.setAnswerReceivedValues(new AnswerValues(0));
         }
 
+        deviceAnswer.setClientId(currentDirection.get());
         saveAndLogSome(deviceAnswer, tabDirection);
     }
 
@@ -547,9 +598,14 @@ public class ComDataCollector implements Runnable{
         }
         //log.info("Завершены все процессы логирования" + answer.toString() + " client " + clientId);
         //log.info("Завершены все процессы логирования");
+        comDataCollectorWaitingForAnswer.set(false);
     }
 
     public void setPoolDelay(int poolDelay) {
+        //ToDo легко разделить на индивидуальные интервалы
+        for (ClientData client : clientsMap.values()) {
+            client.setMillisInterval(poolDelay);
+        }
         this.poolDelay = poolDelay;
         log.info("Новое значение задержки опроса " + poolDelay);
     }
@@ -603,13 +659,13 @@ public class ComDataCollector implements Runnable{
         return clientsMap.containsKey(clientId);
     }
 
-    public void addDeviceToService(int clientId, String prf, String cmd, boolean needLog, boolean needPoolFlag) {
+    public void addDeviceToService(int clientId, String prf, String cmd, boolean needLog, boolean needPoolFlag, long poolDelay) {
         log.info("Добавление клиента в поток " + clientId  + Thread.currentThread().getName());
         DeviceLogger deviceLogger = null;
         if(needLog){
             deviceLogger = new DeviceLogger(clientId,myProperties);
         }
-        clientsMap.put(clientId, new ClientData(clientId, needLog, needPoolFlag, prf, cmd, deviceLogger));
+        clientsMap.put(clientId, new ClientData(clientId, needLog, needPoolFlag, prf, cmd, deviceLogger, poolDelay));
     }
 
     public void removeDeviceFromComDataCollector(int clientId){ //Когда вкладка закрывается
@@ -692,17 +748,44 @@ public class ComDataCollector implements Runnable{
         int clientId;
         boolean needLog;
         boolean needPool;
+        //log.info("Изменение времени последнего получения ответа");
+        @Setter @Getter
+        private long millisPrev;
+        @Getter
+        private long millisInterval;
         String prefix;
-        String command;
+        @Getter @Setter
+        private String command;
         DeviceLogger logger;
+        private String previousCommand;
 
-        public ClientData(int clientId, boolean needLog, boolean needPool, String prefix, String command, DeviceLogger logger) {
+        public ClientData(int clientId, boolean needLog, boolean needPool, String prefix, String command, DeviceLogger logger, long millisInterval) {
             this.clientId = clientId;
             this.needLog = needLog;
             this.needPool = needPool;
             this.prefix = prefix;
             this.command = command;
             this.logger = logger;
+            this.millisInterval = millisInterval;
+            this.millisPrev = System.currentTimeMillis() - millisInterval - millisInterval;//Что бы был первый запуск
+            previousCommand = command;
+        }
+
+        public void backupCurrentCommand(){
+           previousCommand = command;
+        }
+
+        public void restoreMainCommand(){
+            command = previousCommand;
+        }
+        public void setMillisInterval(long millisInterval) {
+            log.info("Изменение интервала времени опроса");
+            this.millisInterval = millisInterval;
+        }
+
+        public void setCommand(String command) {
+            log.info("Изменение команды на " + command);
+            this.command = command;
         }
 
         public void setDeviceLogger(DeviceLogger deviceLogger) {

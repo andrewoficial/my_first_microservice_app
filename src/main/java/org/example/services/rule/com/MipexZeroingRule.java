@@ -5,7 +5,7 @@ import org.example.device.SomeDevice;
 import java.io.Serializable;
 import java.util.Map;
 
-public class MipexZeroingRule implements ComRule, Serializable {
+public class MipexZeroingRule implements ComRule {
     @Override
     public String generateCommand() {
         return "ZERO2";
