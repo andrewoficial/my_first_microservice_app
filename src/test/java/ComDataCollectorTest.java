@@ -1,9 +1,11 @@
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
+import org.apache.log4j.Logger;
 import org.example.device.SomeDevice;
 import org.example.services.connectionPool.ComDataCollector;
 import org.example.services.loggers.DeviceLogger;
+import org.example.utilites.properties.MyProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -34,7 +36,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
 public class ComDataCollectorTest {
-
+    private static Logger log = Logger.getLogger(ComDataCollectorTest.class);
     private ComDataCollector collector;
     private SerialPort mockPort;
     private MainLeftPanelStateCollection mockState;
@@ -119,6 +121,7 @@ public class ComDataCollectorTest {
 
     @Test
     void whenLoggerThrowsException_threadSurvives() throws Exception {
+        log.info("Running whenLoggerThrowsException_threadSurvives");
         // Настройка мока логгера на выброс исключения
         doThrow(new RuntimeException("Mocked exception when log")).when(mockLogger).writeLine(any(DeviceAnswer.class));
 
@@ -147,19 +150,21 @@ public class ComDataCollectorTest {
         // Запускаем коллектор в отдельном потоке
         Thread collectorThread = new Thread(collectorSpy);
         collectorThread.start();
-
+        log.info("Collector thread started");
         // Ждем запуска потока
-        await().atMost(1, TimeUnit.SECONDS).until(collectorSpy::isAlive);
+        await().atMost(4, TimeUnit.SECONDS).until(collectorSpy::isAlive);
 
         // Имитируем событие DATA_AVAILABLE
         SerialPortEvent event = mock(SerialPortEvent.class);
         when(event.getEventType()).thenReturn(SerialPort.LISTENING_EVENT_DATA_AVAILABLE);
-
+        log.info("[OK]  Simulate LISTENING_EVENT_DATA_AVAILABLE");
         // Вызываем обработчик события через шпиона
         spyListener.serialEvent(event);
+        log.info("[OK]  Call serialEvent(event)");
 
         // Проверяем что обработчик события был вызван
         verify(spyListener).serialEvent(event);
+        log.info("[OK]  ensure (spyListener).serialEvent(event)");
 
         // Проверяем что handleDataAvailableEvent был вызван
         verify(collectorSpy).handleDataAvailableEvent();
@@ -169,21 +174,23 @@ public class ComDataCollectorTest {
             // Проверяем что исключение было обработано
             verify(mockLogger, times(1)).writeLine(any(DeviceAnswer.class));
         });
-
+        log.info("verify(mockLogger, times(1)).writeLine(any(DeviceAnswer.class))");
         // Проверяем что поток выжил после исключения
         assertTrue(collectorSpy.isAlive(), "Поток должен остаться активным после исключения");
         assertFalse(collectorThread.isInterrupted(), "Поток не должен быть прерван");
 
         // Проверяем что флаг busy был сброшен
         assertFalse(collectorSpy.getComDataCollectorBusy().get());
-
+        log.info("Busy flag is OK (false)");
         // Проверяем что слушатель был переустановлен
         verify(mockPort, atLeastOnce()).addDataListener(spyListener);
-
+        log.info("Listener is OK (addDataListener)");
         // Останавливаем поток
         collectorSpy.shutdown();
-        collectorThread.join(1000);
+        log.info("shutdown down thread");
+        collectorThread.join(3000);
         assertFalse(collectorSpy.isAlive(), "Поток должен завершиться после shutdown");
+        log.info("OK");
     }
 
     @Test

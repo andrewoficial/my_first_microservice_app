@@ -115,8 +115,6 @@ public class MyProperties {
 
     private String logLevel;
 
-
-    @Getter
     private boolean needSyncSavingAnswer = true;
 
     @Getter
@@ -679,6 +677,7 @@ public class MyProperties {
             propertyBuilders.get("parityBitCode").append(state.getParityBit()).append(", ");
 
             propertyBuilders.get("command").append(state.getCommand()).append(", ");
+            log.info("add for save: [" + state.getCommand() + "] ");
             propertyBuilders.get("prefix").append(state.getPrefix()).append(", ");
         }
 
@@ -687,9 +686,11 @@ public class MyProperties {
             if (sb.length() > 2) {
                 sb.setLength(sb.length() - 2); // Убираем последнюю запятую и пробел
             }
-            String escapedValue = escapePropertyValue(sb.toString());
+            //Fixing #119
+            //String escapedValue = escapePropertyValue(sb.toString());
             //log.warn(key + " : " + escapedValue);
-            properties.setProperty(key, escapedValue);
+            //properties.setProperty(key, escapedValue);
+            properties.setProperty(key, sb.toString());
         });
 
         fileHandler.updateFileFromProperties(properties);

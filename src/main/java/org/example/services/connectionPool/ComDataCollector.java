@@ -219,7 +219,7 @@ public class ComDataCollector implements Runnable{
         Thread.currentThread().setName("Thread Pool Tab " + comPort.getSystemPortName());
         log.info("Запущен поток опроса " + Thread.currentThread().getName() + " для вкладки порта " + comPort.getSystemPortName());
         millisPrev = System.currentTimeMillis() - (poolDelay * 2); // Инициализация таймера
-        int limit = 2;
+        int limit = 1;
         int counter = 0;
         while ((!Thread.currentThread().isInterrupted()) && alive) {
             if ( ! clientsMap.isEmpty() && shouldPollBecauseTimer()) {
@@ -239,15 +239,15 @@ public class ComDataCollector implements Runnable{
                 //log.info("Run  processIncomingMessages");
                 processIncomingMessages();
 
-//                if(counter < limit) {
-//                    if(comPort.bytesAvailable() > 0){
-//                        handleDataAvailableEvent();
-//                        comPort.flushIOBuffers();
-//                    }
-//                    //log.info("Слушатель будет добавлен еще " + (limit - counter) + " раз (отключено)");
-//                    counter++;
-//                    //comPort.addDataListener(serialPortDataListener);
-//                }
+                if(counter < limit) {
+                    if(comPort.bytesAvailable() > 0){
+                        handleDataAvailableEvent();
+                        comPort.flushIOBuffers();
+                    }
+                    //log.info("Слушатель будет добавлен еще " + (limit - counter) + " раз (отключено)");
+                    counter++;
+                    //comPort.addDataListener(serialPortDataListener);
+                }
 
             } else {
                 processIncomingMessages();
@@ -315,11 +315,8 @@ public class ComDataCollector implements Runnable{
                 comDataCollectorWaitingForAnswer.set(false);
                 log.warn("Сброшен флаг ожидания освобождения ком-порта по превышению времени ожидания");
                 comDataCollectorBusy.set(false);
-            }else{
-                //log.info("Нет причин для принудительного сброса флага /n needPool = " + client.needPool + " /n System.currentTimeMillis() - client.getMillisPrev() > client.millisInterval * 3 = " + (System.currentTimeMillis() - client.getMillisPrev() > (client.millisInterval * 3)));
-                log.info(System.currentTimeMillis() - client.getMillisPrev());
-                log.info(client.millisInterval * 3);
             }
+
             if(client.needPool && System.currentTimeMillis() - client.getMillisPrev() > client.millisInterval && !comDataCollectorWaitingForAnswer.get()) {
                 client.setMillisPrev(System.currentTimeMillis());
                 log.info("Во внутренней очереди устройств отправляю для устройства clientId " + client.clientId + " командой " + client.getCommand());
@@ -754,7 +751,7 @@ public class ComDataCollector implements Runnable{
         @Getter
         private long millisInterval;
         String prefix;
-        @Getter @Setter
+        @Getter
         private String command;
         DeviceLogger logger;
         private String previousCommand;
