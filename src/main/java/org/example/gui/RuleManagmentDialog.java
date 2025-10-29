@@ -23,6 +23,8 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.example.services.rule.com.RuleType;
 
+import static org.example.gui.utilites.GuiUtilities.changeFont;
+
 public class RuleManagmentDialog extends JDialog {
     private static final Logger log = Logger.getLogger(RuleManagmentDialog.class);
     private final RuleStorage ruleStorage = RuleStorage.getInstance();
@@ -35,10 +37,10 @@ public class RuleManagmentDialog extends JDialog {
     private JPanel JP_RuleAssociate;
     private JButton BT_Refresh;
     private JComboBox JC_Clients;
-    private JComboBox JC_Rules;
+    private JComboBox<String> JC_Rules;
     private JButton BT_AddPair;
     private JPanel JP_ExistingRules;
-    private JComboBox JC_ExistPair;
+    private JComboBox<String> JC_ExistPair;
     private JButton BT_RemovePair;
     private JPanel mainPanel;
 
@@ -46,7 +48,7 @@ public class RuleManagmentDialog extends JDialog {
     private Map<String, String> currentNeededParameters = new ConcurrentHashMap<>();
     private List<ParamMetadata> params = null;
     private RuleType selectedRuleType;
-    private ComRule createdRule;
+    private ComRule selectedRule;
     private ArrayList<Integer> clientsIdGui = new ArrayList<>();
 
     //Порядковый номер в выпадашке: номер клиента -- правило. Потому что многие ко многим.
@@ -98,7 +100,7 @@ public class RuleManagmentDialog extends JDialog {
 
             }
             super.repaint();
-
+            refreshGui();
         });
 
         BT_CreateRule.addActionListener(e -> {
@@ -121,7 +123,7 @@ public class RuleManagmentDialog extends JDialog {
             log.info("Завершил сбор параметров. Размер коллекции  " + currentNeededParameters.size());
             //RuleFactory ruleFactory = new RuleFactory();
             try {
-                createdRule = RuleFactory.createRule(selectedRuleType.getRuleClass(), currentNeededParameters);
+                selectedRule = RuleFactory.createRule(selectedRuleType.getRuleClass(), currentNeededParameters);
             } catch (InvocationTargetException ex) {
                 log.error("InvocationTargetException" + ex.getMessage());
                 //throw new RuntimeException(ex);
@@ -133,24 +135,36 @@ public class RuleManagmentDialog extends JDialog {
                 //throw new RuntimeException(ex);
             }
 
-            if (createdRule == null) {
+            if (selectedRule == null) {
                 log.error("Empty rule");
                 return;
             } else {
                 log.info("Создано правило");
-                log.info(createdRule.getRuleId());
-                log.info(createdRule.getDescription());
-                log.info(createdRule.getRuleType());
+                log.info(selectedRule.getRuleId());
+                log.info(selectedRule.getDescription());
+                log.info(selectedRule.getRuleType());
             }
             log.info("Сохраняю правило в коллекцию");
-            ruleStorage.addRule(createdRule);
+            ruleStorage.addRule(selectedRule);
             refreshGui();
             log.info("Закончил обновление GUI полсе создания правила");
+            ruleStorage.saveRulesToDisk();
         });
 
         BT_AddPair.addActionListener(e -> {
-            RuleStorage.getInstance().registryRule(clientsIdGui.get(JC_Clients.getSelectedIndex()), createdRule);
+            RuleStorage.getInstance().registryRule(clientsIdGui.get(JC_Clients.getSelectedIndex()), selectedRule);
             refreshGui();
+        });
+
+        BT_RemovePair.addActionListener(e -> {
+            if (JC_Rules.getSelectedIndex() == -1) return;
+            ruleStorage.unRegistryRule(clientsIdGui.get(JC_Clients.getSelectedIndex()), selectedRule);
+            refreshGui();
+        });
+
+        JC_Rules.addActionListener(e -> {
+            if (JC_Rules.getSelectedIndex() == -1) return;
+            selectedRule = ruleStorage.findRule(JC_Rules.getSelectedIndex());
         });
     }
 
@@ -183,18 +197,22 @@ public class RuleManagmentDialog extends JDialog {
         JC_Rules.removeAllItems();
         List<ComRule> rules = ruleStorage.getAllRules();
         log.info("Коллекция содержит " + rules.size() + " правил");
-        int tt = 0;
+        int num = 0;
         for (ComRule rule : rules) {
-            JC_Rules.addItem("Trololo " + tt + " ruleId: " + rule.getRuleId());
-            tt++;
+            JC_Rules.addItem(num + ". Описание: " + rule.getDescription() + " id: " + rule.getRuleId() + " периодичность: " + rule.getNextPoolDelay() + " протокол: " + rule.getTargetDevice().getClass().getSimpleName());
+            num++;
         }
+    }
+
+    private void updateRuleClientPairsList() {
+        log.info("Вызвано обновление списка связок");
+        JC_ExistPair.removeAllItems();
+        updateClientRulePairs();
     }
 
     private void updateClientRulePairs() {
         log.info("Вызвано обновление списка ассоциаций (клиент/правило)");
         sb.setLength(0);
-
-
         ConcurrentMap<Integer, List<ComRule>> pairs = RuleStorage.getInstance().getAllBounds();
         log.info("Количество клиентов в хранилище " + pairs.size());
         int count = 0;
@@ -214,32 +232,38 @@ public class RuleManagmentDialog extends JDialog {
             }
         }
 
-        for (Integer i : guiPairRuleAndClients.keySet()) {
-            Set<Integer> currentClientIdSet = guiPairRuleAndClients.get(i).keySet();
-            Integer currentClientId = currentClientIdSet.iterator().next();
-            JC_ExistPair.addItem(
-                    i +
-                    " Клиент " +
-                    currentClientId +
-                    " приписан правилу " +
-                    guiPairRuleAndClients.get(i).get(currentClientId).getRuleId() +
-                    " (" +
-                        guiPairRuleAndClients.get(i).get(currentClientId).getRuleType() +
-                    ") "
-            );
-        }
+//        for (Integer i : guiPairRuleAndClients.keySet()) {
+//            Set<Integer> currentClientIdSet = guiPairRuleAndClients.get(i).keySet();
+//            Integer currentClientId = currentClientIdSet.iterator().next();
+//            JC_ExistPair.addItem(
+//                    i +
+//                            " Клиент " +
+//                            currentClientId +
+//                            " приписан правилу " +
+//                            guiPairRuleAndClients.get(i).get(currentClientId).getRuleId() +
+//                            " (" +
+//                            guiPairRuleAndClients.get(i).get(currentClientId).getRuleType() +
+//                            ") "
+//            );
+//        }
 
     }
 
     private void refreshGui() {
+
         updateRuleSampleList();
         updateRuleList();
         updateClientsList();
-        updateClientRulePairs();
+        updateRuleClientPairsList();
         repaint();
+        resizeFrame();
     }
 
-
+    private void resizeFrame() {
+        Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+        this.setSize(dim.width / 2, dim.height / 2);
+        //this.setLocation(dim.width / 4, dim.height / 4);
+    }
 
 
     private JComponent createInputField(ParamMetadata param) {
@@ -258,7 +282,8 @@ public class RuleManagmentDialog extends JDialog {
                 JSpinner spinner = new JSpinner(new SpinnerNumberModel(
                         0.1, param.getMin(), param.getMax(), 0.1
                 ));
-                return spinner;
+
+                return changeFont(spinner);
 
             case "INT":
                 return new JTextField(10);
@@ -314,44 +339,64 @@ public class RuleManagmentDialog extends JDialog {
      */
     private void $$$setupUI$$$() {
         mainPanel = new JPanel();
-        mainPanel.setLayout(new GridLayoutManager(4, 1, new Insets(0, 0, 0, 0), -1, -1));
+        mainPanel.setLayout(new GridLayoutManager(7, 1, new Insets(0, 0, 0, 0), -1, -1));
         JP_RuleCreate = new JPanel();
         JP_RuleCreate.setLayout(new GridLayoutManager(3, 2, new Insets(0, 0, 0, 0), -1, -1));
-        mainPanel.add(JP_RuleCreate, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        mainPanel.add(JP_RuleCreate, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         JC_SampleRules = new JComboBox();
         JP_RuleCreate.add(JC_SampleRules, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         BT_SelectTemplate = new JButton();
-        BT_SelectTemplate.setText("Select");
+        BT_SelectTemplate.setText("Выбрать");
         JP_RuleCreate.add(BT_SelectTemplate, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         JP_Arguments = new JPanel();
-        JP_Arguments.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        JP_Arguments.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
         JP_RuleCreate.add(JP_Arguments, new GridConstraints(1, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        BT_CreateRule = new JButton();
-        BT_CreateRule.setText("CreateRule");
-        JP_RuleCreate.add(BT_CreateRule, new GridConstraints(2, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label1 = new JLabel();
+        label1.setText("2. Заполните шаблон (параметры) правила");
+        JP_Arguments.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final Spacer spacer1 = new Spacer();
-        mainPanel.add(spacer1, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        JP_Arguments.add(spacer1, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        BT_CreateRule = new JButton();
+        BT_CreateRule.setText("Создать правило");
+        JP_RuleCreate.add(BT_CreateRule, new GridConstraints(2, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final Spacer spacer2 = new Spacer();
+        mainPanel.add(spacer2, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         JP_RuleAssociate = new JPanel();
-        JP_RuleAssociate.setLayout(new GridLayoutManager(2, 3, new Insets(0, 0, 0, 0), -1, -1));
-        mainPanel.add(JP_RuleAssociate, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        JP_RuleAssociate.setLayout(new GridLayoutManager(3, 3, new Insets(0, 0, 0, 0), -1, -1));
+        mainPanel.add(JP_RuleAssociate, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         BT_Refresh = new JButton();
-        BT_Refresh.setText("Refresh");
+        BT_Refresh.setText("Обновить окно");
         JP_RuleAssociate.add(BT_Refresh, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         JC_Clients = new JComboBox();
-        JP_RuleAssociate.add(JC_Clients, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        JP_RuleAssociate.add(JC_Clients, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         JC_Rules = new JComboBox();
-        JP_RuleAssociate.add(JC_Rules, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        JP_RuleAssociate.add(JC_Rules, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         BT_AddPair = new JButton();
-        BT_AddPair.setText("AddPair");
-        JP_RuleAssociate.add(BT_AddPair, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        BT_AddPair.setText("Связать");
+        JP_RuleAssociate.add(BT_AddPair, new GridConstraints(2, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label2 = new JLabel();
+        label2.setText("Список вкладок");
+        JP_RuleAssociate.add(label2, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label3 = new JLabel();
+        label3.setText("Список правил");
+        JP_RuleAssociate.add(label3, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         JP_ExistingRules = new JPanel();
         JP_ExistingRules.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
-        mainPanel.add(JP_ExistingRules, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        mainPanel.add(JP_ExistingRules, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         JC_ExistPair = new JComboBox();
         JP_ExistingRules.add(JC_ExistPair, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         BT_RemovePair = new JButton();
-        BT_RemovePair.setText("RemovePair");
+        BT_RemovePair.setText("Удалить связку");
         JP_ExistingRules.add(BT_RemovePair, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label4 = new JLabel();
+        label4.setText("1. Выберите шаблон создаваемого правила");
+        mainPanel.add(label4, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label5 = new JLabel();
+        label5.setText("Список существующих связок \"Правило<->Клиент(вкладка)\"");
+        mainPanel.add(label5, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label6 = new JLabel();
+        label6.setText("для удаления нужно выбрать одно и то же правило в  \"Список правил\" и \"Список существующих связок \"Правило<->Клиент(вкладка)\"\"");
+        mainPanel.add(label6, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     }
 
     /**

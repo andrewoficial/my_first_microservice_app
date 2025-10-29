@@ -7,7 +7,7 @@ import java.awt.*;
 
 public class GuiUtilities {
 
-    public static void changeFont(JFormattedTextField textField) {
+    public static JFormattedTextField changeFont(JFormattedTextField textField) {
         textField.setOpaque(true);
         textField.setBackground(NimbusCustomizer.disabledForeground);
         textField.setForeground(Color.WHITE);
@@ -22,6 +22,13 @@ public class GuiUtilities {
         textField.putClientProperty("Nimbus.Overrides.InheritDefaults", false);
         textField.revalidate();
         textField.repaint();
-        //return textField;
+        return textField;
+    }
+
+    public static JSpinner changeFont(JSpinner jSpinner) {
+        JSpinner.DefaultEditor editor = (JSpinner.DefaultEditor) jSpinner.getEditor();
+        JFormattedTextField textField = editor.getTextField();
+        changeFont(textField);
+        return jSpinner;
     }
 }
