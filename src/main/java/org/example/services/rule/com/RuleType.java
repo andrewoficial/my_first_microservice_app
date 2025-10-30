@@ -2,6 +2,7 @@ package org.example.services.rule.com;
 
 public enum RuleType {
     OWON_VOLTAGE_LINEAR(OwonVoltLinearRule.class, "Линейное изменение напряжения (Owon)"),
+    OWON_VOLTAGE_SINUS(OwonVoltSinusRule.class, "Синусоидальное изменение напряжения (Owon)"),
     MIPEX_ZEROING(MipexZeroingRule.class, "Обнуление MIPEX");
 
     private final Class<? extends ComRule> ruleClass;
