@@ -1,0 +1,45 @@
+name: PowerShell File Check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-files:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check directory structure
+      run: |
+        Write-Host "=== Current Location ==="
+        $currentPath = Get-Location
+        Write-Host $currentPath.Path
+        
+        Write-Host "=== Directory Structure ==="
+        Get-ChildItem -Recurse | ForEach-Object {
+            Write-Host $_.FullName
+        }
+        
+        Write-Host "=== Checking Required Files ==="
+        $requiredFiles = @(
+            "pom.xml",
+            "scripts/update-version.ps1",
+            "installer/script.iss"
+        )
+        
+        $allExist = $true
+        foreach ($file in $requiredFiles) {
+            if (Test-Path $file) {
+                Write-Host "✅ $file - EXISTS"
+            } else {
+                Write-Host "❌ $file - MISSING"
+                $allExist = $false
+            }
+        }
+        
+        if (-not $allExist) {
+            Write-Host "Some required files are missing!"
+            exit 1
+        } else {
+            Write-Host "All required files are present!"
+        }
