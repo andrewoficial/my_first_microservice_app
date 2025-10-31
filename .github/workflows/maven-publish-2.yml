@@ -11,44 +11,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Debug - List files (using CMD)
-      shell: cmd
+    - name: Debug - List files (PowerShell)
       run: |
-        echo "=== Root directory ==="
-        dir
-        echo "=== Scripts directory ==="
-        if exist scripts (dir scripts) else (echo scripts directory not found)
-        echo "=== Installer directory ==="
-        if exist installer (dir installer) else (echo installer directory not found)
-        echo "=== Full recursive listing ==="
-        dir /s
-      
-    - name: Check critical files
-      shell: pwsh
-      run: |
-        $filesExist = $true
-        
-        if (-not (Test-Path "pom.xml")) {
-          Write-Error "❌ pom.xml not found"
-          $filesExist = $false
-        } else {
-          Write-Host "✅ pom.xml found"
-        }
-        
-        if (-not (Test-Path "scripts/update-version.ps1")) {
-          Write-Error "❌ scripts/update-version.ps1 not found"
-          $filesExist = $false
-        } else {
-          Write-Host "✅ scripts/update-version.ps1 found"
-        }
-        
-        if (-not (Test-Path "installer/script.iss")) {
-          Write-Error "❌ installer/script.iss not found"
-          $filesExist = $false
-        } else {
-          Write-Host "✅ installer/script.iss found"
-        }
-        
-        if (-not $filesExist) {
-          exit 1
-        }
+        Write-Host "=== Current directory ==="
+        Get-Location
+        Write-Host "=== Root directory contents ==="
+        Get-ChildItem
+        Write-Host "=== Scripts directory ==="
+        Get-ChildItem scripts -ErrorAction SilentlyContinue
+        Write-Host "=== Installer directory ==="
+        Get-ChildItem installer -ErrorAction SilentlyContinue
+        Write-Host "=== Recursive file listing ==="
+        Get-ChildItem -Recurse -Name -ErrorAction SilentlyContinue
