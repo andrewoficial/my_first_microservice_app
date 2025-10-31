@@ -1,11 +1,7 @@
-# .github/workflows/test-build.yml
 name: Test Build
 
 on:
-  push:
-    branches: [main, master]
-  # Или для ручного запуска:
-  workflow_dispatch:
+  workflow_dispatch:  # Разрешает ручной запуск
 
 jobs:
   test-build:
@@ -15,9 +11,46 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Debug - List files
-      run: dir /s
+    - name: Debug - List files (PowerShell)
+      run: |
+        echo "=== Root directory ==="
+        Get-ChildItem
+        echo "=== Scripts directory ==="
+        Get-ChildItem scripts -ErrorAction SilentlyContinue
+        echo "=== Installer directory ==="
+        Get-ChildItem installer -ErrorAction SilentlyContinue
+        echo "=== Full recursive listing ==="
+        Get-ChildItem -Recurse -ErrorAction SilentlyContinue
       
+    - name: Check critical files
+      run: |
+        $filesExist = $true
+        
+        if (-not (Test-Path "pom.xml")) {
+          echo "❌ pom.xml not found"
+          $filesExist = $false
+        } else {
+          echo "✅ pom.xml found"
+        }
+        
+        if (-not (Test-Path "scripts/update-version.ps1")) {
+          echo "❌ scripts/update-version.ps1 not found"
+          $filesExist = $false
+        } else {
+          echo "✅ scripts/update-version.ps1 found"
+        }
+        
+        if (-not (Test-Path "installer/script.iss")) {
+          echo "❌ installer/script.iss not found"
+          $filesExist = $false
+        } else {
+          echo "✅ installer/script.iss found"
+        }
+        
+        if (-not $filesExist) {
+          exit 1
+        }
+        
     - name: Set up JDK 21
       uses: actions/setup-java@v4
       with:
@@ -29,8 +62,14 @@ jobs:
       
     - name: Test version update script
       run: |
-        echo "Testing version update script..."
-        type pom.xml | findstr version
+        echo "=== Current versions ==="
+        echo "POM version:"
+        Select-String -Path pom.xml -Pattern '<version>([^<]+)</version>' | ForEach-Object { $_.Matches.Groups[1].Value }
+        echo "ISS version:"
+        Select-String -Path installer/script.iss -Pattern 'MyAppVersion "([^"]+)"' | ForEach-Object { $_.Matches.Groups[1].Value }
+        
+        echo "=== Running update script ==="
         powershell -File scripts/update-version.ps1
-        echo "Updated ISS file:"
-        type installer/script.iss | findstr MyAppVersion
+        
+        echo "=== Updated ISS version ==="
+        Select-String -Path installer/script.iss -Pattern 'MyAppVersion "([^"]+)"' | ForEach-Object { $_.Matches.Groups[1].Value }
