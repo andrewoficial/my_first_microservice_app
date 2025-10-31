@@ -11,40 +11,41 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Debug - List files (PowerShell)
+    - name: Debug - List files (CMD)
+      shell: cmd
       run: |
         echo "=== Root directory ==="
-        Get-ChildItem
+        dir
         echo "=== Scripts directory ==="
-        Get-ChildItem scripts -ErrorAction SilentlyContinue
+        if exist scripts (dir scripts) else (echo scripts directory not found)
         echo "=== Installer directory ==="
-        Get-ChildItem installer -ErrorAction SilentlyContinue
+        if exist installer (dir installer) else (echo installer directory not found)
         echo "=== Full recursive listing ==="
-        Get-ChildItem -Recurse -ErrorAction SilentlyContinue
+        dir /s
       
-    - name: Check critical files
+    - name: Check critical files (PowerShell)
       run: |
         $filesExist = $true
         
         if (-not (Test-Path "pom.xml")) {
-          echo "❌ pom.xml not found"
+          Write-Error "❌ pom.xml not found"
           $filesExist = $false
         } else {
-          echo "✅ pom.xml found"
+          Write-Host "✅ pom.xml found"
         }
         
         if (-not (Test-Path "scripts/update-version.ps1")) {
-          echo "❌ scripts/update-version.ps1 not found"
+          Write-Error "❌ scripts/update-version.ps1 not found"
           $filesExist = $false
         } else {
-          echo "✅ scripts/update-version.ps1 found"
+          Write-Host "✅ scripts/update-version.ps1 found"
         }
         
         if (-not (Test-Path "installer/script.iss")) {
-          echo "❌ installer/script.iss not found"
+          Write-Error "❌ installer/script.iss not found"
           $filesExist = $false
         } else {
-          echo "✅ installer/script.iss found"
+          Write-Host "✅ installer/script.iss found"
         }
         
         if (-not $filesExist) {
@@ -62,14 +63,14 @@ jobs:
       
     - name: Test version update script
       run: |
-        echo "=== Current versions ==="
-        echo "POM version:"
+        Write-Host "=== Current versions ==="
+        Write-Host "POM version:"
         Select-String -Path pom.xml -Pattern '<version>([^<]+)</version>' | ForEach-Object { $_.Matches.Groups[1].Value }
-        echo "ISS version:"
+        Write-Host "ISS version:"
         Select-String -Path installer/script.iss -Pattern 'MyAppVersion "([^"]+)"' | ForEach-Object { $_.Matches.Groups[1].Value }
         
-        echo "=== Running update script ==="
+        Write-Host "=== Running update script ==="
         powershell -File scripts/update-version.ps1
         
-        echo "=== Updated ISS version ==="
+        Write-Host "=== Updated ISS version ==="
         Select-String -Path installer/script.iss -Pattern 'MyAppVersion "([^"]+)"' | ForEach-Object { $_.Matches.Groups[1].Value }
