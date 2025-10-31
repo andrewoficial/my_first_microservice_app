@@ -1,0 +1,36 @@
+# .github/workflows/test-build.yml
+name: Test Build
+
+on:
+  push:
+    branches: [main, master]
+  # Или для ручного запуска:
+  workflow_dispatch:
+
+jobs:
+  test-build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Debug - List files
+      run: dir /s
+      
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        
+    - name: Build with Maven
+      run: mvn -B package --file pom.xml
+      
+    - name: Test version update script
+      run: |
+        echo "Testing version update script..."
+        type pom.xml | findstr version
+        powershell -File scripts/update-version.ps1
+        echo "Updated ISS file:"
+        type installer/script.iss | findstr MyAppVersion
