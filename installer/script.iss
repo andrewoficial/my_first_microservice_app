@@ -21,9 +21,9 @@ ArchitecturesInstallIn64BitMode=x64
 SetupLogging=yes
 
 [Files]
-Source: "../target/Elephant-Monitor-{#MyAppVersion}.jar"; DestDir: "{app}"; Flags: ignoreversion
-Source: "../sources/favicon.ico"; DestDir: "{app}"; Flags: ignoreversion
-Source: "../sources/launcher.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "sources\favicon.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "sources\launcher.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\target\Elephant-Monitor-{#MyAppVersion}.jar"; DestDir: "{app}"; Flags: ignoreversion
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
