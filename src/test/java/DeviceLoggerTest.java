@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
+import java.time.format.DateTimeFormatter;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -198,19 +198,20 @@ class DeviceLoggerTest {
         assertTrue(logger.getLogFileCSV().canWrite());
 
         // Ожидаемое содержимое TXT-файла
+        String timeStr = FIXED_TIME.format(DateTimeFormatter.ofPattern("yyyy.MM.dd;HH:mm:ss.SSS"));
         List<String> expectedTxtLines = Arrays.asList(
-                "2025.08.09;01:00:42.682 | Mocked Request 012",
-                "2025.08.09;01:00:42.682 | {77 111 99 107 101 100 32 82 101 113 117 101 115 116 32 48 49 50}",
-                "2025.08.09;01:00:42.682 | {82 97 119 32 65 110 115 119 101 114 32 83 116 114 105 110 103 32 51 52 53}",
-                "2025.08.09;01:00:42.682 | Raw Answer String 345",
-                "2025.08.09;01:00:42.682 | 0,0 | units for 0 | 1,0 | units for 1 | 2,0 | units for 2 | 3,0 | units for 3 | 0,0 | null |"
+                timeStr + " | Mocked Request 012",
+                timeStr + " | {77 111 99 107 101 100 32 82 101 113 117 101 115 116 32 48 49 50}",
+                timeStr + " | {82 97 119 32 65 110 115 119 101 114 32 83 116 114 105 110 103 32 51 52 53}",
+                timeStr + " | Raw Answer String 345",
+                timeStr + " | 0,0 | units for 0 | 1,0 | units for 1 | 2,0 | units for 2 | 3,0 | units for 3 | 0,0 | null |"
         );
 
         // Ожидаемое содержимое CSV-файла
         List<String> expectedCsvLines = Arrays.asList(
-                "2025.08.09;01:00:42.682 | Mocked Request 012",
-                "2025.08.09;01:00:42.682 | Raw Answer String 345",
-                "2025.08.09;01:00:42.682 | 0,0 | units for 0 | 1,0 | units for 1 | 2,0 | units for 2 | 3,0 | units for 3 | 0,0 | null |"
+                timeStr + " | Mocked Request 012",
+                timeStr + " | Raw Answer String 345",
+                timeStr + " | 0,0 | units for 0 | 1,0 | units for 1 | 2,0 | units for 2 | 3,0 | units for 3 | 0,0 | null |"
         );
 
         // Проверяем содержимое TXT-файла
@@ -254,19 +255,20 @@ class DeviceLoggerTest {
         assertTrue(logger.getLogFileCSV().canWrite());
 
         // Ожидаемое содержимое TXT-файла
+        String timeStr = FIXED_TIME.format(DateTimeFormatter.ofPattern("yyyy.MM.dd;HH:mm:ss.SSS"));
         List<String> expectedTxtLines = Arrays.asList(
-                "2025.08.09;01:00:42.682 | Mocked Request 012",
-                "2025.08.09;01:00:42.682 | {77 111 99 107 101 100 32 82 101 113 117 101 115 116 32 48 49 50}",
-                "2025.08.09;01:00:42.682 | {82 97 119 32 65 110 115 119 101 114 32 83 116 114 105 110 103 32 51 52 53}",
-                "2025.08.09;01:00:42.682 | Raw Answer String 345",
-                "2025.08.09;01:00:42.682 | nullValuesReceived | nullValuesReceived |"
+                timeStr + " | Mocked Request 012",
+                timeStr + " | {77 111 99 107 101 100 32 82 101 113 117 101 115 116 32 48 49 50}",
+                timeStr + " | {82 97 119 32 65 110 115 119 101 114 32 83 116 114 105 110 103 32 51 52 53}",
+                timeStr + " | Raw Answer String 345",
+                timeStr + " | nullValuesReceived | nullValuesReceived |"
         );
 
         // Ожидаемое содержимое CSV-файла
         List<String> expectedCsvLines = Arrays.asList(
-                "2025.08.09;01:00:42.682 | Mocked Request 012",
-                "2025.08.09;01:00:42.682 | Raw Answer String 345",
-                "2025.08.09;01:00:42.682 |"
+                timeStr + " | Mocked Request 012",
+                timeStr + " | Raw Answer String 345",
+                timeStr + " |"
         );
 
         // Проверяем содержимое TXT-файла
@@ -309,20 +311,21 @@ class DeviceLoggerTest {
         assertTrue(logger.getLogFileCSV().canRead());
         assertTrue(logger.getLogFileCSV().canWrite());
 
+        String timeStr = FIXED_TIME.format(DateTimeFormatter.ofPattern("yyyy.MM.dd;HH:mm:ss.SSS"));
         // Ожидаемое содержимое TXT-файла
         List<String> expectedTxtLines = Arrays.asList(
-                "2025.08.09;01:00:42.682 | Mocked Request 012",
-                "2025.08.09;01:00:42.682 | {77 111 99 107 101 100 32 82 101 113 117 101 115 116 32 48 49 50}",
-                "2025.08.09;01:00:42.682 | {78 85 76 76 32 83 84 82 73 78 71}",
-                "2025.08.09;01:00:42.682 | NULL STRING",
-                "2025.08.09;01:00:42.682 | nullValuesReceived | nullValuesReceived |"
+                timeStr + " | Mocked Request 012",
+                timeStr + " | {77 111 99 107 101 100 32 82 101 113 117 101 115 116 32 48 49 50}",
+                timeStr + " | {78 85 76 76 32 83 84 82 73 78 71}",
+                timeStr + " | NULL STRING",
+                timeStr + " | nullValuesReceived | nullValuesReceived |"
         );
 
         // Ожидаемое содержимое CSV-файла
         List<String> expectedCsvLines = Arrays.asList(
-                "2025.08.09;01:00:42.682 | Mocked Request 012",
-                "2025.08.09;01:00:42.682 | NULL STRING",
-                "2025.08.09;01:00:42.682 |"
+                timeStr + " | Mocked Request 012",
+                timeStr + " | NULL STRING",
+                timeStr + " |"
         );
 
         // Проверяем содержимое TXT-файла
@@ -365,20 +368,21 @@ class DeviceLoggerTest {
         assertTrue(logger.getLogFileCSV().canRead());
         assertTrue(logger.getLogFileCSV().canWrite());
 
+        String timeStr = FIXED_TIME.format(DateTimeFormatter.ofPattern("yyyy.MM.dd;HH:mm:ss.SSS"));
         // Ожидаемое содержимое TXT-файла
         List<String> expectedTxtLines = Arrays.asList(
-                "2025.08.09;01:00:42.682 | null",
-                "2025.08.09;01:00:42.682 | {}",
-                "2025.08.09;01:00:42.682 | {82 97 119 32 65 110 115 119 101 114 32 83 116 114 105 110 103 32 51 52 53}",
-                "2025.08.09;01:00:42.682 | Raw Answer String 345",
-                "2025.08.09;01:00:42.682 | nullValuesReceived | nullValuesReceived |"
+                timeStr + " | null",
+                timeStr + " | {}",
+                timeStr + " | {82 97 119 32 65 110 115 119 101 114 32 83 116 114 105 110 103 32 51 52 53}",
+                timeStr + " | Raw Answer String 345",
+                timeStr + " | nullValuesReceived | nullValuesReceived |"
         );
 
         // Ожидаемое содержимое CSV-файла
         List<String> expectedCsvLines = Arrays.asList(
-                "2025.08.09;01:00:42.682 | null",
-                "2025.08.09;01:00:42.682 | Raw Answer String 345",
-                "2025.08.09;01:00:42.682 |"
+                timeStr + " | null",
+                timeStr + " | Raw Answer String 345",
+                timeStr + " |"
         );
 
         // Проверяем содержимое TXT-файла
