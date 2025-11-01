@@ -34,10 +34,13 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class DeviceLoggerTest {
     private static final Logger log = Logger.getLogger(DeviceLoggerTest.class);
-    private static final String FIXED_TIME_STR = "2025-08-08T22:00:42.682Z";
-    private static final Instant FIXED_INSTANT = Instant.parse(FIXED_TIME_STR);
-    private static final Clock FIXED_CLOCK = Clock.fixed(FIXED_INSTANT, ZoneId.systemDefault());
+    private static final String OLD_FIXED_TIME_STR = "2025-08-08T22:00:42.682Z";//OLD FIXED_TIME_STR
+    private static final Instant OLD_FIXED_INSTANT = Instant.parse(OLD_FIXED_TIME_STR);
+    private static final Clock FIXED_CLOCK = Clock.fixed(OLD_FIXED_INSTANT, ZoneId.of("UTC"));
     private static final LocalDateTime FIXED_TIME = LocalDateTime.now(FIXED_CLOCK);
+
+    //Требуется FIXED_TIME и FIXED_TIME_STR
+    private static final String FIXED_TIME_STR = FIXED_TIME.format(DateTimeFormatter.ofPattern("yyyy.MM.dd;HH:mm:ss.SSS"));
     /*
     ToDo
     1. Добавить проверку: DeviceAnswer (DA) содержит одно значение null. [Done.]
@@ -99,7 +102,7 @@ class DeviceLoggerTest {
     @DisplayName("данные буферизуются и записываются по истечении интервала")
     void writeLine_flushesAfterInterval() {
         // Настраиваем часы с фиксированным временем
-        Clock clock = Clock.fixed(Instant.now(), ZoneId.systemDefault());
+        Clock clock = Clock.fixed(Instant.now(), ZoneId.of("UTC"));
         when(properties.isDbgLogState()).thenReturn(true);
         when(deviceAnswer.toStringDBG()).thenReturn("debug_data");
 
@@ -457,7 +460,7 @@ class DeviceLoggerTest {
         // Создаем логгер с невалидным путем
         Path invalidPath = Path.of("/invalid/path");
         DeviceLogger logger = new DeviceLogger(
-                "test", properties, Clock.systemDefaultZone(), invalidPath.toString(), Object::toString
+                "test", properties, FIXED_CLOCK.withZone(ZoneId.of("UTC")), invalidPath.toString(), Object::toString
         );
 
         // Проверяем обработку исключения при записи
@@ -645,7 +648,7 @@ class DeviceLoggerTest {
         return new DeviceLogger(
                 "test",
                 properties,
-                clock != null ? clock : Clock.systemDefaultZone(),
+                clock != null ? clock : FIXED_CLOCK.withZone(ZoneId.of("UTC")),
                 tempDir.toString(),
                 Object::toString
         );
