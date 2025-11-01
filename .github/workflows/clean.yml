@@ -1,5 +1,5 @@
-- name: Clean workspace
-  run: |
+name: Clean workspace
+run: |
     echo "Cleaning workspace..."
     mvn clean
     rm -rf target
