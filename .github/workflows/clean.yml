@@ -1,2 +1,5 @@
 - name: Clean workspace
-  run: rm -rf target  # Clears Maven build artifacts
+  run: |
+    echo "Cleaning workspace..."
+    mvn clean
+    rm -rf target
