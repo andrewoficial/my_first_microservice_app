@@ -60,7 +60,7 @@ class DeviceLoggerTest {
 
     @BeforeEach
     void logStartTestName(TestInfo testInfo) {
-        log.info("Начат тест: " + testInfo.getDisplayName());
+        log.info("Run test: " + testInfo.getDisplayName());
 
 
         // Общие настройки для всех тестов
@@ -82,7 +82,7 @@ class DeviceLoggerTest {
     }
 
     @Test
-    @DisplayName("создание файлов при инициализации")
+    @DisplayName("FileLogger creates files when enabled")
     void init_createsFilesWhenEnabled() {
         when(properties.isCsvLogState()).thenReturn(true);
         when(properties.isDbgLogState()).thenReturn(true);
@@ -130,7 +130,7 @@ class DeviceLoggerTest {
     }
 
     @Test
-    @DisplayName("явный вызов flush")
+    @DisplayName("Flush forced call")
     void flush_writesBuffersImmediately() {
         when(properties.isCsvLogState()).thenReturn(true);
         when(deviceAnswer.toStringCSV()).thenReturn("csv_data");
@@ -151,7 +151,7 @@ class DeviceLoggerTest {
             "true, true, 1, 1",     // оба формата
             "false, false, 0, 0"    // оба отключены
     })
-    @DisplayName("Проверка конфигурации логирования")
+    @DisplayName("Check logger configuration")
     void logger_respectsConfiguration(
             boolean txtEnabled,
             boolean csvEnabled,
@@ -170,7 +170,7 @@ class DeviceLoggerTest {
 
 
     @Test
-    @DisplayName("DA содержит одно поле результатов измерения как NULL")
+    @DisplayName("DA contain one of measuring fields as NULL")
     void writeLineWithBrokenMeasureResult() throws IOException {
         // Настройка свойств логирования
         when(properties.isDbgLogState()).thenReturn(true);
@@ -229,7 +229,7 @@ class DeviceLoggerTest {
     }
 
     @Test
-    @DisplayName("DA сам NULL")
+    @DisplayName("DeviceAnswer is NULL")
     void writeLineWithNullDeviceAnswer() throws IOException {
         // Настройка свойств логирования
         when(properties.isDbgLogState()).thenReturn(true);
@@ -285,7 +285,7 @@ class DeviceLoggerTest {
     }
 
     @Test
-    @DisplayName("DA содержит NULL строку ответа.")
+    @DisplayName("A NULL response string is passed.")
     void writeLineWithNullRawString() throws IOException {
         // Настройка свойств логирования
         when(properties.isDbgLogState()).thenReturn(true);
@@ -341,7 +341,7 @@ class DeviceLoggerTest {
     }
 
     @Test
-    @DisplayName("в DA NULL строка запроса.")
+    @DisplayName("A NULL request string is passed.")
     void writeLineWithNullRequestSendString() throws IOException {
         // Настройка свойств логирования
         when(properties.isDbgLogState()).thenReturn(true);
@@ -397,7 +397,7 @@ class DeviceLoggerTest {
     }
 
     @Test
-    @DisplayName("контроль записи по накоплению буфера")
+    @DisplayName("buffer accumulation write control")
     void writeLine_flushesWhenBufferFull() throws IOException {
         // Настройка свойств
         when(properties.isDbgLogState()).thenReturn(true);
@@ -408,19 +408,17 @@ class DeviceLoggerTest {
         logger.setBufferLineLimit(3);
         // Создаем тестовые данные
 
-        DeviceAnswer realAnswerOne = createTestAnswer(LocalDateTime.now(),
+        DeviceAnswer realAnswerOne = createTestAnswer(FIXED_TIME,
                 "First Request","First Answer","First Answer CSV",null);
 
-
-        DeviceAnswer realAnswerTwo = createTestAnswer(LocalDateTime.now(),
+        DeviceAnswer realAnswerTwo = createTestAnswer(FIXED_TIME,
                 "Second Request","Second Answer","Second Answer CSV",null);
 
-        DeviceAnswer realAnswerThree = createTestAnswer(LocalDateTime.now(),
+        DeviceAnswer realAnswerThree = createTestAnswer(FIXED_TIME,
                 "Third Request","Third Answer","Third Answer CSV",null);
 
-        DeviceAnswer realAnswerFourth = createTestAnswer(LocalDateTime.now(),
+        DeviceAnswer realAnswerFourth = createTestAnswer(FIXED_TIME,
                 "Fourth Request","Fourth Answer","Fourth Answer CSV",null);
-
 
         // До записи буфер пустой
         assertEquals(0, logger.getTxtBuffer().size());
@@ -450,7 +448,7 @@ class DeviceLoggerTest {
     }
 
     @Test
-    @DisplayName("обработка исключений при записи")
+    @DisplayName("handling exceptions when writing")
     void writeLine_handlesIOException() throws IOException {
         // Настройка свойств
         when(properties.isDbgLogState()).thenReturn(true);
@@ -475,7 +473,7 @@ class DeviceLoggerTest {
     }
 
     @Test
-    @DisplayName("DBG-логгер при занятом файле")
+    @DisplayName("DBG logger when file is busy")
     void writeLineWhenFileIsLocked() throws IOException {
         // Настройка свойств
         when(properties.isDbgLogState()).thenReturn(true);
@@ -550,7 +548,7 @@ class DeviceLoggerTest {
     }
 
     @Test
-    @DisplayName("дописывание в существующий файл")
+    @DisplayName("Continue writing to file")
     void writeLine_appendsToExistingFile() throws IOException {
         when(properties.isDbgLogState()).thenReturn(true);
 
@@ -573,7 +571,7 @@ class DeviceLoggerTest {
 
 
     @Test
-    @DisplayName("конкурентный доступ к логгеру")
+    @DisplayName("competitive access to the logger")
     void concurrentAccess() throws InterruptedException {
         when(properties.isDbgLogState()).thenReturn(true);
         DeviceLogger logger = createTestLogger(null);
@@ -614,22 +612,22 @@ class DeviceLoggerTest {
     }
 
     private void assertFileContent(File file, List<String> expectedLines) throws IOException {
-        assertNotNull(file, "Файл не должен быть null");
-        assertTrue(file.exists(), "Файл должен существовать: " + file.getPath());
-        assertTrue(file.canRead(), "Нет прав на чтение: " + file.getPath());
-        assertTrue(file.canWrite(), "Нет прав на запись: " + file.getPath());
+        assertNotNull(file, "File must not be null");
+        assertTrue(file.exists(), "File must exist: " + file.getPath());
+        assertTrue(file.canRead(), "Have not permissions to read: " + file.getPath());
+        assertTrue(file.canWrite(), "Have not permissions to write: " + file.getPath());
 
         List<String> actualLines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
-        assertEquals(expectedLines.size(), actualLines.size(), "Неверное количество строк");
+        assertEquals(expectedLines.size(), actualLines.size(), "Wrong number of lines");
 
         for (int i = 0; i < expectedLines.size(); i++) {
-            assertEquals(expectedLines.get(i), actualLines.get(i), "Ошибка в строке " + (i+1));
+            assertEquals(expectedLines.get(i), actualLines.get(i), "Error in line " + (i+1));
         }
     }
 
     private void assertBuffersEmpty(DeviceLogger logger) {
-        assertTrue(logger.getTxtBuffer().isEmpty(), "TXT буфер должен быть пустым");
-        assertTrue(logger.getCsvBuffer().isEmpty(), "CSV буфер должен быть пустым");
+        assertTrue(logger.getTxtBuffer().isEmpty(), "TXT must be empty");
+        assertTrue(logger.getCsvBuffer().isEmpty(), "CSV must be empty");
     }
 
     private DeviceLogger createTestLogger(Clock clock) {
