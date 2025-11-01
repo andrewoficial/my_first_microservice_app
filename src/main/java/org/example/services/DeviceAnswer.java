@@ -26,6 +26,11 @@ public class DeviceAnswer {
     private String answerReceivedString;
 
     @Setter @Getter
+    private byte[] answerReceivedBytes;
+    @Setter @Getter
+    private byte[] answerSendBytes;
+
+    @Setter @Getter
     private String answerReceivedStringCSV;
 
     @Setter @Getter
@@ -128,13 +133,21 @@ public class DeviceAnswer {
         if(prop.isDbgLogOutputHEX()){
             formattedString.append(requestSendTime.format(MyUtilities.CUSTOM_FORMATTER_CSV));
             formattedString.append(prop.getDbgLogSeparator());
-            formattedString.append(stringToHexArray(requestSendString));
+            if(answerSendBytes != null && answerSendBytes.length > 0) {
+                formattedString.append(arrayToHexArray(answerSendBytes));
+            }else{
+                formattedString.append(stringToHexArray(requestSendString));
+            }
             formattedString.append("\n");
         }
         if(prop.isDbgLogInputHEX()){
             formattedString.append(answerReceivedTime.format(MyUtilities.CUSTOM_FORMATTER_CSV));
             formattedString.append(prop.getDbgLogSeparator());
-            formattedString.append(stringToHexArray(answerReceivedString));
+            if(answerReceivedBytes != null && answerReceivedBytes.length > 0) {
+                formattedString.append(arrayToHexArray(answerReceivedBytes));
+            }else{
+                formattedString.append(stringToHexArray(answerReceivedString));
+            }
             formattedString.append("\n");
         }
         if(prop.isDbgLogInputASCII()){
@@ -189,6 +202,22 @@ public class DeviceAnswer {
             }
         }
         hexArray.append("}");
+        return hexArray.toString();
+    }
+
+    public String arrayToHexArray(byte[] input) {
+        if(input == null){
+            return new StringBuilder("{}").toString();
+        }
+        StringBuilder hexArray = new StringBuilder("{");
+        for (int i = 0; i < input.length; i++) {
+            hexArray.append(String.format("%02X", input[i] & 0xFF));
+            if (i < input.length - 1) {
+                hexArray.append(" ");
+            }
+            hexArray.append(" ");
+        }
+        hexArray.append("} ");
         return hexArray.toString();
     }
 }

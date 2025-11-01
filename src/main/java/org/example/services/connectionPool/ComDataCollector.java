@@ -455,6 +455,7 @@ public class ComDataCollector implements Runnable{
             }
             deviceAnswer = new DeviceAnswer(LocalDateTime.ofInstant(Instant.ofEpochMilli(receiveTimestamp), ZoneId.systemDefault()), "", currentDirection.get());
         }
+        deviceAnswer.setAnswerReceivedBytes(message);
 
         if(responseRequested) {
             if(currentComRule != null && currentComRule.isWaitingForAnswer()){
@@ -466,6 +467,7 @@ public class ComDataCollector implements Runnable{
             }
             if(collection != null && collection.containClientId(clientId)){
                 device.setCmdToSend(collection.getCommand(clientId));
+                deviceAnswer.setAnswerSendBytes(collection.getRawCommand(clientId));
             }else{
                 log.warn("Collection null или не содержит clientId: " + clientId);
             }
