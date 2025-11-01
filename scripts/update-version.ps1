@@ -16,3 +16,5 @@ $issContent = $issContent -replace 'Source: ".*Elephant-Monitor-[\d.]+\.jar"', "
 
 Set-Content -Path "installer/script.iss" -Value $issContent
 Write-Host "Updated Inno Setup script to version $version"
+
+"version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
