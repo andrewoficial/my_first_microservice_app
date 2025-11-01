@@ -36,19 +36,12 @@ jobs:
         Write-Host "=== Compiling installer with Inno Setup ==="
         iscc installer/script.iss
       
-    - name: Get version from pom.xml
-      id: get_version
-      shell: pwsh
-      run: |
-        $version = mvn help:evaluate -Dexpression=project.version -q -DforceStdout
-        echo "version=$version" >> $env:GITHUB_OUTPUT
-
     - name: Create git tag
       shell: pwsh
       run: |
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        $version = "v${{ steps.get_version.outputs.version }}"
+        $version = "v${{ steps.update_version.outputs.version }}"
         Write-Host "Creating tag $version"
         git tag $version
         git push origin $version
@@ -56,10 +49,11 @@ jobs:
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: v${{ steps.get_version.outputs.version }}
-        name: Release v${{ steps.get_version.outputs.version }}
+        tag_name: v${{ steps.update_version.outputs.version }}
+        name: Release v${{ steps.update_version.outputs.version }}
         files: |
           installer/output/ElephantMonitor_Setup.exe
           target/Elephant-Monitor-*.jar
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
