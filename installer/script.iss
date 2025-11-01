@@ -23,6 +23,7 @@ SetupLogging=yes
 [Files]
 Source: "sources\favicon.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "sources\launcher.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "sources\OpenJDK21U-jdk_x64_windows_hotspot_21.0.8_9.msi"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\target\Elephant-Monitor-{#MyAppVersion}.jar"; DestDir: "{app}"; Flags: ignoreversion
 
 [Tasks]
