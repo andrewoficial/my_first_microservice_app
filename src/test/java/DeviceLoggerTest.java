@@ -61,6 +61,7 @@ class DeviceLoggerTest {
     @BeforeEach
     void logStartTestName(TestInfo testInfo) {
         log.info("Run test: " + testInfo.getDisplayName());
+        System.out.println("Run test: " + testInfo.getDisplayName());
 
 
         // Общие настройки для всех тестов
