@@ -248,15 +248,73 @@ public class CubicCommandRegistry extends DeviceCommandRegistry {
             version.append((char) response[i]);
         }
         log.info("CUBIC: version: " + version);
-        double versionNum = -1D;
-        try{
-            versionNum = Double.parseDouble(version.toString());
-        }catch (NumberFormatException e){
-            log.warn("CUBIC: Invalid version response");
-        }
+        double versionNum = extractNumericVersion(version.toString());
+
         AnswerValues answerValues = new AnswerValues(1);
         answerValues.addValue(versionNum, version.toString());
         return answerValues;
+    }
+
+    /**
+     * Извлекает числовую версию из строки, содержащей цифры и точки
+     * Примеры:
+     *   "V2.1.5" -> 2.1
+     *   "R1.5.1" -> 1.5
+     *   "1.0" -> 1.0
+     *   "Version 3.2.1" -> 3.2
+     */
+    private double extractNumericVersion(String versionStr) {
+        if (versionStr == null || versionStr.isEmpty()) {
+            return -1.0;
+        }
+
+        // Ищем последовательности цифр и точек
+        StringBuilder numericPart = new StringBuilder();
+        boolean foundDigit = false;
+        boolean foundDot = false;
+
+        for (char c : versionStr.toCharArray()) {
+            if (Character.isDigit(c)) {
+                numericPart.append(c);
+                foundDigit = true;
+            } else if (c == '.' && foundDigit && !foundDot) {
+                // Добавляем только первую точку для мажорной и минорной версии
+                numericPart.append(c);
+                foundDot = true;
+            } else if (foundDigit && !Character.isDigit(c) && c != '.') {
+                // Прерываемся при первом нецифровом символе после начала числовой последовательности
+                break;
+            }
+        }
+
+        String result = numericPart.toString();
+
+        // Убедимся, что строка не заканчивается точкой
+        if (result.endsWith(".")) {
+            result = result.substring(0, result.length() - 1);
+        }
+
+        // Разделяем на части по точке
+        String[] parts = result.split("\\.");
+
+        try {
+            if (parts.length == 1) {
+                // Только мажорная версия "1" -> 1.0
+                return Double.parseDouble(parts[0] + ".0");
+            } else if (parts.length >= 2) {
+                // Мажорная и минорная версия "1.2" -> 1.2
+                // Если минорная версия длинная, берем первые 2 цифры
+                String minor = parts[1];
+                if (minor.length() > 2) {
+                    minor = minor.substring(0, 2);
+                }
+                return Double.parseDouble(parts[0] + "." + minor);
+            }
+        } catch (NumberFormatException e) {
+            log.info("CUBIC: Cannot parse version number from: " + result);
+        }
+
+        return -1.0;
     }
 
     private AnswerValues parseSerialResponse(byte[] response) {
@@ -288,29 +346,112 @@ public class CubicCommandRegistry extends DeviceCommandRegistry {
     }
 
     private AnswerValues parseGasPropertyResponse(byte[] response) {
-        if (response.length < 11 || response[0] != ACK || response[1] != 0x08 || response[2] != 0x0D || !validateChecksum(response)) {
-            log.warn("CUBIC: Invalid gas property response");
+        log.info("CUBIC: Starting GasProperty response parsing. Raw data: " + MyUtilities.bytesToHex(response));
+
+        // Более гибкая проверка длины
+        if (response.length < 11) {
+            log.warn("CUBIC: GasProperty response too short. Expected at least 11 bytes, got: " + response.length);
             return null;
         }
-        log.info("Начинаю разбор ответа на GasProperty: ");
+
+        if (response[0] != ACK) {
+            log.warn("CUBIC: Invalid ACK in GasProperty response: 0x" + Integer.toHexString(response[0] & 0xFF));
+            return null;
+        }
+
+        if (response[1] != 0x08) {
+            log.warn("CUBIC: Invalid length byte in GasProperty response: 0x" + Integer.toHexString(response[1] & 0xFF));
+            return null;
+        }
+
+        if (response[2] != 0x0D) {
+            log.warn("CUBIC: Invalid command byte in GasProperty response: 0x" + Integer.toHexString(response[2] & 0xFF));
+            return null;
+        }
+
+        if (!validateChecksum(response)) {
+            log.warn("CUBIC: Checksum error in GasProperty response");
+            // Можно продолжить разбор, но залогировать ошибку
+        }
+
+        // Подробное логирование всех байтов
+        log.info("CUBIC: GasProperty response structure:");
+        log.info("  ACK: 0x" + Integer.toHexString(response[0] & 0xFF));
+        log.info("  LB: 0x" + Integer.toHexString(response[1] & 0xFF) + " (" + (response[1] & 0xFF) + " bytes)");
+        log.info("  CMD: 0x" + Integer.toHexString(response[2] & 0xFF));
+        log.info("  DF1: 0x" + Integer.toHexString(response[3] & 0xFF) + " (" + (response[3] & 0xFF) + ")");
+        log.info("  DF2: 0x" + Integer.toHexString(response[4] & 0xFF) + " (" + (response[4] & 0xFF) + ")");
+        log.info("  DF3 (decimals): 0x" + Integer.toHexString(response[5] & 0xFF) + " (" + (response[5] & 0xFF) + ")");
+        log.info("  DF4 (reserved): 0x" + Integer.toHexString(response[6] & 0xFF) + " (" + (response[6] & 0xFF) + ")");
+        log.info("  DF5 (unit): 0x" + Integer.toHexString(response[7] & 0xFF) + " (" + (response[7] & 0xFF) + ")");
+        log.info("  DF6 (reserved): 0x" + Integer.toHexString(response[8] & 0xFF) + " (" + (response[8] & 0xFF) + ")");
+        log.info("  DF7 (reserved): 0x" + Integer.toHexString(response[9] & 0xFF) + " (" + (response[9] & 0xFF) + ")");
+        log.info("  CS: 0x" + Integer.toHexString(response[10] & 0xFF) + " (" + (response[10] & 0xFF) + ")");
+
+        // Извлечение данных с проверкой диапазонов
         int df1 = Byte.toUnsignedInt(response[3]);
-        log.info("df1: " + df1);
         int df2 = Byte.toUnsignedInt(response[4]);
-        log.info("df2: " + df2);
         int decimals = Byte.toUnsignedInt(response[5]);
-        log.info("decimals: " + decimals);
-        // df4 reserved
-        int unit = Byte.toUnsignedInt(response[7]); // 0 ppm, 2 vol%
-        // df6 df7 reserved
-        double range = (df1 * 256 + df2) / Math.pow(10, decimals);
-        log.info("Range: " + range);
-        String unitStr = unit == 0 ? "ppm" : (unit == 2 ? "vol%" : "unknown");
-        log.info("unit: " + unitStr);
-        log.info("decimals: " + decimals);
+        int df4 = Byte.toUnsignedInt(response[6]); // Зарезервировано, но логируем
+        int unit = Byte.toUnsignedInt(response[7]);
+        int df6 = Byte.toUnsignedInt(response[8]); // Зарезервировано
+        int df7 = Byte.toUnsignedInt(response[9]); // Зарезервировано
+
+        // Проверка корректности decimals
+        if (decimals > 5) {
+            log.warn("CUBIC: Suspicious decimals value: " + decimals + ". Limiting to 5.");
+            decimals = 5;
+        }
+
+        // Вычисление диапазона с проверкой переполнения
+        long rawRange = (long) df1 * 256L + (long) df2;
+        if (rawRange > Integer.MAX_VALUE) {
+            log.warn("CUBIC: Range value too large: " + rawRange);
+        }
+
+        double range;
+        if (decimals == 0) {
+            range = rawRange;
+        } else {
+            double divisor = Math.pow(10, decimals);
+            range = rawRange / divisor;
+        }
+
+        log.info("CUBIC: Calculated range: " + range + " (raw: " + rawRange + ", decimals: " + decimals + ")");
+
+        // Определение единиц измерения
+        String unitStr;
+        switch (unit) {
+            case 0:
+                unitStr = "ppm";
+                break;
+            case 1:
+                unitStr = "unknown(1)";
+                log.warn("CUBIC: Unknown unit code: 1");
+                break;
+            case 2:
+                unitStr = "vol%";
+                break;
+            default:
+                unitStr = "unknown(" + unit + ")";
+                log.warn("CUBIC: Unknown unit code: " + unit);
+                break;
+        }
+
+        log.info("CUBIC: Unit: " + unitStr);
+
+        // Создание результата
         AnswerValues answerValues = new AnswerValues(3);
         answerValues.addValue(range, "Range");
         answerValues.addValue((double) decimals, "Decimals");
-        answerValues.addValue(0.0, unitStr);
+        answerValues.addValue((double) unit, unitStr); // Сохраняем код единицы и строку
+
+        // Дополнительная информация для отладки
+        log.info("CUBIC: GasProperty parsing completed:");
+        log.info("  Range: " + range + " " + unitStr);
+        log.info("  Decimals: " + decimals);
+        log.info("  Unit code: " + unit + " (" + unitStr + ")");
+
         return answerValues;
     }
 
