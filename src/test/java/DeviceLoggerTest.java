@@ -18,10 +18,7 @@ import java.nio.channels.FileLock;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -34,12 +31,12 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class DeviceLoggerTest {
     private static final Logger log = Logger.getLogger(DeviceLoggerTest.class);
-    private static final String OLD_FIXED_TIME_STR = "2025-08-08T22:00:42.682Z";//OLD FIXED_TIME_STR
-    private static final Instant OLD_FIXED_INSTANT = Instant.parse(OLD_FIXED_TIME_STR);
-    private static final Clock FIXED_CLOCK = Clock.fixed(OLD_FIXED_INSTANT, ZoneId.of("UTC"));
-    private static final LocalDateTime FIXED_TIME = LocalDateTime.now(FIXED_CLOCK);
+    private static final String UTC_ZONE = "UTC+3";
+    private static final String TIME_FOR_TEST = "2025-08-08T22:00:42.682Z";
+    private static final Instant INSTANT_FOR_TEST = Instant.parse(TIME_FOR_TEST);
+    private static final Clock FIXED_CLOCK = Clock.fixed(INSTANT_FOR_TEST, ZoneId.of(UTC_ZONE));
 
-    //Требуется FIXED_TIME и FIXED_TIME_STR
+    private static final LocalDateTime FIXED_TIME = LocalDateTime.now(FIXED_CLOCK);
     private static final String FIXED_TIME_STR = FIXED_TIME.format(DateTimeFormatter.ofPattern("yyyy.MM.dd;HH:mm:ss.SSS"));
     /*
     ToDo
@@ -99,32 +96,37 @@ class DeviceLoggerTest {
     }
 
     @Test
-    @DisplayName("данные буферизуются и записываются по истечении интервала")
+    @DisplayName("data is buffered and written after the interval expires")
     void writeLine_flushesAfterInterval() {
-        // Настраиваем часы с фиксированным временем
-        Clock clock = Clock.fixed(Instant.now(), ZoneId.of("UTC"));
+        System.out.println("=== Starting buffer flush interval test ===");
+
+        // Setup
+        Clock clock = Clock.fixed(Instant.now(), ZoneId.of(UTC_ZONE));
         when(properties.isDbgLogState()).thenReturn(true);
         when(deviceAnswer.toStringDBG()).thenReturn("debug_data");
 
-        DeviceLogger logger = createTestLogger(null);
+        DeviceLogger logger = createTestLogger(clock);
+        logger.setBufferLineLimit(2);
+        long flushInterval = logger.getLogWriteInterval();
 
-        // Подменяем clock для контроля времени
-        Clock laterClock = Clock.offset(clock, java.time.Duration.ofMillis(400));
-        logger.setLastWriteTime(clock.millis()); // Начальное время
-
+        // Initial state
+        logger.setLastWriteTime(clock.millis());
         logger.writeLine(deviceAnswer);
 
-        // Данные в буфере, но не записаны
+        // Verify data buffered but not written
         assertEquals(1, logger.getTxtBuffer().size());
-        assertTrue(logger.getLogFile().length() == 0);
+        assertEquals(0, logger.getLogFile().length());
 
-        // Эмулируем сдвиг времени
-        logger.setLastWriteTime(laterClock.millis() - 900); // Прошло 350 мс
+        // Simulate time passage beyond flush interval
+        Clock laterClock = Clock.offset(clock, Duration.ofMillis(flushInterval + 100));
+        logger.setLastWriteTime(laterClock.millis() - flushInterval - 50);
         logger.writeLine(deviceAnswer);
 
-        // Должен сработать flush
+        // Verify buffer flushed to file
         assertEquals(0, logger.getTxtBuffer().size());
         assertTrue(logger.getLogFile().length() > 0);
+
+        System.out.println("=== Test completed successfully ===");
     }
 
     @Test
@@ -201,20 +203,19 @@ class DeviceLoggerTest {
         assertTrue(logger.getLogFileCSV().canWrite());
 
         // Ожидаемое содержимое TXT-файла
-        String timeStr = FIXED_TIME.format(DateTimeFormatter.ofPattern("yyyy.MM.dd;HH:mm:ss.SSS"));
         List<String> expectedTxtLines = Arrays.asList(
-                timeStr + " | Mocked Request 012",
-                timeStr + " | {77 111 99 107 101 100 32 82 101 113 117 101 115 116 32 48 49 50}",
-                timeStr + " | {82 97 119 32 65 110 115 119 101 114 32 83 116 114 105 110 103 32 51 52 53}",
-                timeStr + " | Raw Answer String 345",
-                timeStr + " | 0,0 | units for 0 | 1,0 | units for 1 | 2,0 | units for 2 | 3,0 | units for 3 | 0,0 | null |"
+                FIXED_TIME_STR + " | Mocked Request 012",
+                FIXED_TIME_STR + " | {77 111 99 107 101 100 32 82 101 113 117 101 115 116 32 48 49 50}",
+                FIXED_TIME_STR + " | {82 97 119 32 65 110 115 119 101 114 32 83 116 114 105 110 103 32 51 52 53}",
+                FIXED_TIME_STR + " | Raw Answer String 345",
+                FIXED_TIME_STR + " | 0,0 | units for 0 | 1,0 | units for 1 | 2,0 | units for 2 | 3,0 | units for 3 | 0,0 | null |"
         );
 
         // Ожидаемое содержимое CSV-файла
         List<String> expectedCsvLines = Arrays.asList(
-                timeStr + " | Mocked Request 012",
-                timeStr + " | Raw Answer String 345",
-                timeStr + " | 0,0 | units for 0 | 1,0 | units for 1 | 2,0 | units for 2 | 3,0 | units for 3 | 0,0 | null |"
+                FIXED_TIME_STR + " | Mocked Request 012",
+                FIXED_TIME_STR + " | Raw Answer String 345",
+                FIXED_TIME_STR + " | 0,0 | units for 0 | 1,0 | units for 1 | 2,0 | units for 2 | 3,0 | units for 3 | 0,0 | null |"
         );
 
         // Проверяем содержимое TXT-файла
@@ -258,20 +259,19 @@ class DeviceLoggerTest {
         assertTrue(logger.getLogFileCSV().canWrite());
 
         // Ожидаемое содержимое TXT-файла
-        String timeStr = FIXED_TIME.format(DateTimeFormatter.ofPattern("yyyy.MM.dd;HH:mm:ss.SSS"));
         List<String> expectedTxtLines = Arrays.asList(
-                timeStr + " | Mocked Request 012",
-                timeStr + " | {77 111 99 107 101 100 32 82 101 113 117 101 115 116 32 48 49 50}",
-                timeStr + " | {82 97 119 32 65 110 115 119 101 114 32 83 116 114 105 110 103 32 51 52 53}",
-                timeStr + " | Raw Answer String 345",
-                timeStr + " | nullValuesReceived | nullValuesReceived |"
+                FIXED_TIME_STR + " | Mocked Request 012",
+                FIXED_TIME_STR + " | {77 111 99 107 101 100 32 82 101 113 117 101 115 116 32 48 49 50}",
+                FIXED_TIME_STR + " | {82 97 119 32 65 110 115 119 101 114 32 83 116 114 105 110 103 32 51 52 53}",
+                FIXED_TIME_STR + " | Raw Answer String 345",
+                FIXED_TIME_STR + " | nullValuesReceived | nullValuesReceived |"
         );
 
         // Ожидаемое содержимое CSV-файла
         List<String> expectedCsvLines = Arrays.asList(
-                timeStr + " | Mocked Request 012",
-                timeStr + " | Raw Answer String 345",
-                timeStr + " |"
+                FIXED_TIME_STR + " | Mocked Request 012",
+                FIXED_TIME_STR + " | Raw Answer String 345",
+                FIXED_TIME_STR + " |"
         );
 
         // Проверяем содержимое TXT-файла
@@ -314,21 +314,20 @@ class DeviceLoggerTest {
         assertTrue(logger.getLogFileCSV().canRead());
         assertTrue(logger.getLogFileCSV().canWrite());
 
-        String timeStr = FIXED_TIME.format(DateTimeFormatter.ofPattern("yyyy.MM.dd;HH:mm:ss.SSS"));
         // Ожидаемое содержимое TXT-файла
         List<String> expectedTxtLines = Arrays.asList(
-                timeStr + " | Mocked Request 012",
-                timeStr + " | {77 111 99 107 101 100 32 82 101 113 117 101 115 116 32 48 49 50}",
-                timeStr + " | {78 85 76 76 32 83 84 82 73 78 71}",
-                timeStr + " | NULL STRING",
-                timeStr + " | nullValuesReceived | nullValuesReceived |"
+                FIXED_TIME_STR + " | Mocked Request 012",
+                FIXED_TIME_STR + " | {77 111 99 107 101 100 32 82 101 113 117 101 115 116 32 48 49 50}",
+                FIXED_TIME_STR + " | {78 85 76 76 32 83 84 82 73 78 71}",
+                FIXED_TIME_STR + " | NULL STRING",
+                FIXED_TIME_STR + " | nullValuesReceived | nullValuesReceived |"
         );
 
         // Ожидаемое содержимое CSV-файла
         List<String> expectedCsvLines = Arrays.asList(
-                timeStr + " | Mocked Request 012",
-                timeStr + " | NULL STRING",
-                timeStr + " |"
+                FIXED_TIME_STR + " | Mocked Request 012",
+                FIXED_TIME_STR + " | NULL STRING",
+                FIXED_TIME_STR + " |"
         );
 
         // Проверяем содержимое TXT-файла
@@ -371,21 +370,20 @@ class DeviceLoggerTest {
         assertTrue(logger.getLogFileCSV().canRead());
         assertTrue(logger.getLogFileCSV().canWrite());
 
-        String timeStr = FIXED_TIME.format(DateTimeFormatter.ofPattern("yyyy.MM.dd;HH:mm:ss.SSS"));
         // Ожидаемое содержимое TXT-файла
         List<String> expectedTxtLines = Arrays.asList(
-                timeStr + " | null",
-                timeStr + " | {}",
-                timeStr + " | {82 97 119 32 65 110 115 119 101 114 32 83 116 114 105 110 103 32 51 52 53}",
-                timeStr + " | Raw Answer String 345",
-                timeStr + " | nullValuesReceived | nullValuesReceived |"
+                FIXED_TIME_STR + " | null",
+                FIXED_TIME_STR + " | {}",
+                FIXED_TIME_STR + " | {82 97 119 32 65 110 115 119 101 114 32 83 116 114 105 110 103 32 51 52 53}",
+                FIXED_TIME_STR + " | Raw Answer String 345",
+                FIXED_TIME_STR + " | nullValuesReceived | nullValuesReceived |"
         );
 
         // Ожидаемое содержимое CSV-файла
         List<String> expectedCsvLines = Arrays.asList(
-                timeStr + " | null",
-                timeStr + " | Raw Answer String 345",
-                timeStr + " |"
+                FIXED_TIME_STR + " | null",
+                FIXED_TIME_STR + " | Raw Answer String 345",
+                FIXED_TIME_STR + " |"
         );
 
         // Проверяем содержимое TXT-файла
@@ -460,7 +458,7 @@ class DeviceLoggerTest {
         // Создаем логгер с невалидным путем
         Path invalidPath = Path.of("/invalid/path");
         DeviceLogger logger = new DeviceLogger(
-                "test", properties, FIXED_CLOCK.withZone(ZoneId.of("UTC")), invalidPath.toString(), Object::toString
+                "test", properties, FIXED_CLOCK.withZone(ZoneId.of(UTC_ZONE)), invalidPath.toString(), Object::toString
         );
 
         // Проверяем обработку исключения при записи
@@ -521,41 +519,31 @@ class DeviceLoggerTest {
     }
 
     @Test
-    @DisplayName("CSV-логгер при занятом файле")
+    @DisplayName("CSV logger when file is busy")
     void writeCSVWhenFileIsLocked() throws IOException {
-        // Настройка свойств
         when(properties.isCsvLogState()).thenReturn(true);
-
-        // Стандартные ответы для deviceAnswer
         when(deviceAnswer.toStringCSV()).thenReturn("csv_data");
-        // Создаем логгер
         DeviceLogger logger = createTestLogger(null);
 
-        // Записываем начальные данные
         logger.writeLine(deviceAnswer);
         logger.flush();
 
-        // Блокируем CSV-файл
         Path csvPath = logger.getLogFileCSV().toPath();
         try (FileOutputStream fos = new FileOutputStream(csvPath.toFile());
              FileLock lock = fos.getChannel().lock()) {
 
-            // Пытаемся записать данные при заблокированном файле
             assertDoesNotThrow(() -> {
                 logger.writeLine(deviceAnswer);
                 logger.flush();
             });
 
-            // Проверяем, что буфер хранит значение (данные попытались записаться)
             assertEquals(1, logger.getCsvBuffer().size());
 
-            // Проверяем, что размер файла не изменился
             long initialSize = Files.size(csvPath);
             assertEquals(initialSize, Files.size(csvPath));
 
         } // Блокировка снимается здесь
 
-        // Проверяем, что после снятия блокировки можно писать
         logger.writeLine(deviceAnswer);
         logger.flush();
         assertTrue(Files.size(csvPath) > 0);
@@ -648,7 +636,7 @@ class DeviceLoggerTest {
         return new DeviceLogger(
                 "test",
                 properties,
-                clock != null ? clock : FIXED_CLOCK.withZone(ZoneId.of("UTC")),
+                clock != null ? clock : FIXED_CLOCK.withZone(ZoneId.of(UTC_ZONE)),
                 tempDir.toString(),
                 Object::toString
         );

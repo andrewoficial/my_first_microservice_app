@@ -21,6 +21,7 @@ import java.util.function.Supplier;
 
 public class DeviceLogger {
     private static final Logger log = Logger.getLogger(DeviceLogger.class);
+    @Getter
     private static final long LOG_WRITE_INTERVAL = 300L;
     private static final int DEFAULT_BUFFER_LINE_LIMIT = 100; // Значение по умолчанию
 
@@ -31,6 +32,8 @@ public class DeviceLogger {
     private final Function<Object, String> fileNameGenerator;
     @Getter @Setter
     private int bufferLineLimit = DEFAULT_BUFFER_LINE_LIMIT;
+    @Getter
+    private long logWriteInterval = LOG_WRITE_INTERVAL;
     // Геттеры для тестирования
     @Getter
     private final File logFile;
@@ -38,6 +41,7 @@ public class DeviceLogger {
     private final File logFileCSV;
 
     private final ReentrantLock lock = new ReentrantLock();
+    @Setter
     @Getter
     private long lastWriteTime;
     private final List<String> txtBuffer = new ArrayList<>();
@@ -170,6 +174,7 @@ public class DeviceLogger {
     }
 
     public void flush() {
+        log.info("Run flush");
         lock.lock();
         try {
             writeBuffer(txtBuffer, logFile, properties.isDbgLogState());
@@ -216,10 +221,6 @@ public class DeviceLogger {
 
     public List<String> getCsvBuffer() {
         return new ArrayList<>(csvBuffer);
-    }
-
-    public void setLastWriteTime(long millis) {
-        this.lastWriteTime = millis;
     }
 
 
