@@ -162,7 +162,24 @@ public class MyUtilities {
         return crc;
     }
 
-
+    public static String getCubicUnits(int num){
+        String unitStr;
+        switch (num) {
+            case 0:
+                unitStr = "ppm";
+                break;
+            case 1:
+                unitStr = "probably lel";
+                break;
+            case 2:
+                unitStr = "vol%";
+                break;
+            default:
+                unitStr = "unknown(" + num + ")";
+                break;
+        }
+        return unitStr;
+    }
     public static boolean checkStructureForF(byte[] responseArray) {
         int limit = 72;
         if (responseArray.length <= limit) {

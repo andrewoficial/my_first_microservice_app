@@ -12,6 +12,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.*;
 
+import static org.example.utilites.MyUtilities.getCubicUnits;
+
 public class CubicCommandRegistry extends DeviceCommandRegistry {
     private static final Logger log = Logger.getLogger(CubicCommandRegistry.class);
 
@@ -178,7 +180,7 @@ public class CubicCommandRegistry extends DeviceCommandRegistry {
     }
 
     public byte calculateChecksum(byte[] data) {
-        log.info("Run calculate checksum for array " + MyUtilities.bytesToHex(data));
+        //log.info("Run calculate checksum for array " + MyUtilities.bytesToHex(data));
         int sum = 0;
         for (byte b : data) {
             sum += Byte.toUnsignedInt(b);
@@ -318,31 +320,66 @@ public class CubicCommandRegistry extends DeviceCommandRegistry {
     }
 
     private AnswerValues parseSerialResponse(byte[] response) {
-        if (response.length < 14 || response[0] != ACK || response[1] != 0x0B || response[2] != 0x1F || !validateChecksum(response)) {
-            log.warn("CUBIC: Invalid serial response");
+        // Проверяем минимальную длину и заголовки
+        if (response.length < 14 || response[0] != ACK || response[1] != 0x0B || response[2] != 0x1F) {
+            log.warn("CUBIC: Invalid serial response - wrong length or header");
             return null;
         }
+
+        // Проверяем контрольную сумму
+        if (!validateChecksum(response)) {
+            log.warn("CUBIC: Invalid serial response - checksum error");
+            return null;
+        }
+
         StringBuilder serial = new StringBuilder();
-        log.info("CUBIC: Raw serial data: " + MyUtilities.bytesToHex(Arrays.copyOfRange(response, 3, 13))); // Логируем сырые данные
-        for (int i = 0; i < 5; i++) {
-            // Используем беззнаковое преобразование
-            int byte1 = Byte.toUnsignedInt(response[3 + i*2]);
-            int byte2 = Byte.toUnsignedInt(response[4 + i*2]);
-            int sn = (byte1 << 8) | byte2; // Корректное беззнаковое значение
-            //log.info("CUBIC: SN" + (i+1) + " = " + sn); // Логируем каждое значение
-            serial.append(String.format("%04d", sn));
-            //serial.append(sn);
+        int[] snValues = new int[5]; // Массив для хранения всех 5 значений
+
+        // Логируем сырые данные
+        log.info("CUBIC: Raw serial data: " + MyUtilities.bytesToHex(Arrays.copyOfRange(response, 3, 13)));
+
+        try {
+            // Обрабатываем 5 двухбайтных значений
+            for (int i = 0; i < 5; i++) {
+                int offset = 3 + i * 2;
+                int byte1 = Byte.toUnsignedInt(response[offset]);
+                int byte2 = Byte.toUnsignedInt(response[offset + 1]);
+                int sn = (byte1 << 8) | byte2;
+                snValues[i] = sn; // Сохраняем значение в массив
+                serial.append(String.format("%04d", sn));
+            }
+
+            String fullSerial = serial.toString();
+            log.info("CUBIC: Parsed serial number: " + fullSerial);
+
+            // Формируем double из последних трех чисел со знаком минус
+            double numericValue = -1.0;
+            if (snValues.length >= 3) {
+                // Берем последние три числа и объединяем их
+                // Например: [1, 2, 3, 4, 5] -> берем 3, 4, 5 -> формируем -345.0
+                StringBuilder lastThreeBuilder = new StringBuilder();
+                for (int i = 2; i < 5; i++) {
+                    lastThreeBuilder.append(String.format("%04d", snValues[i]));
+                }
+
+                try {
+                    // Парсим объединенную строку как double и делаем отрицательным
+                    String combined = lastThreeBuilder.toString();
+                    numericValue = -Double.parseDouble(combined);
+                    log.info("CUBIC: Combined last three values: " + combined + " -> " + numericValue);
+                } catch (NumberFormatException e) {
+                    log.warn("CUBIC: Failed to parse combined serial number part: " + lastThreeBuilder.toString());
+                }
+            }
+
+            AnswerValues answerValues = new AnswerValues(1);
+            answerValues.addValue(numericValue, fullSerial);
+            return answerValues;
+
+        } catch (Exception e) {
+            log.warn("CUBIC: Error parsing serial number: " + e.getMessage());
+            return null;
         }
-        log.info("CUBIC: SN" + serial.toString()); // Логируем каждое значение
-        double sn = -1L;
-        try{
-            sn = Double.parseDouble(serial.toString());
-        }catch (NumberFormatException e){
-            log.warn("CUBIC: Invalid serial response" + e.getMessage());
-        }
-        AnswerValues answerValues = new AnswerValues(1);
-        answerValues.addValue(sn, serial.toString());
-        return answerValues;
     }
 
     private AnswerValues parseGasPropertyResponse(byte[] response) {
@@ -375,18 +412,18 @@ public class CubicCommandRegistry extends DeviceCommandRegistry {
         }
 
         // Подробное логирование всех байтов
-        log.info("CUBIC: GasProperty response structure:");
-        log.info("  ACK: 0x" + Integer.toHexString(response[0] & 0xFF));
-        log.info("  LB: 0x" + Integer.toHexString(response[1] & 0xFF) + " (" + (response[1] & 0xFF) + " bytes)");
-        log.info("  CMD: 0x" + Integer.toHexString(response[2] & 0xFF));
-        log.info("  DF1: 0x" + Integer.toHexString(response[3] & 0xFF) + " (" + (response[3] & 0xFF) + ")");
-        log.info("  DF2: 0x" + Integer.toHexString(response[4] & 0xFF) + " (" + (response[4] & 0xFF) + ")");
-        log.info("  DF3 (decimals): 0x" + Integer.toHexString(response[5] & 0xFF) + " (" + (response[5] & 0xFF) + ")");
-        log.info("  DF4 (reserved): 0x" + Integer.toHexString(response[6] & 0xFF) + " (" + (response[6] & 0xFF) + ")");
-        log.info("  DF5 (unit): 0x" + Integer.toHexString(response[7] & 0xFF) + " (" + (response[7] & 0xFF) + ")");
-        log.info("  DF6 (reserved): 0x" + Integer.toHexString(response[8] & 0xFF) + " (" + (response[8] & 0xFF) + ")");
-        log.info("  DF7 (reserved): 0x" + Integer.toHexString(response[9] & 0xFF) + " (" + (response[9] & 0xFF) + ")");
-        log.info("  CS: 0x" + Integer.toHexString(response[10] & 0xFF) + " (" + (response[10] & 0xFF) + ")");
+//        log.info("CUBIC: GasProperty response structure:");
+//        log.info("  ACK: 0x" + Integer.toHexString(response[0] & 0xFF));
+//        log.info("  LB: 0x" + Integer.toHexString(response[1] & 0xFF) + " (" + (response[1] & 0xFF) + " bytes)");
+//        log.info("  CMD: 0x" + Integer.toHexString(response[2] & 0xFF));
+//        log.info("  DF1: 0x" + Integer.toHexString(response[3] & 0xFF) + " (" + (response[3] & 0xFF) + ")");
+//        log.info("  DF2: 0x" + Integer.toHexString(response[4] & 0xFF) + " (" + (response[4] & 0xFF) + ")");
+//        log.info("  DF3 (decimals): 0x" + Integer.toHexString(response[5] & 0xFF) + " (" + (response[5] & 0xFF) + ")");
+//        log.info("  DF4 (reserved): 0x" + Integer.toHexString(response[6] & 0xFF) + " (" + (response[6] & 0xFF) + ")");
+//        log.info("  DF5 (unit): 0x" + Integer.toHexString(response[7] & 0xFF) + " (" + (response[7] & 0xFF) + ")");
+//        log.info("  DF6 (reserved): 0x" + Integer.toHexString(response[8] & 0xFF) + " (" + (response[8] & 0xFF) + ")");
+//        log.info("  DF7 (reserved): 0x" + Integer.toHexString(response[9] & 0xFF) + " (" + (response[9] & 0xFF) + ")");
+//        log.info("  CS: 0x" + Integer.toHexString(response[10] & 0xFF) + " (" + (response[10] & 0xFF) + ")");
 
         // Извлечение данных с проверкой диапазонов
         int df1 = Byte.toUnsignedInt(response[3]);
@@ -420,24 +457,7 @@ public class CubicCommandRegistry extends DeviceCommandRegistry {
         log.info("CUBIC: Calculated range: " + range + " (raw: " + rawRange + ", decimals: " + decimals + ")");
 
         // Определение единиц измерения
-        String unitStr;
-        switch (unit) {
-            case 0:
-                unitStr = "ppm";
-                break;
-            case 1:
-                unitStr = "unknown(1)";
-                log.warn("CUBIC: Unknown unit code: 1");
-                break;
-            case 2:
-                unitStr = "vol%";
-                break;
-            default:
-                unitStr = "unknown(" + unit + ")";
-                log.warn("CUBIC: Unknown unit code: " + unit);
-                break;
-        }
-
+        String unitStr = getCubicUnits(unit);
         log.info("CUBIC: Unit: " + unitStr);
 
         // Создание результата

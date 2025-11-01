@@ -26,4 +26,10 @@ public interface Constants {
     enum SupportedHidDeviceType{
         MULTIGASSENSE, MIKROSENSE, UNKNOWN
     }
+
+    public interface protocols{
+        public interface cubic{
+
+        }
+    }
 }
