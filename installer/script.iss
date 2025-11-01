@@ -1,5 +1,5 @@
 #define MyAppName "Elephant Monitor"
-#define MyAppVersion "1.8.31"  # Будет заменено автоматически
+#define MyAppVersion "1.8.31"
 #define MyAppPublisher "Andrew Official"
 #define MyAppURL "https://github.com/andrewoficial/my_first_microservice_app/"
 
@@ -21,9 +21,10 @@ ArchitecturesInstallIn64BitMode=x64
 SetupLogging=yes
 
 [Files]
-Source: "target\Elephant-Monitor-{#MyAppVersion}.jar"; DestDir: "{app}"; Flags: ignoreversion
 Source: "sources\favicon.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "sources\launcher.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "sources\OpenJDK21U-jdk_x64_windows_hotspot_21.0.8_9.msi"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\target\Elephant-Monitor-{#MyAppVersion}.jar"; DestDir: "{app}"; Flags: ignoreversion
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked

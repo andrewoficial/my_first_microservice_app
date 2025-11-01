@@ -1,0 +1,17 @@
+name: Clean workspace
+
+on:
+  workflow_dispatch:
+
+jobs:
+  clean:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Clean workspace
+        run: |
+          echo "Cleaning workspace..."
+          mvn clean
+          rm -rf target

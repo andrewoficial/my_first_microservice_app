@@ -9,7 +9,9 @@ on:
 jobs:
   build-and-release:
     runs-on: windows-latest
-    
+    permissions:
+      contents: write
+      
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -36,13 +38,24 @@ jobs:
         Write-Host "=== Compiling installer with Inno Setup ==="
         iscc installer/script.iss
       
+    - name: Create git tag
+      shell: pwsh
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        $version = "v${{ steps.update_version.outputs.version }}"
+        Write-Host "Creating tag $version"
+        git tag $version
+        git push origin $version
+    
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
+        tag_name: v${{ steps.update_version.outputs.version }}
+        name: Release v${{ steps.update_version.outputs.version }}
         files: |
           installer/output/ElephantMonitor_Setup.exe
           target/Elephant-Monitor-*.jar
-        draft: false
-        prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
