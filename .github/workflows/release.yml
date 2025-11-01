@@ -36,13 +36,19 @@ jobs:
         Write-Host "=== Compiling installer with Inno Setup ==="
         iscc installer/script.iss
       
+    - name: Get version from pom.xml
+      id: get_version
+      run: echo "version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_OUTPUT
+    
+    - name: Create git tag
+      run: |
+        git tag v${{ steps.get_version.outputs.version }}
+        git push origin v${{ steps.get_version.outputs.version }}
+    
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
+        tag_name: v${{ steps.get_version.outputs.version }}
         files: |
           installer/output/ElephantMonitor_Setup.exe
           target/Elephant-Monitor-*.jar
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
