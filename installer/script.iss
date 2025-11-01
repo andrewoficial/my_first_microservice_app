@@ -1,5 +1,5 @@
 #define MyAppName "Elephant Monitor"
-#define MyAppVersion "1.8.31"  # Будет заменено автоматически
+#define MyAppVersion "1.8.31"
 #define MyAppPublisher "Andrew Official"
 #define MyAppURL "https://github.com/andrewoficial/my_first_microservice_app/"
 
