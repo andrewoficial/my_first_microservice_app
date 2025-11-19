@@ -20,6 +20,7 @@ import org.example.device.protGpsTest.GPS_Test;
 import org.example.device.protIgm10.IGM_10;
 import org.example.device.protMipex2.Mipex2;
 import org.example.device.protOwonSpe3051.OWON_SPE3051;
+import org.example.device.protTt5166.TT5166;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -114,6 +115,7 @@ public class MyUtilities {
             case Cubic -> device = new Cubic(comPort);
             case Belead -> device = new BeLead(comPort);
             case Mipex2 -> device = new Mipex2(comPort);
+            case TT5166 -> device = new TT5166(comPort);
             //case LORADIF -> device = new LORADIF(comPort);
             default -> device = new DEMO_PROTOCOL(comPort);
         }
@@ -139,6 +141,7 @@ public class MyUtilities {
             case Cubic -> device = new Cubic();
             case Belead -> device = new BeLead();
             case Mipex2 -> device = new Mipex2();
+            case TT5166 -> device = new TT5166();
             default -> device = new DEMO_PROTOCOL();
         }
         return device;

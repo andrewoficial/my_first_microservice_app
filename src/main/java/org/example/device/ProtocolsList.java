@@ -23,6 +23,7 @@ public enum ProtocolsList {
     OWON_SPE3051("OWON_SPE3051"),
     DVK_4RD("DVK_4RD"),
     Mipex2("Mipex2"),
+    TT5166("TT5166"),
     EDWARDS_D397_00_000("EDWARDS_D397_00_000"),
     LORADIF("LORADIF"),
     Dynament("Dynament"),
