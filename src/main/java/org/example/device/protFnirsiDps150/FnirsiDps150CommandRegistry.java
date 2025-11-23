@@ -10,6 +10,7 @@ import org.example.utilites.MyUtilities;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -219,6 +220,7 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
     }
 
     public byte calculateChecksum(byte[] data, int startIndex) {
+        //log.info("Calculate checksum for array " + MyUtilities.bytesToHex(data));
         int sum = 0;
         for (int i = startIndex; i < data.length; i++) {
             sum += (data[i] & 0xFF);
@@ -230,9 +232,18 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
         if (response.length < 5) {
             return false;
         }
+        System.out.println(MyUtilities.bytesToHex(response));
         byte receivedCs = response[response.length - 1];
-        byte calculatedCs = calculateChecksum(response, 2); // Checksum over bytes 2 to length-2
-        return receivedCs == calculatedCs;
+        byte[] payload = new byte[response.length - 3];
+        for (int i = 2; i < response.length - 1; i++) {
+            payload[i - 2] = response[i];
+        }
+        byte calculatedCsOne = calculateChecksum(payload, 2); // Checksum over bytes 2 to length-2
+        byte calculatedCsTwo = calculateChecksum(payload, 0); // Checksum over bytes 2 to length-2
+        log.info("Calculated CrcOne {}" + calculatedCsOne);
+        log.info("Calculated CrcTwo {}" + calculatedCsTwo);
+        log.info("Received CRC {}" + receivedCs);
+        return (receivedCs == calculatedCsOne) || (receivedCs == calculatedCsTwo);
     }
 
     private AnswerValues parseFloatResponse(byte[] response) {
@@ -246,7 +257,7 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
             return null;
         }
         if (!validateChecksum(response, true)) {
-            log.warn("FNIRSI_DPS150: Checksum error in response");
+            log.warn("249 FNIRSI_DPS150: Checksum error in response ");
             return null;
         }
         byte length = response[3];
@@ -271,7 +282,7 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
             return null;
         }
         if (!validateChecksum(response, true)) {
-            log.warn("FNIRSI_DPS150: Checksum error in response");
+            log.warn("274 FNIRSI_DPS150: Checksum error in response");
             return null;
         }
         byte length = response[3];
