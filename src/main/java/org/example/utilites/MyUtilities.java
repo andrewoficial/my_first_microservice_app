@@ -16,6 +16,7 @@ import org.example.device.protDynament.Dynament;
 import org.example.device.protEctTc290.ECT_TC290;
 import org.example.device.protEdwardsD397.EDWARDS_D397_00_000;
 import org.example.device.protErstevakMtp4d.ERSTEVAK_MTP4D;
+import org.example.device.protFnirsiDps150.FNIRSI_DPS150;
 import org.example.device.protGpsTest.GPS_Test;
 import org.example.device.protIgm10.IGM_10;
 import org.example.device.protMipex2.Mipex2;
@@ -116,6 +117,7 @@ public class MyUtilities {
             case Belead -> device = new BeLead(comPort);
             case Mipex2 -> device = new Mipex2(comPort);
             case TT5166 -> device = new TT5166(comPort);
+            case DPS150 -> device = new FNIRSI_DPS150(comPort);
             //case LORADIF -> device = new LORADIF(comPort);
             default -> device = new DEMO_PROTOCOL(comPort);
         }
@@ -142,6 +144,7 @@ public class MyUtilities {
             case Belead -> device = new BeLead();
             case Mipex2 -> device = new Mipex2();
             case TT5166 -> device = new TT5166();
+            case DPS150 -> device = new FNIRSI_DPS150();
             default -> device = new DEMO_PROTOCOL();
         }
         return device;
