@@ -376,7 +376,23 @@ public class DpsEmulatorWindow extends JFrame {
                 case (byte) 0xE3: // Iout measured
                     float iout = Float.parseFloat(safetyGetValue(jtfUpperLimitCurrent));
                     return buildResponse((byte) 0xA1, type, ByteUtils.floatToBytes(iout));
-                // Add more types as needed (e.g., 0xE2 vout meas, etc.)
+                case (byte) 0xD6: // A1 D6 — получение яркости
+                    int brightness = Integer.parseInt(safetyGetValue(jtfBrightness));
+                    respData = new byte[]{(byte) brightness};
+                    return buildResponse((byte) 0xA1, type, respData);
+
+                case (byte) 0xDB: // A1 DB — состояние выхода (boolean)
+                    respData = new byte[]{ (byte) (isPowerOutputOpen ? 0x01 : 0x00) };
+                    return buildResponse((byte) 0xA1, type, respData);
+
+                case (byte) 0xC3: // A1 C3 — выходные мощности 3 float LE
+                    respData = ByteBuffer.allocate(12)
+                            .order(ByteOrder.LITTLE_ENDIAN)
+                            .putFloat(Float.parseFloat(safetyGetValue(jtfMeasVoltOut)))
+                            .putFloat(Float.parseFloat(safetyGetValue(jtfMeasCurrentOut)))
+                            .putFloat(Float.parseFloat(safetyGetValue(jtfMeasWattOut)))
+                            .array();
+                    return buildResponse((byte)0xA1, type, respData);
                 default:
                     return null;
             }

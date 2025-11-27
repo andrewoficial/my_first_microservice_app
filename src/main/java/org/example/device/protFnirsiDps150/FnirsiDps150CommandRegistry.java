@@ -521,6 +521,7 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
 
     private AnswerValues parsePowerResponse(byte[] response) {
         AnswerValues answerValues = new AnswerValues(3); // Предполагаем 3 float в 12 байтах
+        //ToDo recheck it!!!!!
         if (response.length != 17) {
             log.warn("FNIRSI_DPS150: Wrong response length for power: " + response.length);
             return null;
