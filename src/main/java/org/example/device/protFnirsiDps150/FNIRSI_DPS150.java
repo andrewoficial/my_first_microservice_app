@@ -30,7 +30,7 @@ public class FNIRSI_DPS150 implements SomeDevice, NonAscii, ProtocolComPort {
     @Getter
     private final ParityList defaultParity = ParityList.P_NO;
     @Getter
-    private final BaudRatesList defaultBaudRate = BaudRatesList.B115200; // Assumed; may need adjustment or use searchBaudrate
+    private final BaudRatesList defaultBaudRate = BaudRatesList.B115200; // Подтверждено логами, но можно использовать search
     @Getter
     private final StopBitsList defaultStopBit = StopBitsList.S1;
 
@@ -48,7 +48,7 @@ public class FNIRSI_DPS150 implements SomeDevice, NonAscii, ProtocolComPort {
     private String devIdent = "FNIRSI_DPS150";
     private byte[] rawCmd = null;
 
-    private static final int[] BAUDRATES = {9600, 19200, 38400, 57600, 115200}; // Limited to common rates
+    private static final int[] BAUDRATES = {9600, 19200, 38400, 57600, 115200};
 
     public FNIRSI_DPS150() {
         log.info("Создан объект протокола FNIRSI_DPS150 эмуляция");
@@ -96,9 +96,17 @@ public class FNIRSI_DPS150 implements SomeDevice, NonAscii, ProtocolComPort {
         String cmdName = parts[0];
         List<byte[]> bytesList = new ArrayList<>();
 
-        if ("getVout".equals(cmdName)) {
+        if ("getModel".equals(cmdName)) {
+            bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_MODEL));
+        } else if ("getSwVersion".equals(cmdName)) {
+            bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_SW_VERSION));
+        } else if ("getHwVersion".equals(cmdName)) {
+            bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_HW_VERSION));
+        } else if ("getVin".equals(cmdName)) {
+            bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_VIN));
+        } else if ("getVoutMeas".equals(cmdName)) {
             bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_VOUT_MEAS));
-        } else if ("getIout".equals(cmdName)) {
+        } else if ("getIoutMeas".equals(cmdName)) {
             bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_IOUT_MEAS));
         } else if ("getPower".equals(cmdName)) {
             bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_POWER));
@@ -106,16 +114,15 @@ public class FNIRSI_DPS150 implements SomeDevice, NonAscii, ProtocolComPort {
             bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_TEMP));
         } else if ("getOutput".equals(cmdName)) {
             bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_OUTPUT));
+        } else if ("getBrightness".equals(cmdName)) {
+            bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_BRIGHTNESS));
+        } else if ("getDump".equals(cmdName)) {
+            bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_DUMP));
         } else if ("setVout".equals(cmdName)) {
             if (parts.length < 2) {
                 throw new IllegalArgumentException("Value required for setVout");
             }
-            float value;
-            try {
-                value = Float.parseFloat(parts[1]);
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Invalid value for setVout");
-            }
+            float value = Float.parseFloat(parts[1]);
             ByteBuffer bb = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(value);
             byte[] valueBytes = bb.array();
             bytesList.add(commandRegistry.buildWriteCommand(FnirsiDps150CommandRegistry.TYPE_VOUT_SET, valueBytes));
@@ -123,12 +130,7 @@ public class FNIRSI_DPS150 implements SomeDevice, NonAscii, ProtocolComPort {
             if (parts.length < 2) {
                 throw new IllegalArgumentException("Value required for setIout");
             }
-            float value;
-            try {
-                value = Float.parseFloat(parts[1]);
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Invalid value for setIout");
-            }
+            float value = Float.parseFloat(parts[1]);
             ByteBuffer bb = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(value);
             byte[] valueBytes = bb.array();
             bytesList.add(commandRegistry.buildWriteCommand(FnirsiDps150CommandRegistry.TYPE_IOUT_SET, valueBytes));
@@ -139,6 +141,13 @@ public class FNIRSI_DPS150 implements SomeDevice, NonAscii, ProtocolComPort {
             byte value = Byte.parseByte(parts[1]);
             byte[] valueBytes = {value};
             bytesList.add(commandRegistry.buildWriteCommand(FnirsiDps150CommandRegistry.TYPE_OUTPUT, valueBytes));
+        } else if ("setBrightness".equals(cmdName)) {
+            if (parts.length < 2) {
+                throw new IllegalArgumentException("Value required for setBrightness (0-14?)");
+            }
+            byte value = Byte.parseByte(parts[1]);
+            byte[] valueBytes = {value};
+            bytesList.add(commandRegistry.buildWriteCommand(FnirsiDps150CommandRegistry.TYPE_BRIGHTNESS, valueBytes));
         } else if ("searchBaudrate".equals(cmdName)) {
             searchBaudrate();
             return new ArrayList<>();
@@ -147,7 +156,7 @@ public class FNIRSI_DPS150 implements SomeDevice, NonAscii, ProtocolComPort {
     }
 
     public int searchBaudrate() {
-        byte[] request = commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_VOUT_MEAS); // Use a simple read command for testing
+        byte[] request = commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_MODEL); // Простой get для теста
 
         int originalBaud = comPort.getBaudRate();
         for (int baud : BAUDRATES) {
@@ -163,7 +172,7 @@ public class FNIRSI_DPS150 implements SomeDevice, NonAscii, ProtocolComPort {
             if (read > 0) {
                 byte[] response = new byte[read];
                 System.arraycopy(buffer, 0, response, 0, read);
-                if (commandRegistry.validateChecksum(response, false)) {
+                if (commandRegistry.validateChecksum(response)) {
                     log.info("Found baudrate: " + baud);
                     return baud;
                 }

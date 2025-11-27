@@ -239,13 +239,13 @@ public class TT5166 implements SomeDevice, NonAscii, ProtocolComPort {
             HashMap<String, SingleCommand> commandsList = commands.getCommandPool();
             SingleCommand foundetCommand = null;
 
-            byte[] sentPart = new byte[3];
-            System.arraycopy(rawCmd, 0, sentPart, 0, 3);
+            byte[] sentPart = new byte[4];
+            System.arraycopy(rawCmd, 0, sentPart, 0, 4);
 
-            byte[] commandPart = new byte[3];
+            byte[] commandPart = new byte[4];//Увеличил включив счетчик
             log.info("Определяю команду... ");
             for (SingleCommand value : commandsList.values()) {
-                System.arraycopy(value.getBaseBody(), 0, commandPart, 0, 3);
+                System.arraycopy(value.getBaseBody(), 0, commandPart, 0, 4);//Увеличил включив счетчик
                 if (Arrays.equals(commandPart, sentPart)) {
                     log.info("Found command pattern for command [" + value.getMapKey() + "]");
                     isKnown = true;

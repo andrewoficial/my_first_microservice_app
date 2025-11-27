@@ -513,7 +513,7 @@ public class TT5166CommandRegistry extends DeviceCommandRegistry {
     }
 
     private AnswerValues parseStateResponse(byte[] response) {
-        if (response.length < 3 + 4 + 2) {
+        if (response.length < 3 + 2 + 2) {
             log.warn("TT5166: Response too short for getState");
             return null;
         }
@@ -525,12 +525,12 @@ public class TT5166CommandRegistry extends DeviceCommandRegistry {
             log.warn("TT5166: CRC error in getState response");
             return null;
         }
-        if (response[2] != 4) {
+        if (response[2] != 4 && response[2] != 2) {
             log.warn("TT5166: Unexpected byte count in getState: " + response[2]);
             return null;
         }
 
-        byte[] data = Arrays.copyOfRange(response, 3, 7);
+        byte[] data = Arrays.copyOfRange(response, 3, response.length - 2);
         AnswerValues answerValues = new AnswerValues(2);
 
         // Run/Stop state (H0018)
@@ -538,6 +538,9 @@ public class TT5166CommandRegistry extends DeviceCommandRegistry {
         String runState = (runStateRaw & 0x0001) == 1 ? "Running" : "Stopped";
         answerValues.addValue((double) runStateRaw, "Состояние работы: " + runState);
 
+        if(response[2] == 2) {
+            return answerValues;
+        }
         // Fixed/Program state (H0019)
         short modeStateRaw = ByteBuffer.wrap(data, 2, 2).order(ByteOrder.BIG_ENDIAN).getShort();
         String modeState = (modeStateRaw & 0x0001) == 1 ? "Program mode" : "Fixed mode";

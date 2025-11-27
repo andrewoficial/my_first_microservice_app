@@ -10,9 +10,8 @@ import org.example.utilites.MyUtilities;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.ArrayList;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Map;
 
 public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
     private static final Logger log = Logger.getLogger(FnirsiDps150CommandRegistry.class);
@@ -22,49 +21,116 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
     private static final byte CMD_GET = (byte) 0xA1;
     private static final byte CMD_SET = (byte) 0xB1;
 
-    // Speculative type codes; these are assumed based on typical power supply parameters.
-    // You may need to reverse-engineer or adjust based on actual device behavior.
-    public static final byte TYPE_OUTPUT = (byte) 0x00; // Output on/off (byte: 0/1)
-    public static final byte TYPE_VOUT_SET = (byte) 0x01; // Set voltage (float)
-    public static final byte TYPE_IOUT_SET = (byte) 0x02; // Set current (float)
-    public static final byte TYPE_VOUT_MEAS = (byte) 0x03; // Measured voltage (float)
-    public static final byte TYPE_IOUT_MEAS = (byte) 0x04; // Measured current (float)
-    public static final byte TYPE_POWER = (byte) 0x05; // Power (float)
-    public static final byte TYPE_TEMP = (byte) 0x06; // Temperature (float)
+    // Обновлённые type codes на основе логов
+    public static final byte TYPE_MODEL = (byte) 0xDE; // "DPS-150"
+    public static final byte TYPE_SW_VERSION = (byte) 0xE0; // "V1.1"
+    public static final byte TYPE_HW_VERSION = (byte) 0xDF; // "V1.0"
+    public static final byte TYPE_VIN = (byte) 0xC0; // Input voltage ~5.25V
+    public static final byte TYPE_VOUT_MEAS = (byte) 0xE2; // Measured voltage ~5.05V
+    public static final byte TYPE_IOUT_MEAS = (byte) 0xE3; // Measured current ~5.1A
+    public static final byte TYPE_POWER = (byte) 0xC3; // 12 bytes, power-related
+    public static final byte TYPE_TEMP = (byte) 0xC4; // Temperature ~24C
+    public static final byte TYPE_OUTPUT = (byte) 0xDB; // Output on/off 0/1
+    public static final byte TYPE_BRIGHTNESS = (byte) 0xD6; // Brightness 10-14
+    public static final byte TYPE_DUMP = (byte) 0xFF; // Big settings dump
+    public static final byte TYPE_VOUT_SET = (byte) 0xC1; // Set voltage
+    public static final byte TYPE_IOUT_SET = (byte) 0xC2; // Set current
 
     @Override
     protected void initCommands() {
-        commandList.addCommand(createGetVoutCommand());
-        commandList.addCommand(createGetIoutCommand());
+        commandList.addCommand(createGetModelCommand());
+        commandList.addCommand(createGetSwVersionCommand());
+        commandList.addCommand(createGetHwVersionCommand());
+        commandList.addCommand(createGetVinCommand());
+        commandList.addCommand(createGetVoutMeasCommand());
+        commandList.addCommand(createGetIoutMeasCommand());
         commandList.addCommand(createGetPowerCommand());
         commandList.addCommand(createGetTempCommand());
         commandList.addCommand(createGetOutputCommand());
+        commandList.addCommand(createGetBrightnessCommand());
+        commandList.addCommand(createGetDumpCommand());
         commandList.addCommand(createSetVoutCommand());
         commandList.addCommand(createSetIoutCommand());
         commandList.addCommand(createSetOutputCommand());
-        // Add more commands as needed, e.g., for protection settings if discovered
+        commandList.addCommand(createSetBrightnessCommand());
     }
 
-    private SingleCommand createGetVoutCommand() {
-        byte[] baseBody = buildReadCommand(TYPE_VOUT_MEAS);
+    private SingleCommand createGetModelCommand() {
+        byte[] baseBody = buildReadCommand(TYPE_MODEL);
         return new SingleCommand(
-                "getVout",
-                "getVout - Получить измеренное напряжение",
-                "getVout",
+                "getModel",
+                "getModel - Получить модель устройства",
+                "getModel",
                 baseBody,
                 args -> baseBody,
-                this::parseFloatResponse,
-                9, // Expected response length for float (start+cmd+type+len+data4+cs = 9)
+                this::parseStringResponse,
+                13, // len=7 + header+cs
                 CommandType.BINARY
         );
     }
 
-    private SingleCommand createGetIoutCommand() {
+    private SingleCommand createGetSwVersionCommand() {
+        byte[] baseBody = buildReadCommand(TYPE_SW_VERSION);
+        return new SingleCommand(
+                "getSwVersion",
+                "getSwVersion - Получить версию ПО",
+                "getSwVersion",
+                baseBody,
+                args -> baseBody,
+                this::parseStringResponse,
+                10, // len=4
+                CommandType.BINARY
+        );
+    }
+
+    private SingleCommand createGetHwVersionCommand() {
+        byte[] baseBody = buildReadCommand(TYPE_HW_VERSION);
+        return new SingleCommand(
+                "getHwVersion",
+                "getHwVersion - Получить версию аппаратной части",
+                "getHwVersion",
+                baseBody,
+                args -> baseBody,
+                this::parseStringResponse,
+                10,
+                CommandType.BINARY
+        );
+    }
+
+    private SingleCommand createGetVinCommand() {
+        byte[] baseBody = buildReadCommand(TYPE_VIN);
+        return new SingleCommand(
+                "getVin",
+                "getVin - Получить входное напряжение",
+                "getVin",
+                baseBody,
+                args -> baseBody,
+                this::parseFloatResponse,
+                9,
+                CommandType.BINARY
+        );
+    }
+
+    private SingleCommand createGetVoutMeasCommand() {
+        byte[] baseBody = buildReadCommand(TYPE_VOUT_MEAS);
+        return new SingleCommand(
+                "getVoutMeas",
+                "getVoutMeas - Получить измеренное напряжение",
+                "getVoutMeas",
+                baseBody,
+                args -> baseBody,
+                this::parseFloatResponse,
+                9,
+                CommandType.BINARY
+        );
+    }
+
+    private SingleCommand createGetIoutMeasCommand() {
         byte[] baseBody = buildReadCommand(TYPE_IOUT_MEAS);
         return new SingleCommand(
-                "getIout",
-                "getIout - Получить измеренный ток",
-                "getIout",
+                "getIoutMeas",
+                "getIoutMeas - Получить измеренный ток",
+                "getIoutMeas",
                 baseBody,
                 args -> baseBody,
                 this::parseFloatResponse,
@@ -77,12 +143,12 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
         byte[] baseBody = buildReadCommand(TYPE_POWER);
         return new SingleCommand(
                 "getPower",
-                "getPower - Получить мощность",
+                "getPower - Получить данные о мощности (12 байт)",
                 "getPower",
                 baseBody,
                 args -> baseBody,
-                this::parseFloatResponse,
-                9,
+                this::parsePowerResponse, // Custom для 12 байт
+                17, // header +12 +cs
                 CommandType.BINARY
         );
     }
@@ -105,18 +171,46 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
         byte[] baseBody = buildReadCommand(TYPE_OUTPUT);
         return new SingleCommand(
                 "getOutput",
-                "getOutput - Получить статус выхода (on/off)",
+                "getOutput - Получить статус выхода (0/1)",
                 "getOutput",
                 baseBody,
                 args -> baseBody,
                 this::parseByteResponse,
-                6, // Expected for byte (start+cmd+type+len+data1+cs = 6)
+                6,
+                CommandType.BINARY
+        );
+    }
+
+    private SingleCommand createGetBrightnessCommand() {
+        byte[] baseBody = buildReadCommand(TYPE_BRIGHTNESS);
+        return new SingleCommand(
+                "getBrightness",
+                "getBrightness - Получить яркость (10-14)",
+                "getBrightness",
+                baseBody,
+                args -> baseBody,
+                this::parseByteResponse,
+                6,
+                CommandType.BINARY
+        );
+    }
+
+    private SingleCommand createGetDumpCommand() {
+        byte[] baseBody = buildReadCommand(TYPE_DUMP);
+        return new SingleCommand(
+                "getDump",
+                "getDump - Получить дамп настроек",
+                "getDump",
+                baseBody,
+                args -> baseBody,
+                this::parseDumpResponse, // Custom для большого дампа
+                144, // len=0x8B + header + cs
                 CommandType.BINARY
         );
     }
 
     private SingleCommand createSetVoutCommand() {
-        byte[] baseBody = buildWriteCommand(TYPE_VOUT_SET, new byte[4]); // Placeholder
+        byte[] baseBody = buildWriteCommand(TYPE_VOUT_SET, new byte[4]);
         SingleCommand command = new SingleCommand(
                 "setVout",
                 "setVout [value] - Установить напряжение",
@@ -128,7 +222,7 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
                     byte[] valueBytes = bb.array();
                     return buildWriteCommand(TYPE_VOUT_SET, valueBytes);
                 },
-                this::parseFloatResponse, // Assume response returns the set value
+                this::parseFloatResponse,
                 9,
                 CommandType.BINARY
         );
@@ -136,13 +230,13 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
                 "value",
                 Float.class,
                 0.0f,
-                val -> (Float) val >= 0 && (Float) val <= 30.0f // Assumed max 30V
+                val -> (Float) val >= 0 && (Float) val <= 30.0f // Предполагаемый max
         ));
         return command;
     }
 
     private SingleCommand createSetIoutCommand() {
-        byte[] baseBody = buildWriteCommand(TYPE_IOUT_SET, new byte[4]); // Placeholder
+        byte[] baseBody = buildWriteCommand(TYPE_IOUT_SET, new byte[4]);
         SingleCommand command = new SingleCommand(
                 "setIout",
                 "setIout [value] - Установить ток",
@@ -162,16 +256,16 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
                 "value",
                 Float.class,
                 0.0f,
-                val -> (Float) val >= 0 && (Float) val <= 5.0f // Assumed max 5A
+                val -> (Float) val >= 0 && (Float) val <= 5.0f // Предполагаемый max
         ));
         return command;
     }
 
     private SingleCommand createSetOutputCommand() {
-        byte[] baseBody = buildWriteCommand(TYPE_OUTPUT, new byte[1]); // Placeholder
+        byte[] baseBody = buildWriteCommand(TYPE_OUTPUT, new byte[1]);
         SingleCommand command = new SingleCommand(
                 "setOutput",
-                "setOutput [0/1] - Установить статус выхода (off/on)",
+                "setOutput [0/1] - Установить статус выхода",
                 "setOutput",
                 baseBody,
                 args -> {
@@ -192,9 +286,35 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
         return command;
     }
 
+    private SingleCommand createSetBrightnessCommand() {
+        byte[] baseBody = buildWriteCommand(TYPE_BRIGHTNESS, new byte[1]);
+        SingleCommand command = new SingleCommand(
+                "setBrightness",
+                "setBrightness [value] - Установить яркость (10-14)",
+                "setBrightness",
+                baseBody,
+                args -> {
+                    Byte value = (Byte) args.getOrDefault("value", (byte) 10);
+                    byte[] valueBytes = {value};
+                    return buildWriteCommand(TYPE_BRIGHTNESS, valueBytes);
+                },
+                this::parseByteResponse,
+                6,
+                CommandType.BINARY
+        );
+        command.addArgument(new ArgumentDescriptor(
+                "value",
+                Byte.class,
+                (byte) 10,
+                val -> ((Byte) val >= 0 && (Byte) val <= 14)
+        ));
+        return command;
+    }
+
     public byte[] buildReadCommand(byte type) {
-        byte[] data = new byte[0];
-        return buildCommand(CMD_GET, type, data);
+        byte[] data = new byte[0]; // Для get data часто 1 байт 0, но в логах len=01, data=00
+        byte[] base = new byte[]{0x00}; // По логам get имеет len=01 data=00
+        return buildCommand(CMD_GET, type, base);
     }
 
     public byte[] buildWriteCommand(byte type, byte[] data) {
@@ -211,7 +331,7 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
         if (data != null) {
             System.arraycopy(data, 0, frameWithoutCs, 4, length);
         }
-        byte cs = calculateChecksum(frameWithoutCs, 2); // Start checksum from byte 2
+        byte cs = calculateChecksum(frameWithoutCs);
         byte[] frame = new byte[frameWithoutCs.length + 1];
         System.arraycopy(frameWithoutCs, 0, frame, 0, frameWithoutCs.length);
         frame[frameWithoutCs.length] = cs;
@@ -219,31 +339,26 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
         return frame;
     }
 
-    public byte calculateChecksum(byte[] data, int startIndex) {
-        //log.info("Calculate checksum for array " + MyUtilities.bytesToHex(data));
+    private byte calculateChecksum(byte[] data) {
         int sum = 0;
-        for (int i = startIndex; i < data.length; i++) {
+        for (int i = 2; i < data.length; i++) { // От type (2) до конца data
             sum += (data[i] & 0xFF);
         }
         return (byte) (sum % 256);
     }
 
-    public boolean validateChecksum(byte[] response, boolean isRecv) {
+    public boolean validateChecksum(byte[] response) {
         if (response.length < 5) {
             return false;
         }
-        System.out.println(MyUtilities.bytesToHex(response));
         byte receivedCs = response[response.length - 1];
-        byte[] payload = new byte[response.length - 3];
+        byte calculatedCs = calculateChecksum(response); // Теперь calc от 0, но sum от 2
+        int sum = 0;
         for (int i = 2; i < response.length - 1; i++) {
-            payload[i - 2] = response[i];
+            sum += (response[i] & 0xFF);
         }
-        byte calculatedCsOne = calculateChecksum(payload, 2); // Checksum over bytes 2 to length-2
-        byte calculatedCsTwo = calculateChecksum(payload, 0); // Checksum over bytes 2 to length-2
-        log.info("Calculated CrcOne {}" + calculatedCsOne);
-        log.info("Calculated CrcTwo {}" + calculatedCsTwo);
-        log.info("Received CRC {}" + receivedCs);
-        return (receivedCs == calculatedCsOne) || (receivedCs == calculatedCsTwo);
+        calculatedCs = (byte) (sum % 256);
+        return receivedCs == calculatedCs;
     }
 
     private AnswerValues parseFloatResponse(byte[] response) {
@@ -252,12 +367,12 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
             log.warn("FNIRSI_DPS150: Wrong response length for float: " + response.length);
             return null;
         }
-        if (response[0] != START_RECV || (response[1] != CMD_GET && response[1] != CMD_SET)) {
+        if (response[0] != START_RECV || response[1] != CMD_GET) {
             log.warn("FNIRSI_DPS150: Invalid header in response");
             return null;
         }
-        if (!validateChecksum(response, true)) {
-            log.warn("249 FNIRSI_DPS150: Checksum error in response ");
+        if (!validateChecksum(response)) {
+            log.warn("FNIRSI_DPS150: Checksum error in response");
             return null;
         }
         byte length = response[3];
@@ -277,12 +392,12 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
             log.warn("FNIRSI_DPS150: Wrong response length for byte: " + response.length);
             return null;
         }
-        if (response[0] != START_RECV || (response[1] != CMD_GET && response[1] != CMD_SET)) {
+        if (response[0] != START_RECV || response[1] != CMD_GET) {
             log.warn("FNIRSI_DPS150: Invalid header in response");
             return null;
         }
-        if (!validateChecksum(response, true)) {
-            log.warn("274 FNIRSI_DPS150: Checksum error in response");
+        if (!validateChecksum(response)) {
+            log.warn("FNIRSI_DPS150: Checksum error in response");
             return null;
         }
         byte length = response[3];
@@ -292,6 +407,93 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
         }
         byte value = response[4];
         answerValues.addValue(value, "status");
+        return answerValues;
+    }
+
+    private AnswerValues parseStringResponse(byte[] response) {
+        AnswerValues answerValues = new AnswerValues(1);
+        if (response.length < 6) {
+            log.warn("FNIRSI_DPS150: Wrong response length for string");
+            return null;
+        }
+        if (response[0] != START_RECV || response[1] != CMD_GET) {
+            log.warn("FNIRSI_DPS150: Invalid header in response");
+            return null;
+        }
+        if (!validateChecksum(response)) {
+            log.warn("FNIRSI_DPS150: Checksum error in response");
+            return null;
+        }
+        byte length = response[3];
+        if (length == 0) {
+            log.warn("FNIRSI_DPS150: Zero data length for string");
+            return null;
+        }
+        byte[] data = Arrays.copyOfRange(response, 4, 4 + length);
+        String value;
+        try {
+            value = new String(data, StandardCharsets.US_ASCII);
+        } catch (Exception e) {
+            log.warn("FNIRSI_DPS150: Error decoding string: " + e.getMessage());
+            return null;
+        }
+        answerValues.addValue(-1, value);
+        return answerValues;
+    }
+
+    private AnswerValues parsePowerResponse(byte[] response) {
+        AnswerValues answerValues = new AnswerValues(3); // Предполагаем 3 float в 12 байтах
+        if (response.length != 17) {
+            log.warn("FNIRSI_DPS150: Wrong response length for power: " + response.length);
+            return null;
+        }
+        if (response[0] != START_RECV || response[1] != CMD_GET) {
+            log.warn("FNIRSI_DPS150: Invalid header in response");
+            return null;
+        }
+        if (!validateChecksum(response)) {
+            log.warn("FNIRSI_DPS150: Checksum error in response");
+            return null;
+        }
+        byte length = response[3];
+        if (length != 12) {
+            log.warn("FNIRSI_DPS150: Unexpected data length for power: " + length);
+            return null;
+        }
+        byte[] data = Arrays.copyOfRange(response, 4, 16);
+        // Разбить на 3 float?
+        float val1 = ByteBuffer.wrap(Arrays.copyOfRange(data, 0, 4)).order(ByteOrder.LITTLE_ENDIAN).getFloat();
+        float val2 = ByteBuffer.wrap(Arrays.copyOfRange(data, 4, 8)).order(ByteOrder.LITTLE_ENDIAN).getFloat();
+        float val3 = ByteBuffer.wrap(Arrays.copyOfRange(data, 8, 12)).order(ByteOrder.LITTLE_ENDIAN).getFloat();
+        answerValues.addValue(val1, "power1");
+        answerValues.addValue(val2, "power2");
+        answerValues.addValue(val3, "power3");
+        return answerValues;
+    }
+
+    private AnswerValues parseDumpResponse(byte[] response) {
+        AnswerValues answerValues = new AnswerValues(1);
+        if (response.length != 144) {
+            log.warn("FNIRSI_DPS150: Wrong response length for dump: " + response.length);
+            return null;
+        }
+        if (response[0] != START_RECV || response[1] != CMD_GET) {
+            log.warn("FNIRSI_DPS150: Invalid header in response");
+            return null;
+        }
+        if (!validateChecksum(response)) {
+            log.warn("FNIRSI_DPS150: Checksum error in response");
+            return null;
+        }
+        byte length = response[3];
+        if (length != (byte)0x8B) {
+            log.warn("FNIRSI_DPS150: Unexpected data length for dump: " + length);
+            return null;
+        }
+        byte[] data = Arrays.copyOfRange(response, 4, 4 + length);
+        // Возвращаем как hex string или парсим, если известно
+        String hexDump = MyUtilities.bytesToHex(data);
+        answerValues.addValue(-1, hexDump);
         return answerValues;
     }
 }
