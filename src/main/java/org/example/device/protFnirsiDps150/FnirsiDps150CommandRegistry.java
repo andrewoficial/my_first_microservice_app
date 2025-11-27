@@ -416,7 +416,7 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
         return frame;
     }
 
-    private byte calculateChecksum(byte[] data) {
+    public byte calculateChecksum(byte[] data) {
         int sum = 0;
         for (int i = 2; i < data.length; i++) { // От type (2) до конца data
             sum += (data[i] & 0xFF);
