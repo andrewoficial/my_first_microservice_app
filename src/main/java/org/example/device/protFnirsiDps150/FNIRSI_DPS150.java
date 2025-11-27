@@ -97,23 +97,23 @@ public class FNIRSI_DPS150 implements SomeDevice, NonAscii, ProtocolComPort {
         List<byte[]> bytesList = new ArrayList<>();
 
         if ("getModel".equals(cmdName)) {
-            bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_MODEL));
+            bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_DEV_MODEL));
         } else if ("getSwVersion".equals(cmdName)) {
             bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_SW_VERSION));
         } else if ("getHwVersion".equals(cmdName)) {
             bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_HW_VERSION));
         } else if ("getVin".equals(cmdName)) {
-            bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_VIN));
-        } else if ("getVoutMeas".equals(cmdName)) {
-            bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_VOUT_MEAS));
-        } else if ("getIoutMeas".equals(cmdName)) {
-            bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_IOUT_MEAS));
+            bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_DEV_VIN));
+        } else if ("getLimitCurrent".equals(cmdName)) {
+            bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_VOUT_LIMIT));
+        } else if ("getLimitCurrent".equals(cmdName)) {
+            bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_IOUT_LIMIT));
         } else if ("getPower".equals(cmdName)) {
             bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_POWER));
         } else if ("getTemp".equals(cmdName)) {
             bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_TEMP));
         } else if ("getOutput".equals(cmdName)) {
-            bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_OUTPUT));
+            bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_DEV_OUTPUT));
         } else if ("getBrightness".equals(cmdName)) {
             bytesList.add(commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_BRIGHTNESS));
         } else if ("getDump".equals(cmdName)) {
@@ -125,7 +125,7 @@ public class FNIRSI_DPS150 implements SomeDevice, NonAscii, ProtocolComPort {
             float value = Float.parseFloat(parts[1]);
             ByteBuffer bb = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(value);
             byte[] valueBytes = bb.array();
-            bytesList.add(commandRegistry.buildWriteCommand(FnirsiDps150CommandRegistry.TYPE_VOUT_SET, valueBytes));
+            bytesList.add(commandRegistry.buildWriteCommand(FnirsiDps150CommandRegistry.TYPE_DEV_VOUT, valueBytes));
         } else if ("setIout".equals(cmdName)) {
             if (parts.length < 2) {
                 throw new IllegalArgumentException("Value required for setIout");
@@ -133,14 +133,14 @@ public class FNIRSI_DPS150 implements SomeDevice, NonAscii, ProtocolComPort {
             float value = Float.parseFloat(parts[1]);
             ByteBuffer bb = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(value);
             byte[] valueBytes = bb.array();
-            bytesList.add(commandRegistry.buildWriteCommand(FnirsiDps150CommandRegistry.TYPE_IOUT_SET, valueBytes));
+            bytesList.add(commandRegistry.buildWriteCommand(FnirsiDps150CommandRegistry.TYPE_DEV_IOUT, valueBytes));
         } else if ("setOutput".equals(cmdName)) {
             if (parts.length < 2) {
                 throw new IllegalArgumentException("Value required for setOutput (0 or 1)");
             }
             byte value = Byte.parseByte(parts[1]);
             byte[] valueBytes = {value};
-            bytesList.add(commandRegistry.buildWriteCommand(FnirsiDps150CommandRegistry.TYPE_OUTPUT, valueBytes));
+            bytesList.add(commandRegistry.buildWriteCommand(FnirsiDps150CommandRegistry.TYPE_DEV_OUTPUT, valueBytes));
         } else if ("setBrightness".equals(cmdName)) {
             if (parts.length < 2) {
                 throw new IllegalArgumentException("Value required for setBrightness (0-14?)");
@@ -156,7 +156,7 @@ public class FNIRSI_DPS150 implements SomeDevice, NonAscii, ProtocolComPort {
     }
 
     public int searchBaudrate() {
-        byte[] request = commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_MODEL); // Простой get для теста
+        byte[] request = commandRegistry.buildReadCommand(FnirsiDps150CommandRegistry.TYPE_DEV_MODEL); // Простой get для теста
 
         int originalBaud = comPort.getBaudRate();
         for (int baud : BAUDRATES) {

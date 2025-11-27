@@ -1,4 +1,3 @@
-// org/example/gui/autoresponder/ConfigManager.java
 package org.example.gui.autoresponder;
 
 import java.io.*;
@@ -22,6 +21,7 @@ public class ConfigManager {
                 window.jtfStatus.setText(prop.getProperty("status", "1"));
                 window.jtfBrightness.setText(prop.getProperty("brightness", "10"));
                 LogUtil.logMessage(window.jtaLog, "Config loaded");
+                window.updateIndicators();
             } catch (IOException ex) {
                 DpsEmulatorWindow.log.error("Error loading config", ex);
             }
@@ -38,6 +38,8 @@ public class ConfigManager {
         prop.setProperty("temperature", window.jtfTemperature.getText());
         prop.setProperty("status", window.jtfStatus.getText());
         prop.setProperty("brightness", window.jtfBrightness.getText());
+        prop.setProperty("wakeUp", window.isWakeUp ? "1" : "0");
+        prop.setProperty("powerOutput", window.isPowerOutputOpen ? "1" : "0");
 
         try (OutputStream output = new FileOutputStream(CONFIG_FILE)) {
             prop.store(output, null);

@@ -13,28 +13,38 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
+import static org.example.utilites.MyUtilities.getAnyNumber;
+
 public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
     private static final Logger log = Logger.getLogger(FnirsiDps150CommandRegistry.class);
 
-    private static final byte START_SEND = (byte) 0xF1;
-    private static final byte START_RECV = (byte) 0xF0;
-    private static final byte CMD_GET = (byte) 0xA1;
-    private static final byte CMD_SET = (byte) 0xB1;
+    // Тип команды
+    private static final byte START_SEND 	= (byte) 0xF1;
+    private static final byte START_RECV 	= (byte) 0xF0;
+    private static final byte CMD_GET 		= (byte) 0xA1;
+    private static final byte CMD_SET 		= (byte) 0xB1;
+    private static final byte SPECIAL_SET 	= (byte) 0xC1;
 
-    // Обновлённые type codes на основе логов
-    public static final byte TYPE_MODEL = (byte) 0xDE; // "DPS-150"
-    public static final byte TYPE_SW_VERSION = (byte) 0xE0; // "V1.1"
-    public static final byte TYPE_HW_VERSION = (byte) 0xDF; // "V1.0"
-    public static final byte TYPE_VIN = (byte) 0xC0; // Input voltage ~5.25V
-    public static final byte TYPE_VOUT_MEAS = (byte) 0xE2; // Measured voltage ~5.05V
-    public static final byte TYPE_IOUT_MEAS = (byte) 0xE3; // Measured current ~5.1A
-    public static final byte TYPE_POWER = (byte) 0xC3; // 12 bytes, power-related
-    public static final byte TYPE_TEMP = (byte) 0xC4; // Temperature ~24C
-    public static final byte TYPE_OUTPUT = (byte) 0xDB; // Output on/off 0/1
-    public static final byte TYPE_BRIGHTNESS = (byte) 0xD6; // Brightness 10-14
-    public static final byte TYPE_DUMP = (byte) 0xFF; // Big settings dump
-    public static final byte TYPE_VOUT_SET = (byte) 0xC1; // Set voltage
-    public static final byte TYPE_IOUT_SET = (byte) 0xC2; // Set current
+    // Параметр команды
+    public static final byte TYPE_BRIGHTNESS 	= (byte) 0xD6; // Brightness 10-14
+    public static final byte TYPE_DEV_OUTPUT	= (byte) 0xDB; // Output on/off 0/1
+    public static final byte TYPE_DEV_MODEL 	= (byte) 0xDE; // "DPS-150"
+    public static final byte TYPE_HW_VERSION 	= (byte) 0xDF; // "V1.0"
+
+    public static final byte TYPE_SW_VERSION 	= (byte) 0xE0; // "V1.1"
+    public static final byte TYPE_DEV_STATUS 	= (byte) 0xE1; // "1/0"
+    public static final byte TYPE_VOUT_LIMIT 	= (byte) 0xE2; // "5.23"
+    public static final byte TYPE_IOUT_LIMIT 	= (byte) 0xE3; // "1.53"
+
+    public static final byte TYPE_DEV_VIN 	= (byte) 0xC0; // "5.45"
+    public static final byte TYPE_DEV_VOUT  = (byte) 0xC1; // "5.25"
+    public static final byte TYPE_DEV_IOUT  = (byte) 0xC2; // "1.25"
+    public static final byte TYPE_POWER     = (byte) 0xC3; // 12 bytes, (float MeasuredVolts; float MeasuredCurrent; float MeasuredWatts)
+    public static final byte TYPE_TEMP 		= (byte) 0xC4; // Temperature ~24C
+
+    //Специальные типы
+    public static final byte TYPE_DUMP 		= (byte) 0xFF; // Big settings dump
+    public static final byte TYPE_WAKE_SET	= (byte) 0x00; // Big settings dump
 
     @Override
     protected void initCommands() {
@@ -42,8 +52,8 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
         commandList.addCommand(createGetSwVersionCommand());
         commandList.addCommand(createGetHwVersionCommand());
         commandList.addCommand(createGetVinCommand());
-        commandList.addCommand(createGetVoutMeasCommand());
-        commandList.addCommand(createGetIoutMeasCommand());
+        commandList.addCommand(createGetLimitVoutCommand());
+        commandList.addCommand(createGetLimitCurrentCommand());
         commandList.addCommand(createGetPowerCommand());
         commandList.addCommand(createGetTempCommand());
         commandList.addCommand(createGetOutputCommand());
@@ -53,10 +63,51 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
         commandList.addCommand(createSetIoutCommand());
         commandList.addCommand(createSetOutputCommand());
         commandList.addCommand(createSetBrightnessCommand());
+        commandList.addCommand(createWakeUpCommand());
+    }
+
+    private SingleCommand createWakeUpCommand() {
+        byte[] baseBody = buildCommand(SPECIAL_SET, TYPE_WAKE_SET, new byte[]{(byte) 1}); // По умолчанию включение
+
+        SingleCommand command = new SingleCommand(
+                "wakeUp",
+                "wakeUp [0/1] - Включ. 1 / Выключ. 0",
+                "wakeUp",
+                baseBody,
+                args -> {
+                    // Преобразуем любой числовой тип в byte
+                    Object value = args.getOrDefault("value", (byte) 1);
+                    byte byteValue;
+                    if (value instanceof Number) {
+                        byteValue = ((Number) value).byteValue();
+                    } else {
+                        throw new IllegalArgumentException("Значение должно быть числом (0 или 1)");
+                    }
+                    return buildCommand(SPECIAL_SET, TYPE_WAKE_SET, new byte[]{byteValue});
+                },
+                this::parseStringResponse, // Или другой парсер, если нужно
+                6, // Длина зависит от вашего протокола
+                CommandType.BINARY
+        );
+
+        command.addArgument(new ArgumentDescriptor(
+                "value",
+                Number.class,
+                (byte) 1,
+                val -> {
+                    if (val instanceof Number) {
+                        byte b = ((Number) val).byteValue();
+                        return b == 0 || b == 1;
+                    }
+                    return false;
+                }
+        ));
+
+        return command;
     }
 
     private SingleCommand createGetModelCommand() {
-        byte[] baseBody = buildReadCommand(TYPE_MODEL);
+        byte[] baseBody = buildReadCommand(TYPE_DEV_MODEL);
         return new SingleCommand(
                 "getModel",
                 "getModel - Получить модель устройства",
@@ -98,7 +149,7 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
     }
 
     private SingleCommand createGetVinCommand() {
-        byte[] baseBody = buildReadCommand(TYPE_VIN);
+        byte[] baseBody = buildReadCommand(TYPE_DEV_VIN);
         return new SingleCommand(
                 "getVin",
                 "getVin - Получить входное напряжение",
@@ -111,12 +162,12 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
         );
     }
 
-    private SingleCommand createGetVoutMeasCommand() {
-        byte[] baseBody = buildReadCommand(TYPE_VOUT_MEAS);
+    private SingleCommand createGetLimitVoutCommand() {
+        byte[] baseBody = buildReadCommand(TYPE_VOUT_LIMIT);
         return new SingleCommand(
-                "getVoutMeas",
-                "getVoutMeas - Получить измеренное напряжение",
-                "getVoutMeas",
+                "getLimitVout",
+                "getLimitVout - Получить максимальное допустимое напряжение",
+                "getLimitVout",
                 baseBody,
                 args -> baseBody,
                 this::parseFloatResponse,
@@ -125,12 +176,12 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
         );
     }
 
-    private SingleCommand createGetIoutMeasCommand() {
-        byte[] baseBody = buildReadCommand(TYPE_IOUT_MEAS);
+    private SingleCommand createGetLimitCurrentCommand() {
+        byte[] baseBody = buildReadCommand(TYPE_IOUT_LIMIT);
         return new SingleCommand(
-                "getIoutMeas",
-                "getIoutMeas - Получить измеренный ток",
-                "getIoutMeas",
+                "getLimitCurrent",
+                "getLimitCurrent - Получить максимально допустимый ток",
+                "getLimitCurrent",
                 baseBody,
                 args -> baseBody,
                 this::parseFloatResponse,
@@ -168,7 +219,7 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
     }
 
     private SingleCommand createGetOutputCommand() {
-        byte[] baseBody = buildReadCommand(TYPE_OUTPUT);
+        byte[] baseBody = buildReadCommand(TYPE_DEV_OUTPUT);
         return new SingleCommand(
                 "getOutput",
                 "getOutput - Получить статус выхода (0/1)",
@@ -185,7 +236,7 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
         byte[] baseBody = buildReadCommand(TYPE_BRIGHTNESS);
         return new SingleCommand(
                 "getBrightness",
-                "getBrightness - Получить яркость (10-14)",
+                "getBrightness - Получить яркость (1-14)",
                 "getBrightness",
                 baseBody,
                 args -> baseBody,
@@ -210,7 +261,7 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
     }
 
     private SingleCommand createSetVoutCommand() {
-        byte[] baseBody = buildWriteCommand(TYPE_VOUT_SET, new byte[4]);
+        byte[] baseBody = buildWriteCommand(TYPE_DEV_VOUT, new byte[4]);
         SingleCommand command = new SingleCommand(
                 "setVout",
                 "setVout [value] - Установить напряжение",
@@ -220,7 +271,7 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
                     Float value = (Float) args.getOrDefault("value", 0.0f);
                     ByteBuffer bb = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(value);
                     byte[] valueBytes = bb.array();
-                    return buildWriteCommand(TYPE_VOUT_SET, valueBytes);
+                    return buildWriteCommand(TYPE_DEV_VOUT, valueBytes);
                 },
                 this::parseFloatResponse,
                 9,
@@ -236,7 +287,7 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
     }
 
     private SingleCommand createSetIoutCommand() {
-        byte[] baseBody = buildWriteCommand(TYPE_IOUT_SET, new byte[4]);
+        byte[] baseBody = buildWriteCommand(TYPE_DEV_IOUT, new byte[4]);
         SingleCommand command = new SingleCommand(
                 "setIout",
                 "setIout [value] - Установить ток",
@@ -246,7 +297,7 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
                     Float value = (Float) args.getOrDefault("value", 0.0f);
                     ByteBuffer bb = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(value);
                     byte[] valueBytes = bb.array();
-                    return buildWriteCommand(TYPE_IOUT_SET, valueBytes);
+                    return buildWriteCommand(TYPE_DEV_IOUT, valueBytes);
                 },
                 this::parseFloatResponse,
                 9,
@@ -262,16 +313,23 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
     }
 
     private SingleCommand createSetOutputCommand() {
-        byte[] baseBody = buildWriteCommand(TYPE_OUTPUT, new byte[1]);
+        byte[] baseBody = buildWriteCommand(TYPE_DEV_OUTPUT, new byte[1]);
         SingleCommand command = new SingleCommand(
                 "setOutput",
                 "setOutput [0/1] - Установить статус выхода",
                 "setOutput",
                 baseBody,
                 args -> {
-                    Byte value = (Byte) args.getOrDefault("value", (byte) 0);
-                    byte[] valueBytes = {value};
-                    return buildWriteCommand(TYPE_OUTPUT, valueBytes);
+                    // Преобразуем любой числовой тип в byte
+                    Object value = args.getOrDefault("value", (byte) 0);
+                    byte byteValue;
+                    if (value instanceof Number) {
+                        byteValue = ((Number) value).byteValue();
+                    } else {
+                        throw new IllegalArgumentException("Значение выхода должно быть числом (0 или 1)");
+                    }
+                    byte[] valueBytes = {byteValue};
+                    return buildWriteCommand(TYPE_DEV_OUTPUT, valueBytes);
                 },
                 this::parseByteResponse,
                 6,
@@ -279,9 +337,15 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
         );
         command.addArgument(new ArgumentDescriptor(
                 "value",
-                Byte.class,
+                Number.class, // Разрешаем любой числовой тип
                 (byte) 0,
-                val -> ((Byte) val == 0 || (Byte) val == 1)
+                val -> {
+                    if (val instanceof Number) {
+                        byte b = ((Number) val).byteValue();
+                        return b == 0 || b == 1;
+                    }
+                    return false;
+                }
         ));
         return command;
     }
@@ -290,12 +354,19 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
         byte[] baseBody = buildWriteCommand(TYPE_BRIGHTNESS, new byte[1]);
         SingleCommand command = new SingleCommand(
                 "setBrightness",
-                "setBrightness [value] - Установить яркость (10-14)",
+                "setBrightness [value] - Установить яркость (1-14)",
                 "setBrightness",
                 baseBody,
                 args -> {
-                    Byte value = (Byte) args.getOrDefault("value", (byte) 10);
-                    byte[] valueBytes = {value};
+                    // Преобразуем любой числовой тип в byte
+                    Object value = args.getOrDefault("value", (byte) 10);
+                    byte byteValue;
+                    if (value instanceof Number) {
+                        byteValue = ((Number) value).byteValue();
+                    } else {
+                        throw new IllegalArgumentException("Яркость должна быть числом");
+                    }
+                    byte[] valueBytes = {byteValue};
                     return buildWriteCommand(TYPE_BRIGHTNESS, valueBytes);
                 },
                 this::parseByteResponse,
@@ -304,9 +375,15 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
         );
         command.addArgument(new ArgumentDescriptor(
                 "value",
-                Byte.class,
+                Number.class, // Разрешаем любой числовой тип
                 (byte) 10,
-                val -> ((Byte) val >= 0 && (Byte) val <= 14)
+                val -> {
+                    if (val instanceof Number) {
+                        byte b = ((Number) val).byteValue();
+                        return b >= 0 && b <= 14;
+                    }
+                    return false;
+                }
         ));
         return command;
     }
@@ -437,7 +514,8 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
             log.warn("FNIRSI_DPS150: Error decoding string: " + e.getMessage());
             return null;
         }
-        answerValues.addValue(-1, value);
+        Double number = getAnyNumber(value);
+        answerValues.addValue(number, value);
         return answerValues;
     }
 

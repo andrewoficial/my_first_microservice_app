@@ -444,4 +444,43 @@ public class MyUtilities {
         }
         return result;
     }
+
+    public static Double getAnyNumber(String str) {
+        if (str == null || str.isEmpty()) {
+            return -1.0;
+        }
+
+        boolean pointFound = false;
+        StringBuilder numberBuilder = new StringBuilder();
+
+        for (char c : str.toCharArray()) {
+            if (Character.isDigit(c)) {
+                numberBuilder.append(c);
+            } else if (c == '.' && !pointFound) {
+                pointFound = true;
+                numberBuilder.append(c);
+            }
+        }
+
+        if (numberBuilder.length() == 0) {
+            return -1.0;
+        }
+
+        // Проверяем, что строка не заканчивается точкой
+        String result = numberBuilder.toString();
+        if (result.endsWith(".")) {
+            result = result.substring(0, result.length() - 1);
+        }
+
+        // Проверяем, что число не состоит из одной точки
+        if (result.isEmpty() || result.equals(".")) {
+            return -1.0;
+        }
+
+        try {
+            return Double.parseDouble(result);
+        } catch (NumberFormatException e) {
+            return -1.0;
+        }
+    }
 }

@@ -1,4 +1,3 @@
-// org/example/gui/autoresponder/ByteUtils.java
 package org.example.gui.autoresponder;
 
 import java.nio.ByteBuffer;

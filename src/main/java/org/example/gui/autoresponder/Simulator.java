@@ -1,63 +1,59 @@
-// org/example/gui/autoresponder/Simulator.java
 package org.example.gui.autoresponder;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.example.gui.autoresponder.DumpGenerator.safetyGetValue;
+
 public class Simulator {
 
     public static void simulateAll(DpsEmulatorWindow window) {
         try {
             List<byte[]> packets = new ArrayList<>();
-
-            packets.add(window.buildResponse((byte) 0xA1, (byte) 0xE1,
-                    new byte[]{(byte) Integer.parseInt(window.jtfStatus.getText())}));
-
             packets.add(window.buildResponse((byte) 0xA1, (byte) 0xDE,
                     window.jtfModel.getText().getBytes()));
-
-            packets.add(window.buildResponse((byte) 0xA1, (byte) 0xE0,
-                    window.jtfSwVersion.getText().getBytes()));
 
             packets.add(window.buildResponse((byte) 0xA1, (byte) 0xDF,
                     window.jtfHwVersion.getText().getBytes()));
 
-            //F1 B1 C2 04 6F 12 03 3B 85
-            packets.add(window.buildResponse((byte) 0xB1, (byte) 0xC2,
-                    ByteUtils.floatToBytes(Float.parseFloat(window.jtfCurrentSet.getText()))));
+            packets.add(window.buildResponse((byte) 0xA1, (byte) 0xE0,
+                    window.jtfSwVersion.getText().getBytes()));
 
-            packets.add(window.buildResponse((byte) 0xB1, (byte) 0xC1,
-                    ByteUtils.floatToBytes(Float.parseFloat(window.jtfVoltageSet.getText()))));
+            packets.add(window.buildResponse((byte) 0xA1, (byte) 0xE1,
+                    new byte[]{(byte) Integer.parseInt(safetyGetValue(window.jtfStatus))}));
 
             packets.add(window.buildResponse((byte) 0xA1, (byte) 0xE2,
-                    ByteUtils.floatToBytes(Float.parseFloat(window.jtfUpperLimitVoltage.getText()))));
+                    ByteUtils.floatToBytes(Float.parseFloat(safetyGetValue(window.jtfUpperLimitVoltage)))));
 
             packets.add(window.buildResponse((byte) 0xA1, (byte) 0xE3,
-                    ByteUtils.floatToBytes(Float.parseFloat(window.jtfUpperLimitCurrent.getText()))));
-
-            packets.add(window.buildResponse((byte) 0xA1, (byte) 0xFF,
-                    DumpGenerator.generateDump(window)));
+                    ByteUtils.floatToBytes(Float.parseFloat(safetyGetValue(window.jtfUpperLimitCurrent)))));
 
             packets.add(window.buildResponse((byte) 0xA1, (byte) 0xC0,
-                    ByteUtils.floatToBytes(Float.parseFloat(window.jtfVin.getText()))));
+                    ByteUtils.floatToBytes(Float.parseFloat(safetyGetValue(window.jtfVin)))));
+
+            packets.add(window.buildResponse((byte) 0xB1, (byte) 0xC1,
+                    ByteUtils.floatToBytes(Float.parseFloat(safetyGetValue(window.jtfVoltageSet)))));
+
+            packets.add(window.buildResponse((byte) 0xB1, (byte) 0xC2,
+                    ByteUtils.floatToBytes(Float.parseFloat(safetyGetValue(window.jtfCurrentSet)))));
 
             packets.add(window.buildResponse((byte)0xA1, (byte)0xC3,
                     ByteBuffer.allocate(12)
                             .order(ByteOrder.LITTLE_ENDIAN)
-                            .putFloat(Float.parseFloat(window.jtfMeasVoltOut.getText()))
-                            .putFloat(Float.parseFloat(window.jtfMeasCurrentOut.getText()))
-                            .putFloat(Float.parseFloat(window.jtfMeasWattOut.getText()))
+                            .putFloat(Float.parseFloat(safetyGetValue(window.jtfMeasVoltOut)))
+                            .putFloat(Float.parseFloat(safetyGetValue(window.jtfMeasCurrentOut)))
+                            .putFloat(Float.parseFloat(safetyGetValue(window.jtfMeasWattOut)))
                             .array()
             ));
 
             packets.add(window.buildResponse((byte) 0xA1, (byte) 0xC4,
-                    ByteUtils.floatToBytes(Float.parseFloat(window.jtfTemperature.getText()))));
+                    ByteUtils.floatToBytes(Float.parseFloat(safetyGetValue(window.jtfTemperature)))));
 
+            packets.add(window.buildResponse((byte) 0xA1, (byte) 0xFF,
+                    DumpGenerator.generateDump(window)));
 
             // отправляем последовательно
             for (byte[] p : packets) {
@@ -79,13 +75,13 @@ public class Simulator {
                 AtomicBoolean simulating = new AtomicBoolean(true);
                 // To stop, perhaps add a button, but for now, simulate 100 points
                 int numPoints = 100;
-                float baseVoltOut = Float.parseFloat(window.jtfMeasVoltOut.getText());
-                float baseCurrentOut = Float.parseFloat(window.jtfMeasCurrentOut.getText());
-                float baseWattOut = Float.parseFloat(window.jtfMeasWattOut.getText());
-                float vin = Float.parseFloat(window.jtfVin.getText());
-                float upperLimitVoltage = Float.parseFloat(window.jtfUpperLimitVoltage.getText());
-                float upperLimitCurrent = Float.parseFloat(window.jtfUpperLimitCurrent.getText());
-                float temperature = Float.parseFloat(window.jtfTemperature.getText());
+                float baseVoltOut = Float.parseFloat(safetyGetValue(window.jtfMeasVoltOut));
+                float baseCurrentOut = Float.parseFloat(safetyGetValue(window.jtfMeasCurrentOut));
+                float baseWattOut = Float.parseFloat(safetyGetValue(window.jtfMeasWattOut));
+                float vin = Float.parseFloat(safetyGetValue(window.jtfVin));
+                float upperLimitVoltage = Float.parseFloat(safetyGetValue(window.jtfUpperLimitVoltage));
+                float upperLimitCurrent = Float.parseFloat(safetyGetValue(window.jtfUpperLimitCurrent));
+                float temperature = Float.parseFloat(safetyGetValue(window.jtfTemperature));
 
                 for (int i = 0; i < numPoints && simulating.get(); i++) {
                     // Варьируем значения для имитации изменения данных

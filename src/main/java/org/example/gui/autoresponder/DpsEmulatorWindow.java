@@ -1,4 +1,3 @@
-// org/example/gui/autoresponder/DpsEmulatorWindow.java
 package org.example.gui.autoresponder;
 
 import com.fazecast.jSerialComm.SerialPort;
@@ -16,9 +15,11 @@ import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.example.gui.autoresponder.DumpGenerator.safetyGetValue;
+
 public class DpsEmulatorWindow extends JFrame {
     public static final Logger log = Logger.getLogger(DpsEmulatorWindow.class);
-    private static final int RESPONSE_TIMEOUT_MS = 50; // Таймаут для накопления пакета
+    private static final int RESPONSE_TIMEOUT_MS = 250; // Таймаут для накопления пакета
 
     private JPanel mainPanel;
     private JPanel leftPanel; // Управление портом и лог
@@ -47,6 +48,15 @@ public class DpsEmulatorWindow extends JFrame {
     JTextField jtfMeasVoltOut;
     JTextField jtfMeasWattOut;
     JTextField jtfBrightness;
+
+    // Визуальные индикаторы
+    private JPanel wakeUpIndicator;
+    private JPanel dunnoModeIndicator;
+    private JPanel powerOutputIndicator;
+
+    // Состояния
+    boolean isWakeUp = false;
+    boolean isPowerOutputOpen = false;
 
     SerialPort comPort;
     private Thread listenerThread;
@@ -141,6 +151,28 @@ public class DpsEmulatorWindow extends JFrame {
         jtfBrightness = new JTextField("10");
         rightPanel.add(jtfBrightness);
 
+        // Визуальные индикаторы
+        wakeUpIndicator = new JPanel();
+        wakeUpIndicator.setPreferredSize(new Dimension(20, 20));
+        wakeUpIndicator.setBackground(Color.BLACK);
+
+        dunnoModeIndicator = new JPanel();
+        dunnoModeIndicator.setPreferredSize(new Dimension(20, 20));
+        dunnoModeIndicator.setBackground(Color.BLACK);
+
+        powerOutputIndicator = new JPanel();
+        powerOutputIndicator.setPreferredSize(new Dimension(20, 20));
+        powerOutputIndicator.setBackground(Color.BLACK);
+
+        rightPanel.add(new JLabel("WakeUp Indicator:"));
+        rightPanel.add(wakeUpIndicator);
+
+        rightPanel.add(new JLabel("DunnoMode Indicator:"));
+        rightPanel.add(dunnoModeIndicator);
+
+        rightPanel.add(new JLabel("PowerOutput Indicator:"));
+        rightPanel.add(powerOutputIndicator);
+
         //Отсуствует поля:
         //Яркость
         //F1 B1 D6 01 0B E2 (set 11)
@@ -186,6 +218,17 @@ public class DpsEmulatorWindow extends JFrame {
                 closePort(null);
             }
         });
+    }
+
+    void updateIndicators() {
+        wakeUpIndicator.setBackground(isWakeUp ? Color.GREEN : Color.BLACK);
+        powerOutputIndicator.setBackground(isPowerOutputOpen ? Color.GREEN : Color.BLACK);
+        try {
+            boolean dunnoOn = Integer.parseInt(safetyGetValue(jtfStatus)) == 1;
+            dunnoModeIndicator.setBackground(dunnoOn ? Color.LIGHT_GRAY : Color.BLACK);
+        } catch (NumberFormatException e) {
+            dunnoModeIndicator.setBackground(Color.RED);
+        }
     }
 
     private void updateComPortList() {
@@ -299,7 +342,7 @@ public class DpsEmulatorWindow extends JFrame {
             byte[] respData;
             switch (type) {
                 case (byte) 0xE1: // Status
-                    respData = new byte[]{(byte) Integer.parseInt(jtfStatus.getText())};
+                    respData = new byte[]{(byte) Integer.parseInt(safetyGetValue(jtfStatus))};
                     return buildResponse((byte) 0xA1, type, respData);
                 case (byte) 0xDE: // Model
                     respData = jtfModel.getText().getBytes();
@@ -319,19 +362,19 @@ public class DpsEmulatorWindow extends JFrame {
                     }
                     return buildResponse((byte) 0xA1, type, respData);
                 case (byte) 0xC4: // Temp (example, add if needed)
-                    float temp = Float.parseFloat(jtfTemperature.getText());
+                    float temp = Float.parseFloat(safetyGetValue(jtfTemperature));
                     respData = ByteUtils.floatToBytes(temp);
                     return buildResponse((byte) 0xA1, type, respData);
                 case (byte) 0xC0: // Vin
-                    float vin = Float.parseFloat(jtfVin.getText());
+                    float vin = Float.parseFloat(safetyGetValue(jtfVin));
                     return buildResponse((byte) 0xA1, type, ByteUtils.floatToBytes(vin));
 
                 case (byte) 0xE2: // Vout measured
-                    float vout = Float.parseFloat(jtfUpperLimitVoltage.getText());
+                    float vout = Float.parseFloat(safetyGetValue(jtfUpperLimitVoltage));
                     return buildResponse((byte) 0xA1, type, ByteUtils.floatToBytes(vout));
 
                 case (byte) 0xE3: // Iout measured
-                    float iout = Float.parseFloat(jtfUpperLimitCurrent.getText());
+                    float iout = Float.parseFloat(safetyGetValue(jtfUpperLimitCurrent));
                     return buildResponse((byte) 0xA1, type, ByteUtils.floatToBytes(iout));
                 // Add more types as needed (e.g., 0xE2 vout meas, etc.)
                 default:
@@ -342,20 +385,28 @@ public class DpsEmulatorWindow extends JFrame {
                 switch (type) {
                     case (byte) 0xC1: // set voltage
                         float volt = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
-                        String forSet = String.format("%.3f", volt).replace(",", ".");
-                        SwingUtilities.invokeLater(() -> jtfVoltageSet.setText(forSet));
-                        return buildResponse((byte) 0xB1, (byte) 0xC1, data);
+                        SwingUtilities.invokeLater(() -> jtfVoltageSet.setText(String.format("%.3f", volt)));
+                        return null;
                     case (byte) 0xC2: // set current
                         float curr = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
-                        String forSetCurr = String.format("%.3f", curr).replace(",", ".");
-                        SwingUtilities.invokeLater(() -> jtfCurrentSet.setText(forSetCurr));
-                        return buildResponse((byte) 0xB1, (byte) 0xC2, data);
+                        SwingUtilities.invokeLater(() -> jtfCurrentSet.setText(String.format("%.3f", curr)));
+                        return null;
                     case (byte) 0xD6: // brightness
                         int bright = data[0] & 0xFF;
                         SwingUtilities.invokeLater(() -> jtfBrightness.setText(String.valueOf(bright)));
                         return null;
+                    case (byte) 0xDB: // PowerOutput
+                        isPowerOutputOpen = (data[0] == 0x01);
+                        SwingUtilities.invokeLater(this::updateIndicators);
+                        return null;
                     default:
                         return null;
+                }
+            } else if (cmd == (byte) 0xC1) {
+                if (type == (byte) 0x00) { // WakeUp
+                    isWakeUp = (data[0] == 0x01);
+                    SwingUtilities.invokeLater(this::updateIndicators);
+                    return null;
                 }
             }
             return null; // Or echo for confirmation

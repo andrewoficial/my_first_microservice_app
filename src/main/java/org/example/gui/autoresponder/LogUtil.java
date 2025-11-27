@@ -1,4 +1,3 @@
-// org/example/gui/autoresponder/LogUtil.java
 package org.example.gui.autoresponder;
 
 import javax.swing.*;
