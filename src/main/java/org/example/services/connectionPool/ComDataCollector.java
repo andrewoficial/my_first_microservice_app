@@ -195,6 +195,7 @@ public class ComDataCollector implements Runnable{
             ReceivedData data = incomingMessages.poll();
             if (data != null) {
                 try {
+                    generateAnswerAndSend(data.message);
                     saveReceivedByEvent(data.message, data.isResponseRequested, data.timestamp);
                 } catch (Exception e) {
                     log.warn("Исключение при обработке входящего сообщения", e);
@@ -353,7 +354,7 @@ public class ComDataCollector implements Runnable{
             log.warn("Произошла ошибка при попытке сна" + e.getMessage());
         }
     }
-    public void sendOnce(String pref, String cmd,int clientId, boolean internal) {
+    public void sendOnce(String pref, String cmd, int clientId, boolean internal) {
         //log.info(" Начал отправку " + Thread.currentThread().getName() + " для клиента " + clientId);
 
         if( ! internal){
@@ -437,6 +438,20 @@ public class ComDataCollector implements Runnable{
         }
     }
 
+    public void generateAnswerAndSend(byte[] message) {
+        if(device instanceof Answerable){
+            Answerable answerable = (Answerable) device;
+            byte[] answer = answerable.generateAnswer(message);
+            if(answer == null || answer.length == 0){
+                return;
+            }
+            StringBuilder sb = new StringBuilder();
+            for (byte b : answer) {//ToDo переделать на массив
+                sb.append((char) b);
+            }
+            sendOnce("", sb.toString(), currentDirection.get(), false);
+        }
+    }
     public void saveReceivedByEvent(byte[] message, boolean responseRequested, long receiveTimestamp) {
         //log.info("saveReceivedByEvent вызван: responseRequested=" + responseRequested + ", message.length=" + (message != null ? message.length : "null") + ", device=" + (device != null ? "ok" : "null") + ", deviceAnswer=" + (deviceAnswer != null ? "ok" : "null"));
         if(message == null || message.length == 0){

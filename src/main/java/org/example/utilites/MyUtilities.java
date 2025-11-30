@@ -5,6 +5,7 @@ package org.example.utilites;
 
 import com.fazecast.jSerialComm.SerialPort;
 import org.example.device.*;
+import org.example.device.lora.rui420.igm.mesh.Igm10Mesh;
 import org.example.device.protArdBadVlt.ARD_BAD_VLT;
 import org.example.device.protArdFeeBrdMeter.ARD_FEE_BRD_METER;
 import org.example.device.protArdTerm.ARD_TERM;
@@ -109,6 +110,7 @@ public class MyUtilities {
             case ECT_TC290 -> device = new ECT_TC290(comPort);
             case DVK_4RD -> device = new DVK_4RD(comPort);
             //case IGM10LORA_P2P -> device = new IGM_10LORA_P2P(comPort);
+            case IGM10LORA_MESH -> device = new Igm10Mesh(comPort);
             case DEMO_PROTOCOL -> device = new DEMO_PROTOCOL(comPort);
             case GPS_Test -> device = new GPS_Test(comPort);
             case OWON_SPE3051 -> device = new OWON_SPE3051(comPort);
@@ -135,6 +137,7 @@ public class MyUtilities {
             case EDWARDS_D397_00_000 -> device = new EDWARDS_D397_00_000();
             case ECT_TC290 -> device = new ECT_TC290();
             //case IGM10LORA_P2P -> device = new IGM_10LORA_P2P();
+            case IGM10LORA_MESH -> device = new Igm10Mesh();
             case DEMO_PROTOCOL -> device = new DEMO_PROTOCOL();
             case OWON_SPE3051 -> device = new OWON_SPE3051();
             case GPS_Test -> device = new GPS_Test();
@@ -421,6 +424,19 @@ public class MyUtilities {
         StringBuilder sb = new StringBuilder();
         for (byte b : response) {
             sb.append((char) b);
+        }
+
+        return sb.toString();
+    }
+
+    public static String charArrayToString(byte[] response) {
+        if (response == null) {
+            return null;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        for (byte b : response) {
+            sb.append(b);
         }
 
         return sb.toString();
