@@ -16,8 +16,13 @@ jobs:
      
     - name: Download OpenJDK MSI
       run: |
-        mkdir -p installer/sources
-        Invoke-WebRequest -Uri "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.8%2B9/OpenJDK21U-jdk_x64_windows_hotspot_21.0.8_9.msi" -OutFile "installer/sources/OpenJDK21U-jdk_x64_windows_hotspot_21.0.8_9.msi"
+        if (!(Test-Path installer/sources)) {
+          mkdir installer/sources
+        }
+        $msiPath = "installer/sources/OpenJDK21U-jdk_x64_windows_hotspot_21.0.8_9.msi"
+        if (!(Test-Path $msiPath)) {
+          Invoke-WebRequest -Uri "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.8%2B9/OpenJDK21U-jdk_x64_windows_hotspot_21.0.8_9.msi" -OutFile $msiPath
+        }
      
     - name: Set up JDK 21
       uses: actions/setup-java@v4
