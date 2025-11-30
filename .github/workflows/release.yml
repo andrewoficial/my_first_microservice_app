@@ -13,6 +13,8 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        lfs: true
      
     - name: Download OpenJDK MSI
       run: |
@@ -24,11 +26,19 @@ jobs:
           Write-Host "Directory $dirPath already exists."
         }
         $msiPath = "$dirPath/OpenJDK21U-jdk_x64_windows_hotspot_21.0.8_9.msi"
-        if (!(Test-Path $msiPath)) {
-          Write-Host "MSI file not found at $msiPath. Downloading from repository raw URL."
-          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/andrewoficial/my_first_microservice_app/master/installer/sources/OpenJDK21U-jdk_x64_windows_hotspot_21.0.8_9.msi" -OutFile $msiPath
+        $downloadUrl = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.8%2B9/OpenJDK21U-jdk_x64_windows_hotspot_21.0.8_9.msi"
+        if (Test-Path $msiPath) {
+          $fileSize = (Get-Item $msiPath).Length
+          Write-Host "MSI file exists at $msiPath with size $fileSize bytes."
+          if ($fileSize -lt 1000000) {  # Less than 1MB, likely LFS pointer
+            Write-Host "File is too small (likely Git LFS pointer). Overwriting with download from official URL."
+            Invoke-WebRequest -Uri $downloadUrl -OutFile $msiPath
+          } else {
+            Write-Host "MSI file is sufficiently large. Skipping download."
+          }
         } else {
-          Write-Host "MSI file already exists at $msiPath. Skipping download."
+          Write-Host "MSI file not found at $msiPath. Downloading from official URL."
+          Invoke-WebRequest -Uri $downloadUrl -OutFile $msiPath
         }
      
     - name: Set up JDK 21
