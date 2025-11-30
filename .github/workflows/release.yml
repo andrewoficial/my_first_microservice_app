@@ -16,12 +16,19 @@ jobs:
      
     - name: Download OpenJDK MSI
       run: |
-        if (!(Test-Path installer/sources)) {
-          mkdir installer/sources
+        $dirPath = "installer/sources"
+        if (!(Test-Path $dirPath)) {
+          Write-Host "Directory $dirPath does not exist. Creating it."
+          mkdir $dirPath
+        } else {
+          Write-Host "Directory $dirPath already exists."
         }
-        $msiPath = "installer/sources/OpenJDK21U-jdk_x64_windows_hotspot_21.0.8_9.msi"
+        $msiPath = "$dirPath/OpenJDK21U-jdk_x64_windows_hotspot_21.0.8_9.msi"
         if (!(Test-Path $msiPath)) {
-          Invoke-WebRequest -Uri "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.8%2B9/OpenJDK21U-jdk_x64_windows_hotspot_21.0.8_9.msi" -OutFile $msiPath
+          Write-Host "MSI file not found at $msiPath. Downloading from repository raw URL."
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/andrewoficial/my_first_microservice_app/master/installer/sources/OpenJDK21U-jdk_x64_windows_hotspot_21.0.8_9.msi" -OutFile $msiPath
+        } else {
+          Write-Host "MSI file already exists at $msiPath. Skipping download."
         }
      
     - name: Set up JDK 21
