@@ -19,32 +19,32 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
     private static final Logger log = Logger.getLogger(FnirsiDps150CommandRegistry.class);
 
     // Тип команды
-    private static final byte START_SEND 	= (byte) 0xF1;
-    private static final byte START_RECV 	= (byte) 0xF0;
-    private static final byte CMD_GET 		= (byte) 0xA1;
-    private static final byte CMD_SET 		= (byte) 0xB1;
-    private static final byte SPECIAL_SET 	= (byte) 0xC1;
+    private static final byte START_SEND    = (byte) 0xF1;
+    private static final byte START_RECV    = (byte) 0xF0;
+    private static final byte CMD_GET      = (byte) 0xA1;
+    private static final byte CMD_SET      = (byte) 0xB1;
+    private static final byte SPECIAL_SET   = (byte) 0xC1;
 
     // Параметр команды
-    public static final byte TYPE_BRIGHTNESS 	= (byte) 0xD6; // Brightness 10-14
-    public static final byte TYPE_DEV_OUTPUT	= (byte) 0xDB; // Output on/off 0/1
-    public static final byte TYPE_DEV_MODEL 	= (byte) 0xDE; // "DPS-150"
-    public static final byte TYPE_HW_VERSION 	= (byte) 0xDF; // "V1.0"
+    public static final byte TYPE_BRIGHTNESS    = (byte) 0xD6; // Brightness 10-14
+    public static final byte TYPE_DEV_OUTPUT    = (byte) 0xDB; // Output on/off 0/1
+    public static final byte TYPE_DEV_MODEL     = (byte) 0xDE; // "DPS-150"
+    public static final byte TYPE_HW_VERSION    = (byte) 0xDF; // "V1.0"
 
-    public static final byte TYPE_SW_VERSION 	= (byte) 0xE0; // "V1.1"
-    public static final byte TYPE_DEV_STATUS 	= (byte) 0xE1; // "1/0"
-    public static final byte TYPE_VOUT_LIMIT 	= (byte) 0xE2; // "5.23"
-    public static final byte TYPE_IOUT_LIMIT 	= (byte) 0xE3; // "1.53"
+    public static final byte TYPE_SW_VERSION    = (byte) 0xE0; // "V1.1"
+    public static final byte TYPE_DEV_STATUS    = (byte) 0xE1; // "1/0"
+    public static final byte TYPE_VOUT_LIMIT    = (byte) 0xE2; // "5.23"
+    public static final byte TYPE_IOUT_LIMIT    = (byte) 0xE3; // "1.53"
 
-    public static final byte TYPE_DEV_VIN 	= (byte) 0xC0; // "5.45"
+    public static final byte TYPE_DEV_VIN   = (byte) 0xC0; // "5.45"
     public static final byte TYPE_DEV_VOUT  = (byte) 0xC1; // "5.25"
     public static final byte TYPE_DEV_IOUT  = (byte) 0xC2; // "1.25"
     public static final byte TYPE_POWER     = (byte) 0xC3; // 12 bytes, (float MeasuredVolts; float MeasuredCurrent; float MeasuredWatts)
-    public static final byte TYPE_TEMP 		= (byte) 0xC4; // Temperature ~24C
+    public static final byte TYPE_TEMP     = (byte) 0xC4; // Temperature ~24C
 
     //Специальные типы
-    public static final byte TYPE_DUMP 		= (byte) 0xFF; // Big settings dump
-    public static final byte TYPE_WAKE_SET	= (byte) 0x00; // Big settings dump
+    public static final byte TYPE_DUMP     = (byte) 0xFF; // Big settings dump
+    public static final byte TYPE_WAKE_SET  = (byte) 0x00; // Big settings dump
 
     @Override
     protected void initCommands() {
@@ -64,6 +64,7 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
         commandList.addCommand(createSetOutputCommand());
         commandList.addCommand(createSetBrightnessCommand());
         commandList.addCommand(createWakeUpCommand());
+        commandList.addCommand(createBackgroundPollingCommand());
     }
 
     private SingleCommand createWakeUpCommand() {
@@ -228,6 +229,20 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
                 args -> baseBody,
                 this::parseByteResponse,
                 6,
+                CommandType.BINARY
+        );
+    }
+
+    private SingleCommand createBackgroundPollingCommand() {
+        byte[] baseBody = new byte[0]; // Nothing to send for background polling
+        return new SingleCommand(
+                "backgroundPolling",
+                "notForUse - do not use it (for automatically send from device information)",
+                "backgroundPolling",
+                baseBody,
+                args -> { throw new UnsupportedOperationException("Cannot send background polling command"); },
+                this::parseBackgroundResponse,
+                53, // Fixed length based on the example: 17 (power) + 9*4 (vin, vout_limit, iout_limit, temp)
                 CommandType.BINARY
         );
     }
@@ -460,6 +475,92 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
         byte[] data = Arrays.copyOfRange(response, 4, 8);
         float value = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
         answerValues.addValue(value, "value");
+        return answerValues;
+    }
+
+    private AnswerValues parseBackgroundResponse(byte[] response) {
+        //F0 A1 C3 0C 00 00 00 00 00 00 00 00 00 00 00 00 CF F0 A1 C0 04 49 E6 9F 41 D3 F0 A1 E2 04 AF 4C 9E 41 C0 F0 A1 E3 04 33 33 A3 40 30 F0 A1 C4 04 5A 95 CD 41 C5
+        AnswerValues answerValues = new AnswerValues(7); // vout, iout, power, vin, vout_limit, iout_limit, temp
+        int pos = 0;
+        while (pos < response.length) {
+            if (response.length - pos < 5) {
+                log.warn("FNIRSI_DPS150: Incomplete frame in background response");
+                return null;
+            }
+            if (response[pos] != START_RECV || response[pos + 1] != CMD_GET) {
+                log.warn("FNIRSI_DPS150: Invalid header in background response at pos " + pos);
+                return null;
+            }
+            byte type = response[pos + 2];
+            byte length = response[pos + 3];
+            int frameLen = 4 + (length & 0xFF) + 1;
+            if (pos + frameLen > response.length) {
+                log.warn("FNIRSI_DPS150: Frame exceeds response length at pos " + pos);
+                return null;
+            }
+            byte[] frameWithoutCs = Arrays.copyOfRange(response, pos, pos + frameLen - 1);
+            byte receivedCs = response[pos + frameLen - 1];
+            byte calculatedCs = calculateChecksum(frameWithoutCs);
+            if (receivedCs != calculatedCs) {
+                log.warn("FNIRSI_DPS150: Checksum error in background frame at pos " + pos);
+                return null;
+            }
+            byte[] data = Arrays.copyOfRange(response, pos + 4, pos + 4 + (length & 0xFF));
+            switch (type) {
+                case TYPE_POWER:
+                    if (length != 12) {
+                        log.warn("FNIRSI_DPS150: Invalid length for POWER: " + length);
+                        return null;
+                    }
+                    float vout = ByteBuffer.wrap(data, 0, 4).order(ByteOrder.LITTLE_ENDIAN).getFloat();
+                    float iout = ByteBuffer.wrap(data, 4, 4).order(ByteOrder.LITTLE_ENDIAN).getFloat();
+                    float power = ByteBuffer.wrap(data, 8, 4).order(ByteOrder.LITTLE_ENDIAN).getFloat();
+                    answerValues.addValue(vout, "Out (V)");
+                    answerValues.addValue(iout, "Out (A)");
+                    answerValues.addValue(power, "Out (W)");
+                    break;
+                case TYPE_DEV_VIN:
+                    if (length != 4) {
+                        log.warn("FNIRSI_DPS150: Invalid length for VIN: " + length);
+                        return null;
+                    }
+                    float vin = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
+                    answerValues.addValue(vin, "Input (V)");
+                    break;
+                case TYPE_VOUT_LIMIT:
+                    if (length != 4) {
+                        log.warn("FNIRSI_DPS150: Invalid length for VOUT_LIMIT: " + length);
+                        return null;
+                    }
+                    float vlim = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
+                    answerValues.addValue(vlim, "Out Limit (V)");
+                    break;
+                case TYPE_IOUT_LIMIT:
+                    if (length != 4) {
+                        log.warn("FNIRSI_DPS150: Invalid length for IOUT_LIMIT: " + length);
+                        return null;
+                    }
+                    float ilim = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
+                    answerValues.addValue(ilim, "Out Limit (A)");
+                    break;
+                case TYPE_TEMP:
+                    if (length != 4) {
+                        log.warn("FNIRSI_DPS150: Invalid length for TEMP: " + length);
+                        return null;
+                    }
+                    float temp = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
+                    answerValues.addValue(temp, "C deg");
+                    break;
+                default:
+                    log.warn("FNIRSI_DPS150: Unknown type in background: " + type);
+                    return null;
+            }
+            pos += frameLen;
+        }
+        if (pos != response.length) {
+            log.warn("FNIRSI_DPS150: Extra data in background response");
+            return null;
+        }
         return answerValues;
     }
 

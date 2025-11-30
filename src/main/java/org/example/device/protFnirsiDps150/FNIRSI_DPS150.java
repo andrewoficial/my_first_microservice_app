@@ -264,6 +264,10 @@ public class FNIRSI_DPS150 implements SomeDevice, NonAscii, ProtocolComPort {
             byte[] commandPart = new byte[3];
             log.info("Определяю команду... ");
             for (SingleCommand value : commandsList.values()) {
+                if(value.getBaseBody().length < 3){
+                    log.warn("Пропустил команду " + value.getDescription() + " потому что размер команды менее трёх");
+                    continue;
+                }
                 System.arraycopy(value.getBaseBody(), 0, commandPart, 0, 3);
                 if (Arrays.equals(commandPart, sentPart)) {
                     log.info("Found command pattern for command [" + value.getMapKey() + "]");
@@ -274,16 +278,31 @@ public class FNIRSI_DPS150 implements SomeDevice, NonAscii, ProtocolComPort {
             }
             if (isKnown) {
                 answerValues = foundetCommand.getResult(lastAnswerBytes);
-                log.info("Записываю ответ [" + answerValues + "]");
+                log.info("Получил результат парсинга [" + answerValues + "]");
                 if (answerValues != null) {
                     for (int i = 0; i < answerValues.getValues().length; i++) {
-                        lastAnswer.append(answerValues.getValues()[i]);
+                        lastAnswer.append(String.format("%.4f", answerValues.getValues()[i]));
+                        lastAnswer.append("\t");
+                        lastAnswer.append(answerValues.getUnits()[i]);
                         lastAnswer.append("\t");
                     }
-                } else {
-                    lastAnswer.append(new String(lastAnswerBytes));
-                    log.info("FNIRSI_DPS150 Cant create answers obj (error in answer)");
+                    return;
                 }
+                log.info("Ответ на другую команду или неверный ответ.");
+                foundetCommand = commandRegistry.getCommandList().getCommand("backgroundPolling");
+                answerValues = foundetCommand.getResult(lastAnswerBytes);
+                if (answerValues != null) {
+                    for (int i = 0; i < answerValues.getValues().length; i++) {
+                        lastAnswer.append(String.format("%.3f", answerValues.getValues()[i]));
+                        lastAnswer.append("\t");
+                        lastAnswer.append(answerValues.getUnits()[i]);
+                        lastAnswer.append("\t");
+                    }
+                    return;
+                }
+                lastAnswer.append(new String(MyUtilities.bytesToHex(lastAnswerBytes)));
+                log.info("FNIRSI_DPS150 Cant create answers obj (error in answer)");
+
             } else {
                 lastAnswer.setLength(0);
                 lastAnswer.append(MyUtilities.bytesToHex(lastAnswerBytes));
