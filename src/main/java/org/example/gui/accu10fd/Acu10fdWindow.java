@@ -8,7 +8,6 @@ import org.example.gui.accu10fd.table.AcuTableCreator;
 import org.example.gui.accu10fd.table.AcuTableFileHandler;
 import org.example.gui.accu10fd.table.GasData;
 import org.example.gui.components.DecimalSpinner;
-import org.example.gui.components.NimbusCustomizer;
 import org.example.gui.curve.file.Serialization;
 import org.example.services.comPort.BaudRatesList;
 import org.example.services.comPort.ParityList;
@@ -59,6 +58,7 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
     private JButton jbCmdSetGasCoefficient;
     private JButton jbSearch;
     private JTextArea jtaStatus;
+    private JButton jbCmdCalculateZeroGas;
 
     private SerialPort comPort;
     private final AcuTableFileHandler acuTableFileHandler;
@@ -124,6 +124,7 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
         jbCmdSetGasCoefficient.addActionListener(this::setCoefficient);
         jcbBackgroundDataPool.addActionListener(this::changePoolState);
         jbSearch.addActionListener(this::testComPortSpeedsHandler);
+        jbCmdCalculateZeroGas.addActionListener(this::calculateZeroGas);
         acu10fsCommander = new Acu10fsCommander(comPort);
 
         this.addWindowListener(new WindowAdapter() {
@@ -181,6 +182,12 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
             poolState = jcbBackgroundDataPool.isSelected();
         }
 
+    }
+
+    private void calculateZeroGas(ActionEvent actionEvent) {
+        double conc1 = (Double) jsFirstComponentConcentration.getValue();
+        double conc2 = 100.0 - conc1;
+        jsSecondComponentConcentration.setValue(conc2);
     }
 
     private void backgroundPool() {
@@ -644,14 +651,17 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
         label1.setText("Первый компонент");
         componentA.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JPanel panel2 = new JPanel();
-        panel2.setLayout(new GridLayoutManager(3, 1, new Insets(0, 0, 0, 0), -1, -1));
+        panel2.setLayout(new GridLayoutManager(3, 2, new Insets(0, 0, 0, 0), -1, -1));
         panel1.add(panel2, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         jcbSecondComponentName = new JComboBox();
-        panel2.add(jcbSecondComponentName, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        panel2.add(jsSecondComponentConcentration, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel2.add(jcbSecondComponentName, new GridConstraints(1, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel2.add(jsSecondComponentConcentration, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label2 = new JLabel();
         label2.setText("Второй компонент");
-        panel2.add(label2, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel2.add(label2, new GridConstraints(0, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jbCmdCalculateZeroGas = new JButton();
+        jbCmdCalculateZeroGas.setText("Вычислить");
+        panel2.add(jbCmdCalculateZeroGas, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jcbBackgroundDataPool = new JCheckBox();
         jcbBackgroundDataPool.setText("Фоновый опрос данных");
         mainPane.add(jcbBackgroundDataPool, new GridConstraints(11, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
