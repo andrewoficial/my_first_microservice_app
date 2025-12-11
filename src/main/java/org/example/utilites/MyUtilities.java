@@ -4,6 +4,7 @@
 package org.example.utilites;
 
 import com.fazecast.jSerialComm.SerialPort;
+import org.apache.log4j.Logger;
 import org.example.device.*;
 import org.example.device.lora.rui420.igm.mesh.Igm10Mesh;
 import org.example.device.protArdBadVlt.ARD_BAD_VLT;
@@ -22,6 +23,7 @@ import org.example.device.protGpsTest.GPS_Test;
 import org.example.device.protIgm10.ascii.Igm10Ascii;
 import org.example.device.protIgm10.modbus.Igm10Modbus;
 import org.example.device.protIgm11.modbus.Igm11Modbus;
+import org.example.device.protIgm12.modbus.Igm12Modbus;
 import org.example.device.protMipex2.Mipex2;
 import org.example.device.protOwonSpe3051.OWON_SPE3051;
 import org.example.device.protTt5166.TT5166;
@@ -35,6 +37,8 @@ import java.util.ArrayList;
 import java.util.Date;
 
 public class MyUtilities {
+    private static final Logger log = Logger.getLogger(MyUtilities.class);
+
     public static String separator = ";";
     public static String dotOrPoint = ",";
     public static final DateTimeFormatter CUSTOM_FORMATTER = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm:ss.SSS");
@@ -100,6 +104,50 @@ public class MyUtilities {
         return crcCalculated == crcReceived;
     }
 
+    /**
+     * Compares two byte arrays with a starting position offset.
+     * Optionally, only exact size matches can be considered valid.
+     *
+     * @param reference the expected byte array pattern to compare against
+     * @param inCommand the actual byte array to check
+     * @param startPosition the position in inCommand to start comparison from
+     * @param exactMatch if true, requires reference.length == inCommand.length - startPosition
+     * @return true if the arrays match in the specified range, false otherwise
+     */
+    public static boolean compare(byte[] reference, byte[] inCommand, int startPosition, boolean exactMatch) {
+        // Базовые проверки
+        if (reference == null || inCommand == null) {
+            log.warn("Reference or inCommand is null");
+            return false;
+        }
+
+        if (startPosition < 0 || startPosition >= inCommand.length || startPosition >= reference.length) {
+            log.warn("Start position is out of range");
+            return false;
+        }
+
+        // Если требуется точное совпадение размеров
+        if (exactMatch && reference.length != inCommand.length) {
+            log.warn("Exact match required, but lengths do not match");
+            return false;
+        }
+
+        // Если reference длиннее, чем доступно в inCommand
+        if (reference.length > inCommand.length - startPosition) {
+            log.warn("Reference is longer than available data in inCommand");
+            return false;
+        }
+
+        // Сравниваем байты
+        for (int i = startPosition; i < reference.length; i++) {
+            if (reference[i] != inCommand[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public static SomeDevice createDeviceByProtocol(ProtocolsList protocol, SerialPort comPort){
         SomeDevice device = null;
 
@@ -107,6 +155,7 @@ public class MyUtilities {
             case IGM10ASCII -> device = new Igm10Ascii(comPort);
             case IGM10MODBUS -> device = new Igm10Modbus(comPort);
             case IGM11MODBUS -> device = new Igm11Modbus(comPort);
+            case IGM12MODBUS -> device = new Igm12Modbus(comPort);
             case ARD_BAD_VOLTMETER -> device = new ARD_BAD_VLT(comPort);
             case ARD_FEE_BRD_METER -> device = new ARD_FEE_BRD_METER(comPort);
             case ARD_TERM -> device = new ARD_TERM(comPort);
@@ -138,6 +187,7 @@ public class MyUtilities {
             case IGM10ASCII -> device = new Igm10Ascii();
             case IGM10MODBUS -> device = new Igm10Modbus();
             case IGM11MODBUS -> device = new Igm11Modbus();
+            case IGM12MODBUS -> device = new Igm12Modbus();
             case ARD_BAD_VOLTMETER -> device = new ARD_BAD_VLT();
             case ARD_FEE_BRD_METER -> device = new ARD_FEE_BRD_METER();
             case ARD_TERM -> device = new ARD_TERM();
@@ -407,6 +457,19 @@ public class MyUtilities {
             sb.append(String.format("%02X ", b));
         }
         return sb.toString().trim();
+    }
+
+    public static byte[] hexToBytes(String hexString) {
+        hexString = hexString.trim();
+        if (hexString.isEmpty()) {
+            return new byte[0];
+        }
+        String[] hexValues = hexString.split(" ");
+        byte[] result = new byte[hexValues.length];
+        for (int i = 0; i < hexValues.length; i++) {
+            result[i] = (byte) Integer.parseInt(hexValues[i], 16);
+        }
+        return result;
     }
 
     public static boolean isCorrectNumberFExceptMinus(byte[] stringArray){

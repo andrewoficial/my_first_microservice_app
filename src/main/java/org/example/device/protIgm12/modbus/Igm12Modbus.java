@@ -1,4 +1,4 @@
-package org.example.device.protIgm10.modbus;
+package org.example.device.protIgm12.modbus;
 
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
@@ -18,8 +18,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-public class Igm10Modbus implements SomeDevice, ProtocolComPort, NonAscii {
-    private static final Logger log = Logger.getLogger(Igm10Modbus.class);
+public class Igm12Modbus implements SomeDevice, ProtocolComPort, NonAscii {
+    private static final Logger log = Logger.getLogger(Igm12Modbus.class);
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters();
     private final SerialPort comPort;
@@ -33,7 +33,7 @@ public class Igm10Modbus implements SomeDevice, ProtocolComPort, NonAscii {
     private final StopBitsList defaultStopBit = StopBitsList.S1;
 
     private final DeviceCommandListClass commands;
-    private final Igm10ModbusCommandRegistry commandRegistry;
+    private final Igm12ModbusCommandRegistry commandRegistry;
 
     private volatile byte[] lastAnswerBytes = new byte[1];
     private StringBuilder lastAnswer = new StringBuilder();
@@ -43,21 +43,21 @@ public class Igm10Modbus implements SomeDevice, ProtocolComPort, NonAscii {
     private String cmdToSend;
     private int expectedBytes = 0;
 
-    private String devIdent = "IGM10";
+    private String devIdent = "IGM12";
     private byte[] rawCmd = null;
     private int slaveAddress = 1; // Default Modbus slave address
 
-    public Igm10Modbus() {
+    public Igm12Modbus() {
         log.info("Created Igm10 protocol emulation object");
         this.comPort = null;
-        this.commandRegistry = new Igm10ModbusCommandRegistry();
+        this.commandRegistry = new Igm12ModbusCommandRegistry();
         this.commands = commandRegistry.getCommandList();
     }
 
-    public Igm10Modbus(SerialPort port) {
+    public Igm12Modbus(SerialPort port) {
         log.info("Created Igm10 protocol object");
         this.comPort = port;
-        this.commandRegistry = new Igm10ModbusCommandRegistry();
+        this.commandRegistry = new Igm12ModbusCommandRegistry();
         this.commands = commandRegistry.getCommandList();
         comParameters.setDataBits(defaultDataBit);
         comParameters.setParity(defaultParity);

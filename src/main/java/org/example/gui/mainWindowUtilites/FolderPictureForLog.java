@@ -19,7 +19,7 @@ public class FolderPictureForLog {
         if (isPoolServiceFound) {
             if (file == null) {
                 isLogActive = false;
-                log.warning("File is null, setting isLogActive to false");
+                //log.warning("File is null, setting isLogActive to false");
             }
             if (isLogActive) {
                 container.setOpaque(false); // Прозрачный фон

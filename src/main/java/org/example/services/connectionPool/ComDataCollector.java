@@ -415,7 +415,7 @@ public class ComDataCollector implements Runnable{
         System.arraycopy(device.getStrEndian(), 0, buffer, textToSend.length() , device.getStrEndian().length);
         if(! device.isASCII()){
             if(collection.containClientId(clientId) && collection.getRawCommand(clientId) != null){
-                log.info("Отправляю сырую команду из состояния панели" + MyUtilities.bytesToHex(collection.getRawCommand(clientId)));
+                //log.info("Отправляю сырую команду из состояния панели" + MyUtilities.bytesToHex(collection.getRawCommand(clientId)));
                 if(device instanceof NonAscii){
                     log.info("Выполняю setRawCommand с проверкой через device instanceof NonAscii");
                     ((NonAscii) device).setRawCommand(collection.getRawCommand(clientId));
