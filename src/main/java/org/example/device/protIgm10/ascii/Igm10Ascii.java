@@ -1,4 +1,4 @@
-package org.example.device.protIgm10;
+package org.example.device.protIgm10.ascii;
 
 
 import com.fazecast.jSerialComm.SerialPort;
@@ -11,14 +11,14 @@ import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 
 
-public class IGM_10 implements SomeDevice {
-    private static final Logger log = Logger.getLogger(IGM_10.class);
+public class Igm10Ascii implements SomeDevice {
+    private static final Logger log = Logger.getLogger(Igm10Ascii.class);
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора
     private final SerialPort comPort;
 
     private final DeviceCommandListClass commands;
-    private final Igm10CommandRegistry commandRegistry;
+    private final Igm10AsciiCommandRegistry commandRegistry;
 
     private volatile byte [] lastAnswerBytes = new byte[1];
     private StringBuilder lastAnswer = new StringBuilder();
@@ -30,17 +30,17 @@ public class IGM_10 implements SomeDevice {
 
     private String devIdent = "IGM_10";
 
-    public IGM_10(){
+    public Igm10Ascii(){
         log.info("Создан объект протокола IGM_10 эмуляция");
         this.comPort = null;
-        this.commandRegistry = new Igm10CommandRegistry();
+        this.commandRegistry = new Igm10AsciiCommandRegistry();
         this.commands = commandRegistry.getCommandList();
     }
 
-    public IGM_10(SerialPort port){
+    public Igm10Ascii(SerialPort port){
         log.info("Создан объект протокола IGM_10");
         this.comPort = port;
-        this.commandRegistry = new Igm10CommandRegistry();
+        this.commandRegistry = new Igm10AsciiCommandRegistry();
         this.commands = commandRegistry.getCommandList();
         comParameters.setDataBits(DataBitsList.B8);
         comParameters.setParity(ParityList.P_EV);

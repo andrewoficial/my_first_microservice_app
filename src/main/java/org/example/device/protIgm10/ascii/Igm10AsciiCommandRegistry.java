@@ -1,4 +1,4 @@
-package org.example.device.protIgm10;
+package org.example.device.protIgm10.ascii;
 
 
 import org.apache.log4j.Logger;
@@ -20,8 +20,8 @@ import static org.example.utilites.MyUtilities.isCorrectNumberF;
 import static org.example.utilites.MyUtilities.isCorrectNumberFExceptMinus;
 
 
-public class Igm10CommandRegistry extends DeviceCommandRegistry {
-    private static final Logger log = Logger.getLogger(Igm10CommandRegistry.class);
+public class Igm10AsciiCommandRegistry extends DeviceCommandRegistry {
+    private static final Logger log = Logger.getLogger(Igm10AsciiCommandRegistry.class);
     private final static Charset charset = Charset.forName("Cp1251");
     private static final CharsetDecoder decoder = charset.newDecoder();
 
