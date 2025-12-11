@@ -26,7 +26,7 @@ public class DecimalSpinner extends JSpinner {
         UIManager.put("Spinner:FormattedTextField[Enabled].opaque", true);
 
         // Редактор с форматом чисел
-        JSpinner.NumberEditor editor = new JSpinner.NumberEditor(this, "#0.###");
+        JSpinner.NumberEditor editor = new JSpinner.NumberEditor(this, "#0.########");
         setEditor(editor);
 
         JFormattedTextField textField = editor.getTextField();
@@ -34,7 +34,7 @@ public class DecimalSpinner extends JSpinner {
         DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
         symbols.setDecimalSeparator('.');
 
-        DecimalFormat df = new DecimalFormat("#0.###", symbols);
+        DecimalFormat df = new DecimalFormat("#0.########", symbols);
 
         NumberFormatter formatter = new NumberFormatter(df) {
             @Override

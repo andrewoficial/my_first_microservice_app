@@ -10,27 +10,30 @@ import java.util.List;
 public enum ProtocolsList {
 
 
-    IGM10ASCII("IGM10ASCII"),
-    IGM10LORA_P2P("IGM10LORA_P2P"),
-    IGM10LORA_MESH("IGM10LORA_MESH"),
-    IGM10MODBUS("IGM10MODBUS"),
+
     ARD_BAD_VOLTMETER("ARD_BAD_VOLTMETER"),
     ARD_FEE_BRD_METER("ARD_FEE_BRD_METER"),
     ARD_TERM("ARD_TERM"),
+    IGM10ASCII("IGM10ASCII"),
+    IGM10MODBUS("IGM10MODBUS"),
+    IGM10LORA_P2P("IGM10LORA_P2P"),
+    IGM10LORA_MESH("IGM10LORA_MESH"),
+    IGM11MODBUS("IGM11MODBUS"),
+    SPB_STU_MCPS("SPB_STU_MCPS"),
     ERSTEVAK_MTP4D("ERSTEVAK_MTP4D"),
     DEMO_PROTOCOL("DEMO_PROTOCOL"),
     GPS_Test("GPS_Test"),
     ECT_TC290("ECT_TC290"),//East Changing Technologies
     OWON_SPE3051("OWON_SPE3051"),
-    DVK_4RD("DVK_4RD"),
-    Mipex2("Mipex2"),
+    Sens_DVK_4RD("Sens_DVK_4RD"),
+    Sens_Mipex2("Sens_Mipex2"),
+    Sens_Dynament("Sens_Dynament"),
+    Sens_Belead("Sens_Belead"),
+    Sens_Cubic("Sens_Cubic"),
     TT5166("TT5166"),
     DPS150("DPS150"),
     EDWARDS_D397_00_000("EDWARDS_D397_00_000"),
-    LORADIF("LORADIF"),
-    Dynament("Dynament"),
-    Belead("Belead"),
-    Cubic("Cubic");
+    LORADIF("LORADIF");
 
 
     private final String value;
