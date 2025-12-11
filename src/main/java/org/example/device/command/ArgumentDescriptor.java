@@ -21,5 +21,7 @@ public class ArgumentDescriptor {
         this.validator = validator;
     }
 
-    public boolean validate(Object value) { return validator == null || validator.test(value); }
+    public boolean validate(Object value) {
+        return validator == null || validator.test(value);
+    }
 }

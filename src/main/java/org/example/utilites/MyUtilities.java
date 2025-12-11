@@ -19,10 +19,13 @@ import org.example.device.protEdwardsD397.EDWARDS_D397_00_000;
 import org.example.device.protErstevakMtp4d.ERSTEVAK_MTP4D;
 import org.example.device.protFnirsiDps150.FNIRSI_DPS150;
 import org.example.device.protGpsTest.GPS_Test;
-import org.example.device.protIgm10.IGM_10;
+import org.example.device.protIgm10.ascii.Igm10Ascii;
+import org.example.device.protIgm10.modbus.Igm10Modbus;
+import org.example.device.protIgm11.modbus.Igm11Modbus;
 import org.example.device.protMipex2.Mipex2;
 import org.example.device.protOwonSpe3051.OWON_SPE3051;
 import org.example.device.protTt5166.TT5166;
+import org.example.device.spbstu.mcps.SPbSTuMcps;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -101,23 +104,26 @@ public class MyUtilities {
         SomeDevice device = null;
 
         switch (protocol) {
-            case IGM10ASCII -> device = new IGM_10(comPort);
+            case IGM10ASCII -> device = new Igm10Ascii(comPort);
+            case IGM10MODBUS -> device = new Igm10Modbus(comPort);
+            case IGM11MODBUS -> device = new Igm11Modbus(comPort);
             case ARD_BAD_VOLTMETER -> device = new ARD_BAD_VLT(comPort);
             case ARD_FEE_BRD_METER -> device = new ARD_FEE_BRD_METER(comPort);
             case ARD_TERM -> device = new ARD_TERM(comPort);
+            case SPB_STU_MCPS -> device = new SPbSTuMcps(comPort);
             case ERSTEVAK_MTP4D -> device = new ERSTEVAK_MTP4D(comPort);
             case EDWARDS_D397_00_000 -> device = new EDWARDS_D397_00_000(comPort);
             case ECT_TC290 -> device = new ECT_TC290(comPort);
-            case DVK_4RD -> device = new DVK_4RD(comPort);
+            case Sens_DVK_4RD -> device = new DVK_4RD(comPort);
             //case IGM10LORA_P2P -> device = new IGM_10LORA_P2P(comPort);
             case IGM10LORA_MESH -> device = new Igm10Mesh(comPort);
             case DEMO_PROTOCOL -> device = new DEMO_PROTOCOL(comPort);
             case GPS_Test -> device = new GPS_Test(comPort);
             case OWON_SPE3051 -> device = new OWON_SPE3051(comPort);
-            case Dynament -> device = new Dynament(comPort);
-            case Cubic -> device = new Cubic(comPort);
-            case Belead -> device = new BeLead(comPort);
-            case Mipex2 -> device = new Mipex2(comPort);
+            case Sens_Dynament -> device = new Dynament(comPort);
+            case Sens_Cubic -> device = new Cubic(comPort);
+            case Sens_Belead -> device = new BeLead(comPort);
+            case Sens_Mipex2 -> device = new Mipex2(comPort);
             case TT5166 -> device = new TT5166(comPort);
             case DPS150 -> device = new FNIRSI_DPS150(comPort);
             //case LORADIF -> device = new LORADIF(comPort);
@@ -129,10 +135,13 @@ public class MyUtilities {
     public static SomeDevice createDeviceByProtocol(ProtocolsList protocol){
         SomeDevice device = null;
         switch (protocol) {
-            case IGM10ASCII -> device = new IGM_10();
+            case IGM10ASCII -> device = new Igm10Ascii();
+            case IGM10MODBUS -> device = new Igm10Modbus();
+            case IGM11MODBUS -> device = new Igm11Modbus();
             case ARD_BAD_VOLTMETER -> device = new ARD_BAD_VLT();
             case ARD_FEE_BRD_METER -> device = new ARD_FEE_BRD_METER();
             case ARD_TERM -> device = new ARD_TERM();
+            case SPB_STU_MCPS -> device = new SPbSTuMcps();
             case ERSTEVAK_MTP4D -> device = new ERSTEVAK_MTP4D();
             case EDWARDS_D397_00_000 -> device = new EDWARDS_D397_00_000();
             case ECT_TC290 -> device = new ECT_TC290();
@@ -141,11 +150,11 @@ public class MyUtilities {
             case DEMO_PROTOCOL -> device = new DEMO_PROTOCOL();
             case OWON_SPE3051 -> device = new OWON_SPE3051();
             case GPS_Test -> device = new GPS_Test();
-            case DVK_4RD -> device = new DVK_4RD();
-            case Dynament -> device = new Dynament();
-            case Cubic -> device = new Cubic();
-            case Belead -> device = new BeLead();
-            case Mipex2 -> device = new Mipex2();
+            case Sens_DVK_4RD -> device = new DVK_4RD();
+            case Sens_Dynament -> device = new Dynament();
+            case Sens_Cubic -> device = new Cubic();
+            case Sens_Belead -> device = new BeLead();
+            case Sens_Mipex2 -> device = new Mipex2();
             case TT5166 -> device = new TT5166();
             case DPS150 -> device = new FNIRSI_DPS150();
             default -> device = new DEMO_PROTOCOL();
