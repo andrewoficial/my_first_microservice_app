@@ -131,8 +131,8 @@ public class MyPropertiesSettingsLoader {
             return defaultValue;
         }
 
-        String value = properties.getProperty(name).trim();
-        if (value.length() < 1) {
+        String value = properties.getProperty(name);
+        if (value.isEmpty()) {
             log.warn("configAccess.properties содержит пустое значение для параметра " + name + ". Оно будет заменено на " + defaultValue);
             properties.setProperty(name, defaultValue);
             fileHandler.updateFileFromProperties(properties);

@@ -1,5 +1,8 @@
 package org.example.gui;
 
+import lombok.Getter;
+import org.apache.log4j.Logger;
+import org.example.services.AnswerStorage;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -10,9 +13,35 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class MainLeftPanelStateCollection {
+    private static volatile MainLeftPanelStateCollection instance = null;
+
+    private static final Logger log = Logger.getLogger(MainLeftPanelStateCollection.class);
     private final ConcurrentHashMap<Integer, Integer> clientIdTab = new ConcurrentHashMap<>(); // <RandomID, TabNumber>
+    @Getter
     private final ConcurrentHashMap<Integer, MainLeftPanelState> clientIdTabState = new ConcurrentHashMap<>();
 
+    private MainLeftPanelStateCollection() {
+        // Защита от создания через Reflection
+        if (instance != null) {
+            throw new IllegalStateException("Instance already created");
+        }
+    }
+    public static MainLeftPanelStateCollection getInstance() {
+        MainLeftPanelStateCollection localInstance = instance;
+        if (localInstance == null) {
+            synchronized (MainLeftPanelStateCollection.class) {
+                localInstance = instance;
+                if (localInstance == null) {
+                    instance = localInstance = new MainLeftPanelStateCollection();
+                }
+            }
+        }
+        return localInstance;
+    }
+
+    public static void renewInstance(MainLeftPanelStateCollection leftPanState) {
+        MainLeftPanelStateCollection.instance = leftPanState;
+    }
 
     public boolean isCollectionEmpty(){
         return clientIdTab.isEmpty() || clientIdTabState.isEmpty();
@@ -47,7 +76,7 @@ public class MainLeftPanelStateCollection {
     public boolean addOrUpdateIdState(Integer clientId, MainLeftPanelState paneState){
         if (clientId != null && paneState != null && clientId >= 0) {
             clientIdTabState.put(clientId, paneState);
-            System.out.println(" Выполнил clientIdTabState.put(clientId, paneState)" + clientId + " paneState tab " + paneState.getTabNumber() + " paneState id " + paneState.getClientId());
+            log.info("Done addOrUpdateIdState for clientId " + clientId + " rab number " + paneState.getTabNumber());
             return true;
         }
         return false;
@@ -71,7 +100,7 @@ public class MainLeftPanelStateCollection {
                 }
             }
         }
-        System.out.println("Не найдена связка вкладка/клиент для tabNumber [" + tabNumber + "] clientIdTab.isEmpty()" + clientIdTab.isEmpty() + " clientIdTab" + clientIdTab.size());
+        log.warn("Не найдена связка вкладка/клиент для tabNumber [" + tabNumber + "] clientIdTab.isEmpty()" + clientIdTab.isEmpty() + " clientIdTab" + clientIdTab.size());
         return -1;
     }
 
@@ -87,10 +116,10 @@ public class MainLeftPanelStateCollection {
         if (clientId != null && tabNumber != null && clientId >= 0 && tabNumber >= 0) {
             if(getTabNumberByClientId(clientId) == -1 && getClientIdByTabNumber(tabNumber) == -1){
                 clientIdTab.put(clientId, tabNumber);
-                System.out.println("Выполнил  clientIdTab.put(clientId, tabNumber) ");
+                log.info("Done clientIdTab.put(clientId, tabNumber) ");
                 return true;
             }else{
-                System.out.println("Уже существует ключ или вкладка");
+                log.warn("pair clientId, tabNumber already exist ");
             }
         }
         return false;
@@ -233,6 +262,19 @@ public class MainLeftPanelStateCollection {
         }
         stateObj.setPrefix(prefix);
     }
+    public void setVisibleName(int clientId, String visibleName) {
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+
+        if(visibleName == null ){
+            System.out.println("В сохранение состояния передан пустой visibleName");
+            visibleName = "";
+        }
+        stateObj.setVisibleName(visibleName);
+    }
+
     public void setProtocol(int clientId, int state) {
         MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
         if (stateObj == null) {
@@ -247,6 +289,18 @@ public class MainLeftPanelStateCollection {
             throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
         }
         stateObj.setRawCommand(cmd);
+    }
+
+    public void setDevName(int clientId, String name){
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        if(name == null ){
+            System.out.println("В сохранение состояния передано пустое имя клиента");
+            name = "";
+        }
+        stateObj.setVisibleName(name);
     }
 
     public int getNewRandomId(){
@@ -361,6 +415,14 @@ public class MainLeftPanelStateCollection {
             throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
         }
         return stateObj.getRawCommand();
+    }
+
+    public String getDevName(int clientId){
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        return stateObj.getVisibleName();
     }
 
 

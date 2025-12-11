@@ -27,9 +27,10 @@ public interface Constants {
         MULTIGASSENSE, MIKROSENSE, UNKNOWN
     }
 
-    public interface protocols{
-        public interface cubic{
 
+    interface Gui{
+        interface Windows{
+            int DEVICE_NAME_LIMIT = 5;
         }
     }
 }

@@ -3,6 +3,8 @@ package org.example.gui.graph;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import org.apache.log4j.Logger;
+import org.example.gui.MainLeftPanelState;
+import org.example.gui.MainLeftPanelStateCollection;
 import org.example.gui.Rendeble;
 import org.example.gui.graph.data.AnswerLoader;
 import org.example.gui.graph.data.AnswerValidator;
@@ -38,6 +40,7 @@ import javax.swing.event.ChangeListener;
 import static org.example.utilites.MyUtilities.convertToLocalDateViaMilisecond;
 
 public class ChartWindow extends JFrame implements Rendeble {
+    private final MainLeftPanelStateCollection panelStateCollection = MainLeftPanelStateCollection.getInstance();
     private static final int HEIGHT_THRESHOLD = 15;
     private static final int WIDTH_THRESHOLD = 5;
     private static final int CONTROL_PANEL_MARGIN = 38;
@@ -251,6 +254,25 @@ public class ChartWindow extends JFrame implements Rendeble {
 
 
     private String generateNameForSeries(Integer tab, Integer subMeasurement, ArrayList<String> unitsInAnswer) {
+        //if tab found in paneState
+        if (panelStateCollection.containClientId(tab)) {
+            String fromPanelStateCollection = panelStateCollection.getDevName(tab);
+            if (fromPanelStateCollection != null && !fromPanelStateCollection.isEmpty()) {
+                if (unitsInAnswer.size() > subMeasurement) {
+                    return ("[" + fromPanelStateCollection + "] (" + subMeasurement + ")" + unitsInAnswer.get(subMeasurement));
+                } else {
+                    return ("[" + fromPanelStateCollection + "] (" + subMeasurement + ")");
+                }
+            }
+        } else {
+            log.warn("Tab " + tab + " not found in panelStateCollection");
+            ArrayList<MainLeftPanelState> states = panelStateCollection.getIdTabStateAsList();
+            for (MainLeftPanelState state : states) {
+                log.info("Contain " + state.getClientId());
+            }
+        }
+
+        //if tab not found in pane state
         if (unitsInAnswer.size() > subMeasurement) {
             return ("tab" + tab + "_" + "(" + subMeasurement + ")" + unitsInAnswer.get(subMeasurement));
         } else {

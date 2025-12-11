@@ -593,7 +593,12 @@ public class ComDataCollector implements Runnable{
             deviceLogger = clientsMap.get(clientId).logger;
             if(deviceLogger == null){
                 log.info("Логгер не был инициализирован ранее");
-                clientsMap.get(clientId).logger = new DeviceLogger(clientsMap.get(clientId).clientId, myProperties);
+                //clientsMap.get(clientId).logger = new DeviceLogger(clientsMap.get(clientId).clientId, myProperties);
+                String name = collection.getDevName(clientId);
+                if(name == null || name.isEmpty()) {
+                    name = String.valueOf(clientsMap.get(clientId).clientId);
+                }
+                clientsMap.get(clientId).logger = new DeviceLogger(name, myProperties);
                 deviceLogger = clientsMap.get(clientId).logger;
             }
 

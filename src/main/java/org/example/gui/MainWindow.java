@@ -49,6 +49,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntFunction;
 import java.util.function.IntSupplier;
 
+import static org.example.utilites.Constants.Gui.Windows.DEVICE_NAME_LIMIT;
 import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 
 
@@ -120,6 +121,11 @@ public class MainWindow extends JFrame implements Rendeble {
     private JPanel jpComStopBit;
     private JPanel jpOpenClose;
     private JButton jbSetTypicalParametrs;
+    private JPanel jpProtocol;
+    private JPanel jpComPorts;
+    private JPanel jpNeedPool;
+    private JTextField jtfDevName;
+    private JLabel devName;
 
 
     private void initUI() {
@@ -164,6 +170,20 @@ public class MainWindow extends JFrame implements Rendeble {
             restoredFromFile = leftPanState;
         }
         leftPanState = restoredFromFile;
+        MainLeftPanelStateCollection.renewInstance(leftPanState);
+        ConcurrentHashMap<Integer, MainLeftPanelState> tmp = leftPanState.getClientIdTabState();
+        for (Map.Entry<Integer, MainLeftPanelState> entry : tmp.entrySet()) {
+            log.info("Command " + entry.getValue().getCommand() + " devName " + entry.getValue().getVisibleName());
+        }
+
+        for (Integer i : lastReceivedPositionFromStorageMap.keySet()) {
+
+        }
+
+        log.info("DevName in leftPaneState " + leftPanState.getDevName(
+                leftPanState.getClientIdByTabNumber(0)));
+        log.info("ClientIdByTabNumber in leftPaneState " +
+                leftPanState.getClientIdByTabNumber(0));
         return leftPanState.getClientIdByTabNumber(0);
     }
 
@@ -178,6 +198,9 @@ public class MainWindow extends JFrame implements Rendeble {
 
 
     public MainWindow(MyProperties myProperties, AnyPoolService anyPoolService, MainLeftPanelStateCollection leftPanelStateCollection) {
+        if (leftPanelStateCollection == null) {
+            log.warn("В конструктор MainWindow передан null leftPanelStateCollection");
+        }
         NimbusCustomizer.customize();
         $$$setupUI$$$();
         log.debug("Подготовка к рендеру окна....");
@@ -213,7 +236,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 () -> leftPanState.getDataBits(currentActiveClientId.get()));
 
 
-        guiStateManager = new GuiStateManager(leftPanState, currentActiveClientId, currentActiveTab);
+        guiStateManager = new GuiStateManager(leftPanState, currentActiveTab);
         tabManager = new TabManager(jtpDevicesTerminal, leftPanState, logDataTransferJtextPanelsMap, lastReceivedPositionFromStorageMap, jbRemoveDev);
         portManager = new PortManager(anyPoolService, prop, guiStateManager, leftPanState);
         updateComPortList();
@@ -276,11 +299,12 @@ public class MainWindow extends JFrame implements Rendeble {
 
         initUI();
         initDocumentListeners();
-        //updateGuiFromClass();
+        //
         updateClassFromGui();
         jtpDevicesTerminal.setSelectedIndex(0);
         uiThPool.submit(new RenderThread(this));
         initialCalls = false;
+        updateGuiFromClass();
     }
 
 
@@ -331,6 +355,7 @@ public class MainWindow extends JFrame implements Rendeble {
         ListenerUtils.addDocumentListener(jtfPoolDelay, this::updatePoolDelay);
         ListenerUtils.addDocumentListener(jtfPrefToSend, this::updateTextToSend);
         ListenerUtils.addDocumentListener(jtfTextToSend, this::updateTextToSend);
+        ListenerUtils.addDocumentListener(jtfDevName, this::updateDevName);
 
         // Key Listeners
         ListenerUtils.addKeyListener(jtfTextToSend, this::updateTextAndSendFromEnter);
@@ -389,6 +414,12 @@ public class MainWindow extends JFrame implements Rendeble {
         updateFolderPicture();
     }
 
+    private void updateDevName() {
+        leftPanState.setDevName(currentActiveClientId.get(), jtfDevName.getText());
+        if (jtfDevName.getText() != null && jtfDevName.getText().length() <= DEVICE_NAME_LIMIT && jtfDevName.getText().length() > 1) {
+            jtpDevicesTerminal.setTitleAt(currentActiveTab.get(), jtfDevName.getText());
+        }
+    }
 
     private void updateParity() {
         leftPanState.setParityBits(currentActiveClientId.get(), jcbParity.getSelectedIndex());
@@ -666,7 +697,7 @@ public class MainWindow extends JFrame implements Rendeble {
         guiStateManager.updateGuiFromModel(
                 jcbDataBits, jcbParity, jcbStopBit,
                 jcbBaudRate, jcbProtocol, jtfTextToSend,
-                jtfPrefToSend
+                jtfPrefToSend, jtfDevName
         );
     }
 
@@ -675,12 +706,12 @@ public class MainWindow extends JFrame implements Rendeble {
         guiStateManager.updateModelFromGui(
                 jcbParity, jcbDataBits, jcbStopBit,
                 jcbBaudRate, jcbProtocol, jtfTextToSend,
-                jtfPrefToSend
+                jtfPrefToSend, jtfDevName
         );
     }
 
     private void readAndUpdateInputPrefAndCommandValues() {
-        log.info("Изменение в поле ввода префикса или команды");
+        //log.info("Изменение в поле ввода префикса или команды");
         if (leftPanState.containClientId(currentActiveTab.get())) {
             ComDataCollector ps = anyPoolService.getComDataCollectors().get(currentActiveTab.get());
             if (ps != null)
@@ -847,7 +878,7 @@ public class MainWindow extends JFrame implements Rendeble {
         return true;
     }
 
-    //Типа смена контекста
+    //Смена контекста
     public void updateServices(MyProperties newProps, AnyPoolService newService, MainLeftPanelStateCollection leftPanelStateCollection) {
         this.prop = newProps;
         this.anyPoolService = newService;
@@ -856,11 +887,11 @@ public class MainWindow extends JFrame implements Rendeble {
 
     private void saveParameters() {
         log.debug("Обновление файла настроек со вкладки" + currentActiveTab + " и ИД клиента " + currentActiveClientId.get());
-        log.debug("Обновление файла настроек со вкладки" + currentActiveTab + " и ИД клиента " + currentActiveClientId.get());
         prop.setLastLeftPanel(leftPanState);
         prop.setLogLevel(Logger.getRootLogger().getLevel());
         prop.setTabCounter(currentTabCount.get());
         prop.setIdentAndTabBounding(AnswerStorage.getDeviceTabPair());
+
     }
 
 
@@ -880,12 +911,12 @@ public class MainWindow extends JFrame implements Rendeble {
         jpMainPanel.setMinimumSize(new Dimension(530, 530));
         jpMainPanel.setPreferredSize(new Dimension(900, 700));
         final JPanel panel1 = new JPanel();
-        panel1.setLayout(new FormLayout("fill:max(d;4px):noGrow,left:4dlu:noGrow,fill:d:grow", "center:d:grow,top:4dlu:noGrow,center:max(d;4px):noGrow,top:4dlu:noGrow,center:max(d;4px):noGrow,top:4dlu:noGrow,center:max(d;4px):noGrow"));
+        panel1.setLayout(new FormLayout("fill:max(d;4px):noGrow,left:4dlu:noGrow,fill:d:grow", "center:d:grow,top:4dlu:noGrow,center:max(d;4px):noGrow,top:4dlu:noGrow,center:max(d;4px):noGrow,top:4dlu:noGrow,center:max(d;4px):noGrow,top:4dlu:noGrow,center:max(d;4px):noGrow"));
         jpMainPanel.add(panel1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(450, 400), new Dimension(700, 600), null, 0, false));
         jpTerminalHistory = new JPanel();
         jpTerminalHistory.setLayout(new BorderLayout(0, 0));
         CellConstraints cc = new CellConstraints();
-        panel1.add(jpTerminalHistory, cc.xywh(3, 1, 1, 3, CellConstraints.FILL, CellConstraints.FILL));
+        panel1.add(jpTerminalHistory, cc.xywh(3, 1, 1, 5, CellConstraints.FILL, CellConstraints.FILL));
         jpSendInput = new JPanel();
         jpSendInput.setLayout(new BorderLayout(0, 0));
         jpTerminalHistory.add(jpSendInput, BorderLayout.NORTH);
@@ -902,15 +933,15 @@ public class MainWindow extends JFrame implements Rendeble {
         jtfPrefToSend.setPreferredSize(new Dimension(60, 40));
         jtfPrefToSend.setText("");
         jpAsciiInput.add(jtfPrefToSend, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(10, 35), new Dimension(40, 35), new Dimension(80, 35), 0, false));
+        jbTerminalSend = new JButton();
+        jbTerminalSend.setMargin(new Insets(5, 5, 5, 5));
+        jbTerminalSend.setText("Отправить");
+        jpAsciiInput.add(jbTerminalSend, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jtfTextToSend = new JTextField();
         jtfTextToSend.setMargin(new Insets(2, 9, 2, 6));
         jtfTextToSend.setPreferredSize(new Dimension(100, 40));
         jtfTextToSend.setText("M^");
         jpAsciiInput.add(jtfTextToSend, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(25, 35), new Dimension(900, 35), new Dimension(-1, 35), 0, false));
-        jbTerminalSend = new JButton();
-        jbTerminalSend.setMargin(new Insets(5, 5, 5, 5));
-        jbTerminalSend.setText("Отправить");
-        jpAsciiInput.add(jbTerminalSend, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jpTerminalLogPanel = new JPanel();
         jpTerminalLogPanel.setLayout(new BorderLayout(0, 0));
         jpTerminalHistory.add(jpTerminalLogPanel, BorderLayout.CENTER);
@@ -922,19 +953,6 @@ public class MainWindow extends JFrame implements Rendeble {
         jpConnectionSettings.setMinimumSize(new Dimension(275, 594));
         jpConnectionSettings.setPreferredSize(new Dimension(275, 627));
         panel1.add(jpConnectionSettings, cc.xy(1, 1, CellConstraints.CENTER, CellConstraints.TOP));
-        jpConnectionType = new JPanel();
-        jpConnectionType.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpConnectionType.setEnabled(true);
-        jpConnectionSettings.add(jpConnectionType, BorderLayout.NORTH);
-        jlbConnectionType = new JLabel();
-        jlbConnectionType.setText("Тип соединения");
-        jpConnectionType.add(jlbConnectionType, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jcbConnectionType = new JComboBox();
-        final DefaultComboBoxModel defaultComboBoxModel1 = new DefaultComboBoxModel();
-        jcbConnectionType.setModel(defaultComboBoxModel1);
-        jpConnectionType.add(jcbConnectionType, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(120, -1), new Dimension(120, -1), new Dimension(120, -1), 0, false));
-        final Spacer spacer1 = new Spacer();
-        jpConnectionType.add(spacer1, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         jpComPortSetup = new JPanel();
         jpComPortSetup.setLayout(new GridLayoutManager(13, 1, new Insets(0, 0, 0, 0), -1, -1));
         jpComPortSetup.setEnabled(true);
@@ -947,8 +965,8 @@ public class MainWindow extends JFrame implements Rendeble {
         jpDataBits.add(jlbComDataBits, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jcbDataBits = new JComboBox();
         jpDataBits.add(jcbDataBits, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
-        final Spacer spacer2 = new Spacer();
-        jpDataBits.add(spacer2, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final Spacer spacer1 = new Spacer();
+        jpDataBits.add(spacer1, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         jpParity = new JPanel();
         jpParity.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
         jpComPortSetup.add(jpParity, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
@@ -956,11 +974,11 @@ public class MainWindow extends JFrame implements Rendeble {
         jlbComParity.setText("Чётность");
         jpParity.add(jlbComParity, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jcbParity = new JComboBox();
-        final DefaultComboBoxModel defaultComboBoxModel2 = new DefaultComboBoxModel();
-        jcbParity.setModel(defaultComboBoxModel2);
+        final DefaultComboBoxModel defaultComboBoxModel1 = new DefaultComboBoxModel();
+        jcbParity.setModel(defaultComboBoxModel1);
         jpParity.add(jcbParity, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
-        final Spacer spacer3 = new Spacer();
-        jpParity.add(spacer3, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final Spacer spacer2 = new Spacer();
+        jpParity.add(spacer2, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         jpComStopBit = new JPanel();
         jpComStopBit.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
         jpComPortSetup.add(jpComStopBit, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
@@ -969,8 +987,8 @@ public class MainWindow extends JFrame implements Rendeble {
         jpComStopBit.add(jlbComStopBit, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jcbStopBit = new JComboBox();
         jpComStopBit.add(jcbStopBit, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
-        final Spacer spacer4 = new Spacer();
-        jpComStopBit.add(spacer4, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final Spacer spacer3 = new Spacer();
+        jpComStopBit.add(spacer3, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         jpOpenClose = new JPanel();
         jpOpenClose.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
         jpComPortSetup.add(jpOpenClose, new GridConstraints(9, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, 1, new Dimension(240, 29), new Dimension(240, 29), null, 0, false));
@@ -983,42 +1001,43 @@ public class MainWindow extends JFrame implements Rendeble {
         jbComClose.setAlignmentY(0.0f);
         jbComClose.setText("Закрыть");
         jpOpenClose.add(jbComClose, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(100, 25), new Dimension(119, 25), new Dimension(200, 200), 0, false));
-        final JPanel panel2 = new JPanel();
-        panel2.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(panel2, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        jpComPorts = new JPanel();
+        jpComPorts.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpComPortSetup.add(jpComPorts, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         jlbComPorts = new JLabel();
         jlbComPorts.setText("Порт");
-        panel2.add(jlbComPorts, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jpComPorts.add(jlbComPorts, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jcbComPorts = new JComboBox();
-        final DefaultComboBoxModel defaultComboBoxModel3 = new DefaultComboBoxModel();
-        jcbComPorts.setModel(defaultComboBoxModel3);
-        panel2.add(jcbComPorts, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
-        final Spacer spacer5 = new Spacer();
-        panel2.add(spacer5, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final JPanel panel3 = new JPanel();
-        panel3.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(panel3, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        jcbComPorts.setEditable(false);
+        final DefaultComboBoxModel defaultComboBoxModel2 = new DefaultComboBoxModel();
+        jcbComPorts.setModel(defaultComboBoxModel2);
+        jpComPorts.add(jcbComPorts, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
+        final Spacer spacer4 = new Spacer();
+        jpComPorts.add(spacer4, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jpProtocol = new JPanel();
+        jpProtocol.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpComPortSetup.add(jpProtocol, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         jlbComProtocol = new JLabel();
         jlbComProtocol.setText("Протокол");
-        panel3.add(jlbComProtocol, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jpProtocol.add(jlbComProtocol, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jcbProtocol = new JComboBox();
-        final DefaultComboBoxModel defaultComboBoxModel4 = new DefaultComboBoxModel();
-        jcbProtocol.setModel(defaultComboBoxModel4);
-        panel3.add(jcbProtocol, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
-        final Spacer spacer6 = new Spacer();
-        panel3.add(spacer6, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final JPanel panel4 = new JPanel();
-        panel4.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(panel4, new GridConstraints(11, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        final DefaultComboBoxModel defaultComboBoxModel3 = new DefaultComboBoxModel();
+        jcbProtocol.setModel(defaultComboBoxModel3);
+        jpProtocol.add(jcbProtocol, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
+        final Spacer spacer5 = new Spacer();
+        jpProtocol.add(spacer5, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jpNeedPool = new JPanel();
+        jpNeedPool.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpComPortSetup.add(jpNeedPool, new GridConstraints(11, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         jCbNeedPool = new JCheckBox();
         jCbNeedPool.setText("Опрос  ");
-        panel4.add(jCbNeedPool, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jpNeedPool.add(jCbNeedPool, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label1 = new JLabel();
         label1.setText("мс");
-        panel4.add(label1, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jpNeedPool.add(label1, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jtfPoolDelay = new JTextField();
         jtfPoolDelay.setText("1000");
-        panel4.add(jtfPoolDelay, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        jpNeedPool.add(jtfPoolDelay, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         jpAddRemove = new JPanel();
         jpAddRemove.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
         jpComPortSetup.add(jpAddRemove, new GridConstraints(12, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, 1, new Dimension(240, 29), new Dimension(240, 29), null, 0, false));
@@ -1033,58 +1052,84 @@ public class MainWindow extends JFrame implements Rendeble {
         jbRemoveDev.setAutoscrolls(false);
         jbRemoveDev.setText("Удалить тек.");
         jpAddRemove.add(jbRemoveDev, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(100, 25), new Dimension(119, 25), new Dimension(200, 200), 0, false));
-        final JPanel panel5 = new JPanel();
-        panel5.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(panel5, new GridConstraints(8, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(-1, 100), new Dimension(-1, 100), new Dimension(-1, 100), 0, false));
+        final JPanel panel2 = new JPanel();
+        panel2.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jpComPortSetup.add(panel2, new GridConstraints(8, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(-1, 100), new Dimension(-1, 100), new Dimension(-1, 100), 0, false));
         jbComUpdateList = new JButton();
         jbComUpdateList.setHideActionText(false);
         jbComUpdateList.setText("Обновить список портов");
-        panel5.add(jbComUpdateList, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(260, 25), new Dimension(400, 200), 0, false));
-        final JPanel panel6 = new JPanel();
-        panel6.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(panel6, new GridConstraints(10, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        panel2.add(jbComUpdateList, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(260, 25), new Dimension(400, 200), 0, false));
+        final JPanel panel3 = new JPanel();
+        panel3.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jpComPortSetup.add(panel3, new GridConstraints(10, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         jbComSearch = new JButton();
         jbComSearch.setAlignmentY(0.0f);
         jbComSearch.setAutoscrolls(false);
         jbComSearch.setHideActionText(false);
         jbComSearch.setText("Поиск сетевых адресов");
-        panel6.add(jbComSearch, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(260, 25), new Dimension(400, 200), 0, false));
-        final JPanel panel7 = new JPanel();
-        panel7.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        panel7.setEnabled(true);
-        jpComPortSetup.add(panel7, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        panel3.add(jbComSearch, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(260, 25), new Dimension(400, 200), 0, false));
+        final JPanel panel4 = new JPanel();
+        panel4.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        panel4.setEnabled(true);
+        jpComPortSetup.add(panel4, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         jlbComBaudRate = new JLabel();
         jlbComBaudRate.setBackground(new Color(-11184811));
         jlbComBaudRate.setText("Скорость   ");
-        panel7.add(jlbComBaudRate, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel4.add(jlbComBaudRate, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jcbBaudRate = new JComboBox();
         jcbBaudRate.setEnabled(true);
-        panel7.add(jcbBaudRate, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
-        final Spacer spacer7 = new Spacer();
-        panel7.add(spacer7, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final JPanel panel8 = new JPanel();
-        panel8.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(panel8, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        panel4.add(jcbBaudRate, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
+        final Spacer spacer6 = new Spacer();
+        panel4.add(spacer6, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final JPanel panel5 = new JPanel();
+        panel5.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpComPortSetup.add(panel5, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         jCbNeedLog = new JCheckBox();
         jCbNeedLog.setEnabled(true);
         jCbNeedLog.setText("Лог");
-        panel8.add(jCbNeedLog, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel5.add(jCbNeedLog, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jCbAutoConnect = new JCheckBox();
         jCbAutoConnect.setEnabled(false);
         jCbAutoConnect.setText("Автоподключение");
-        panel8.add(jCbAutoConnect, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel5.add(jCbAutoConnect, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jpFolderIconPanel = new JPanel();
         jpFolderIconPanel.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
         jpFolderIconPanel.setEnabled(true);
-        panel8.add(jpFolderIconPanel, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        final JPanel panel9 = new JPanel();
-        panel9.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(panel9, new GridConstraints(7, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, 1, 1, null, null, null, 0, false));
+        panel5.add(jpFolderIconPanel, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        final JPanel panel6 = new JPanel();
+        panel6.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jpComPortSetup.add(panel6, new GridConstraints(7, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, 1, 1, null, null, null, 0, false));
         jbSetTypicalParametrs = new JButton();
         jbSetTypicalParametrs.setHorizontalTextPosition(0);
         jbSetTypicalParametrs.setText("Задать стандартные параметры");
         jbSetTypicalParametrs.setToolTipText("Задает параметры скорости для выбранного протокола");
-        panel9.add(jbSetTypicalParametrs, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        panel6.add(jbSetTypicalParametrs, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        final JPanel panel7 = new JPanel();
+        panel7.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jpConnectionSettings.add(panel7, BorderLayout.NORTH);
+        jpConnectionType = new JPanel();
+        jpConnectionType.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpConnectionType.setEnabled(true);
+        panel7.add(jpConnectionType, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        jlbConnectionType = new JLabel();
+        jlbConnectionType.setText("Тип соединения");
+        jpConnectionType.add(jlbConnectionType, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jcbConnectionType = new JComboBox();
+        final DefaultComboBoxModel defaultComboBoxModel4 = new DefaultComboBoxModel();
+        jcbConnectionType.setModel(defaultComboBoxModel4);
+        jpConnectionType.add(jcbConnectionType, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(120, -1), new Dimension(120, -1), new Dimension(120, -1), 0, false));
+        final Spacer spacer7 = new Spacer();
+        jpConnectionType.add(spacer7, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final JPanel panel8 = new JPanel();
+        panel8.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        panel7.add(panel8, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        devName = new JLabel();
+        devName.setText("Имя вкладки");
+        panel8.add(devName, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final Spacer spacer8 = new Spacer();
+        panel8.add(spacer8, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        jtfDevName = new JTextField();
+        panel8.add(jtfDevName, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
     }
 
     /**

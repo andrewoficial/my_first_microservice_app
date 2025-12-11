@@ -124,7 +124,7 @@ public class PoolLogger {
 
         Integer clientId = answer.getClientId();
         if (clientId == null || clientId < 0) {
-            log.error(String.format("Invalid client ID: %s", clientId));
+            log.warn(String.format("Invalid client ID: %s", clientId));
             return false;
         }
 

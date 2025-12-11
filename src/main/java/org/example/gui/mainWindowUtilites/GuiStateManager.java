@@ -1,25 +1,25 @@
 package org.example.gui.mainWindowUtilites;
 
+import org.apache.log4j.Logger;
 import org.example.device.ProtocolsList;
 import org.example.gui.MainLeftPanelState;
 import org.example.gui.MainLeftPanelStateCollection;
 import org.example.services.comPort.BaudRatesList;
 import org.example.services.comPort.DataBitsList;
 import org.example.services.comPort.StopBitsList;
+import org.example.utilites.properties.MyPropertiesSettingsLoader;
 
 import javax.swing.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class GuiStateManager {
+    private static final Logger log = Logger.getLogger(GuiStateManager.class);
     private final MainLeftPanelStateCollection state;
-    private final AtomicInteger currentClientId;
     private final AtomicInteger currentTab;
 
     public GuiStateManager(MainLeftPanelStateCollection state,
-                           AtomicInteger currentClientId,
                            AtomicInteger currentTab) {
         this.state = state;
-        this.currentClientId = currentClientId;
         this.currentTab = currentTab;
     }
 
@@ -29,7 +29,8 @@ public class GuiStateManager {
                                    JComboBox<String> baudRate,
                                    JComboBox<String> protocol,
                                    JTextField command,
-                                   JTextField prefix) {
+                                   JTextField prefix,
+                                   JTextField devName) {
         int clientId = ensureClientId();
         dataBits.setSelectedIndex(state.getDataBits(clientId));
         parity.setSelectedIndex(state.getParityBits(clientId));
@@ -38,6 +39,7 @@ public class GuiStateManager {
         protocol.setSelectedIndex(state.getProtocol(clientId));
         command.setText(state.getCommand(clientId));
         prefix.setText(state.getPrefix(clientId));
+        devName.setText(state.getDevName(clientId));
     }
 
     public void updateModelFromGui(JComboBox<String> parity,
@@ -46,7 +48,8 @@ public class GuiStateManager {
                                    JComboBox<String> baudRate,
                                    JComboBox<String> protocol,
                                    JTextField command,
-                                   JTextField prefix) {
+                                   JTextField prefix,
+                                   JTextField devName) {
         int clientId = ensureClientId();
         state.setParityBits(clientId, parity.getSelectedIndex());
         state.setParityBitsValue(clientId, parity.getSelectedIndex());
@@ -65,6 +68,8 @@ public class GuiStateManager {
         state.setCommandToSend(clientId, command.getText());
 
         state.setPrefixToSend(clientId, prefix.getText());
+
+        state.setDevName(clientId, devName.getText());
     }
 
     private int ensureClientId() {

@@ -27,8 +27,8 @@ public class Main {
                 .run(args);
 
         //Проверка чтения конфига
-        String confName = context.getEnvironment().getProperty("spring.config.name", "dunno");
-        System.out.println("Параметр confName: " + confName);
+        //String confName = context.getEnvironment().getProperty("spring.config.name", "dunno");
+        //System.out.println("Параметр confName: " + confName);
         SwingUtilities.invokeLater(() -> {
             AnyPoolService anyPoolService = context.getBean(AnyPoolService.class);
             MyProperties myProperties = context.getBean(MyProperties.class);

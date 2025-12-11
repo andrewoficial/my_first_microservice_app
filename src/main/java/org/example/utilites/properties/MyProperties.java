@@ -561,7 +561,7 @@ public class MyProperties {
     private void updateLeftPanelStateCollectionClass() {
         if(leftPanelStateCollection == null){
             log.error("Пересоздаю leftPanelStateCollection");
-            leftPanelStateCollection = new MainLeftPanelStateCollection();
+            leftPanelStateCollection = MainLeftPanelStateCollection.getInstance();
         }
 
 
@@ -577,7 +577,8 @@ public class MyProperties {
         // String параметры
         Map<String, BiConsumer<Integer, String>> stringSetters = Map.of(
                 "command", leftPanelStateCollection::setCommandToSend,
-                "prefix", leftPanelStateCollection::setPrefixToSend
+                "prefix", leftPanelStateCollection::setPrefixToSend,
+                "visibleName", leftPanelStateCollection::setVisibleName
         );
 
         // Чтение параметров из настроек
@@ -651,7 +652,7 @@ public class MyProperties {
         String[] propertyKeys = {
                 "clientId", "tabNumber", "protocol", "protocolCode", "baudRate", "baudRateCode",
                 "stopBits", "stopBitsCode", "dataBits", "dataBitsCode",
-                "parityBit", "parityBitCode", "command", "prefix"
+                "parityBit", "parityBitCode", "command", "prefix", "visibleName"
         };
         for (String key : propertyKeys) {
             propertyBuilders.put(key, new StringBuilder());
@@ -677,8 +678,8 @@ public class MyProperties {
             propertyBuilders.get("parityBitCode").append(state.getParityBit()).append(", ");
 
             propertyBuilders.get("command").append(state.getCommand()).append(", ");
-            log.info("add for save: [" + state.getCommand() + "] ");
             propertyBuilders.get("prefix").append(state.getPrefix()).append(", ");
+            propertyBuilders.get("visibleName").append(state.getVisibleName()).append(", ");
         }
 
         // Удаляем лишние запятые и пробелы, экранируем специальные символы
@@ -698,18 +699,19 @@ public class MyProperties {
     }
 
     private String escapePropertyValue(String value) {
-        return value.replace("\\", "\\\\")  // Экранируем \
-                .replace("\n", "\\n")   // Экранируем перевод строки
-                .replace("\r", "\\r")   // Экранируем возврат каретки
-                .replace("\t", "\\t")   // Экранируем табуляцию
-                .replace("=", "\\=")    // Экранируем =
-                .replace(":", "\\:");   // Экранируем :
+        return value.replace("\\", "\\\\")  //  \
+                .replace("\n", "\\n")       //  перевод строки
+                .replace("\r", "\\r")       //  возврат каретки
+                .replace("\t", "\\t")       //  табуляцию
+                .replace("=", "\\=")        //  =
+                .replace(":", "\\:");       //  :
     }
 
 
     private void updatePairsState(){
         if (clientAssociationMarkers.length != clientAssociationID.length) {
-            log.warn("Количество элементов в idents и tabNumbersIdents не совпадает");
+            log.warn("Количество элементов в idents и tabNumbersIdents не совпадает. clientAssociationMarkers.length " + clientAssociationMarkers.length +
+            " clientAssociationID.length" + clientAssociationID.length);
             return;
         }
 
