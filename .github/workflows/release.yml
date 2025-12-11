@@ -1,44 +1,71 @@
 name: Release Build
-
 on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:  # Разрешает ручной запуск
-
+  workflow_dispatch: # Разрешает ручной запуск
 jobs:
   build-and-release:
     runs-on: windows-latest
     permissions:
       contents: write
-      
+     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+      with:
+        lfs: true
+     
+    - name: Download OpenJDK MSI
+      run: |
+        $dirPath = "installer/sources"
+        if (!(Test-Path $dirPath)) {
+          Write-Host "Directory $dirPath does not exist. Creating it."
+          mkdir $dirPath
+        } else {
+          Write-Host "Directory $dirPath already exists."
+        }
+        $msiPath = "$dirPath/OpenJDK21U-jdk_x64_windows_hotspot_21.0.8_9.msi"
+        $downloadUrl = "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.8%2B9/OpenJDK21U-jdk_x64_windows_hotspot_21.0.8_9.msi"
+        if (Test-Path $msiPath) {
+          $fileSize = (Get-Item $msiPath).Length
+          Write-Host "MSI file exists at $msiPath with size $fileSize bytes."
+          if ($fileSize -lt 1000000) {  # Less than 1MB, likely LFS pointer
+            Write-Host "File is too small (likely Git LFS pointer). Overwriting with download from official URL."
+            Invoke-WebRequest -Uri $downloadUrl -OutFile $msiPath
+          } else {
+            Write-Host "MSI file is sufficiently large. Skipping download."
+          }
+        } else {
+          Write-Host "MSI file not found at $msiPath. Downloading from official URL."
+          Invoke-WebRequest -Uri $downloadUrl -OutFile $msiPath
+        }
+     
     - name: Set up JDK 21
       uses: actions/setup-java@v4
       with:
         java-version: '21'
         distribution: 'temurin'
-        
+       
     - name: Build with Maven
       run: mvn -B package --file pom.xml
-      
+     
     - name: Update version in ISS script
+      id: update_version
       run: |
         Write-Host "=== Updating version in ISS script ==="
         powershell -File scripts/update-version.ps1
-        
+       
     - name: Install Inno Setup
       run: choco install innosetup -y
-        
+       
     - name: Compile installer
       run: |
         Write-Host "=== Compiling installer with Inno Setup ==="
         iscc installer/script.iss
-      
+     
     - name: Create git tag
+      if: github.event_name == 'workflow_dispatch'
       shell: pwsh
       run: |
         git config user.name "github-actions[bot]"
@@ -47,7 +74,7 @@ jobs:
         Write-Host "Creating tag $version"
         git tag $version
         git push origin $version
-    
+   
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
@@ -58,4 +85,3 @@ jobs:
           target/Elephant-Monitor-*.jar
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
