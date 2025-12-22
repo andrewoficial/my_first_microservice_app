@@ -66,7 +66,7 @@ public class SingleCommand implements CommandBuilder, CommandParser {
         // Optional pre-process based on type
         switch (type) {
             case ASCII: // e.g., convert to String if needed
-                return parser.parse(new String(response).getBytes());
+                return parser.parse(response);
             case JSON: // e.g., Gson parse first
                 // Assume parser handles
             default:

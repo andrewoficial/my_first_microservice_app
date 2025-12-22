@@ -5,5 +5,5 @@ import org.example.services.AnswerValues;
 // Interface для парсинга ответа
 @FunctionalInterface
 public interface CommandParser {
-    AnswerValues parse(byte[] response);  // As your current Function
+    AnswerValues parse(final byte[] response);  // As your current Function
 }

@@ -7,7 +7,9 @@ import com.fazecast.jSerialComm.SerialPort;
 import org.apache.log4j.Logger;
 import org.example.device.*;
 import org.example.device.lora.rui420.igm.mesh.Igm10Mesh;
+import org.example.device.mgu.usbadcten.MguUsbAdc10;
 import org.example.device.protArdBadVlt.ARD_BAD_VLT;
+import org.example.device.protArdCurrLoopMeter.ARD_CUR_LOOP_METER;
 import org.example.device.protArdFeeBrdMeter.ARD_FEE_BRD_METER;
 import org.example.device.protArdTerm.ARD_TERM;
 import org.example.device.protBelead.BeLead;
@@ -158,8 +160,10 @@ public class MyUtilities {
             case IGM12MODBUS -> device = new Igm12Modbus(comPort);
             case ARD_BAD_VOLTMETER -> device = new ARD_BAD_VLT(comPort);
             case ARD_FEE_BRD_METER -> device = new ARD_FEE_BRD_METER(comPort);
+            case ARD_CUR_LOOP_METER -> device = new ARD_CUR_LOOP_METER(comPort);
             case ARD_TERM -> device = new ARD_TERM(comPort);
             case SPB_STU_MCPS -> device = new SPbSTuMcps(comPort);
+            case MSK_MGU_UsbAdc10 -> device = new MguUsbAdc10(comPort);
             case ERSTEVAK_MTP4D -> device = new ERSTEVAK_MTP4D(comPort);
             case EDWARDS_D397_00_000 -> device = new EDWARDS_D397_00_000(comPort);
             case ECT_TC290 -> device = new ECT_TC290(comPort);
@@ -190,8 +194,10 @@ public class MyUtilities {
             case IGM12MODBUS -> device = new Igm12Modbus();
             case ARD_BAD_VOLTMETER -> device = new ARD_BAD_VLT();
             case ARD_FEE_BRD_METER -> device = new ARD_FEE_BRD_METER();
+            case ARD_CUR_LOOP_METER -> device = new ARD_CUR_LOOP_METER();
             case ARD_TERM -> device = new ARD_TERM();
             case SPB_STU_MCPS -> device = new SPbSTuMcps();
+            case MSK_MGU_UsbAdc10 -> device = new MguUsbAdc10();
             case ERSTEVAK_MTP4D -> device = new ERSTEVAK_MTP4D();
             case EDWARDS_D397_00_000 -> device = new EDWARDS_D397_00_000();
             case ECT_TC290 -> device = new ECT_TC290();
@@ -454,7 +460,9 @@ public class MyUtilities {
     public static String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) {
-            sb.append(String.format("%02X ", b));
+            //sb.append(String.format("%02X ", b));
+            sb.append(String.format("%02X ", b & 0xFF));
+
         }
         return sb.toString().trim();
     }
