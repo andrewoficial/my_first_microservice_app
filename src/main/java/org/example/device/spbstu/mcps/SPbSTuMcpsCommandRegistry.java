@@ -120,7 +120,7 @@ public class SPbSTuMcpsCommandRegistry extends DeviceCommandRegistry {
                 null,
                 args -> {
                     Integer ch = Math.round((Float) args.get("channel"));
-                    Integer b = Math.round((Float) args.get("b"));
+                    Integer b = Math.round((Float) args.get("b(0/1)"));
                     Integer time = Math.round((Float)  args.get("time"));
                     if (b == 0) {
                         return String.format("@WR%02d %d", ch, b).getBytes();
