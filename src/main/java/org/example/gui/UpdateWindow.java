@@ -6,6 +6,7 @@ import com.intellij.uiDesigner.core.Spacer;
 import org.example.gui.components.CustomScrollBarUI;
 import org.example.utilites.*;
 import org.example.utilites.properties.MyProperties;
+import org.example.utilites.update.*;
 
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicScrollBarUI;
@@ -37,6 +38,10 @@ public class UpdateWindow extends JDialog implements Rendeble {
     private int downloadProgress = 0;
     private final ProgramUpdater programUpdater = new ProgramUpdater();
 
+    // Для поддержки скачивания из конкретного источника после проверки нескольких
+    private String pendingDownloadUrl = null;
+    private String pendingDownloadFileName = null;
+
     public UpdateWindow() {
 
         $$$setupUI$$$();
@@ -53,33 +58,90 @@ public class UpdateWindow extends JDialog implements Rendeble {
         BT_Check.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                TP_CheckResult.setText("Приступаю к проверке на существование новой версии");
+                TP_CheckResult.setText("Приступаю к проверке источников обновлений...");
                 TF_DownloadResult.setText("Начинаю проверку!");
-                boolean errors = false;
+                pendingDownloadUrl = null;
+                pendingDownloadFileName = null;
+
+                StringBuilder report = new StringBuilder();
+                report.append("Текущая версия: ").append(currentVersion).append("\n");
+                report.append("Проверяем все источники и собираем изменения по всем промежуточным версиям...\n\n");
+
+                boolean anyNewer = false;
+                String bestDlUrl = "";
+                String bestFileName = "";
+                StringBuilder fullChangelog = new StringBuilder();
+
                 try {
-                    isAvailableNewVersion = programUpdater.isAvailableNewVersion(programUpdater.getLatestVersion(), currentVersion);
+                    java.util.List<SourceChangelog> changelogs =
+                            programUpdater.getChangelogsSince(currentVersion);
+
+                    for (SourceChangelog cl : changelogs) {
+                        report.append("=== Источник: ").append(cl.sourceName).append(" ===\n");
+
+                        if (cl.hasError()) {
+                            report.append("Ошибка: ").append(cl.error).append("\n\n");
+                            continue;
+                        }
+
+                        if (!cl.hasNewer()) {
+                            report.append("Нет новых версий.\n\n");
+                            continue;
+                        }
+
+                        anyNewer = true;
+                        report.append("Найдено новых версий: ").append(cl.newerReleases.size()).append("\n");
+
+                        // Берём самую новую (первую) для кнопки Скачать
+                        Release newest = cl.newerReleases.get(0);
+                        if (bestDlUrl.isEmpty() && newest.hasDownload()) {
+                            bestDlUrl = newest.downloadUrl;
+                            try {
+                                String[] parts = newest.downloadUrl.split("/");
+                                bestFileName = parts[parts.length - 1];
+                            } catch (Exception ex) {
+                                bestFileName = "Elephant-Monitor-" + newest.version + ".jar";
+                            }
+                        }
+
+                        // Краткий список версий в отчёте
+                        for (Release rn : cl.newerReleases) {
+                            String firstLine = rn.notes.trim().split("\n")[0];
+                            if (firstLine.length() > 80) firstLine = firstLine.substring(0, 77) + "...";
+                            report.append("  • ").append(rn.version).append(" — ").append(firstLine).append("\n");
+                        }
+                        report.append("\n");
+
+                        // Полные изменения для этого источника в общий "что нового"
+                        fullChangelog.append("══════════════════════════════════════\n");
+                        fullChangelog.append("Источник: ").append(cl.sourceName).append("\n");
+                        fullChangelog.append(cl.getCombinedNotes()).append("\n\n");
+                    }
+
                 } catch (Exception ex) {
-                    TP_CheckResult.setText("Произошла ошибка во время проверки обновлений " + ex.getMessage());
-                    errors = true;
+                    report.append("Критическая ошибка при проверке: ").append(ex.getMessage());
                 }
 
-                if (isAvailableNewVersion) {
-                    TP_CheckResult.setText("Новая версия обнаружена! \n Найденная версия:" + programUpdater.getLatestVersion() + "\n Текущая версия: " + currentVersion);
-                } else if (!errors) {
-                    TP_CheckResult.setText("Обновлений не найдено! \n Найденная версия:" + programUpdater.getLatestVersion() + "\n Текущая версия: " + currentVersion);
-                }
+                TP_CheckResult.setText(report.toString());
+
+                isAvailableNewVersion = anyNewer;
 
                 if (isAvailableNewVersion) {
                     BT_Download.setEnabled(true);
-                    try {
-                        String whatsNewsStr = programUpdater.getInfo();
-                        whatsNewsStr = whatsNewsStr.replaceAll("\r", "");
-                        TP_WhatsNews.setText(whatsNewsStr);
-                    } catch (IOException ex) {
-                        throw new RuntimeException(ex);
-                    }
+                    pendingDownloadUrl = bestDlUrl;
+                    pendingDownloadFileName = bestFileName;
 
+                    String whatsNewsStr = fullChangelog.length() > 0
+                            ? fullChangelog.toString()
+                            : "Есть новые версии, но не удалось получить описания изменений.";
+
+                    whatsNewsStr = whatsNewsStr.replaceAll("\r", "");
+                    TP_WhatsNews.setText(whatsNewsStr);
+                } else {
+                    BT_Download.setEnabled(false);
+                    TP_WhatsNews.setText("Обновлений не найдено.");
                 }
+
                 TF_DownloadResult.setText("Проверка завершена!");
             }
         });
@@ -103,8 +165,12 @@ public class UpdateWindow extends JDialog implements Rendeble {
                             downloadProgress = 0;
                             PB_Download.setValue(downloadProgress);
 
-
-                            programUpdater.downloadUpdate();
+                            if (pendingDownloadUrl != null && !pendingDownloadUrl.isEmpty()) {
+                                // Скачиваем именно тот файл, который мы выбрали при проверке источника
+                                programUpdater.downloadFromDirectUrl(pendingDownloadUrl, pendingDownloadFileName);
+                            } else {
+                                programUpdater.downloadUpdate();
+                            }
 
                         } catch (IOException | InterruptedException exception) {
                             // Обработка ошибок
@@ -209,6 +275,9 @@ public class UpdateWindow extends JDialog implements Rendeble {
 
     private static Method $$$cachedGetBundleMethod$$$ = null;
 
+    /**
+     * @noinspection ALL
+     */
     private String $$$getMessageFromBundle$$$(String path, String key) {
         ResourceBundle bundle;
         try {
