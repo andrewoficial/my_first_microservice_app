@@ -39,7 +39,7 @@ public class ProgramUpdater {
      * Собирает активные источники: два встроенных + один из настроек (если указан).
      * Все URL нормализованы к списку релизов (?per_page=100).
      */
-    private java.util.List<UpdateSource> getActiveSources() {
+    public java.util.List<UpdateSource> getActiveSources() {
         java.util.List<UpdateSource> sources = new java.util.ArrayList<>();
 
         if (!GITHUB_OLD_LIST.isBlank()) {
