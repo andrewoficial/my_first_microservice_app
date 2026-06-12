@@ -1,5 +1,7 @@
 package org.example;
 
+import com.formdev.flatlaf.FlatLightLaf;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.MainLeftPanelStateCollection;
 import org.example.gui.MainWindow;
 import org.example.services.connectionPool.AnyPoolService;
@@ -17,6 +19,7 @@ import java.util.stream.Stream;
 
 
 @SpringBootApplication
+@Slf4j
 public class Main {
     private static ConfigurableApplicationContext context;
     private static MainWindow mainWindow = null;
@@ -26,9 +29,15 @@ public class Main {
         context  =  new SpringApplicationBuilder(Main.class)
                 .run(args);
 
+
         //Проверка чтения конфига
         //String confName = context.getEnvironment().getProperty("spring.config.name", "dunno");
         //System.out.println("Параметр confName: " + confName);
+//        try {
+//            UIManager.setLookAndFeel(new FlatLightLaf());
+//        } catch (UnsupportedLookAndFeelException e) {
+//            log.info("Error while set FlatLightLaf");
+//        }
         SwingUtilities.invokeLater(() -> {
             AnyPoolService anyPoolService = context.getBean(AnyPoolService.class);
             MyProperties myProperties = context.getBean(MyProperties.class);

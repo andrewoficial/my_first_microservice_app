@@ -9,8 +9,8 @@ import org.example.device.connectParameters.ComConnectParameters;
 import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 
-public class ARD_BAD_VLT implements SomeDevice {
-    private static final Logger log = Logger.getLogger(ARD_BAD_VLT.class);
+public class ARD_BAD_VOLTMETER implements SomeDevice {
+    private static final Logger log = Logger.getLogger(ARD_BAD_VOLTMETER.class);
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора
     private final SerialPort comPort;
@@ -28,14 +28,14 @@ public class ARD_BAD_VLT implements SomeDevice {
 
     private String devIdent = "ARD_BAD_VLT";
 
-    public ARD_BAD_VLT(){
+    public ARD_BAD_VOLTMETER(){
         log.info("Создан объект протокола ARD_BAD_VLT эмуляция");
         this.comPort = null;
         this.commandRegistry = new ArdBadVltCommandRegistry();
         this.commands = commandRegistry.getCommandList();
     }
 
-    public ARD_BAD_VLT(SerialPort port){
+    public ARD_BAD_VOLTMETER(SerialPort port){
         log.info("Создан объект протокола ARD_BAD_VLT");
         this.comPort = port;
         this.commandRegistry = new ArdBadVltCommandRegistry();
@@ -186,3 +186,4 @@ public class ARD_BAD_VLT implements SomeDevice {
 
 
 }
+

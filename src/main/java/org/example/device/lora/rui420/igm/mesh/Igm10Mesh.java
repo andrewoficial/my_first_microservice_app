@@ -164,7 +164,7 @@ public class Igm10Mesh implements SomeDevice, ProtocolComPort, Answerable {
                         log.info(rui.getEventType());
                         log.info(rui.getDbi());
                         log.info(rui.getSnr());
-                        log.info("Payload: " + MyUtilities.byteArrayToString(rui.getPayload()));
+                        log.info("Payload: " + MyUtilities.bytesToHexString(rui.getPayload()));
                         return LoraMeshMessage.parse(rui.getPayload());
                     })
                     .flatMap(lora -> {

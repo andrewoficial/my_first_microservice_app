@@ -53,194 +53,51 @@ public class ArdFeeBrdMeterCommandRegistry extends DeviceCommandRegistry {
             double stat = 0.0;
             double serialNumber = 0.0;
             answerValues = new AnswerValues(11);
-            byte subResponse[] = Arrays.copyOfRange(response, 1, 6);
-            if (isCorrectNumberF(subResponse)) {
-                boolean isNegative = false;
-                boolean success = true;
 
-                // Преобразуем байты ASCII-чисел вручную
-                for (int i = 0; i < subResponse.length; i++) {
-                    byte b = subResponse[i];
-
-                    if (b == '-' && i == 0) {
-                        isNegative = true;
-                        continue;
-                    }
-
-                    // Проверяем, что символ – цифра
-                    if (b >= '0' && b <= '9') {
-                        termBM = termBM * 10 + (b - '0');
-                    } else {
-                        termBM = 0.0;
-                        success = false;
-                        break;
-                    }
-                }
-
-                // Применяем десятичный порядок для получения числа в формате 123.45
-                if (success) {
-                    termBM /= 100.0; // Сдвигаем запятую на два знака влево
-                    termBM = isNegative ? -termBM : termBM; // Применяем знак
-                    answerValues.addValue(termBM, " °C");
-                    //System.out.println(termBM);
-                } else {
-                    answerValues.addValue(-88.88, " °C(ERR)");
-                }
+            // TermBM (positions 1-6, /100)
+            if (isCorrectNumberF(Arrays.copyOfRange(response, 1, 6))) {
+                double val = parseAsciiField(response, 1, 5, 100.0);
+                answerValues.addValue(val, " °C");
             } else {
-                System.out.println("Wrong isCorrectNumberF position " + Arrays.toString(subResponse));
+                System.out.println("Wrong isCorrectNumberF position " + Arrays.toString(Arrays.copyOfRange(response, 1, 6)));
                 answerValues.addValue(-99.99, " °C(ERR)");
             }
 
-            subResponse = Arrays.copyOfRange(response, 7, 12);
-            if (isCorrectNumberF(subResponse)) {
-                boolean isNegative = false;
-                boolean success = true;
-
-                // Преобразуем байты ASCII-чисел вручную
-                for (int i = 0; i < subResponse.length; i++) {
-                    byte b = subResponse[i];
-
-                    if (b == '-' && i == 0) {
-                        isNegative = true;
-                        continue;
-                    }
-
-                    // Проверяем, что символ – цифра
-                    if (b >= '0' && b <= '9') {
-                        presBM = presBM * 10 + (b - '0');
-                    } else {
-                        presBM = 0.0;
-                        success = false;
-                        break;
-                    }
-                }
-
-                // Применяем десятичный порядок для получения числа в формате 123.45
-                if (success) {
-                    presBM /= 10.0; // Сдвигаем запятую на два знака влево
-                    presBM = isNegative ? -presBM : presBM; // Применяем знак
-                    answerValues.addValue(presBM, " mmHg");
-                    //System.out.println(termBM);
-                } else {
-                    answerValues.addValue(-88.88, " mmHg(ERR)");
-                }
+            // PresBM (7-12, /10)
+            if (isCorrectNumberF(Arrays.copyOfRange(response, 7, 12))) {
+                double val = parseAsciiField(response, 7, 5, 10.0);
+                answerValues.addValue(val, " mmHg");
             } else {
-                System.out.println("Wrong isCorrectNumberF position (press)" + Arrays.toString(subResponse));
+                System.out.println("Wrong isCorrectNumberF position (press)" + Arrays.toString(Arrays.copyOfRange(response, 7, 12)));
                 answerValues.addValue(-99.99, " mmHg(ERR)");
             }
 
-            subResponse = Arrays.copyOfRange(response, 13, 18);
-            if (isCorrectNumberF(subResponse)) {
-                boolean isNegative = false;
-                boolean success = true;
-
-                // Преобразуем байты ASCII-чисел вручную
-                for (int i = 0; i < subResponse.length; i++) {
-                    byte b = subResponse[i];
-
-                    if (b == '-' && i == 0) {
-                        isNegative = true;
-                        continue;
-                    }                                        // Проверяем, что символ – цифра
-                    if (b >= '0' && b <= '9') {
-                        hydmBM = hydmBM * 10 + (b - '0');
-                    } else {
-                        hydmBM = 0.0;
-                        success = false;
-                        break;
-                    }
-                }
-
-                // Применяем десятичный порядок для получения числа в формате 123.45
-                if (success) {
-                    //hydmBM /= 10.0; // Сдвигаем запятую на два знака влево
-                    hydmBM = isNegative ? -hydmBM : hydmBM; // Применяем знак
-                    answerValues.addValue(hydmBM, " %");
-                    //System.out.println(termBM);
-                } else {
-                    answerValues.addValue(-88.88, " %(ERR)");
-                }
+            // hydmBM (13-18, /1)
+            if (isCorrectNumberF(Arrays.copyOfRange(response, 13, 18))) {
+                answerValues.addValue(parseAsciiField(response, 13, 5, 1.0), " %");
             } else {
-                System.out.println("Wrong isCorrectNumberF position (hydmBM)" + Arrays.toString(subResponse));
+                System.out.println("Wrong isCorrectNumberF position (hydmBM)" + Arrays.toString(Arrays.copyOfRange(response, 13, 18)));
                 answerValues.addValue(-99.99, " %(ERR)");
             }
 
-            subResponse = Arrays.copyOfRange(response, 19, 24);  //Напряжение питания
-            if (isCorrectNumberF(subResponse)) {
-                boolean isNegative = false;
-                boolean success = true;
-
-                // Преобразуем байты ASCII-чисел вручную
-                for (int i = 0; i < subResponse.length; i++) {
-                    byte b = subResponse[i];
-
-                    if (b == '-' && i == 0) {
-                        isNegative = true;
-                        continue;
-                    }                                        // Проверяем, что символ – цифра
-                    if (b >= '0' && b <= '9') {
-                        thre_V = thre_V * 10 + (b - '0');
-                    } else {
-                        thre_V = 0.0;
-                        success = false;
-                        break;
-                    }
-                }
-
-                // Применяем десятичный порядок для получения числа в формате 123.45
-                if (success) {
-                    thre_V /= 100.0; // Сдвигаем запятую на два знака влево
-                    thre_V = isNegative ? -thre_V : thre_V; // Применяем знак
-                    answerValues.addValue(thre_V, " V (pwr)");
-                    //System.out.println(termBM);
-                } else {
-                    answerValues.addValue(-88.88, " V (pwr) (ERR)");
-                }
+            // thre_V (19-24, /100)
+            if (isCorrectNumberF(Arrays.copyOfRange(response, 19, 24))) {
+                answerValues.addValue(parseAsciiField(response, 19, 5, 100.0), " V (pwr)");
             } else {
-                System.out.println("Wrong isCorrectNumberF position (thre_V)" + Arrays.toString(subResponse));
+                System.out.println("Wrong isCorrectNumberF position (thre_V)" + Arrays.toString(Arrays.copyOfRange(response, 19, 24)));
                 answerValues.addValue(-99.99, " V (pwr) (ERR)");
             }
 
 
-            subResponse = Arrays.copyOfRange(response, 25, 30);  //Сила тока шунт один до полинома
-            if (isCorrectNumberF(subResponse)) {
-                boolean isNegative = false;
-                boolean success = true;
-
-                // Преобразуем байты ASCII-чисел вручную
-                for (int i = 0; i < subResponse.length; i++) {
-                    byte b = subResponse[i];
-
-                    if (b == '-' && i == 0) {
-                        isNegative = true;
-                        continue;
-                    }
-                    // Проверяем, что символ – цифра
-                    if (b >= '0' && b <= '9') {
-                        cur_One = cur_One * 10 + (b - '0');
-                    } else {
-                        cur_One = 0.0;
-                        success = false;
-                        break;
-                    }
-
-                }
-
-                // Применяем десятичный порядок для получения числа в формате 123.45
-                if (success) {
-                    cur_One /= 1000.0; // Сдвигаем запятую на два знака влево
-                    cur_One = isNegative ? -cur_One : cur_One; // Применяем знак
-                    answerValues.addValue(cur_One, " A");
-                    //System.out.println(termBM);
-                } else {
-                    answerValues.addValue(-88.88, " A (ERR)");
-                }
+            // cur_One (25-30, /1000)
+            if (isCorrectNumberF(Arrays.copyOfRange(response, 25, 30))) {
+                answerValues.addValue(parseAsciiField(response, 25, 5, 1000.0), " A");
             } else {
-                System.out.println("Wrong isCorrectNumberF position (cur_One)" + Arrays.toString(subResponse));
+                System.out.println("Wrong isCorrectNumberF position (cur_One)" + Arrays.toString(Arrays.copyOfRange(response, 25, 30)));
                 answerValues.addValue(-99.99, " A (ERR)");
             }
 
-            subResponse = Arrays.copyOfRange(response, 31, 36);  //Сила тока шунт два до полинома
+            byte[] subResponse = Arrays.copyOfRange(response, 31, 36);  //Сила тока шунт два до полинома
             if (isCorrectNumberF(subResponse)) {
                 boolean isNegative = false;
                 boolean success = true;

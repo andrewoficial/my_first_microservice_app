@@ -7,6 +7,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 
+import static org.example.utilites.MyUtilities.isCorrectNumberF;
+import static org.example.utilites.MyUtilities.parseAsciiDigits;
+import static org.example.utilites.MyUtilities.parseAsciiField;
+
 public class FULSParser {
     private static final Logger log = LoggerFactory.getLogger(FULSParser.class);
 
@@ -40,30 +44,14 @@ public class FULSParser {
         double value = 0.0;
         double serialNumber = 0.0;
 
-        // Parse each field (0 to 16)
+        // Parse each field (0 to 16) using shared utility
         for (int field = 0; field < 17; field++) {
             String fieldValue = fields[field];
             if (isCorrectNumberF(fieldValue.getBytes())) {
-                boolean success = true;
-                value = 0.0;
-
-                for (int i = 0; i < fieldValue.length(); i++) {
-                    char c = fieldValue.charAt(i);
-                    if (c >= '0' && c <= '9') {
-                        value = value * 10 + (c - '0');
-                    } else {
-                        success = false;
-                        break;
-                    }
-                }
-
-                if (success) {
-                    answerValues.addValue(value, " Units");
-                } else {
-                    log.warn("FULS parsing: Invalid number format in position ({}): {}", field, fieldValue);
-                    answerValues.addValue(-88.88, " " + field + "(ERR)");
-                    return null;
-                }
+                // We can use byte version for consistency
+                byte[] bytes = fieldValue.getBytes();
+                long raw = parseAsciiDigits(bytes, 0, bytes.length);
+                answerValues.addValue(raw, " Units");
             } else {
                 log.warn("FULS parsing: Wrong number format in position ({}): {}", field, fieldValue);
                 answerValues.addValue(-99.99, " " + field + "(ERR)");
@@ -110,16 +98,5 @@ public class FULSParser {
 
         log.info("FULS parsing: Successfully parsed response: {}", responseString);
         return answerValues;
-    }
-
-    // Assuming isCorrectNumberF is defined elsewhere, reused as in original code
-    private boolean isCorrectNumberF(byte[] data) {
-        // Placeholder for the original isCorrectNumberF logic
-        for (byte b : data) {
-            if (b != '-' && (b < '0' || b > '9')) {
-                return false;
-            }
-        }
-        return true;
     }
 }

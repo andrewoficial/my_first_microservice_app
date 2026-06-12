@@ -1,6 +1,3 @@
-/*
-Вспомогательные сложно классифицируемые утилиты
- */
 package org.example.utilites;
 
 import com.fazecast.jSerialComm.SerialPort;
@@ -8,7 +5,7 @@ import org.apache.log4j.Logger;
 import org.example.device.*;
 import org.example.device.lora.rui420.igm.mesh.Igm10Mesh;
 import org.example.device.mgu.usbadcten.MguUsbAdc10;
-import org.example.device.protArdBadVlt.ARD_BAD_VLT;
+import org.example.device.protArdBadVlt.ARD_BAD_VOLTMETER;
 import org.example.device.protArdCurrLoopMeter.ARD_CUR_LOOP_METER;
 import org.example.device.protArdFeeBrdMeter.ARD_FEE_BRD_METER;
 import org.example.device.protArdTerm.ARD_TERM;
@@ -31,11 +28,10 @@ import org.example.device.protOwonSpe3051.OWON_SPE3051;
 import org.example.device.protTt5166.TT5166;
 import org.example.device.spbstu.mcps.SPbSTuMcps;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 
 public class MyUtilities {
@@ -81,84 +77,19 @@ public class MyUtilities {
             0x6E17, 0x7E36, 0x4E55, 0x5E74, 0x2E93, 0x3EB2, 0x0ED1, 0x1EF0
     };
 
-    public static String changeToNeedSeparator(String str){
-        if(str == null || str.isEmpty()){
-            return "";
-        }
-        return str.replaceAll("[.,]", MyUtilities.dotOrPoint);
-    }
-
-    public static String changeToNeedSeparator(double value){
-        String str = Double.toString(value);
-        return str.replaceAll("[.,]", MyUtilities.dotOrPoint);
-    }
-
-    public static boolean checkCRC16(String dataPart, String crcPart) {
-        int crcCalculated = calculateCRC16(dataPart.getBytes());
-
-        int crcReceived = 0;
-        try{
-            crcReceived = Integer.parseInt(crcPart, 16);
-        }catch (NumberFormatException e){
-            System.out.println(e.getMessage());
-        }
-
-        return crcCalculated == crcReceived;
-    }
-
-    /**
-     * Compares two byte arrays with a starting position offset.
-     * Optionally, only exact size matches can be considered valid.
-     *
-     * @param reference the expected byte array pattern to compare against
-     * @param inCommand the actual byte array to check
-     * @param startPosition the position in inCommand to start comparison from
-     * @param exactMatch if true, requires reference.length == inCommand.length - startPosition
-     * @return true if the arrays match in the specified range, false otherwise
-     */
-    public static boolean compare(byte[] reference, byte[] inCommand, int startPosition, boolean exactMatch) {
-        // Базовые проверки
-        if (reference == null || inCommand == null) {
-            log.warn("Reference or inCommand is null");
-            return false;
-        }
-
-        if (startPosition < 0 || startPosition >= inCommand.length || startPosition >= reference.length) {
-            log.warn("Start position is out of range");
-            return false;
-        }
-
-        // Если требуется точное совпадение размеров
-        if (exactMatch && reference.length != inCommand.length) {
-            log.warn("Exact match required, but lengths do not match");
-            return false;
-        }
-
-        // Если reference длиннее, чем доступно в inCommand
-        if (reference.length > inCommand.length - startPosition) {
-            log.warn("Reference is longer than available data in inCommand");
-            return false;
-        }
-
-        // Сравниваем байты
-        for (int i = startPosition; i < reference.length; i++) {
-            if (reference[i] != inCommand[i]) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
+    // === VERY SIMILAR: Two createDeviceByProtocol methods ===
     public static SomeDevice createDeviceByProtocol(ProtocolsList protocol, SerialPort comPort){
         SomeDevice device = null;
+        if(protocol == null || comPort == null){
+            log.warn("Null protocol or port");
+        }
 
         switch (protocol) {
             case IGM10ASCII -> device = new Igm10Ascii(comPort);
             case IGM10MODBUS -> device = new Igm10Modbus(comPort);
             case IGM11MODBUS -> device = new Igm11Modbus(comPort);
             case IGM12MODBUS -> device = new Igm12Modbus(comPort);
-            case ARD_BAD_VOLTMETER -> device = new ARD_BAD_VLT(comPort);
+            case ARD_BAD_VOLTMETER -> device = new ARD_BAD_VOLTMETER(comPort);
             case ARD_FEE_BRD_METER -> device = new ARD_FEE_BRD_METER(comPort);
             case ARD_CUR_LOOP_METER -> device = new ARD_CUR_LOOP_METER(comPort);
             case ARD_TERM -> device = new ARD_TERM(comPort);
@@ -168,7 +99,6 @@ public class MyUtilities {
             case EDWARDS_D397_00_000 -> device = new EDWARDS_D397_00_000(comPort);
             case ECT_TC290 -> device = new ECT_TC290(comPort);
             case Sens_DVK_4RD -> device = new DVK_4RD(comPort);
-            //case IGM10LORA_P2P -> device = new IGM_10LORA_P2P(comPort);
             case IGM10LORA_MESH -> device = new Igm10Mesh(comPort);
             case DEMO_PROTOCOL -> device = new DEMO_PROTOCOL(comPort);
             case GPS_Test -> device = new GPS_Test(comPort);
@@ -179,7 +109,6 @@ public class MyUtilities {
             case Sens_Mipex2 -> device = new Mipex2(comPort);
             case TT5166 -> device = new TT5166(comPort);
             case DPS150 -> device = new FNIRSI_DPS150(comPort);
-            //case LORADIF -> device = new LORADIF(comPort);
             default -> device = new DEMO_PROTOCOL(comPort);
         }
         return device;
@@ -192,7 +121,7 @@ public class MyUtilities {
             case IGM10MODBUS -> device = new Igm10Modbus();
             case IGM11MODBUS -> device = new Igm11Modbus();
             case IGM12MODBUS -> device = new Igm12Modbus();
-            case ARD_BAD_VOLTMETER -> device = new ARD_BAD_VLT();
+            case ARD_BAD_VOLTMETER -> device = new ARD_BAD_VOLTMETER();
             case ARD_FEE_BRD_METER -> device = new ARD_FEE_BRD_METER();
             case ARD_CUR_LOOP_METER -> device = new ARD_CUR_LOOP_METER();
             case ARD_TERM -> device = new ARD_TERM();
@@ -201,7 +130,6 @@ public class MyUtilities {
             case ERSTEVAK_MTP4D -> device = new ERSTEVAK_MTP4D();
             case EDWARDS_D397_00_000 -> device = new EDWARDS_D397_00_000();
             case ECT_TC290 -> device = new ECT_TC290();
-            //case IGM10LORA_P2P -> device = new IGM_10LORA_P2P();
             case IGM10LORA_MESH -> device = new Igm10Mesh();
             case DEMO_PROTOCOL -> device = new DEMO_PROTOCOL();
             case OWON_SPE3051 -> device = new OWON_SPE3051();
@@ -217,14 +145,39 @@ public class MyUtilities {
         }
         return device;
     }
-    public static int calculateCRC16(byte[] data) {
-        int crc = 0xFFFF;
-        for (byte b : data) {
-            crc = (crc << 8) ^ MyUtilities.CRC16_TABLE[((crc >> 8) ^ b) & 0xFF];
+
+    // === BYTE COMPARISON ===
+    public static boolean compare(byte[] reference, byte[] inCommand, int startPosition, boolean exactMatch) {
+        if (reference == null || inCommand == null) {
+            log.warn("Reference or inCommand is null");
+            return false;
         }
-        return crc & 0xFFFF;
+
+        if (startPosition < 0 || startPosition >= inCommand.length || startPosition >= reference.length) {
+            log.warn("Start position is out of range");
+            return false;
+        }
+
+        if (exactMatch && reference.length != inCommand.length) {
+            log.warn("Exact match required, but lengths do not match");
+            return false;
+        }
+
+        if (reference.length > inCommand.length - startPosition) {
+            log.warn("Reference is longer than available data in inCommand");
+            return false;
+        }
+
+        for (int i = startPosition; i < reference.length; i++) {
+            if (reference[i] != inCommand[i]) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
+    // === VERY SIMILAR: CRC calculation methods ===
     public static int calculateCRC16_GPS(byte[] data) {
         int crc = 0xFFFF;
         for (byte b : data) {
@@ -236,24 +189,31 @@ public class MyUtilities {
         return crc;
     }
 
-    public static String getCubicUnits(int num){
-        String unitStr;
-        switch (num) {
-            case 0:
-                unitStr = "ppm";
-                break;
-            case 1:
-                unitStr = "probably lel";
-                break;
-            case 2:
-                unitStr = "vol%";
-                break;
-            default:
-                unitStr = "unknown(" + num + ")";
-                break;
+    public static byte calculateCRCforF(byte[] responseArray) {
+        byte crcVar = responseArray[1];
+        if(responseArray.length < 70) return 0;
+        for (int i = 2; i < 70; i++) {
+            crcVar ^= responseArray[i];
         }
-        return unitStr;
+        return crcVar;
     }
+
+    public static byte calculateCRCforFdocumentation(byte[] responseArray) {
+        if (responseArray.length < 70) return 0;
+
+        byte crcVar = 0;
+
+        for (int i = 1; i < 70; i++) {
+            if (responseArray[i] == 0x0E || responseArray[i] == 0x09 && i == 69) {
+                continue;
+            }
+            crcVar ^= responseArray[i];
+        }
+
+        return crcVar;
+    }
+
+    // === VERY SIMILAR: F structure check methods ===
     public static boolean checkStructureForF(byte[] responseArray) {
         int limit = 72;
         if (responseArray.length <= limit) {
@@ -273,12 +233,7 @@ public class MyUtilities {
                 return false;
             }
         }
-/*
-        if (responseArray[72] != 13) {
-            System.out.println("Ошибка: Отсутствует перенос строки (13) в позиции 72.");
-            return false;
-        }
-*/
+
         byte calculatedCRC = calculateCRCforF(responseArray);
         byte calculatedCRCdocumentation = calculateCRCforFdocumentation(responseArray);
         boolean isOkCRC = calculatedCRC == responseArray[70];
@@ -314,44 +269,18 @@ public class MyUtilities {
                 return false;
             }
         }
-/*
-        if (responseArray[72] != 13) {
-            System.out.println("Ошибка: Отсутствует перенос строки (13) в позиции 72.");
-            return false;
-        }
-*/
-
 
         return true;
     }
-    public static byte calculateCRCforF(byte[] responseArray) {
-        byte crcVar = responseArray[1];
-        if(responseArray.length < 70) return 0;
-        for (int i = 2; i < 70; i++) {
-            crcVar ^= responseArray[i];
-        }
-        return crcVar;
+
+    public static String changeToNeedSeparator(double value){
+        String str = Double.toString(value);
+        return str.replaceAll("[.,]", MyUtilities.dotOrPoint);
     }
 
-    public static byte calculateCRCforFdocumentation(byte[] responseArray) {
-        if (responseArray.length < 70) return 0;
-
-        byte crcVar = 0;
-
-        for (int i = 1; i < 70; i++) {
-            // Исключить маркер 0x0E (responseArray[0])
-            // Исключить символ ВК и символ 0x09, предшествующий CRC
-            if (responseArray[i] == 0x0E || responseArray[i] == 0x09 && i == 69) {
-                continue;
-            }
-            crcVar ^= responseArray[i];
-        }
-
-        return crcVar;
-    }
     public static String removeComWord(String arg){
         if(arg == null || arg.length() < 1){
-            return " ";
+            return "null";
         }
         if(arg.indexOf("(CO") > 0){
             return arg.substring(0, arg.indexOf("(CO"));
@@ -361,87 +290,39 @@ public class MyUtilities {
 
     }
 
-    public static boolean containThreadByName(ArrayList<Thread> threadArrList, String name){
-        if(threadArrList.isEmpty() || name == null)
-            return false;
-
-        if(name.isEmpty())
-            return false;
-
-        for (Thread thread : threadArrList) {
-            if(thread.getName().equalsIgnoreCase(name))
-                return true;
-        }
-
-        return false;
-    }
-
-    public static Thread getThreadByName(ArrayList<Thread> threadArrList, String name){
-        if(threadArrList.isEmpty() || name == null)
-            return null;
-
-        if(name.isEmpty())
-            return null;
-
-        for (Thread thread : threadArrList) {
-            if(thread.getName().equalsIgnoreCase(name))
-                return thread;
-        }
-
-        return null;
-    }
-
-
+    // === DATE UTILITIES ===
     public static Date convertToLocalDateViaMilisecond(LocalDateTime dateToConvert) {
         return java.util.Date
                 .from(dateToConvert.atZone(ZoneId.systemDefault())
                         .toInstant());
     }
 
-    public static Date convertToDateViaSqlDate(LocalDate dateToConvert) {
-        return java.sql.Date.valueOf(dateToConvert);
-    }
-
-    public static  byte[] clearAsciiString ( byte[] lastAnswerBytes){
-        int sizeFutureArray = 0;
-        for (int i = 0; i < lastAnswerBytes.length; i++) {
-            if(lastAnswerBytes[i] > 7 && lastAnswerBytes[i] < 126)
-                sizeFutureArray++;
-        }
-        byte[] forReturn = new byte[sizeFutureArray];
-        sizeFutureArray = 0;
-        for (byte lastAnswerByte : lastAnswerBytes) {
-            if(lastAnswerByte > 7 && lastAnswerByte < 126){
-                forReturn[sizeFutureArray] = lastAnswerByte;
-                sizeFutureArray++;
-            }
-        }
-        return forReturn;
-    }
-
-    public static boolean isCorrectNumber(byte[] stringArray){
-        //-1.5566 or 13.7788 example. Check the POINT symbol, and another symbols
-        boolean isOk = false;
+    // === VERY SIMILAR: Number validation methods ===
+    public static boolean containAsciiDot(byte[] stringArray){
         for (byte b : stringArray) {
             if(b == '.'){
-                isOk = true;
-                break;
+                return true;
             }
         }
+        return false;
+    }
+    public static boolean isCorrectNumberWithDot(byte[] stringArray){
+        boolean isOk = containAsciiDot(stringArray);
 
         if(isOk){
             for (byte b : stringArray) {
                 if(b == 0){
-                    System.out.println("Error in isCorrectNumber. Found 0x00");
+                    log.warn("Error in isCorrectNumberWithDot. Found 0x00");
                     isOk = false;
                 }
             }
+        }else {
+            log.warn("Error in isCorrectNumberWithDot. Dot not found.");
         }
         return isOk;
     }
 
     public static boolean isCorrectNumberF(byte[] stringArray){
-        //00512 or 998877 example. Check the wrong ascii symbols
         boolean isOk = true;
         if(stringArray.length < 2){
             isOk = false;
@@ -459,70 +340,7 @@ public class MyUtilities {
         return isOk;
     }
 
-    /**
-     * Safely parses a fixed-length ASCII digit field (5 or 6 bytes typical for F commands)
-     * into a raw long value. Supports optional leading minus.
-     * Returns 0 and logs on error (caller decides what to do with error values).
-     */
-    public static long parseAsciiDigits(byte[] response, int start, int length) {
-        if (response == null || start + length > response.length) {
-            log.warn("parseAsciiDigits: invalid range");
-            return 0;
-        }
-        byte[] sub = Arrays.copyOfRange(response, start, start + length);
-        boolean negative = false;
-        long value = 0;
-
-        for (int i = 0; i < sub.length; i++) {
-            byte b = sub[i];
-            if (b == '-' && i == 0) {
-                negative = true;
-                continue;
-            }
-            if (b >= '0' && b <= '9') {
-                value = value * 10 + (b - '0');
-            } else {
-                log.warn("parseAsciiDigits: non-digit at pos " + (start + i));
-                return 0;
-            }
-        }
-        return negative ? -value : value;
-    }
-
-    /**
-     * Convenience wrapper: parses ASCII digits and applies divisor (e.g. /100.0 for 2 decimals).
-     */
-    public static double parseAsciiField(byte[] response, int start, int length, double divisor) {
-        long raw = parseAsciiDigits(response, start, length);
-        return raw / divisor;
-    }
-
-    // Преобразование байтов в HEX
-    public static String bytesToHexString(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
-        for (byte b : bytes) {
-            //sb.append(String.format("%02X ", b));
-            sb.append(String.format("%02X ", b & 0xFF));
-
-        }
-        return sb.toString().trim();
-    }
-
-    public static byte[] hexStringToBytes(String hexString) {
-        hexString = hexString.trim();
-        if (hexString.isEmpty()) {
-            return new byte[0];
-        }
-        String[] hexValues = hexString.split(" ");
-        byte[] result = new byte[hexValues.length];
-        for (int i = 0; i < hexValues.length; i++) {
-            result[i] = (byte) Integer.parseInt(hexValues[i], 16);
-        }
-        return result;
-    }
-
     public static boolean isCorrectNumberFExceptMinus(byte[] stringArray){
-        //00512 or 998877 example. Check the wrong ascii symbols
         boolean isOk = true;
 
         if(isOk){
@@ -552,30 +370,59 @@ public class MyUtilities {
         return isOk;
     }
 
-    public static String byteArrayToString(byte[] response) {
-        if (response == null) {
-            return null;
+    // === VERY SIMILAR: ASCII digit parsing ===
+    public static long parseAsciiDigits(byte[] response, int start, int length) {
+        if (response == null || start + length > response.length) {
+            log.warn("parseAsciiDigits: invalid range");
+            return 0;
         }
+        byte[] sub = Arrays.copyOfRange(response, start, start + length);
+        boolean negative = false;
+        long value = 0;
 
-        StringBuilder sb = new StringBuilder();
-        for (byte b : response) {
-            sb.append((char) b);
+        for (int i = 0; i < sub.length; i++) {
+            byte b = sub[i];
+            if (b == '-' && i == 0) {
+                negative = true;
+                continue;
+            }
+            if (b >= '0' && b <= '9') {
+                value = value * 10 + (b - '0');
+            } else {
+                log.warn("parseAsciiDigits: non-digit at pos " + (start + i));
+                return 0;
+            }
         }
-
-        return sb.toString();
+        return negative ? -value : value;
     }
 
-    public static String charArrayToString(byte[] response) {
-        if (response == null) {
-            return null;
-        }
+    public static double parseAsciiField(byte[] response, int start, int length, double divisor) {
+        long raw = parseAsciiDigits(response, start, length);
+        return raw / divisor;
+    }
 
+    // === VERY SIMILAR: Byte / String / Hex conversion helpers ===
+    public static String bytesToHexString(byte[] bytes) {
+        if(bytes == null) return  null;
         StringBuilder sb = new StringBuilder();
-        for (byte b : response) {
-            sb.append(b);
-        }
+        for (byte b : bytes) {
+            sb.append(String.format("%02X ", b & 0xFF));
 
-        return sb.toString();
+        }
+        return sb.toString().trim();
+    }
+
+    public static byte[] hexStringToBytes(String hexString) {
+        hexString = hexString.trim();
+        if (hexString.isEmpty()) {
+            return new byte[0];
+        }
+        String[] hexValues = hexString.split(" ");
+        byte[] result = new byte[hexValues.length];
+        for (int i = 0; i < hexValues.length; i++) {
+            result[i] = (byte) Integer.parseInt(hexValues[i], 16);
+        }
+        return result;
     }
 
     public static byte[] strToByte(String str, char endian){
@@ -595,6 +442,26 @@ public class MyUtilities {
             result[result.length-1] = (byte) endian;
         }
         return result;
+    }
+
+    // === MISC ===
+    public static String getCubicUnits(int num){
+        String unitStr;
+        switch (num) {
+            case 0:
+                unitStr = "ppm";
+                break;
+            case 1:
+                unitStr = "probably lel";
+                break;
+            case 2:
+                unitStr = "vol%";
+                break;
+            default:
+                unitStr = "unknown(" + num + ")";
+                break;
+        }
+        return unitStr;
     }
 
     public static Double getAnyNumber(String str) {
@@ -618,13 +485,11 @@ public class MyUtilities {
             return -1.0;
         }
 
-        // Проверяем, что строка не заканчивается точкой
         String result = numberBuilder.toString();
         if (result.endsWith(".")) {
             result = result.substring(0, result.length() - 1);
         }
 
-        // Проверяем, что число не состоит из одной точки
         if (result.isEmpty() || result.equals(".")) {
             return -1.0;
         }

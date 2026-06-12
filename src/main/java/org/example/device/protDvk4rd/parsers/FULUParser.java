@@ -7,6 +7,10 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 
+import static org.example.utilites.MyUtilities.isCorrectNumberF;
+import static org.example.utilites.MyUtilities.parseAsciiDigits;
+import static org.example.utilites.MyUtilities.parseAsciiField;
+
 public class FULUParser {
     private static final Logger log = LoggerFactory.getLogger(FULUParser.class);
 
@@ -110,16 +114,5 @@ public class FULUParser {
 
         log.info("FULU parsing: Successfully parsed response: {}", responseString);
         return answerValues;
-    }
-
-    // Assuming isCorrectNumberF is defined elsewhere, reused as in original code
-    private boolean isCorrectNumberF(byte[] data) {
-        // Placeholder for the original isCorrectNumberF logic
-        for (byte b : data) {
-            if (b != '-' && (b < '0' || b > '9')) {
-                return false;
-            }
-        }
-        return true;
     }
 }

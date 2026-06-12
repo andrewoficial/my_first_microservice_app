@@ -9,7 +9,7 @@ import org.example.services.AnswerValues;
 
 import java.util.Arrays;
 
-import static org.example.utilites.MyUtilities.isCorrectNumber;
+import static org.example.utilites.MyUtilities.isCorrectNumberWithDot;
 
 
 public class EctTc290CommandRegistry extends DeviceCommandRegistry {
@@ -86,7 +86,7 @@ public class EctTc290CommandRegistry extends DeviceCommandRegistry {
         String example = "29.1899";
         if(response.length >= 7 ){
 
-            if(isCorrectNumber(response)) {
+            if(isCorrectNumberWithDot(response)) {
                 Double value;
                 StringBuilder sb = new StringBuilder();
                 for (byte b : response) {
@@ -132,7 +132,7 @@ public class EctTc290CommandRegistry extends DeviceCommandRegistry {
         String example = "35629.9";
         if(response.length >= 27 ){
 
-            if(isCorrectNumber(response)) {
+            if(isCorrectNumberWithDot(response)) {
                 Double value;
                 StringBuilder sb = new StringBuilder();
                 for (byte b : response) {
@@ -178,7 +178,7 @@ public class EctTc290CommandRegistry extends DeviceCommandRegistry {
 
         if(response.length >= 37 ){
 
-            if(isCorrectNumber(response)) {
+            if(isCorrectNumberWithDot(response)) {
                 Double value;
                 StringBuilder sb = new StringBuilder();
                 for (byte b : response) {

@@ -98,33 +98,13 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
             double serialNumber = 0.0;
             answerValues = new AnswerValues(11);
             //===================================================1...6==============Term================================
-            byte subResponse[] = Arrays.copyOfRange(response, 1, 6);
-            if (isCorrectNumberF(subResponse)) {
-                boolean success = true;
-
-                // Преобразуем байты ASCII-чисел вручную
-                for (int i = 0; i < subResponse.length; i++) {
-                    byte b = subResponse[i];
-                    if (b >= '0' && b <= '9') {
-                        value = value * 10 + (b - '0');
-                    } else {
-                        success = false;
-                        break;
-                    }
-                }
-
-                // Применяем десятичный порядок для получения числа в формате 123.45
-                if (success) {
-                    //=-0,00000002*B3^2 - 0,0412*B3 + 93,116
-                    value = (value*value*-0.00000002)-(value*0.0412)+93.116;
-                    answerValues.addValue(value, " °C");
-                    //System.out.println(termBM);
-                } else {
-                    answerValues.addValue(-88.88, " °C(ERR)");
-                    return null;
-                }
+            // Term (1-6) with special polynomial
+            if (isCorrectNumberF(Arrays.copyOfRange(response, 1, 6))) {
+                long raw = parseAsciiDigits(response, 1, 5);
+                value = (raw * raw * -0.00000002) - (raw * 0.0412) + 93.116;
+                answerValues.addValue(value, " °C");
             } else {
-                System.out.println("Wrong isCorrectNumberF position " + Arrays.toString(subResponse));
+                System.out.println("Wrong isCorrectNumberF position " + Arrays.toString(Arrays.copyOfRange(response, 1, 6)));
                 answerValues.addValue(-99.99, " °C(ERR)");
                 return null;
             }
@@ -132,7 +112,7 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
             //===================================================7...12==============St=================================
             value = 0.0;
 
-            subResponse = Arrays.copyOfRange(response, 7, 12);
+            byte[]  subResponse = Arrays.copyOfRange(response, 7, 12);
             if (isCorrectNumberF(subResponse)) {
                 boolean success = true;
                 // Преобразуем байты ASCII-чисел вручную
