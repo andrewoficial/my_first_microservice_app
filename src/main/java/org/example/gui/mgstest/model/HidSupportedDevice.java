@@ -9,12 +9,12 @@ import java.util.Objects;
 
 @Getter @Setter
 public class HidSupportedDevice {
-    private HidDevice hidDevice;
+    private org.hid4java.HidDevice hidDevice;
     private String displayName;
     private Constants.SupportedHidDeviceType deviceType;
     private boolean alive;
 
-    public HidSupportedDevice(HidDevice hidDevice, String displayName, Constants.SupportedHidDeviceType deviceType) {
+    public HidSupportedDevice(org.hid4java.HidDevice hidDevice, String displayName, Constants.SupportedHidDeviceType deviceType) {
         this.hidDevice = hidDevice;
         this.displayName = displayName;
         this.deviceType = deviceType;

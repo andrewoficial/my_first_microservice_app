@@ -33,7 +33,7 @@ public class DeviceRepository {
         for (HidSupportedDevice supportedDevice : deviceList) {
             supportedDevice.setAlive(false);
         }
-        List<HidDevice> devices = hidServices.getAttachedHidDevices();
+        List<org.hid4java.HidDevice> devices = hidServices.getAttachedHidDevices();
         hidServices.stop();
 
         for (HidDevice device : devices) {

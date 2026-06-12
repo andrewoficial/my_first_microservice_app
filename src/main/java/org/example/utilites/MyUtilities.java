@@ -443,11 +443,14 @@ public class MyUtilities {
     public static boolean isCorrectNumberF(byte[] stringArray){
         //00512 or 998877 example. Check the wrong ascii symbols
         boolean isOk = true;
-
+        if(stringArray.length < 2){
+            isOk = false;
+            log.warn("In isCorrectNumberF received too short array");
+        }
         if(isOk){
             for (byte b : stringArray) {
                 if(b < 47 || b > 57){
-                    System.out.println("Error in isCorrectNumberF. b < 47 || b > 57");
+                    log.warn("Error in isCorrectNumberF. b < 47 || b > 57");
                     isOk = false;
                     break;
                 }
@@ -456,8 +459,46 @@ public class MyUtilities {
         return isOk;
     }
 
+    /**
+     * Safely parses a fixed-length ASCII digit field (5 or 6 bytes typical for F commands)
+     * into a raw long value. Supports optional leading minus.
+     * Returns 0 and logs on error (caller decides what to do with error values).
+     */
+    public static long parseAsciiDigits(byte[] response, int start, int length) {
+        if (response == null || start + length > response.length) {
+            log.warn("parseAsciiDigits: invalid range");
+            return 0;
+        }
+        byte[] sub = Arrays.copyOfRange(response, start, start + length);
+        boolean negative = false;
+        long value = 0;
+
+        for (int i = 0; i < sub.length; i++) {
+            byte b = sub[i];
+            if (b == '-' && i == 0) {
+                negative = true;
+                continue;
+            }
+            if (b >= '0' && b <= '9') {
+                value = value * 10 + (b - '0');
+            } else {
+                log.warn("parseAsciiDigits: non-digit at pos " + (start + i));
+                return 0;
+            }
+        }
+        return negative ? -value : value;
+    }
+
+    /**
+     * Convenience wrapper: parses ASCII digits and applies divisor (e.g. /100.0 for 2 decimals).
+     */
+    public static double parseAsciiField(byte[] response, int start, int length, double divisor) {
+        long raw = parseAsciiDigits(response, start, length);
+        return raw / divisor;
+    }
+
     // Преобразование байтов в HEX
-    public static String bytesToHex(byte[] bytes) {
+    public static String bytesToHexString(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) {
             //sb.append(String.format("%02X ", b));
@@ -467,7 +508,7 @@ public class MyUtilities {
         return sb.toString().trim();
     }
 
-    public static byte[] hexToBytes(String hexString) {
+    public static byte[] hexStringToBytes(String hexString) {
         hexString = hexString.trim();
         if (hexString.isEmpty()) {
             return new byte[0];
@@ -485,12 +526,27 @@ public class MyUtilities {
         boolean isOk = true;
 
         if(isOk){
-            for (byte b : stringArray) {
-                if(!(b >= '0' && b <= '9') && b != '-'){
-                    System.out.println("Error in isCorrectNumberFExceptMinus. b < 47 || b > 57");
-                    isOk = false;
-                    break;
+            for (int i = 0; i < stringArray.length; i++) {
+                if (i == 0) {
+                    if(!(stringArray[i] >= '0' &&
+                            stringArray[i] <= '9') &&
+                            stringArray[i] != '-'){
+                        System.out.println("Error in isCorrectNumberFExceptMinus. b < 47 || b > 57");
+                        isOk = false;
+                        break;
+                    }
+                }else{
+                    if(!(stringArray[i] >= '0' &&
+                            stringArray[i] <= '9')){
+                        System.out.println("Error in isCorrectNumberFExceptMinus. b < 47 || b > 57");
+                        isOk = false;
+                        break;
+                    }
                 }
+
+            }
+            for (byte b : stringArray) {
+
             }
         }
         return isOk;

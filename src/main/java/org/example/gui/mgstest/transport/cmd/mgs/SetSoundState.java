@@ -34,4 +34,9 @@ public class SetSoundState extends AbstractCommand implements DeviceCommand {
     public HidCommandName getName() {
         return HidCommandName.SET_SOUND_STATE;
     }
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.SET_SOUND_STATE.getName();
+    }
 }

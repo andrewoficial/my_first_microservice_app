@@ -154,7 +154,7 @@ public class MguUsbAdc10CommandRegistry extends DeviceCommandRegistry {
 
     private AnswerValues parseGconGdtaResponse(final byte[] response) {
         log.info("Run parse gcon/gdta response");
-        log.info("Answer: " + MyUtilities.bytesToHex(response));
+        log.info("Answer: " + MyUtilities.bytesToHexString(response));
         log.info("AnswerLength: " + response.length);
         try {
             if (response.length != 26) {

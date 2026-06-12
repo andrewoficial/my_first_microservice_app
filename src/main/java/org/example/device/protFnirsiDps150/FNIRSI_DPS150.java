@@ -252,8 +252,8 @@ public class FNIRSI_DPS150 implements SomeDevice, NonAscii, ProtocolComPort {
             lastAnswer.setLength(0);
             String cmdName = cmdToSend != null ? cmdToSend.split(" ")[0] : "";
             boolean isKnown = false;
-            log.info("Отправленная команда: " + MyUtilities.bytesToHex(rawCmd));
-            log.info("Полученный ответ: " + MyUtilities.bytesToHex(lastAnswerBytes));
+            log.info("Отправленная команда: " + MyUtilities.bytesToHexString(rawCmd));
+            log.info("Полученный ответ: " + MyUtilities.bytesToHexString(lastAnswerBytes));
 
             HashMap<String, SingleCommand> commandsList = commands.getCommandPool();
             SingleCommand foundetCommand = null;
@@ -300,12 +300,12 @@ public class FNIRSI_DPS150 implements SomeDevice, NonAscii, ProtocolComPort {
                     }
                     return;
                 }
-                lastAnswer.append(new String(MyUtilities.bytesToHex(lastAnswerBytes)));
+                lastAnswer.append(new String(MyUtilities.bytesToHexString(lastAnswerBytes)));
                 log.info("FNIRSI_DPS150 Cant create answers obj (error in answer)");
 
             } else {
                 lastAnswer.setLength(0);
-                lastAnswer.append(MyUtilities.bytesToHex(lastAnswerBytes));
+                lastAnswer.append(MyUtilities.bytesToHexString(lastAnswerBytes));
                 log.info("FNIRSI_DPS150 Cant create answers obj (unknown command)");
             }
         } else {

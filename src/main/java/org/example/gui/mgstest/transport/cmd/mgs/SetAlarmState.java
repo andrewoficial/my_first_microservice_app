@@ -34,4 +34,9 @@ public class SetAlarmState extends AbstractCommand implements DeviceCommand {
     public HidCommandName getName() {
         return HidCommandName.SET_ALARM_STATE;
     }
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.SET_ALARM_STATE.getName();
+    }
 }

@@ -37,4 +37,9 @@ public class SetAlarms extends AbstractCommand implements DeviceCommand {
     public HidCommandName getName() {
         return HidCommandName.SET_ALARMS;
     }
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.SET_ALARMS.getName();
+    }
 }

@@ -34,4 +34,10 @@ public class DoRebootDevice extends AbstractCommand implements DeviceCommand {
     public HidCommandName getName() {
         return HidCommandName.DO_REBOOT;
     }
+
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.DO_REBOOT.getName();
+    }
 }

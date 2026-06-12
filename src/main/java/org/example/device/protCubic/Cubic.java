@@ -4,7 +4,6 @@ import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
 import org.apache.log4j.Logger;
 import org.example.device.DeviceCommandListClass;
-import org.example.device.NonAscii;
 import org.example.device.ProtocolComPort;
 import org.example.device.SomeDevice;
 import org.example.device.command.SingleCommand;
@@ -13,8 +12,6 @@ import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 import org.example.utilites.MyUtilities;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -194,8 +191,8 @@ public class Cubic implements SomeDevice, ProtocolComPort {
             lastAnswer.setLength(0);
             String cmdName = cmdToSend != null ? cmdToSend.split(" ")[0] : "";
             boolean isKnown = false;
-            log.info("Отправленная команда: " + MyUtilities.bytesToHex(cmdToSend.getBytes()));
-            log.info("Полученный ответ: " + MyUtilities.bytesToHex(lastAnswerBytes));
+            log.info("Отправленная команда: " + MyUtilities.bytesToHexString(cmdToSend.getBytes()));
+            log.info("Полученный ответ: " + MyUtilities.bytesToHexString(lastAnswerBytes));
 
             HashMap <String, SingleCommand> commandsList = commands.getCommandPool();
             SingleCommand foundetCommand = null;
@@ -208,9 +205,9 @@ public class Cubic implements SomeDevice, ProtocolComPort {
             //log.info("Определяю команду... ");
             for (SingleCommand value : commandsList.values()) {
                 //log.info("Готовлюсь к просмотру тела команды (имя): " + value.getGuiName());
-                //log.info("Готовлюсь к просмотру тела команды (значение): " +  MyUtilities.bytesToHex(value.getBaseBody()));
+                //log.info("Готовлюсь к просмотру тела команды (значение): " +  MyUtilities.bytesToHexString(value.getBaseBody()));
                 System.arraycopy(value.getBaseBody(), 0, commandPart, 0, 3);
-                //log.info("Сравниваю commandPart: " +  MyUtilities.bytesToHex(commandPart)  + " sentPart: " + MyUtilities.bytesToHex(sentPart));
+                //log.info("Сравниваю commandPart: " +  MyUtilities.bytesToHexString(commandPart)  + " sentPart: " + MyUtilities.bytesToHexString(sentPart));
                 if(Arrays.equals(commandPart, sentPart)){
                     log.info("Found command pattern for command [" + value.getMapKey() + "]");
                     isKnown = true;
@@ -234,7 +231,7 @@ public class Cubic implements SomeDevice, ProtocolComPort {
                 }
             } else {
                 lastAnswer.setLength(0);
-                lastAnswer.append(MyUtilities.bytesToHex(lastAnswerBytes));
+                lastAnswer.append(MyUtilities.bytesToHexString(lastAnswerBytes));
                 log.info("CUBIC Cant create answers obj (unknown command)");
             }
         } else {

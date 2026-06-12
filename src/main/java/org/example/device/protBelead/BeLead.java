@@ -223,8 +223,8 @@ public class BeLead implements SomeDevice, NonAscii, ProtocolComPort {
             lastAnswer.setLength(0);
             String cmdName = cmdToSend != null ? cmdToSend.split(" ")[0] : "";
             boolean isKnown = false;
-            log.info("Отправленная команда: " + MyUtilities.bytesToHex(rawCmd));
-            log.info("Полученный ответ: " + MyUtilities.bytesToHex(lastAnswerBytes));
+            log.info("Отправленная команда: " + MyUtilities.bytesToHexString(rawCmd));
+            log.info("Полученный ответ: " + MyUtilities.bytesToHexString(lastAnswerBytes));
 
             HashMap <String, SingleCommand> commandsList = commands.getCommandPool();
             SingleCommand foundetCommand = null;
@@ -238,9 +238,9 @@ public class BeLead implements SomeDevice, NonAscii, ProtocolComPort {
             log.info("Определяю команду... ");
             for (SingleCommand value : commandsList.values()) {
                 log.info("Готовлюсь к просмотру тела команды (имя): " + value.getGuiName());
-                //log.info("Готовлюсь к просмотру тела команды (значение): " +  MyUtilities.bytesToHex(value.getBaseBody()));
+                //log.info("Готовлюсь к просмотру тела команды (значение): " +  MyUtilities.bytesToHexString(value.getBaseBody()));
                 System.arraycopy(value.getBaseBody(), 0, commandPart, 0, 3);
-                log.info("Сравниваю commandPart: " +  MyUtilities.bytesToHex(commandPart)  + " sentPart: " + MyUtilities.bytesToHex(sentPart));
+                log.info("Сравниваю commandPart: " +  MyUtilities.bytesToHexString(commandPart)  + " sentPart: " + MyUtilities.bytesToHexString(sentPart));
                 if(Arrays.equals(commandPart, sentPart)){
                     log.info("Found command pattern for command [" + value.getMapKey() + "]");
                     isKnown = true;
@@ -264,7 +264,7 @@ public class BeLead implements SomeDevice, NonAscii, ProtocolComPort {
                 }
             } else {
                 lastAnswer.setLength(0);
-                lastAnswer.append(MyUtilities.bytesToHex(lastAnswerBytes));
+                lastAnswer.append(MyUtilities.bytesToHexString(lastAnswerBytes));
                 log.info("BELEAD Cant create answers obj (unknown command)");
             }
         } else {

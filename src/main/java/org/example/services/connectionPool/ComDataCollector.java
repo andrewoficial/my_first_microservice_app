@@ -180,7 +180,7 @@ public class ComDataCollector implements Runnable{
                 // 5. Добавляем массив байтов в очередь
 
                 incomingMessages.add(new ReceivedData(receivedBytes, comDataCollectorWaitingForAnswer.get(), System.currentTimeMillis()));
-                //log.info("Добавлено сообщение в очередь: " + MyUtilities.bytesToHex(receivedBytes));
+                //log.info("Добавлено сообщение в очередь: " + MyUtilities.bytesToHexString(receivedBytes));
             }
         } catch (Exception e) {  // Или конкретнее, напр. IOException | RuntimeException
             log.warn("Исключение в обработке данных из порта", e);  // Лог с трассой
@@ -415,7 +415,7 @@ public class ComDataCollector implements Runnable{
         System.arraycopy(device.getStrEndian(), 0, buffer, textToSend.length() , device.getStrEndian().length);
         if(! device.isASCII()){
             if(collection.containClientId(clientId) && collection.getRawCommand(clientId) != null){
-                //log.info("Отправляю сырую команду из состояния панели" + MyUtilities.bytesToHex(collection.getRawCommand(clientId)));
+                //log.info("Отправляю сырую команду из состояния панели" + MyUtilities.bytesToHexString(collection.getRawCommand(clientId)));
                 if(device instanceof NonAscii){
                     log.info("Выполняю setRawCommand с проверкой через device instanceof NonAscii");
                     ((NonAscii) device).setRawCommand(collection.getRawCommand(clientId));

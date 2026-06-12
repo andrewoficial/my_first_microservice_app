@@ -4,8 +4,6 @@ import org.apache.log4j.Logger;
 import org.example.device.DeviceCommandRegistry;
 import org.example.device.command.SingleCommand;
 import org.example.device.command.ArgumentDescriptor;
-import org.example.device.command.CommandBuilder;
-import org.example.device.command.CommandParser;
 import org.example.device.command.CommandType;
 import org.example.services.AnswerValues;
 import org.example.utilites.MyUtilities;
@@ -13,9 +11,7 @@ import org.example.utilites.MyUtilities;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.function.Predicate;
 
 public class DynamentCommandRegistry extends DeviceCommandRegistry {
     private static final Logger log = Logger.getLogger(DynamentCommandRegistry.class);
@@ -258,15 +254,15 @@ public class DynamentCommandRegistry extends DeviceCommandRegistry {
 
     private AnswerValues parseLiveDataResponseShort(byte[] rawResponse) {
         AnswerValues answerValues = new AnswerValues(3); // version
-        log.info("Массив на входе: " + MyUtilities.bytesToHex(rawResponse));
+        log.info("Массив на входе: " + MyUtilities.bytesToHexString(rawResponse));
         log.info("Размер массива на входе: " + rawResponse.length);
         byte[] frame = extractFrame(rawResponse);
         if (frame == null) return null;
-        log.info("Выделенный frame: " + MyUtilities.bytesToHex(frame));
+        log.info("Выделенный frame: " + MyUtilities.bytesToHexString(frame));
         log.info("Размер выделенного frame: " + frame.length);
 
         byte[] response = unescapeFrame(frame);
-        log.info("Востановленный массив: " + MyUtilities.bytesToHex(response));
+        log.info("Востановленный массив: " + MyUtilities.bytesToHexString(response));
         log.info("Размер востановленного массива: " + response.length);
         //byte[] response = unescapeResponse(rawResponse);
         //byte[] response = (rawResponse);
@@ -382,7 +378,7 @@ public class DynamentCommandRegistry extends DeviceCommandRegistry {
             return false;
         }
 
-        log.info("CRC: исходный кадр: [" + MyUtilities.bytesToHex(frame) + "], len=" + frame.length);
+        log.info("CRC: исходный кадр: [" + MyUtilities.bytesToHexString(frame) + "], len=" + frame.length);
 
         // 1) Принятый CRC (Big Endian: High, Low)
         int rxHigh = frame[frame.length - 2] & 0xFF;
@@ -445,7 +441,7 @@ public class DynamentCommandRegistry extends DeviceCommandRegistry {
         // Берём всё от DLE ... EOF + 2 байта CRC
         int frameLen = (end + 4) - start;
         byte[] frame = Arrays.copyOfRange(response, start, start + frameLen);
-        log.info("Extracted frame: " + MyUtilities.bytesToHex(frame));
+        log.info("Extracted frame: " + MyUtilities.bytesToHexString(frame));
         return frame;
     }
 
@@ -464,7 +460,7 @@ public class DynamentCommandRegistry extends DeviceCommandRegistry {
         }
 
         byte[] unescaped = baos.toByteArray();
-        log.info("Unescaped frame: " + MyUtilities.bytesToHex(unescaped));
+        log.info("Unescaped frame: " + MyUtilities.bytesToHexString(unescaped));
         return unescaped;
     }
 

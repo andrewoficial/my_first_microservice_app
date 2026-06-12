@@ -77,7 +77,7 @@ public abstract class AbstractCommand implements CommandModel {
 
     @Override
     public void addArgument(long arg) {
-        ByteBuffer bb = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putFloat(arg);
+        ByteBuffer bb = ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN).putLong(arg);
         byte[] bytes = bb.array();
         for (byte b : bytes) {
             arguments.add(b);

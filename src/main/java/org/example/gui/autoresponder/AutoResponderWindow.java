@@ -198,7 +198,7 @@ public class AutoResponderWindow extends JFrame {
                 return;
             }
         }
-        //logMessage("No match for packet: " + bytesToHex(packet));
+        //logMessage("No match for packet: " + bytesToHexString(packet));
     }
 
     private void logReceived(byte[] data) {

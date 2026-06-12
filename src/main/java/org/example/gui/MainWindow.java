@@ -516,10 +516,10 @@ public class MainWindow extends JFrame implements Rendeble {
 
 
                 byte[] cmdForSend = entry.getValue().build(argsValue);
-                log.info("Set command in input field to " + MyUtilities.bytesToHex(cmdForSend));
+                log.info("Set command in input field to " + MyUtilities.bytesToHexString(cmdForSend));
                 jtfTextToSend.setText(MyUtilities.byteArrayToString(cmdForSend));
                 leftPanState.setRawCommand(currentActiveClientId.get(), cmdForSend);
-                log.info("Saved  " + MyUtilities.bytesToHex(jtfTextToSend.getText().getBytes()));
+                log.info("Saved  " + MyUtilities.bytesToHexString(jtfTextToSend.getText().getBytes()));
             });
 
             commandPanel.add(sendButton);

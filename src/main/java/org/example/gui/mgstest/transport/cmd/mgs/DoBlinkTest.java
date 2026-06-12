@@ -34,4 +34,9 @@ public class DoBlinkTest extends AbstractCommand implements DeviceCommand{
     public HidCommandName getName() {
         return HidCommandName.DO_TEST_BLINK;
     }
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.DO_TEST_BLINK.getName();
+    }
 }

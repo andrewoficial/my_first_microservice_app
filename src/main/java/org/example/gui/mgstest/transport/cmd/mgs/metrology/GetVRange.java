@@ -35,4 +35,10 @@ public class GetVRange extends AbstractCommand implements DeviceCommand {
     public HidCommandName getName() {
         return HidCommandName.GET_V_RANGE;
     }
+
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.GET_V_RANGE.getName();
+    }
 }

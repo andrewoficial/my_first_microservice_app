@@ -34,4 +34,10 @@ public class DoBeepTest extends AbstractCommand implements DeviceCommand {
     public HidCommandName getName() {
         return HidCommandName.DO_TEST_BEEP;
     }
+
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.DO_TEST_BEEP.getName();
+    }
 }

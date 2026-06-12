@@ -34,4 +34,10 @@ public class GetAllSettings extends AbstractCommand implements DeviceCommand{
     public HidCommandName getName() {
         return HidCommandName.GET_SETTINGS;
     }
+
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.GET_SETTINGS.getName();
+    }
 }

@@ -13,8 +13,6 @@ import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 import org.example.utilites.MyUtilities;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
@@ -160,8 +158,8 @@ public class MguUsbAdc10 implements SomeDevice, ProtocolComPort, TemplatedAscii 
                 lastAnswerBytes = Arrays.copyOfRange(lastAnswerBytes, start, lastAnswerBytes.length);
             }
 
-            log.info("Command: " + MyUtilities.bytesToHex(cmdToSend.getBytes()));
-            log.info("Answer: " + MyUtilities.bytesToHex(lastAnswerBytes));
+            log.info("Command: " + MyUtilities.bytesToHexString(cmdToSend.getBytes()));
+            log.info("Answer: " + MyUtilities.bytesToHexString(lastAnswerBytes));
             log.info("AnswerLength: " + lastAnswerBytes.length);
 
             lastAnswer.setLength(0); // Очистка строкового представления ответа

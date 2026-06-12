@@ -36,4 +36,9 @@ public class GetAlarms extends AbstractCommand implements DeviceCommand {
         return HidCommandName.GET_ALARMS;
     }
 
+    @Override
+    public String getCommandName() {
+        return HidCommandName.GET_ALARMS.getName();
+    }
+
 }

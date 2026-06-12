@@ -34,4 +34,10 @@ public class SetSerialNumber extends AbstractCommand implements DeviceCommand {
     public HidCommandName getName() {
         return HidCommandName.SET_SERIAL_NUMBER;
     }
+
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.SET_SERIAL_NUMBER.getName();
+    }
 }

@@ -34,7 +34,8 @@ public class ArdCurrLoopMeterCommandRegistry extends DeviceCommandRegistry {
     private AnswerValues parseGResponse(byte[] response) {
         if(response[0] != (byte)14) {
             log.error("ERROR G. Expected: 14, received: " + response[0]);
-            throw new RuntimeException("ERROR G parsing. Wrong zero symbol");
+            return null;
+            //throw new RuntimeException("ERROR G parsing. Wrong zero symbol");
         }
         // Проверка CRC
         if (response[70] != calculateCRCforF(response)) {

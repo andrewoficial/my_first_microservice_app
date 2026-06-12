@@ -13,8 +13,6 @@ import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 import org.example.utilites.MyUtilities;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -233,8 +231,8 @@ public class TT5166 implements SomeDevice, NonAscii, ProtocolComPort {
             lastAnswer.setLength(0);
             String cmdName = cmdToSend != null ? cmdToSend.split(" ")[0] : "";
             boolean isKnown = false;
-            log.info("Отправленная команда: " + MyUtilities.bytesToHex(rawCmd));
-            log.info("Полученный ответ: " + MyUtilities.bytesToHex(lastAnswerBytes));
+            log.info("Отправленная команда: " + MyUtilities.bytesToHexString(rawCmd));
+            log.info("Полученный ответ: " + MyUtilities.bytesToHexString(lastAnswerBytes));
 
             HashMap<String, SingleCommand> commandsList = commands.getCommandPool();
             SingleCommand foundetCommand = null;
@@ -267,7 +265,7 @@ public class TT5166 implements SomeDevice, NonAscii, ProtocolComPort {
                 }
             } else {
                 lastAnswer.setLength(0);
-                lastAnswer.append(MyUtilities.bytesToHex(lastAnswerBytes));
+                lastAnswer.append(MyUtilities.bytesToHexString(lastAnswerBytes));
                 log.info("TT5166 Cant create answers obj (unknown command)");
             }
         } else {

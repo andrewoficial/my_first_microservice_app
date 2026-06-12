@@ -40,7 +40,7 @@ public class SendCommandMkrs extends AbstractCommand implements DeviceCommand {
         PayLoadSender sender = new PayLoadSender();
         byte[] payload = PayloadBuilder.buildMkrs(channel, this.getArguments());
 
-        System.out.println("Generated payload: " + MyUtilities.bytesToHex(payload));
+        System.out.println("Generated payload: " + MyUtilities.bytesToHexString(payload));
 
         byte[] answer = sender.writeSimpleDataHid(device, payload, progress, getDescription(), this);
         progress.onExecutionFinished(device, 100, answer, this.getName());
@@ -59,5 +59,10 @@ public class SendCommandMkrs extends AbstractCommand implements DeviceCommand {
     @Override
     public byte[] getAnswerOffsets() {
         return new byte[]{0x00};
+    }
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.MKRS_SEND_UART.getName();
     }
 }

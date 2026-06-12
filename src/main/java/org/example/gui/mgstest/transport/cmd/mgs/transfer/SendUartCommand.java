@@ -16,4 +16,9 @@ public class SendUartCommand extends AbstractSendCommand {
     public HidCommandName getName() {
         return HidCommandName.SENT_URT;
     }
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.SENT_URT.getName();
+    }
 }

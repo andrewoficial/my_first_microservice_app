@@ -316,7 +316,6 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
             log.info(message + " is error " + isError);
             JOptionPane.showMessageDialog(this, "Ошибка выполнения команды " + message + " ");
         }
-
     }
 
     @Override

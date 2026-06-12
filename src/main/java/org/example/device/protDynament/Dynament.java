@@ -12,7 +12,6 @@ import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 import org.example.utilites.MyUtilities;
 
-import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
@@ -236,8 +235,8 @@ public class Dynament implements SomeDevice, ProtocolComPort {
     public void parseData() {
         if (lastAnswerBytes != null && lastAnswerBytes.length > 0) {
             lastAnswer.setLength(0);
-            log.info("Отправленная команда: " + MyUtilities.bytesToHex(cmdToSend.getBytes()));
-            log.info("Полученный ответ: " + MyUtilities.bytesToHex(lastAnswerBytes));
+            log.info("Отправленная команда: " + MyUtilities.bytesToHexString(cmdToSend.getBytes()));
+            log.info("Полученный ответ: " + MyUtilities.bytesToHexString(lastAnswerBytes));
             String cmdName = cmdToSend != null ? cmdToSend.split(" ")[0] : "";
             boolean isKnown = false;
             HashMap <String, SingleCommand> commandsList = commands.getCommandPool();
@@ -259,11 +258,11 @@ public class Dynament implements SomeDevice, ProtocolComPort {
                         lastAnswer.append("\t");
                     }
                 } else {
-                    lastAnswer.append(new String(MyUtilities.bytesToHex(lastAnswerBytes)));
+                    lastAnswer.append(new String(MyUtilities.bytesToHexString(lastAnswerBytes)));
                     log.info("DYNAMENT Cant create answers obj (unknown command)");
                 }
             } else {
-                lastAnswer.append(new String(MyUtilities.bytesToHex(lastAnswerBytes)));
+                lastAnswer.append(new String(MyUtilities.bytesToHexString(lastAnswerBytes)));
                 log.info("DYNAMENT Cant create answers obj (unknown command)");
             }
         } else {

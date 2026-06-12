@@ -310,7 +310,7 @@ public class Acu10fsCommander {
     // ===== Утилиты =====
 
     private static String bytesToHex(byte[] bytes) {
-        return MyUtilities.bytesToHex(bytes);
+        return MyUtilities.bytesToHexString(bytes);
     }
 
 

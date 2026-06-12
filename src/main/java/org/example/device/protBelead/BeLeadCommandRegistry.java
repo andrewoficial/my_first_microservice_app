@@ -131,12 +131,12 @@ public class BeLeadCommandRegistry extends DeviceCommandRegistry {
     }
 
     public byte[] buildReadCommand(byte variableId, byte[] data) {
-        log.info("Return buildReadCommand body " + MyUtilities.bytesToHex(buildCommand(RD, variableId, data, true)));
+        log.info("Return buildReadCommand body " + MyUtilities.bytesToHexString(buildCommand(RD, variableId, data, true)));
         return buildCommand(RD, variableId, data, true);
     }
 
     public byte[] buildWriteCommand(byte variableId, byte[] data) {
-        log.info("Return buildWriteCommand body " + MyUtilities.bytesToHex(buildCommand(WR, variableId, data, true)));
+        log.info("Return buildWriteCommand body " + MyUtilities.bytesToHexString(buildCommand(WR, variableId, data, true)));
         return buildCommand(WR, variableId, data, true);
     }
 
@@ -156,7 +156,7 @@ public class BeLeadCommandRegistry extends DeviceCommandRegistry {
         frame[11] = DLE;
         frame[12] = EOF;
         byte[] cs = calculateChecksum(frame, isHostSend);
-        log.info("Return buildCommand body " + MyUtilities.bytesToHex(concatenate(frame, cs)));
+        log.info("Return buildCommand body " + MyUtilities.bytesToHexString(concatenate(frame, cs)));
         return concatenate(frame, cs);
     }
 

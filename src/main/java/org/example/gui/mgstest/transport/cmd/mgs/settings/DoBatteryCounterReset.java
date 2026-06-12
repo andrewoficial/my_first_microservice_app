@@ -34,4 +34,9 @@ public class DoBatteryCounterReset extends AbstractCommand implements DeviceComm
     public HidCommandName getName() {
         return HidCommandName.DO_BATTERY_COUNTER_RESET;
     }
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.DO_BATTERY_COUNTER_RESET.getName();
+    }
 }

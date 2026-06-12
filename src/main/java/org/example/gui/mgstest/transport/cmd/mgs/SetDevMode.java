@@ -27,11 +27,17 @@ public class SetDevMode extends AbstractCommand implements DeviceCommand {
 
     @Override
     public String getDescription() {
-        return HidCommandName.SET_VIBRATION_STATE.getName();
+        return HidCommandName.SET_DEV_MODE.getName();
     }
 
     @Override
     public HidCommandName getName() {
-        return HidCommandName.SET_VIBRATION_STATE;
+        return HidCommandName.SET_DEV_MODE;
+    }
+
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.SET_DEV_MODE.getName();
     }
 }

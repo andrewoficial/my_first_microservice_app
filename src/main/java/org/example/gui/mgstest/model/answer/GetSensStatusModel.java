@@ -17,4 +17,5 @@ public class GetSensStatusModel {
     private byte H2S_num;
     private byte CH4_num;
 
+
 }

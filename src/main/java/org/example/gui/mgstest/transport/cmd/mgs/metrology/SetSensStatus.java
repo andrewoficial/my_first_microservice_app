@@ -40,4 +40,10 @@ public class SetSensStatus extends AbstractCommand implements DeviceCommand{
     public HidCommandName getName() {
         return HidCommandName.SET_SENS_STATUS;
     }
+
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.SET_SENS_STATUS.getName();
+    }
 }

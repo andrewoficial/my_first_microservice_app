@@ -8,6 +8,8 @@ import org.example.gui.mgstest.transport.cmd.AbstractCommand;
 public class SetVibrationState extends AbstractCommand implements DeviceCommand{
     private byte commandNumber = 0x25;
 
+
+
     @Override
     public byte getCommandNumber() {
         return commandNumber;
@@ -27,6 +29,10 @@ public class SetVibrationState extends AbstractCommand implements DeviceCommand{
 
     @Override
     public String getDescription() {
+        return HidCommandName.SET_VIBRATION_STATE.getName();
+    }
+
+    public String getCommandName() {
         return HidCommandName.SET_VIBRATION_STATE.getName();
     }
 

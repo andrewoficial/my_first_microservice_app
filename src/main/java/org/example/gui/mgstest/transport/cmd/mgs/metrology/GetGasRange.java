@@ -35,4 +35,9 @@ public class GetGasRange extends AbstractCommand implements  DeviceCommand {
     public HidCommandName getName() {
         return HidCommandName.GET_GAS_RANGE;
     }
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.GET_GAS_RANGE.getName();
+    }
 }

@@ -341,11 +341,11 @@ public class Igm10ModbusCommandRegistry extends DeviceCommandRegistry {
         AnswerValues answerValues = new AnswerValues(1);
 
         if(response[1] == (byte)0x86) {
-            log.warn("IGM10: Write response for error: " + MyUtilities.bytesToHex(response));
+            log.warn("IGM10: Write response for error: " + MyUtilities.bytesToHexString(response));
             answerValues.addValue(-1.0, "Fail");
             return answerValues;
         }
-        log.warn("IGM10: Write response for payload: " + MyUtilities.bytesToHex(response));
+        log.warn("IGM10: Write response for payload: " + MyUtilities.bytesToHexString(response));
         answerValues.addValue(1.0, "Success");
         return answerValues;
     }

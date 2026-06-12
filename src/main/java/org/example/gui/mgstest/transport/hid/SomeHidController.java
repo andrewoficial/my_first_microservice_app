@@ -56,7 +56,7 @@ public class SomeHidController implements HidCommunicator {
     private void basicSend(HidDevice device, byte[] message, byte reportId, byte[] originalData, byte padding) {
         int bytesSent = device.write(message, message.length, reportId);
         String paddingHex = String.format("%02X", padding);
-        log.info("Payload: " + MyUtilities.bytesToHex(originalData) + " rest filled with " + paddingHex + " up to " + bytesSent + " bytes");
+        log.info("Payload: " + MyUtilities.bytesToHexString(originalData) + " rest filled with " + paddingHex + " up to " + bytesSent + " bytes");
         if (bytesSent < 1) {
             log.error("Error writing to device. Last error: " + device.getLastErrorMessage());
             logDeviceInfo(device);

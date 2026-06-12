@@ -200,8 +200,8 @@ public class Igm11Modbus implements SomeDevice, ProtocolComPort {
             lastAnswer.setLength(0);
             String cmdName = cmdToSend != null ? cmdToSend.split(" ")[0] : "";
             boolean isKnown = false;
-            log.info("Отправленная команда: " + MyUtilities.bytesToHex(cmdToSend.getBytes()));
-            log.info("Полученный ответ: " + MyUtilities.bytesToHex(lastAnswerBytes));
+            log.info("Отправленная команда: " + MyUtilities.bytesToHexString(cmdToSend.getBytes()));
+            log.info("Полученный ответ: " + MyUtilities.bytesToHexString(lastAnswerBytes));
 
             HashMap<String, SingleCommand> commandsList = commands.getCommandPool();
             SingleCommand foundCommand = null;
@@ -230,7 +230,7 @@ public class Igm11Modbus implements SomeDevice, ProtocolComPort {
                 }
             } else {
                 lastAnswer.setLength(0);
-                lastAnswer.append(MyUtilities.bytesToHex(lastAnswerBytes));
+                lastAnswer.append(MyUtilities.bytesToHexString(lastAnswerBytes));
                 log.info("IGM11 Cant create answers obj (unknown command)");
             }
         } else {

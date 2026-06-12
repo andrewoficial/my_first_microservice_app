@@ -8,8 +8,6 @@ import org.example.device.command.CommandType;
 import org.example.services.AnswerValues;
 import org.example.utilites.MyUtilities;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.*;
 
 import static org.example.utilites.MyUtilities.getCubicUnits;
@@ -180,7 +178,7 @@ public class CubicCommandRegistry extends DeviceCommandRegistry {
     }
 
     public byte calculateChecksum(byte[] data) {
-        //log.info("Run calculate checksum for array " + MyUtilities.bytesToHex(data));
+        //log.info("Run calculate checksum for array " + MyUtilities.bytesToHexString(data));
         int sum = 0;
         for (byte b : data) {
             sum += Byte.toUnsignedInt(b);
@@ -336,7 +334,7 @@ public class CubicCommandRegistry extends DeviceCommandRegistry {
         int[] snValues = new int[5]; // Массив для хранения всех 5 значений
 
         // Логируем сырые данные
-        log.info("CUBIC: Raw serial data: " + MyUtilities.bytesToHex(Arrays.copyOfRange(response, 3, 13)));
+        log.info("CUBIC: Raw serial data: " + MyUtilities.bytesToHexString(Arrays.copyOfRange(response, 3, 13)));
 
         try {
             // Обрабатываем 5 двухбайтных значений
@@ -383,7 +381,7 @@ public class CubicCommandRegistry extends DeviceCommandRegistry {
     }
 
     private AnswerValues parseGasPropertyResponse(byte[] response) {
-        log.info("CUBIC: Starting GasProperty response parsing. Raw data: " + MyUtilities.bytesToHex(response));
+        log.info("CUBIC: Starting GasProperty response parsing. Raw data: " + MyUtilities.bytesToHexString(response));
 
         // Более гибкая проверка длины
         if (response.length < 11) {

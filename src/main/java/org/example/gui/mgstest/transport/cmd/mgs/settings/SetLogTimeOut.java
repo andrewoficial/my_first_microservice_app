@@ -34,4 +34,10 @@ public class SetLogTimeOut extends AbstractCommand implements DeviceCommand {
     public HidCommandName getName() {
         return HidCommandName.SET_LOG_TIME_OUT;
     }
+
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.SET_LOG_TIME_OUT.getName();
+    }
 }

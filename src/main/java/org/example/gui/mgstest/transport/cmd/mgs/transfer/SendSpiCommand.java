@@ -16,4 +16,11 @@ public class SendSpiCommand extends AbstractSendCommand {
     public HidCommandName getName() {
         return HidCommandName.SENT_SPI;
     }
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.SENT_SPI.name();
+    }
+
+
 }

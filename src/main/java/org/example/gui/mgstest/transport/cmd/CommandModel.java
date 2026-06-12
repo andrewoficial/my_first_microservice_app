@@ -3,6 +3,7 @@ package org.example.gui.mgstest.transport.cmd;
 import org.example.services.comPort.StringEndianList;
 
 public interface CommandModel {
+    String getCommandName();
     byte getCommandNumber();
     byte[] getArguments();
     byte[] getAnswerOffsets();

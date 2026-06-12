@@ -201,23 +201,23 @@ public class Igm12Modbus implements SomeDevice, ProtocolComPort, NonAscii {
         if (lastAnswerBytes != null && lastAnswerBytes.length > 0) {
             lastAnswer.setLength(0);
             boolean isKnown = false;
-            log.info("Отправленная команда STW: " + MyUtilities.bytesToHex(cmdToSend.getBytes()));
+            log.info("Отправленная команда STW: " + MyUtilities.bytesToHexString(cmdToSend.getBytes()));
             if(rawCmd == null){
                 log.warn("RAW command is null");
             }else{
-                log.info("Отправленная команда RAW: " + MyUtilities.bytesToHex(rawCmd));
+                log.info("Отправленная команда RAW: " + MyUtilities.bytesToHexString(rawCmd));
             }
-            log.info("Полученный ответ     RAW: " + MyUtilities.bytesToHex(lastAnswerBytes));
+            log.info("Полученный ответ     RAW: " + MyUtilities.bytesToHexString(lastAnswerBytes));
 
             HashMap<String, SingleCommand> commandsList = commands.getCommandPool();
             SingleCommand foundCommand = null;
             //01 03 00 06 00 01 64 0B
             //3 элемент массива это регистр
             byte[] subArray = Arrays.copyOfRange(cmdToSend.getBytes(), 0, 6);
-            String cmdPattern = MyUtilities.bytesToHex(subArray);
+            String cmdPattern = MyUtilities.bytesToHexString(subArray);
             log.warn("Bytes:" + cmdPattern);
             for (SingleCommand value : commandsList.values()) {
-                log.info("Просматривваю " + MyUtilities.bytesToHex(value.getBaseBody()) + " " + value.getGuiName());
+                log.info("Просматривваю " + MyUtilities.bytesToHexString(value.getBaseBody()) + " " + value.getGuiName());
                 if (MyUtilities.compare(value.getBaseBody(), rawCmd, 1, false)){
                     log.info("Found command for [" + value.getGuiName() + "]");
                     isKnown = true;
@@ -241,7 +241,7 @@ public class Igm12Modbus implements SomeDevice, ProtocolComPort, NonAscii {
                 }
             } else {
                 lastAnswer.setLength(0);
-                lastAnswer.append(MyUtilities.bytesToHex(lastAnswerBytes));
+                lastAnswer.append(MyUtilities.bytesToHexString(lastAnswerBytes));
                 log.warn("IGM10 Cant create answers obj (unknown command)");
             }
         } else {

@@ -34,4 +34,9 @@ public class GetDeviceInformation extends AbstractCommand implements DeviceComma
     public HidCommandName getName() {
         return HidCommandName.GET_DEV_INFO;
     }
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.GET_DEV_INFO.getName();
+    }
 }

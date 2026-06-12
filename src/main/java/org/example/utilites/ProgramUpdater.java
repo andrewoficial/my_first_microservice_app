@@ -2,72 +2,172 @@ package org.example.utilites;
 
 import java.io.*;
 import java.net.HttpURLConnection;
-import java.net.URI;
 import java.net.URL;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 
-import com.nimbusds.jose.shaded.gson.JsonObject;
-import com.nimbusds.jose.shaded.gson.JsonParser;
 import lombok.Getter;
 import org.apache.log4j.Logger;
-import org.example.Main;
-import org.example.services.AnswerStorage;
+import org.example.utilites.update.*;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
-import static org.springframework.messaging.simp.stomp.StompHeaderAccessor.getContentLength;
-
+/**
+ * Координатор обновлений программы.
+ * Поддерживает несколько источников (жёстко заданные GitHub + пользовательский в настройках).
+ * Все источники должны эмулировать GitHub Releases API.
+ */
 public class ProgramUpdater {
 
-    private static final String API_URL = "https://api.github.com/repos/andrewoficial/my_first_microservice_app/releases/latest";
-    private static final String UPDATE_FILE_PATH = new File("◘").getAbsolutePath().replaceAll("◘", "");
+    // Встроенные источники. GITHUB_NEW можно заполнить позже.
+    private static final String GITHUB_OLD_LIST = "https://api.github.com/repos/andrewoficial/my_first_microservice_app/releases?per_page=100";
+    private static final String GITHUB_NEW_LIST = ""; // заполни /releases?per_page=100 когда будет новый реп
+
+    private static final Path UPDATE_DIR = Paths.get("").toAbsolutePath();
     private static final Logger log = Logger.getLogger(ProgramUpdater.class);
-    private String whatsNews = "Запрос не был произведён";
+
+    // Для обратной совместимости со старым getInfo()
+    private String lastNotes = "";
 
     @Getter
     private boolean busy = false;
     @Getter
     private volatile int updatePercents = 0;
-    public String getLatestVersion() {
-        try {
-            // Создаем URL и открываем соединение
-            URL url = new URL(API_URL);
-            HttpURLConnection con = (HttpURLConnection) url.openConnection();
-            con.setRequestMethod("GET");
 
-            // Устанавливаем таймауты
-            con.setConnectTimeout(5000);
-            con.setReadTimeout(5000);
+    /**
+     * Собирает активные источники: два встроенных + один из настроек (если указан).
+     * Все URL нормализованы к списку релизов (?per_page=100).
+     */
+    private java.util.List<UpdateSource> getActiveSources() {
+        java.util.List<UpdateSource> sources = new java.util.ArrayList<>();
 
-            // Проверяем HTTP-статус
-            int status = con.getResponseCode();
-            if (status != 200) {
-                log.warn("GitHub API returned status: " + status);
-                return "0.0.0";
-            }
-
-            // Читаем ответ
-            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-            StringBuilder response = new StringBuilder();
-            String inputLine;
-            while ((inputLine = in.readLine()) != null) {
-                response.append(inputLine);
-            }
-            in.close();
-
-            // Парсим JSON
-            JSONObject jsonResponse = new JSONObject(response.toString());
-            whatsNews = jsonResponse.getString("body"); // Строка с описанием "что нового" (уже содержит r n)
-            System.out.println(whatsNews);
-            return jsonResponse.getString("tag_name"); // Метка версии в поле "tag_name"
-        } catch (Exception e) {
-            log.warn("Error while fetching version: " + e.getMessage());
-            return "0.0.0";
+        if (!GITHUB_OLD_LIST.isBlank()) {
+            sources.add(new UpdateSource("Старый GitHub", GITHUB_OLD_LIST));
         }
+        if (!GITHUB_NEW_LIST.isBlank()) {
+            sources.add(new UpdateSource("Новый GitHub", GITHUB_NEW_LIST));
+        }
+
+        try {
+            String user = org.example.utilites.properties.MyProperties.getInstance() != null
+                    ? org.example.utilites.properties.MyProperties.getInstance().getUpdateSourceUrl()
+                    : "";
+            if (user != null && !user.isBlank()) {
+                String listUrl = toListUrl(user.trim());
+                sources.add(new UpdateSource("Пользовательский", listUrl));
+            }
+        } catch (Exception ignored) {
+            // MyProperties может быть ещё не готов (некоторые тесты и т.д.)
+        }
+        return sources;
+    }
+
+    /** Нормализует "latest" URL или произвольный в URL списка релизов. */
+    private String toListUrl(String input) {
+        if (input == null || input.isBlank()) return "";
+        String u = input.trim();
+        if (u.contains("/releases/latest")) {
+            u = u.replace("/releases/latest", "/releases");
+        } else if (u.endsWith("/latest")) {
+            u = u.substring(0, u.length() - 7) + "/releases";
+        }
+        if (!u.contains("per_page=")) {
+            u += (u.contains("?") ? "&" : "?") + "per_page=100";
+        }
+        return u;
+    }
+
+    /** Лёгкий fetch одного релиза (для простых случаев). */
+    private JSONObject fetchJson(String url) throws Exception {
+        HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
+        con.setRequestMethod("GET");
+        con.setConnectTimeout(5000);
+        con.setReadTimeout(8000);
+
+        if (con.getResponseCode() != 200) {
+            throw new IOException("HTTP " + con.getResponseCode());
+        }
+
+        try (BufferedReader r = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = r.readLine()) != null) sb.append(line);
+            return new JSONObject(sb.toString());
+        }
+    }
+
+    /** Основной fetch списка релизов. */
+    private JSONArray fetchReleases(String listUrl) throws Exception {
+        HttpURLConnection con = (HttpURLConnection) new URL(listUrl).openConnection();
+        con.setRequestMethod("GET");
+        con.setConnectTimeout(6000);
+        con.setReadTimeout(10000);
+
+        if (con.getResponseCode() != 200) {
+            throw new IOException("HTTP " + con.getResponseCode() + " from " + listUrl);
+        }
+
+        try (BufferedReader r = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = r.readLine()) != null) sb.append(line);
+            return new JSONArray(sb.toString());
+        }
+    }
+
+    /** Простая проверка "только последняя версия по каждому источнику" (для лёгких случаев). */
+    public java.util.List<UpdateSourceResult> checkAllSources() {
+        java.util.List<UpdateSourceResult> out = new java.util.ArrayList<>();
+        for (UpdateSource src : getActiveSources()) {
+            try {
+                JSONArray arr = fetchReleases(src.listUrl);
+                java.util.List<Release> all = ReleaseParser.parseReleases(arr);
+                Release latest = all.isEmpty() ? null : all.get(0);
+                if (latest == null) {
+                    out.add(new UpdateSourceResult(src.name, "0.0.0", "", "", null));
+                    continue;
+                }
+                out.add(new UpdateSourceResult(src.name, latest.version, latest.notes, latest.downloadUrl, null));
+            } catch (Exception e) {
+                out.add(new UpdateSourceResult(src.name, "0.0.0", "", "", e.getMessage()));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Основной метод: возвращает по каждому источнику все релизы, которые новее текущей версии.
+     * Используется для красивого вывода полного changelog по промежуточным версиям.
+     */
+    public java.util.List<SourceChangelog> getChangelogsSince(String currentVersion) {
+        java.util.List<SourceChangelog> result = new java.util.ArrayList<>();
+
+        for (UpdateSource src : getActiveSources()) {
+            try {
+                JSONArray arr = fetchReleases(src.listUrl);
+                java.util.List<Release> parsed = ReleaseParser.parseReleases(arr);
+
+                java.util.List<Release> newer = new java.util.ArrayList<>();
+                for (Release r : parsed) {
+                    if (!r.version.isEmpty()) {
+                        try {
+                            if (isAvailableNewVersion(r.version, currentVersion)) {
+                                newer.add(r);
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                }
+
+                result.add(new SourceChangelog(src.name, newer, null));
+                if (!newer.isEmpty()) {
+                    lastNotes = newer.get(0).notes; // для старого getInfo()
+                }
+            } catch (Exception e) {
+                result.add(new SourceChangelog(src.name, java.util.Collections.emptyList(), e.getMessage()));
+            }
+        }
+        return result;
     }
 
     public boolean isAvailableNewVersion(String foundVersion, String currentVersion) {
@@ -140,101 +240,119 @@ public class ProgramUpdater {
         return false;
     }
 
-    public String getInfo() throws IOException {
-        return whatsNews;
+    public void downloadUpdate() throws IOException, InterruptedException {
+        // Берём первый валидный источник как primary
+        for (UpdateSource src : getActiveSources()) {
+            try {
+                JSONArray arr = fetchReleases(src.listUrl);
+                java.util.List<Release> parsed = ReleaseParser.parseReleases(arr);
+                if (!parsed.isEmpty() && parsed.get(0).hasDownload()) {
+                    performDownload(parsed.get(0).downloadUrl, null);
+                    return;
+                }
+            } catch (Exception ignored) {}
+        }
+        throw new IOException("Не удалось найти подходящий источник для скачивания");
     }
 
-    public void downloadUpdate() throws IOException, InterruptedException {
+    /**
+     * Прямое скачивание по известной ссылке (используется после getChangelogsSince).
+     */
+    public void downloadFromDirectUrl(String directDownloadUrl, String suggestedFileName) throws IOException, InterruptedException {
         updatePercents = 0;
-
-        // Отладочное сообщение
-        log.info("Загрузка новой версии.");
         this.busy = true;
-        // Создание HTTP-клиента
-        HttpClient client = HttpClient.newHttpClient();
-
-        // Создание HTTP-запроса
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(API_URL))
-                .GET()
-                .build();
-
-        // Выполнение HTTP-запроса      
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-
-
-        // Проверка статуса ответа
-        if (response.statusCode() != 200) {
-            log.warn("Ошибка при загрузке новой версии.");
-            this.busy = false;
-            return;
-        }
-
-        // Отладочное сообщение
-        //System.out.println("Ответ от сервера: " + response.body());
-
-        // Парсинг JSON-ответа
-        JsonObject jsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
-        String downloadUrl = jsonObject.get("assets").getAsJsonArray().get(0).getAsJsonObject().get("browser_download_url").getAsString();
-        String fileName = jsonObject.get("assets").getAsJsonArray().get(0).getAsJsonObject().get("name").getAsString();
-
-        // Отладочное сообщение
-        //System.out.println("Ссылка на загрузку: " + downloadUrl);
-        //System.out.println("Имя файла: " + fileName);
-
-        // Создание директории для сохранения файла
-        Files.createDirectories(Paths.get(UPDATE_FILE_PATH));
-
-        // Путь для сохранения файла
-        String filePath = UPDATE_FILE_PATH + fileName;
-
-        // Загрузка файла
-        try (InputStream is = new URL(downloadUrl).openStream()) {
-            long totalBytes = getContentLength(downloadUrl);
-            long downloadedBytes = 0;
-            byte[] buffer = new byte[8192];
-            int bytesRead;
-            long lastReportTime = System.currentTimeMillis();
-            try (var fos = Files.newOutputStream(Paths.get(filePath))) {
-                while ((bytesRead = is.read(buffer)) != -1) {
-                    fos.write(buffer, 0, bytesRead);
-                    downloadedBytes += bytesRead;
-
-                    long currentTime = System.currentTimeMillis();
-                    if (currentTime - lastReportTime >= 150) { // Каждые 300 мс
-
-
-                        System.out.printf("Загружено: %.2f МБ / %.2f МБ%n",
-                                downloadedBytes / 1_048_576.0, totalBytes / 1_048_576.0);
-
-                        updatePercents = (int) ((downloadedBytes / (double) totalBytes) * 100);
-                        System.out.printf("Прогресс: %d%%%n", updatePercents);
-
-                        lastReportTime = currentTime;
-                    }
-
-                }
-            }
-
-            log.info("Файл успешно загружен: " + filePath);
-        } catch (IOException e) {
-            updatePercents = 0;
-            log.info("Ошибка при загрузке файла: " + e.getMessage());
-        }finally {
+        try {
+            performDownload(directDownloadUrl, suggestedFileName);
+        } finally {
             busy = false;
         }
     }
 
-    private long getContentLength(String downloadUrl) throws IOException {
-        URL url = new URL(downloadUrl);
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setRequestMethod("HEAD");
-        long contentLength = connection.getContentLengthLong();
-        connection.disconnect();
-        return contentLength;
+    private void performDownload(String downloadUrl, String suggestedFileName) throws IOException {
+        if (downloadUrl == null || downloadUrl.isEmpty()) {
+            throw new IOException("Пустая ссылка на скачивание");
+        }
+
+        String fileName = suggestedFileName;
+        if (fileName == null || fileName.isBlank()) {
+            try {
+                fileName = downloadUrl.substring(downloadUrl.lastIndexOf('/') + 1);
+            } catch (Exception e) {
+                fileName = "Elephant-Monitor-update.jar";
+            }
+        }
+
+        log.info("Загрузка обновления: " + fileName);
+        Path targetDir = UPDATE_DIR;
+        Files.createDirectories(targetDir);
+        Path target = targetDir.resolve(fileName);
+
+        this.busy = true;
+        updatePercents = 0;
+
+        try (InputStream is = new URL(downloadUrl).openStream()) {
+            long total = getContentLength(downloadUrl);
+            long done = 0;
+            byte[] buf = new byte[8192];
+            int read;
+            long lastReport = System.currentTimeMillis();
+
+            try (OutputStream out = Files.newOutputStream(target)) {
+                while ((read = is.read(buf)) != -1) {
+                    out.write(buf, 0, read);
+                    done += read;
+
+                    long now = System.currentTimeMillis();
+                    if (now - lastReport >= 150) {
+                        updatePercents = total > 0 ? (int) ((done * 100.0) / total) : 0;
+                        System.out.printf("Загружено: %.2f / %.2f МБ (%d%%)%n",
+                                done / 1048576.0, total / 1048576.0, updatePercents);
+                        lastReport = now;
+                    }
+                }
+            }
+            log.info("Файл успешно сохранён: " + target);
+        } catch (IOException e) {
+            updatePercents = 0;
+            log.warn("Ошибка загрузки: " + e.getMessage());
+            throw e;
+        } finally {
+            busy = false;
+        }
     }
 
+    private long getContentLength(String url) {
+        try {
+            HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+            c.setRequestMethod("HEAD");
+            long len = c.getContentLengthLong();
+            c.disconnect();
+            return len > 0 ? len : 0;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
 
+    // === Legacy / совместимость ===
+
+    public String getLatestVersion() {
+        try {
+            for (UpdateSource src : getActiveSources()) {
+                JSONArray arr = fetchReleases(src.listUrl);
+                java.util.List<Release> parsed = ReleaseParser.parseReleases(arr);
+                if (!parsed.isEmpty()) {
+                    lastNotes = parsed.get(0).notes;
+                    return parsed.get(0).version;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("getLatestVersion failed: " + e.getMessage());
+        }
+        return "0.0.0";
+    }
+
+    public String getInfo() {
+        return lastNotes;
+    }
 }
 

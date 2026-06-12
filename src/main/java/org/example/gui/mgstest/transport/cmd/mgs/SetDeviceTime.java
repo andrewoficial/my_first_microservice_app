@@ -45,4 +45,9 @@ public class SetDeviceTime extends AbstractCommand implements DeviceCommand {
     public HidCommandName getName() {
         return HidCommandName.SET_DEVICE_TIME;
     }
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.SET_DEVICE_TIME.getName();
+    }
 }

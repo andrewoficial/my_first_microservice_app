@@ -106,6 +106,8 @@ public class MyProperties {
     @Getter
     private String vegaLogin;
 
+    private String updateSourceUrl = "";
+
     private String [] clientAssociationMarkers = new String[2];//Получается в результате атомизации полученных сообщений (например ответ содержит информацию о двух независимых параметрах)
     private Integer [] clientAssociationID = new Integer[2];//Он же Гоша, он же Гоги, он же Жора, он же TabDev, tabN, номер вкладки
     private Integer [] tabNumber = new Integer[2];//Массив ( в той же последоватльности что и все массивы MainLeftPane) номеров вкладок
@@ -245,6 +247,7 @@ public class MyProperties {
         vegaLogin = settingsLoader.getString("vegaLogin", "root");
         vegaPassword = settingsLoader.getString("vegaPassword", "123");
         vegaAddress = settingsLoader.getString("vegaAddress", "ws://127.0.0.1:8002");
+        updateSourceUrl = settingsLoader.getString("updateSourceUrl", "");
         ports = settingsLoader.getStringArray("ports", "", tabCounter);
         clientAssociationMarkers = settingsLoader.getStringArray("clientAssociationMarkers", "", tabCounter);
         clientAssociationID = settingsLoader.getIntegerArray("clientAssociationID", 0, tabCounter);
@@ -494,6 +497,18 @@ public class MyProperties {
         }
         this.vegaLogin = login;
         settingsLoader.setString("vegaLogin", login);
+    }
+
+    public String getUpdateSourceUrl() {
+        return updateSourceUrl;
+    }
+
+    public void setUpdateSourceUrl(String value) {
+        if (value == null) {
+            value = "";
+        }
+        this.updateSourceUrl = value;
+        settingsLoader.setString("updateSourceUrl", value);
     }
 
     public void setPortAcu10fd(int port){

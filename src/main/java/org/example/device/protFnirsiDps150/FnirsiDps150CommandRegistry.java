@@ -427,7 +427,7 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
         byte[] frame = new byte[frameWithoutCs.length + 1];
         System.arraycopy(frameWithoutCs, 0, frame, 0, frameWithoutCs.length);
         frame[frameWithoutCs.length] = cs;
-        log.info("Built command: " + MyUtilities.bytesToHex(frame));
+        log.info("Built command: " + MyUtilities.bytesToHexString(frame));
         return frame;
     }
 
@@ -672,7 +672,7 @@ public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
         }
         byte[] data = Arrays.copyOfRange(response, 4, 4 + length);
         // Возвращаем как hex string или парсим, если известно
-        String hexDump = MyUtilities.bytesToHex(data);
+        String hexDump = MyUtilities.bytesToHexString(data);
         answerValues.addValue(-1, hexDump);
         return answerValues;
     }

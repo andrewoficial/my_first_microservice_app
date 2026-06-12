@@ -36,4 +36,10 @@ public class SetO2Polys extends AbstractCommand implements DeviceCommand {
     public HidCommandName getName() {
         return HidCommandName.SET_ECHEM_COEFF;
     }
+
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.SET_ECHEM_COEFF.getName();
+    }
 }

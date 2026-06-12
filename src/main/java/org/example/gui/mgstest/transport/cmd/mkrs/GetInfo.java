@@ -36,4 +36,10 @@ public class GetInfo extends AbstractCommand implements DeviceCommand{
     public HidCommandName getName() {
         return HidCommandName.MKRS_GET_INFO;
     }
+
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.MKRS_GET_INFO.getName();
+    }
 }

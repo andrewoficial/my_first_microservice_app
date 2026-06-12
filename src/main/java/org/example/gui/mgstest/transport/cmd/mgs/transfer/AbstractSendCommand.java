@@ -6,6 +6,8 @@ import org.example.gui.mgstest.transport.*;
 import org.example.gui.mgstest.transport.cmd.AbstractCommand;
 import org.example.services.comPort.StringEndianList;
 
+import static org.example.gui.mgstest.util.CrcValidator.bytesToHexNoSpace;
+
 public abstract class AbstractSendCommand extends AbstractCommand implements DeviceCommand {
     protected byte commandNumber;
     private byte[] commandBytes;
@@ -32,8 +34,14 @@ public abstract class AbstractSendCommand extends AbstractCommand implements Dev
     @Override
     public void execute(HidSupportedDevice device, CommandParameters parameters, MgsExecutionListener progress) throws Exception {
         this.addArgument(parameters.getStringArgument(), parameters.getEndian());
+        System.out.println("В абстрактном классе принято на отправку в юарт [" + parameters.getStringArgument() +
+                "] и окончанием строки [" + parameters.getEndian() + "]");
+
         PayLoadSender sender  = new PayLoadSender();
-        byte[] answer = sender.writeDataHid(device, PayloadBuilder.buildMgs(this), progress, getDescription(), this);
+        byte[] payload = PayloadBuilder.buildMgs(this);
+        System.out.println("Рассчитанная полезная нагрузка [" + bytesToHexNoSpace( payload ) + "]");
+
+        byte[] answer = sender.writeDataHid(device,payload , progress, getDescription(), this);
 
         progress.onExecutionFinished(device, 100, answer, this.getName());
     }

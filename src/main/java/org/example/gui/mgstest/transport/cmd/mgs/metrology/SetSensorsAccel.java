@@ -37,4 +37,9 @@ public class SetSensorsAccel extends AbstractCommand implements DeviceCommand{
     public HidCommandName getName() {
         return HidCommandName.SET_SENS_ACCEL;
     }
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.SET_SENS_ACCEL.getName();
+    }
 }

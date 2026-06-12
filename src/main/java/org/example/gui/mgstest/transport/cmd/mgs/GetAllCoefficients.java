@@ -34,4 +34,9 @@ public class GetAllCoefficients extends AbstractCommand implements DeviceCommand
     public HidCommandName getName() {
         return HidCommandName.GET_COEFF;
     }
+
+    @Override
+    public String getCommandName() {
+        return HidCommandName.GET_COEFF.getName();
+    }
 }

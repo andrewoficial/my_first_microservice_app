@@ -17,6 +17,7 @@ import org.example.gui.utilites.GuiUtilities;
 import org.example.utilites.Constants;
 
 import javax.swing.*;
+import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -30,7 +31,7 @@ public class TabInfo extends DeviceTab {
 
     private final DeviceAsyncExecutor asyncExecutor;
 
-    // Компоненты для разделов
+    // Компоненты (остались те же)
     private JTextField cpuIdField = new JTextField();
     private JTextField serialNumberField = new JTextField();
     private JTextField swVersionField = new JTextField();
@@ -42,7 +43,6 @@ public class TabInfo extends DeviceTab {
     private JCheckBox skipAlarmTestCheckBox = new JCheckBox();
     private JComboBox<String> modeComboBox = new JComboBox<>(new String[]{"stop mode", "transport mode"});
 
-    // Компоненты для выбора даты и времени
     private JSpinner dateSpinner;
     private JSpinner timeSpinner;
 
@@ -53,46 +53,177 @@ public class TabInfo extends DeviceTab {
         initComponents();
     }
 
+    // ===================== НОВАЯ КОМПОНОВКА (ДИЗАЙН ИЗ InfoTab) =====================
+
     private void initComponents() {
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        panel.removeAll();
+        panel.setLayout(new BorderLayout());
 
-        // Раздел: Информация о приборе
-        panel.add(createDeviceInfoPanel());
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        JPanel content = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(6, 10, 6, 10);
+        gbc.weightx = 1.0;
+        gbc.anchor = GridBagConstraints.NORTH;
 
-        // Раздел: Дата/время
-        panel.add(createDateTimePanel());
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        // Верхняя строка: три колонки
+        gbc.gridy = 0;
+        gbc.gridx = 0;
+        gbc.gridwidth = 1;
+        content.add(createDeviceInfoPanel(), gbc);
 
-        // Раздел: Сигнализация
-        panel.add(createAlarmPanel());
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        gbc.gridx = 1;
+        content.add(createActionButtonsPanel(), gbc);
 
-        // Раздел: Проверка индикации
-        panel.add(createTestPanel());
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        gbc.gridx = 2;
+        content.add(createAlarmAndModePanel(), gbc);
 
-        // Раздел: Состояние прибора
-        panel.add(createStatusPanel());
+        // Строка с датой/временем (занимает 2/3 ширины)
+        gbc.gridy = 1;
+        gbc.gridx = 0;
+        gbc.gridwidth = 2;
+        content.add(createDateTimePanel(), gbc);
 
-        clearFields();
+        // Нижние две колонки
+        gbc.gridy = 2;
+        gbc.gridwidth = 3;
+        JPanel bottomPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbcBottom = new GridBagConstraints();
+        gbcBottom.fill = GridBagConstraints.BOTH;
+        gbcBottom.weightx = 0.5;
+        gbcBottom.weighty = 1.0;
+        gbcBottom.insets = new Insets(0, 5, 0, 5);
+
+        JPanel leftColumn = createLeftColumnPanel();
+        JPanel rightColumn = createRightColumnPanel();
+
+        gbcBottom.gridx = 0;
+        gbcBottom.gridy = 0;
+        bottomPanel.add(leftColumn, gbcBottom);
+        gbcBottom.gridx = 1;
+        bottomPanel.add(rightColumn, gbcBottom);
+
+        content.add(bottomPanel, gbc);
+
+        // Распорка внизу, чтобы прижать содержимое к верху
+        gbc.gridy = 3;
+        gbc.weighty = 1.0;
+        gbc.fill = GridBagConstraints.VERTICAL;
+        content.add(new JPanel(), gbc);
+
+        panel.add(new JScrollPane(content), BorderLayout.CENTER);
     }
 
     private JPanel createDeviceInfoPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBorder(BorderFactory.createTitledBorder("Информация о приборе"));
-
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(5, 10, 5, 10);
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.weightx = 0.3;
 
-        int row = 0;
-        addLabelAndField(panel, gbc, "CPU ID:", cpuIdField, row++, false);
-        addLabelAndField(panel, gbc, "Серийный номер:", serialNumberField, row++, false);
-        addLabelAndField(panel, gbc, "SW Version:", swVersionField, row++, false);
-        addLabelAndField(panel, gbc, "HW Version:", hwVersionField, row++, false);
-        addLabelAndField(panel, gbc, "Время устройства:", timeField, row++, false);
+        // CPU ID
+        gbc.gridx = 0; gbc.gridy = 0;
+        panel.add(new JLabel("CPU ID:"), gbc);
+        gbc.gridx = 1; gbc.weightx = 0.7;
+        cpuIdField.setEditable(false);
+        panel.add(cpuIdField, gbc);
+
+        // SW Version
+        gbc.gridx = 0; gbc.gridy = 1;
+        panel.add(new JLabel("SW Version:"), gbc);
+        gbc.gridx = 1;
+        swVersionField.setEditable(false);
+        panel.add(swVersionField, gbc);
+
+        // HW Version
+        gbc.gridx = 0; gbc.gridy = 2;
+        panel.add(new JLabel("HW Version:"), gbc);
+        gbc.gridx = 1;
+        hwVersionField.setEditable(false);
+        panel.add(hwVersionField, gbc);
+
+        // Время устройства
+        gbc.gridx = 0; gbc.gridy = 3;
+        panel.add(new JLabel("Время устройства:"), gbc);
+        gbc.gridx = 1;
+        timeField.setEditable(false);
+        panel.add(timeField, gbc);
+
+        return panel;
+    }
+
+    private JPanel createActionButtonsPanel() {
+        JPanel panel = new JPanel(new GridLayout(0, 1, 0, 6));
+        panel.setBorder(BorderFactory.createTitledBorder("Действия"));
+
+        JButton refreshButton = new JButton("Обновить информацию");
+        JButton blinkTestButton = new JButton("Blink Test");
+        JButton beepTestButton = new JButton("Beep Test");
+        JButton rebootButton = new JButton("Перезагрузить прибор");
+        JButton resetBatteryButton = new JButton("Сбросить состояние батареи");
+
+        panel.add(refreshButton);
+        panel.add(blinkTestButton);
+        panel.add(beepTestButton);
+        panel.add(rebootButton);
+        panel.add(resetBatteryButton);
+
+        // Обработчики (логика из старого кода)
+        refreshButton.addActionListener(e -> refreshInfo());
+        blinkTestButton.addActionListener(e -> performBlinkTest());
+        beepTestButton.addActionListener(e -> performBeepTest());
+        rebootButton.addActionListener(e -> rebootDevice());
+        resetBatteryButton.addActionListener(e -> resetBattery());
+
+        return panel;
+    }
+
+    private JPanel createAlarmAndModePanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+
+        // Блок сигнализации
+        JPanel alarmPanel = new JPanel(new GridLayout(4, 1, 5, 5));
+        alarmPanel.setBorder(BorderFactory.createTitledBorder("Сигнализация"));
+
+        JPanel vibroPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        vibroPanel.add(vibroCheckBox);
+        vibroPanel.add(new JLabel("Вибрация"));
+        alarmPanel.add(vibroPanel);
+
+        JPanel beepPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        beepPanel.add(beepCheckBox);
+        beepPanel.add(new JLabel("Звук"));
+        alarmPanel.add(beepPanel);
+
+        JPanel alarmCheckPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        alarmCheckPanel.add(alarmCheckBox);
+        alarmCheckPanel.add(new JLabel("Сигнализация"));
+        alarmPanel.add(alarmCheckPanel);
+
+        JPanel skipTestPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        skipTestPanel.add(skipAlarmTestCheckBox);
+        skipTestPanel.add(new JLabel("Пропускать тест сигнализации при включении"));
+        alarmPanel.add(skipTestPanel);
+
+        // Блок режима
+        JPanel modePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        modePanel.setBorder(BorderFactory.createTitledBorder("Режим"));
+        modePanel.add(new JLabel("Режим:"));
+        modePanel.add(modeComboBox);
+        JButton setModeButton = new JButton("Задать");
+        setModeButton.addActionListener(e -> setDeviceMode());
+        modePanel.add(setModeButton);
+
+        panel.add(alarmPanel);
+        panel.add(Box.createVerticalStrut(8));
+        panel.add(modePanel);
+
+        // Обработчики чекбоксов
+        alarmCheckBox.addActionListener(e -> switchAlarmState());
+        beepCheckBox.addActionListener(e -> switchSoundState());
+        vibroCheckBox.addActionListener(e -> switchVibrationState());
 
         return panel;
     }
@@ -101,37 +232,28 @@ public class TabInfo extends DeviceTab {
         JPanel panel = new JPanel(new BorderLayout(10, 5));
         panel.setBorder(BorderFactory.createTitledBorder("Установка даты/времени"));
 
-        // Панель для выбора даты и времени
         JPanel datetimePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
-
-        // Выбор даты
         datetimePanel.add(new JLabel("Дата:"));
         dateSpinner = new JSpinner(new SpinnerDateModel());
         JSpinner.DateEditor dateEditor = new JSpinner.DateEditor(dateSpinner, "dd.MM.yyyy");
         GuiUtilities.changeFont(dateEditor.getTextField());
         dateSpinner.setEditor(dateEditor);
-        dateSpinner.setValue(new Date()); // текущая дата по умолчанию
+        dateSpinner.setValue(new Date());
         datetimePanel.add(dateSpinner);
 
-        // Выбор времени
         datetimePanel.add(new JLabel("Время:"));
         timeSpinner = new JSpinner(new SpinnerDateModel());
         JSpinner.DateEditor timeEditor = new JSpinner.DateEditor(timeSpinner, "HH:mm:ss");
         GuiUtilities.changeFont(timeEditor.getTextField());
-
         timeSpinner.setEditor(timeEditor);
-
-        timeSpinner.setValue(new Date()); // текущее время по умолчанию
+        timeSpinner.setValue(new Date());
         datetimePanel.add(timeSpinner);
 
-        // Панель кнопок
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         JButton setSelectedTimeButton = new JButton("Установить выбранное время");
         JButton setPcTimeButton = new JButton("Установить время компьютера");
-
         setSelectedTimeButton.addActionListener(e -> performSetSelectedTime());
         setPcTimeButton.addActionListener(e -> performSetPcTime());
-
         buttonPanel.add(setSelectedTimeButton);
         buttonPanel.add(setPcTimeButton);
 
@@ -141,112 +263,25 @@ public class TabInfo extends DeviceTab {
         return panel;
     }
 
-    private JPanel createAlarmPanel() {
-        JPanel panel = new JPanel(new GridLayout(4, 1, 5, 5));
-        panel.setBorder(BorderFactory.createTitledBorder("Сигнализация"));
-
-        JPanel vibroPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        vibroPanel.add(vibroCheckBox);
-        vibroPanel.add(new JLabel("Вибрация"));
-        panel.add(vibroPanel);
-
-        JPanel beepPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        beepPanel.add(beepCheckBox);
-        beepPanel.add(new JLabel("Звук"));
-        panel.add(beepPanel);
-
-        JPanel alarmPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        alarmPanel.add(alarmCheckBox);
-        alarmPanel.add(new JLabel("Сигнализация"));
-        panel.add(alarmPanel);
-
-        JPanel skipTestPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        skipTestPanel.add(skipAlarmTestCheckBox);
-        skipTestPanel.add(new JLabel("Пропускать тест сигнализации при включении"));
-        panel.add(skipTestPanel);
-
-        return panel;
-    }
-
-    private JPanel createTestPanel() {
+    private JPanel createLeftColumnPanel() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        panel.setBorder(BorderFactory.createTitledBorder("Проверка индикации"));
-
-        JButton blinkTestButton = new JButton("Blink Test");
-        JButton beepTestButton = new JButton("Beep Test");
-
-        blinkTestButton.addActionListener(e -> performBlinkTest());
-        beepTestButton.addActionListener(e -> performBeepTest());
-
-        panel.add(blinkTestButton);
-        panel.add(beepTestButton);
-
-        return panel;
-    }
-
-    private JPanel createStatusPanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createTitledBorder("Состояние прибора"));
-
-        // Первая строка кнопок
-        JPanel buttonRow1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
-        JButton refreshButton = new JButton("Обновить информацию");
-        JButton rebootButton = new JButton("Перезагрузить прибор");
-        buttonRow1.add(refreshButton);
-        buttonRow1.add(rebootButton);
-
-        // Вторая строка - режим
-        JPanel modePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
-        modePanel.add(new JLabel("Режим:"));
-        modePanel.add(modeComboBox);
-        JButton setModeButton = new JButton("Задать");
-        modePanel.add(setModeButton);
-
-        // Третья строка - сброс батареи
-        JPanel batteryPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
-        JButton resetBatteryButton = new JButton("Сбросить состояние батареи");
-        batteryPanel.add(resetBatteryButton);
-
-        JPanel setSerialPane = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
-        JButton setSerialNumberButton = new JButton("Задать серийный номер");
-        batteryPanel.add(setSerialNumberButton);
-
-        // Добавляем обработчики
-        refreshButton.addActionListener(e -> refreshInfo());
-        rebootButton.addActionListener(e -> rebootDevice());
-        setModeButton.addActionListener(e -> setDeviceMode());
-        resetBatteryButton.addActionListener(e -> resetBattery());
-        alarmCheckBox.addActionListener(e -> switchAlarmState());
-        beepCheckBox.addActionListener(e -> switchSoundState());
-        vibroCheckBox.addActionListener(e -> switchVibrationState());
+        panel.setBorder(BorderFactory.createTitledBorder("Серийный номер"));
+        serialNumberField.setColumns(12);
+        panel.add(serialNumberField);
+        JButton setSerialNumberButton = new JButton("Задать");
         setSerialNumberButton.addActionListener(e -> onSetSerialNumber());
-
-        // Компоновка
-        panel.add(buttonRow1);
-        panel.add(modePanel);
-        panel.add(batteryPanel);
-
+        panel.add(setSerialNumberButton);
         return panel;
     }
 
-    private void addLabelAndField(JPanel panel, GridBagConstraints gbc,
-                                  String labelText, JTextField field,
-                                  int row, boolean editable) {
-        field.setEditable(editable);
-        field.setBackground(editable ? Color.LIGHT_GRAY : Color.GRAY);
-
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        gbc.weightx = 0.3;
-        gbc.anchor = GridBagConstraints.WEST;
-        panel.add(new JLabel(labelText), gbc);
-
-        gbc.gridx = 1;
-        gbc.weightx = 0.7;
-        gbc.anchor = GridBagConstraints.CENTER;
-        panel.add(field, gbc);
+    private JPanel createRightColumnPanel() {
+        JPanel panel = new JPanel();
+        panel.setBorder(BorderFactory.createTitledBorder("Дополнительные настройки"));
+        panel.add(new JLabel("(нет доступных настроек)"));
+        return panel;
     }
+
+    // ===================== ВСЕ СТАРЫЕ МЕТОДЫ (ЛОГИКА) ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ =====================
 
     private void onSetSerialNumber() {
         checkDeviceState(selectedDevice);
@@ -264,18 +299,12 @@ public class TabInfo extends DeviceTab {
 
     private void performSetSelectedTime() {
         checkDeviceState(selectedDevice);
-
-        // Получаем выбранные дату и время
         Date selectedDate = (Date) dateSpinner.getValue();
         Date selectedTime = (Date) timeSpinner.getValue();
-
-        // Объединяем дату и время
         Calendar dateCal = Calendar.getInstance();
         dateCal.setTime(selectedDate);
-
         Calendar timeCal = Calendar.getInstance();
         timeCal.setTime(selectedTime);
-
         Calendar combinedCal = Calendar.getInstance();
         combinedCal.set(dateCal.get(Calendar.YEAR),
                 dateCal.get(Calendar.MONTH),
@@ -283,16 +312,11 @@ public class TabInfo extends DeviceTab {
                 timeCal.get(Calendar.HOUR_OF_DAY),
                 timeCal.get(Calendar.MINUTE),
                 timeCal.get(Calendar.SECOND));
-
         long unixTime = combinedCal.getTimeInMillis() / 1000L;
-
         CommandParameters timeParams = new CommandParameters();
         timeParams.setLongArgument(unixTime);
-
         SetDeviceTime timeCommand = new SetDeviceTime();
         asyncExecutor.executeCommand(timeCommand, timeParams, selectedDevice);
-
-        // Показываем информацию о устанавливаемом времени
         SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
         JOptionPane.showMessageDialog(this.getPanel(),
                 "Устанавливается время: " + sdf.format(combinedCal.getTime()),
@@ -302,22 +326,14 @@ public class TabInfo extends DeviceTab {
 
     private void performSetPcTime() {
         checkDeviceState(selectedDevice);
-
-        // Получаем текущее время в Unix timestamp (секунды)
         long currentUnixTime = System.currentTimeMillis() / 1000L;
-
         CommandParameters timeParams = new CommandParameters();
         timeParams.setLongArgument(currentUnixTime);
-
         SetDeviceTime timeCommand = new SetDeviceTime();
         asyncExecutor.executeCommand(timeCommand, timeParams, selectedDevice);
-
-        // Обновляем спиннеры текущим временем
         Date now = new Date();
         dateSpinner.setValue(now);
         timeSpinner.setValue(now);
-
-        // Показываем информацию об устанавливаемом времени
         SimpleDateFormat sdf = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
         JOptionPane.showMessageDialog(this.getPanel(),
                 "Устанавливается текущее время компьютера: " + sdf.format(now),
@@ -342,13 +358,11 @@ public class TabInfo extends DeviceTab {
         CommandParameters parameters = new CommandParameters();
         if (alarmCheckBox.isSelected()) {
             parameters.setIntArgument(0);
-            SetAlarmState setAlarmState = new SetAlarmState();
-            asyncExecutor.executeCommand(setAlarmState, parameters, selectedDevice);
         } else {
             parameters.setIntArgument(1);
-            SetAlarmState setAlarmState = new SetAlarmState();
-            asyncExecutor.executeCommand(setAlarmState, parameters, selectedDevice);
         }
+        SetAlarmState setAlarmState = new SetAlarmState();
+        asyncExecutor.executeCommand(setAlarmState, parameters, selectedDevice);
     }
 
     private void switchSoundState() {
@@ -356,13 +370,11 @@ public class TabInfo extends DeviceTab {
         CommandParameters parameters = new CommandParameters();
         if (beepCheckBox.isSelected()) {
             parameters.setIntArgument(0);
-            SetSoundState setAlarmState = new SetSoundState();
-            asyncExecutor.executeCommand(setAlarmState, parameters, selectedDevice);
         } else {
             parameters.setIntArgument(1);
-            SetSoundState setAlarmState = new SetSoundState();
-            asyncExecutor.executeCommand(setAlarmState, parameters, selectedDevice);
         }
+        SetSoundState setSoundState = new SetSoundState();
+        asyncExecutor.executeCommand(setSoundState, parameters, selectedDevice);
     }
 
     private void switchVibrationState() {
@@ -370,27 +382,24 @@ public class TabInfo extends DeviceTab {
         CommandParameters parameters = new CommandParameters();
         if (vibroCheckBox.isSelected()) {
             parameters.setIntArgument(0);
-            SetVibrationState setAlarmState = new SetVibrationState();
-            asyncExecutor.executeCommand(setAlarmState, parameters, selectedDevice);
         } else {
             parameters.setIntArgument(1);
-            SetVibrationState setAlarmState = new SetVibrationState();
-            asyncExecutor.executeCommand(setAlarmState, parameters, selectedDevice);
         }
+        SetVibrationState setVibrationState = new SetVibrationState();
+        asyncExecutor.executeCommand(setVibrationState, parameters, selectedDevice);
     }
 
     private void refreshInfo() {
         checkDeviceState(selectedDevice);
-        if(selectedDevice.getDeviceType() == Constants.SupportedHidDeviceType.MIKROSENSE) {
+        if (selectedDevice.getDeviceType() == Constants.SupportedHidDeviceType.MIKROSENSE) {
             DeviceCommand command = new GetInfo();
             asyncExecutor.executeCommand(command, null, selectedDevice);
-        }else if(selectedDevice.getDeviceType() == Constants.SupportedHidDeviceType.MULTIGASSENSE) {
+        } else if (selectedDevice.getDeviceType() == Constants.SupportedHidDeviceType.MULTIGASSENSE) {
             DeviceCommand command = new GetDeviceInformation();
             asyncExecutor.executeCommand(command, null, selectedDevice);
-        }else{
+        } else {
             throw new IllegalStateException("Unknown device type");
         }
-
     }
 
     private void rebootDevice() {
@@ -403,17 +412,15 @@ public class TabInfo extends DeviceTab {
         String selectedMode = (String) modeComboBox.getSelectedItem();
         checkDeviceState(selectedDevice);
         CommandParameters parameters = new CommandParameters();
-        if(selectedMode != null && selectedMode.equals("stop mode")) {
+        if (selectedMode != null && selectedMode.equals("stop mode")) {
             parameters.setIntArgument(1);
-            SetDevMode setDevMode = new SetDevMode();
-            asyncExecutor.executeCommand(setDevMode, parameters, selectedDevice);
         } else if (selectedMode != null && selectedMode.equals("transport mode")) {
             parameters.setIntArgument(2);
-            SetDevMode setDevMode = new SetDevMode();
-            asyncExecutor.executeCommand(setDevMode, parameters, selectedDevice);
-        }else{
+        } else {
             throw new IllegalStateException("Unknown mode");
         }
+        SetDevMode setDevMode = new SetDevMode();
+        asyncExecutor.executeCommand(setDevMode, parameters, selectedDevice);
     }
 
     private void resetBattery() {
@@ -445,8 +452,6 @@ public class TabInfo extends DeviceTab {
             if (info.getTime() > 0) {
                 Date date = new Date(info.getTime() * 1000L);
                 timeField.setText(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date));
-
-                // Также обновляем спиннеры временем устройства
                 dateSpinner.setValue(date);
                 timeSpinner.setValue(date);
             } else {
@@ -472,8 +477,6 @@ public class TabInfo extends DeviceTab {
         vibroCheckBox.setSelected(false);
         alarmCheckBox.setSelected(false);
         skipAlarmTestCheckBox.setSelected(false);
-
-        // Устанавливаем спиннеры на текущее время
         Date now = new Date();
         dateSpinner.setValue(now);
         timeSpinner.setValue(now);
