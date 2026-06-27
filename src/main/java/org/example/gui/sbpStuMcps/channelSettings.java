@@ -186,9 +186,8 @@ public class channelSettings {
         updateUiState();
 
         pulseTimer = new Timer(period, e -> {
-            if (isPulsing && service.isConnected()) {
-                firePulseOn(pulseDuration);
-            }
+            if (!isPulsing) return;
+            firePulseOn(pulseDuration);
         });
         pulseTimer.setInitialDelay(period);
         pulseTimer.start();
