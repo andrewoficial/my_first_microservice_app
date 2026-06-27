@@ -17,7 +17,6 @@ import org.example.device.ProtocolsList;
 import org.example.device.*;
 import org.example.services.rule.RuleStorage;
 import org.example.services.rule.com.ComRule;
-import org.example.utilites.MyUtilities;
 import org.example.utilites.properties.MyProperties;
 
 import java.time.Instant;
