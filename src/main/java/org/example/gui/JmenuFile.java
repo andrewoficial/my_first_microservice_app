@@ -14,6 +14,7 @@ import java.util.concurrent.ExecutorService;
 
 import org.example.gui.accu10fd.Acu10fdWindow;
 import org.example.gui.curve.CurveHandlerWindow;
+import org.example.gui.sbpStuMcps.spbStuMcpsMain;
 import org.example.gui.graph.ChartWindow;
 import org.example.gui.graph.data.AnswerLoader;
 import org.example.gui.mgstest.MultigassensWindow;
@@ -336,7 +337,7 @@ public class JmenuFile {
         JMenuItem curveWindow = new JMenuItem("Полиномы TC290");
         JMenuItem acuTenFd = new JMenuItem("Расходомер ACU10FD-MM");
         JMenuItem mgsTest = new JMenuItem("MGSTest");
-
+        JMenuItem spbStuMcps = new JMenuItem("SPB_STU_MCPS");
 
 
         // добавим все в меню
@@ -350,6 +351,7 @@ public class JmenuFile {
         utilitiesMenu.add(curveWindow);
         utilitiesMenu.add(acuTenFd);
         utilitiesMenu.add(mgsTest);
+        utilitiesMenu.add(spbStuMcps);
 
 
         grabber.addActionListener(new ActionListener()
@@ -513,6 +515,23 @@ public class JmenuFile {
                 System.out.println(mgsSimpleTest.isShowing());
                 //chartWindow.isEnabled();
                 //thPool.submit(new RenderThread(commandsWindow));
+            }
+        });
+        spbStuMcps.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                System.out.println("arguments [" + arg0.toString() + "] ");
+                System.out.println("SPB_STU_MCPS Control Window");
+                spbStuMcpsMain mcpsPanel = new spbStuMcpsMain();
+                JFrame frame = new JFrame("SPB_STU_MCPS — Управление каналами");
+                frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+                frame.setContentPane(mcpsPanel.getMainPanel());
+                frame.pack();
+                frame.setSize(980, 520);
+                frame.setLocationRelativeTo(null);
+                frame.setVisible(true);
+                System.out.println(frame.isShowing());
             }
         });
 
