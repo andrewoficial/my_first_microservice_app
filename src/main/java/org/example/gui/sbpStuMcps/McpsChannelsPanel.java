@@ -62,6 +62,13 @@ public class McpsChannelsPanel extends JPanel implements ChannelPulseCoordinator
                         blocks.get(ch - 1).updateActualState(on);
                     }
                 } catch (Exception ignored) {}
+            } else if (response.startsWith("@WR") && response.contains("OK")) {
+                try {
+                    int ch = Integer.parseInt(response.substring(3, 5));
+                    if (ch >= 1 && ch <= CHANNEL_COUNT) {
+                        service.readOutput(ch);
+                    }
+                } catch (Exception ignored) {}
             } else if (response.contains("OK")) {
                 logger.debug("Команда подтверждена: " + response);
             }

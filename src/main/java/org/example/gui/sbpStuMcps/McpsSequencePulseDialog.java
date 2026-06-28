@@ -24,7 +24,7 @@ public class McpsSequencePulseDialog extends JDialog {
     private final McpsCommunicationService service;
     private final AsyncLogger logger;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-    private ScheduledFuture<?> sequenceFuture;
+    private ScheduledFuture<?> cycleFuture;
 
     private final JTextField sequenceField = new JTextField("1,2,3,2,1,2,3", 20);
     private final JTextField durationField = new JTextField("100", 6);
@@ -34,9 +34,9 @@ public class McpsSequencePulseDialog extends JDialog {
     private final JButton closeBtn = new JButton("Закрыть");
 
     private volatile boolean running = false;
+    private int sequenceGen = 0;
     private List<Integer> channelSequence = new ArrayList<>();
-    private int currentIndex = 0;
-    private Consumer<Boolean> onSequenceStateChange; // колбэк для блокировки главной панели
+    private Consumer<Boolean> onSequenceStateChange;
 
     public McpsSequencePulseDialog(Frame owner, McpsCommunicationService service, AsyncLogger logger) {
         super(owner, "Последовательная подача импульсов", true);
@@ -44,35 +44,51 @@ public class McpsSequencePulseDialog extends JDialog {
         this.logger = logger;
 
         setLayout(new BorderLayout(10, 10));
-        setSize(420, 220);
+        setSize(520, 240);
+        setResizable(true);
         setLocationRelativeTo(owner);
 
         JPanel main = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(6, 8, 6, 8);
+        gbc.insets = new Insets(8, 10, 8, 10);
         gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        gbc.gridx = 0; gbc.gridy = 0;
+        // Строка 0: метка последовательности
+        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 3; gbc.weightx = 1;
         main.add(new JLabel("Последовательность каналов (через запятую):"), gbc);
-        gbc.gridx = 0; gbc.gridy = 1; gbc.gridwidth = 3;
+
+        // Строка 1: поле последовательности
+        gbc.gridx = 0; gbc.gridy = 1; gbc.gridwidth = 3; gbc.weightx = 1;
         main.add(sequenceField, gbc);
 
-        gbc.gridwidth = 1;
+        // Строка 2: длительность + поле
+        gbc.gridwidth = 1; gbc.weightx = 0;
         gbc.gridx = 0; gbc.gridy = 2;
         main.add(new JLabel("Длительность импульса (мс):"), gbc);
-        gbc.gridx = 1; main.add(durationField, gbc);
+        gbc.gridx = 1; gbc.weightx = 0.3;
+        durationField.setPreferredSize(new Dimension(80, 26));
+        main.add(durationField, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 3;
+        // Строка 3: период + поле
+        gbc.gridx = 0; gbc.gridy = 3; gbc.weightx = 0;
         main.add(new JLabel("Период следования (мс):"), gbc);
-        gbc.gridx = 1; main.add(periodField, gbc);
+        gbc.gridx = 1; gbc.weightx = 0.3;
+        periodField.setPreferredSize(new Dimension(80, 26));
+        main.add(periodField, gbc);
+
+        // Растяжимый заполнитель в конце
+        gbc.gridx = 2; gbc.gridy = 2; gbc.gridheight = 2; gbc.weightx = 1;
+        main.add(new JPanel(), gbc);
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 5));
-        startBtn.setPreferredSize(new Dimension(90, 32));
+        startBtn.setPreferredSize(new Dimension(100, 34));
         statusLabel.setOpaque(true);
         statusLabel.setBackground(Color.RED);
         statusLabel.setForeground(Color.WHITE);
-        statusLabel.setFont(statusLabel.getFont().deriveFont(Font.BOLD, 13f));
-        statusLabel.setPreferredSize(new Dimension(120, 28));
+        statusLabel.setFont(statusLabel.getFont().deriveFont(Font.BOLD, 14f));
+        statusLabel.setPreferredSize(new Dimension(130, 30));
+        statusLabel.setHorizontalAlignment(SwingConstants.CENTER);
         btnPanel.add(startBtn);
         btnPanel.add(statusLabel);
         btnPanel.add(closeBtn);
@@ -150,49 +166,71 @@ public class McpsSequencePulseDialog extends JDialog {
             return;
         }
 
+        // Отменяем предыдущий цикл (если был перезапуск)
+        if (cycleFuture != null) {
+            cycleFuture.cancel(false);
+            cycleFuture = null;
+        }
+
+        sequenceGen++;
+        int gen = sequenceGen;
         running = true;
-        currentIndex = 0;
         startBtn.setText("Стоп");
         statusLabel.setText("РАБОТАЕТ");
         statusLabel.setBackground(Color.GREEN.darker());
 
         if (onSequenceStateChange != null) onSequenceStateChange.accept(true);
 
-        // Первая отправка сразу
-        sendNextPulse(duration);
-
-        // Периодическая отправка следующего в последовательности
-        sequenceFuture = scheduler.scheduleAtFixedRate(() -> {
-            if (!running) return;
-            currentIndex = (currentIndex + 1) % channelSequence.size();
-            sendNextPulse(duration);
-        }, period, period, TimeUnit.MILLISECONDS);
+        scheduleCycle(gen, duration, period, System.currentTimeMillis());
 
         logger.info("Запущена последовательность: " + channelSequence + " | " + duration + "мс / " + period + "мс");
     }
 
-    private void sendNextPulse(int duration) {
-        if (!running || channelSequence.isEmpty()) return;
-        int ch = channelSequence.get(currentIndex);
-        service.writeOutput(ch, true, duration);
-        logger.debug("Seq pulse -> канал " + ch);
+    /**
+     * Планирует один полный цикл последовательности.
+     * Каждый импульс имеет своё смещение от начала цикла: ch@0, ch@period, ch@2*period, ...
+     * После завершения цикла планируется следующий рекурсивно.
+     */
+    private void scheduleCycle(int gen, int duration, int period, long cycleStart) {
+        if (!running || gen != sequenceGen) return;
+
+        long now = System.currentTimeMillis();
+        long base = Math.max(now, cycleStart);
+        int cycleCount = channelSequence.size();
+        int cycleDuration = cycleCount * period;
+
+        for (int i = 0; i < cycleCount; i++) {
+            int ch = channelSequence.get(i);
+            long fireAt = base + (long) i * period;
+            long delay = fireAt - System.currentTimeMillis();
+            if (delay < 0) delay = 0;
+
+            final int channel = ch;
+            scheduler.schedule(() -> {
+                if (running && gen == sequenceGen) {
+                    service.writeOutput(channel, true, duration);
+                }
+            }, delay, TimeUnit.MILLISECONDS);
+        }
+
+        long nextCycleStart = base + cycleDuration;
+        long nextDelay = nextCycleStart - System.currentTimeMillis();
+        if (nextDelay < 0) nextDelay = 0;
+
+        cycleFuture = scheduler.schedule(() -> {
+            scheduleCycle(gen, duration, period, nextCycleStart);
+        }, nextDelay, TimeUnit.MILLISECONDS);
     }
 
     private void stopSequence() {
         running = false;
-        if (sequenceFuture != null) {
-            sequenceFuture.cancel(true);
-            sequenceFuture = null;
+        if (cycleFuture != null) {
+            cycleFuture.cancel(false);
+            cycleFuture = null;
         }
         startBtn.setText("Старт");
         statusLabel.setText("ОСТАНОВЛЕНО");
         statusLabel.setBackground(Color.RED);
-
-        // Выключаем последний активный канал
-        if (!channelSequence.isEmpty()) {
-            int lastCh = channelSequence.get(currentIndex);
-            service.writeOutput(lastCh, false, 0);
-        }
 
         if (onSequenceStateChange != null) onSequenceStateChange.accept(false);
         logger.info("Последовательность остановлена");

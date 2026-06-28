@@ -174,11 +174,15 @@ public final class McpsCommunicationService {
      * Удобные методы формирования команд по протоколу
      */
     public void writeOutput(int channel, boolean on, int durationMs) {
-        // @WR<CH> <b>,<time>   CH = 01..15 , time=0 для постоянного уровня
+        // @WR<CH> <state>[,<duration>]
+        // duration > 0  -> @WR<CH> 1,<duration> (импульс на duration мс)
+        // duration == 0 -> @WR<CH> 1            (постоянное включение)
         String ch = String.format("%02d", channel);
         String cmd;
         if (on) {
-            cmd = String.format("@WR%s 1,%d", ch, durationMs);
+            cmd = durationMs > 0
+                ? String.format("@WR%s 1,%d", ch, durationMs)
+                : String.format("@WR%s 1", ch);
         } else {
             cmd = String.format("@WR%s 0", ch);
         }
