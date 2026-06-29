@@ -33,12 +33,11 @@ public class spbStuMcpsMain {
     private JLabel deviceConnectionLabel;
     private JPanel generationStatusPanel;
     private JPanel generationStatusLamp;
-    private JPanel currentSendingCommandInUartPanel;
-    private JLabel currentSendingCommandInUartLabel;
     private JPanel connectionPanelContainer;
     private JPanel logLableContainer;
     private JPanel channelsPlaceholderContainer;
-    private JTextArea generationStatusArea;
+    private JLabel generationStatusArea;
+    private JButton openLogFileFolder;
 
     private final AsyncLogger logger;
     private final McpsCommunicationService service;
@@ -237,21 +236,19 @@ public class spbStuMcpsMain {
      */
     private void $$$setupUI$$$() {
         mainPanel = new JPanel();
-        mainPanel.setLayout(new GridLayoutManager(3, 3, new Insets(0, 0, 0, 0), -1, -1));
-        channelsPlaceholderContainer = new JPanel();
-        channelsPlaceholderContainer.setLayout(new GridLayoutManager(1, 1, new Insets(5, 5, 5, 5), -1, -1));
-        mainPanel.add(channelsPlaceholderContainer, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        channelsPlaceholder = new JPanel();
-        channelsPlaceholderContainer.add(channelsPlaceholder, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        mainPanel.setLayout(new GridLayoutManager(4, 3, new Insets(0, 0, 0, 0), -1, -1));
         logLableContainer = new JPanel();
-        logLableContainer.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        mainPanel.add(logLableContainer, new GridConstraints(2, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(-1, 35), new Dimension(-1, 35), new Dimension(-1, 35), 2, false));
+        logLableContainer.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
+        mainPanel.add(logLableContainer, new GridConstraints(3, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(-1, 35), new Dimension(-1, 35), new Dimension(-1, 35), 2, false));
         logLabel = new JLabel();
         logLabel.setText("Лог: mcps_communication.log");
         logLableContainer.add(logLabel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        openLogFileFolder = new JButton();
+        openLogFileFolder.setText("Открыть папку с файлом");
+        logLableContainer.add(openLogFileFolder, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         connectionPanelContainer = new JPanel();
         connectionPanelContainer.setLayout(new GridLayoutManager(17, 1, new Insets(0, 0, 0, 0), -1, -1));
-        mainPanel.add(connectionPanelContainer, new GridConstraints(0, 1, 2, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(270, -1), new Dimension(270, -1), new Dimension(270, -1), 0, false));
+        mainPanel.add(connectionPanelContainer, new GridConstraints(0, 1, 3, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(270, -1), new Dimension(270, -1), new Dimension(270, -1), 0, false));
         final JLabel label1 = new JLabel();
         label1.setText("COM порт:");
         connectionPanelContainer.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -302,13 +299,9 @@ public class spbStuMcpsMain {
         generationStatusLamp = new JPanel();
         generationStatusLamp.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
         generationStatusPanel.add(generationStatusLamp, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(10, 10), new Dimension(10, 10), new Dimension(10, 10), 0, false));
-        generationStatusArea = new JTextArea();
-        generationStatusArea.setBackground(new Color(-12763843));
-        generationStatusArea.setEditable(false);
-        generationStatusArea.setEnabled(false);
-        generationStatusArea.setLineWrap(true);
-        generationStatusArea.setWrapStyleWord(true);
-        generationStatusPanel.add(generationStatusArea, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(150, 50), new Dimension(150, 50), new Dimension(150, 50), 0, false));
+        generationStatusArea = new JLabel();
+        generationStatusArea.setText("Label");
+        generationStatusPanel.add(generationStatusArea, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final Spacer spacer3 = new Spacer();
         connectionPanelContainer.add(spacer3, new GridConstraints(14, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         final JLabel label4 = new JLabel();
@@ -326,12 +319,13 @@ public class spbStuMcpsMain {
         refreshBtn = new JButton();
         refreshBtn.setText("↻");
         connectionPanelContainer.add(refreshBtn, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(215, -1), new Dimension(215, -1), new Dimension(215, -1), 0, false));
-        currentSendingCommandInUartPanel = new JPanel();
-        currentSendingCommandInUartPanel.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        mainPanel.add(currentSendingCommandInUartPanel, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(230, 30), new Dimension(230, 30), new Dimension(230, 30), 0, false));
-        currentSendingCommandInUartLabel = new JLabel();
-        currentSendingCommandInUartLabel.setText("Label");
-        currentSendingCommandInUartPanel.add(currentSendingCommandInUartLabel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JScrollPane scrollPane1 = new JScrollPane();
+        mainPanel.add(scrollPane1, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        channelsPlaceholderContainer = new JPanel();
+        channelsPlaceholderContainer.setLayout(new GridLayoutManager(1, 1, new Insets(5, 5, 5, 5), -1, -1));
+        scrollPane1.setViewportView(channelsPlaceholderContainer);
+        channelsPlaceholder = new JPanel();
+        channelsPlaceholderContainer.add(channelsPlaceholder, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
     }
 
     /**
