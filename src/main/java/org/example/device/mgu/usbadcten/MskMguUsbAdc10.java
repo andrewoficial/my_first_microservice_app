@@ -16,8 +16,8 @@ import org.example.utilites.MyUtilities;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
-public class MguUsbAdc10 implements SomeDevice, ProtocolComPort, TemplatedAscii {
-    private static final Logger log = Logger.getLogger(MguUsbAdc10.class);
+public class MskMguUsbAdc10 implements SomeDevice, ProtocolComPort, TemplatedAscii {
+    private static final Logger log = Logger.getLogger(MskMguUsbAdc10.class);
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора
     private final SerialPort comPort;
@@ -41,17 +41,17 @@ public class MguUsbAdc10 implements SomeDevice, ProtocolComPort, TemplatedAscii 
     private String cmdToSend;
     private int expectedBytes = 0;
 
-    private String devIdent = "MguUsbAdc10";
+    private String devIdent = "MskMguUsbAdc10";
 
-    public MguUsbAdc10() {
-        log.info("Создан объект протокола MguUsbAdc10 эмуляция");
+    public MskMguUsbAdc10() {
+        log.info("Создан объект протокола MskMguUsbAdc10 эмуляция");
         this.comPort = null;
         this.commandRegistry = new MguUsbAdc10CommandRegistry();
         this.commands = commandRegistry.getCommandList();
     }
 
-    public MguUsbAdc10(SerialPort port) {
-        log.info("Создан объект протокола MguUsbAdc10");
+    public MskMguUsbAdc10(SerialPort port) {
+        log.info("Создан объект протокола MskMguUsbAdc10");
         this.comPort = port;
         this.commandRegistry = new MguUsbAdc10CommandRegistry();
         this.commands = commandRegistry.getCommandList();

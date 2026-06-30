@@ -15,8 +15,8 @@ import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 import org.example.utilites.MyUtilities;
 
-public class Igm10Mesh implements SomeDevice, ProtocolComPort, Answerable {
-    private static final Logger log = Logger.getLogger(Igm10Mesh.class);
+public class Igm10LoraMesh implements SomeDevice, ProtocolComPort, Answerable {
+    private static final Logger log = Logger.getLogger(Igm10LoraMesh.class);
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора
     private final SerialPort comPort;
@@ -30,7 +30,7 @@ public class Igm10Mesh implements SomeDevice, ProtocolComPort, Answerable {
     private final StopBitsList defaultStopBit = StopBitsList.S1;
 
     private final DeviceCommandListClass commands;
-    private final Igm10MeshCommandRegistry commandRegistry;
+    private final Igm10LoraMeshCommandRegistry commandRegistry;
 
     private volatile byte[] lastAnswerBytes = new byte[1];
     private StringBuilder lastAnswer = new StringBuilder();
@@ -42,17 +42,17 @@ public class Igm10Mesh implements SomeDevice, ProtocolComPort, Answerable {
 
     private String devIdent = "IGM10_MESH";
 
-    public Igm10Mesh() {
-        log.info("Создан объект протокола Igm10Mesh эмуляция");
+    public Igm10LoraMesh() {
+        log.info("Создан объект протокола Igm10LoraMesh эмуляция");
         this.comPort = null;
-        this.commandRegistry = new Igm10MeshCommandRegistry();
+        this.commandRegistry = new Igm10LoraMeshCommandRegistry();
         this.commands = commandRegistry.getCommandList();
     }
 
-    public Igm10Mesh(SerialPort port) {
-        log.info("Создан объект протокола Igm10Mesh");
+    public Igm10LoraMesh(SerialPort port) {
+        log.info("Создан объект протокола Igm10LoraMesh");
         this.comPort = port;
-        this.commandRegistry = new Igm10MeshCommandRegistry();
+        this.commandRegistry = new Igm10LoraMeshCommandRegistry();
         this.commands = commandRegistry.getCommandList();
         comParameters.setDataBits(defaultDataBit);
         comParameters.setParity(defaultParity);

@@ -92,7 +92,7 @@ public class MguUsbAdc10CommandRegistry extends DeviceCommandRegistry {
             ByteBuffer crcBuffer = ByteBuffer.wrap(response, 76, 2).order(ByteOrder.LITTLE_ENDIAN);
             short crcReceived = crcBuffer.getShort();
 
-            MguUsbAdc10 device = new MguUsbAdc10(); // Assuming to access calculateCrc16, or make static
+            MskMguUsbAdc10 device = new MskMguUsbAdc10(); // Assuming to access calculateCrc16, or make static
             short crcCalc = device.calculateCrc16(data);
             if (crcCalc != crcReceived) {
                 log.warn("CRC mismatch in ginf response: calculated " + Integer.toHexString(crcCalc) + ", received " + Integer.toHexString(crcReceived));
@@ -172,7 +172,7 @@ public class MguUsbAdc10CommandRegistry extends DeviceCommandRegistry {
             ByteBuffer crcBuffer = ByteBuffer.wrap(response, 24, 2).order(ByteOrder.LITTLE_ENDIAN);
             short crcReceived = crcBuffer.getShort();
 
-            MguUsbAdc10 device = new MguUsbAdc10(); // Assuming to access, or make static
+            MskMguUsbAdc10 device = new MskMguUsbAdc10(); // Assuming to access, or make static
             short crcCalc = device.calculateCrc16(data);
             if (crcCalc != crcReceived) {
                 log.warn("CRC mismatch in gcon/gdta response: calculated " + Integer.toHexString(crcCalc) + ", received " + Integer.toHexString(crcReceived));

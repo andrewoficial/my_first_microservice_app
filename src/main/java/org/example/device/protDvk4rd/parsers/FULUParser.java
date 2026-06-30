@@ -112,7 +112,7 @@ public class FULUParser {
             return null;
         }
 
-        log.info("FULU parsing: Successfully parsed response: {}", responseString);
+        //log.info("FULU parsing: Successfully parsed response: {}", responseString);
         return answerValues;
     }
 }

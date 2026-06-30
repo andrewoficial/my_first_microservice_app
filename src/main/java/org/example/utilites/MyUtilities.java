@@ -3,8 +3,8 @@ package org.example.utilites;
 import com.fazecast.jSerialComm.SerialPort;
 import org.apache.log4j.Logger;
 import org.example.device.*;
-import org.example.device.lora.rui420.igm.mesh.Igm10Mesh;
-import org.example.device.mgu.usbadcten.MguUsbAdc10;
+import org.example.device.lora.rui420.igm.mesh.Igm10LoraMesh;
+import org.example.device.mgu.usbadcten.MskMguUsbAdc10;
 import org.example.device.protArdBadVlt.ARD_BAD_VOLTMETER;
 import org.example.device.protArdCurrLoopMeter.ARD_CUR_LOOP_METER;
 import org.example.device.protArdFeeBrdMeter.ARD_FEE_BRD_METER;
@@ -79,10 +79,7 @@ public class MyUtilities {
 
     // === VERY SIMILAR: Two createDeviceByProtocol methods ===
     public static SomeDevice createDeviceByProtocol(ProtocolsList protocol, SerialPort comPort){
-        SomeDevice device = null;
-        if(protocol == null || comPort == null){
-            log.warn("Null protocol or port");
-        }
+        SomeDevice device;
 
         switch (protocol) {
             case IGM10ASCII -> device = new Igm10Ascii(comPort);
@@ -94,12 +91,12 @@ public class MyUtilities {
             case ARD_CUR_LOOP_METER -> device = new ARD_CUR_LOOP_METER(comPort);
             case ARD_TERM -> device = new ARD_TERM(comPort);
             case SPB_STU_MCPS -> device = new SPbSTuMcps(comPort);
-            case MSK_MGU_UsbAdc10 -> device = new MguUsbAdc10(comPort);
+            case MSK_MGU_UsbAdc10 -> device = new MskMguUsbAdc10(comPort);
             case ERSTEVAK_MTP4D -> device = new ERSTEVAK_MTP4D(comPort);
             case EDWARDS_D397_00_000 -> device = new EDWARDS_D397_00_000(comPort);
             case ECT_TC290 -> device = new ECT_TC290(comPort);
             case Sens_DVK_4RD -> device = new DVK_4RD(comPort);
-            case IGM10LORA_MESH -> device = new Igm10Mesh(comPort);
+            case IGM10LORA_MESH -> device = new Igm10LoraMesh(comPort);
             case DEMO_PROTOCOL -> device = new DEMO_PROTOCOL(comPort);
             case GPS_Test -> device = new GPS_Test(comPort);
             case OWON_SPE3051 -> device = new OWON_SPE3051(comPort);
@@ -116,6 +113,9 @@ public class MyUtilities {
 
     public static SomeDevice createDeviceByProtocol(ProtocolsList protocol){
         SomeDevice device = null;
+        if(protocol == null)
+            return new DEMO_PROTOCOL();
+
         switch (protocol) {
             case IGM10ASCII -> device = new Igm10Ascii();
             case IGM10MODBUS -> device = new Igm10Modbus();
@@ -126,11 +126,11 @@ public class MyUtilities {
             case ARD_CUR_LOOP_METER -> device = new ARD_CUR_LOOP_METER();
             case ARD_TERM -> device = new ARD_TERM();
             case SPB_STU_MCPS -> device = new SPbSTuMcps();
-            case MSK_MGU_UsbAdc10 -> device = new MguUsbAdc10();
+            case MSK_MGU_UsbAdc10 -> device = new MskMguUsbAdc10();
             case ERSTEVAK_MTP4D -> device = new ERSTEVAK_MTP4D();
             case EDWARDS_D397_00_000 -> device = new EDWARDS_D397_00_000();
             case ECT_TC290 -> device = new ECT_TC290();
-            case IGM10LORA_MESH -> device = new Igm10Mesh();
+            case IGM10LORA_MESH -> device = new Igm10LoraMesh();
             case DEMO_PROTOCOL -> device = new DEMO_PROTOCOL();
             case OWON_SPE3051 -> device = new OWON_SPE3051();
             case GPS_Test -> device = new GPS_Test();
@@ -168,8 +168,8 @@ public class MyUtilities {
             return false;
         }
 
-        for (int i = startPosition; i < reference.length; i++) {
-            if (reference[i] != inCommand[i]) {
+        for (int i = 0; i < reference.length; i++) {
+            if (reference[i] != inCommand[startPosition + i]) {
                 return false;
             }
         }
@@ -331,7 +331,7 @@ public class MyUtilities {
         if(isOk){
             for (byte b : stringArray) {
                 if(b < 47 || b > 57){
-                    log.warn("Error in isCorrectNumberF. b < 47 || b > 57");
+                    //log.warn("Error in isCorrectNumberF. b < 47 || b > 57");
                     isOk = false;
                     break;
                 }
@@ -478,7 +478,11 @@ public class MyUtilities {
             } else if (c == '.' && !pointFound) {
                 pointFound = true;
                 numberBuilder.append(c);
+            } else if (pointFound) {
+                // После первой точки любой нецифровой символ (включая вторую точку) — конец числа
+                break;
             }
+            // нецифровые символы до первой точки просто игнорируются (как и раньше)
         }
 
         if (numberBuilder.length() == 0) {

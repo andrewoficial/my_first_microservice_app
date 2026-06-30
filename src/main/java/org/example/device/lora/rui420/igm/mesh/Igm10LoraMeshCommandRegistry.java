@@ -5,8 +5,8 @@ import org.example.device.DeviceCommandRegistry;
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
 
-public class Igm10MeshCommandRegistry extends DeviceCommandRegistry {
-    private static final Logger log = Logger.getLogger(Igm10MeshCommandRegistry.class);
+public class Igm10LoraMeshCommandRegistry extends DeviceCommandRegistry {
+    private static final Logger log = Logger.getLogger(Igm10LoraMeshCommandRegistry.class);
 
     @Override
     protected void initCommands() {

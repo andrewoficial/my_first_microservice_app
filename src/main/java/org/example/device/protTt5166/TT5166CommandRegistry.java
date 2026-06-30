@@ -343,7 +343,7 @@ public class TT5166CommandRegistry extends DeviceCommandRegistry {
         int crc = calculateModbusCRC(frame, 0, 6);
         frame[6] = (byte) (crc & 0xFF); // low byte
         frame[7] = (byte) (crc >> 8); // high byte
-        log.info("Built read registers command: " + MyUtilities.bytesToHexString(frame));
+        //log.info("Built read registers command: " + MyUtilities.bytesToHexString(frame));
         return frame;
     }
 
@@ -358,7 +358,7 @@ public class TT5166CommandRegistry extends DeviceCommandRegistry {
         int crc = calculateModbusCRC(frame, 0, 6);
         frame[6] = (byte) (crc & 0xFF);
         frame[7] = (byte) (crc >> 8);
-        log.info("Built force coil command: " + MyUtilities.bytesToHexString(frame));
+        //log.info("Built force coil command: " + MyUtilities.bytesToHexString(frame));
         return frame;
     }
 
@@ -373,7 +373,7 @@ public class TT5166CommandRegistry extends DeviceCommandRegistry {
         int crc = calculateModbusCRC(frame, 0, 6);
         frame[6] = (byte) (crc & 0xFF);
         frame[7] = (byte) (crc >> 8);
-        log.info("Built write register command: " + MyUtilities.bytesToHexString(frame));
+        //log.info("Built write register command: " + MyUtilities.bytesToHexString(frame));
         return frame;
     }
 

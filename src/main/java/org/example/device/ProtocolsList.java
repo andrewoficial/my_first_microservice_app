@@ -17,7 +17,6 @@ public enum ProtocolsList {
     ARD_TERM("ARD_TERM"),
     IGM10ASCII("IGM10ASCII"),
     IGM10MODBUS("IGM10MODBUS"),
-    IGM10LORA_P2P("IGM10LORA_P2P"),
     IGM10LORA_MESH("IGM10LORA_MESH"),
     IGM11MODBUS("IGM11MODBUS"),
     IGM12MODBUS("IGM12MODBUS"),
@@ -35,8 +34,7 @@ public enum ProtocolsList {
     Sens_Cubic("Sens_Cubic"),
     TT5166("TT5166"),
     DPS150("DPS150"),
-    EDWARDS_D397_00_000("EDWARDS_D397_00_000"),
-    LORADIF("LORADIF");
+    EDWARDS_D397_00_000("EDWARDS_D397_00_000");
 
 
     private final String value;

@@ -36,7 +36,7 @@ public class FULSParser {
         // Split by tab delimiter
         String[] fields = responseString.split("\t");
         if (fields.length != 19) { // 17 fields + 1 serial number
-            log.warn("FULS parsing: Wrong number of fields, expected 19, got {}: {}", fields.length, responseString);
+            //log.warn("FULS parsing: Wrong number of fields, expected 19, got {}: {}", fields.length, responseString);
             return null;
         }
 
