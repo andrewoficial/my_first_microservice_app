@@ -19,12 +19,14 @@ public final class AsyncLogger {
     private static final int QUEUE_CAPACITY = 2048;
     private static final DateTimeFormatter TS_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
+    private final String logFilePath;
     private final BlockingQueue<String> queue = new LinkedBlockingQueue<>(QUEUE_CAPACITY);
     private final AtomicBoolean running = new AtomicBoolean(true);
     private final Thread writerThread;
     private final BufferedWriter writer;
 
     public AsyncLogger(String logFilePath) {
+        this.logFilePath = logFilePath;
         BufferedWriter tempWriter;
         try {
             tempWriter = new BufferedWriter(new FileWriter(logFilePath, true));
@@ -71,6 +73,10 @@ public final class AsyncLogger {
             }
         }
         try { if (writer != null) writer.close(); } catch (IOException ignored) {}
+    }
+
+    public String getLogFilePath() {
+        return logFilePath;
     }
 
     public void shutdown() {
