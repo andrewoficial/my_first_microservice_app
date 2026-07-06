@@ -5,10 +5,13 @@ import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 public class channelSettings {
     private JPanel rootPanel;
@@ -30,6 +33,7 @@ public class channelSettings {
     private JPanel сhannelSubContainerTwo;
     private JPanel chanControllerContainer;
     private JLabel chanelName;
+    private JLabel sentValueHeader;
 
     private final int channel;
     private final McpsCommunicationService service;
@@ -39,6 +43,12 @@ public class channelSettings {
     private final LampIndicator outputLamp = new LampIndicator();
     private final LampIndicator pulseLamp = new LampIndicator();
     private final LampIndicator chanLamp = new LampIndicator();
+
+    private Border durationFieldDefaultBorder;
+    private Border periodFieldDefaultBorder;
+
+    private int lastDuration;
+    private int lastPeriod;
 
     private volatile boolean isConstantOn = false;
     private volatile boolean actualOn = false;
@@ -59,6 +69,12 @@ public class channelSettings {
         this.coordinator = coordinator;
 
         channelName.setText("Канал " + channel);
+        chanelName.setText("Канал #" + channel);
+        sentValueHeader.setText("Отправленное значение");
+        durationFieldDefaultBorder = durationField.getBorder();
+        periodFieldDefaultBorder = periodField.getBorder();
+        lastDuration = Integer.parseInt(durationField.getText().trim());
+        lastPeriod = Integer.parseInt(periodField.getText().trim());
         rootPanel.setBorder(new LineBorder(Color.GRAY, 1));
 
         outputStatusLamp.setLayout(new BorderLayout());
@@ -76,14 +92,28 @@ public class channelSettings {
         pulseBtn.addActionListener(e -> togglePulse());
         durationField.addFocusListener(new FocusAdapter() {
             public void focusLost(FocusEvent e) {
-                validatePeriod();
+                validatePeriod(durationField);
             }
         });
+        durationField.addActionListener(e -> validatePeriod(durationField));
         periodField.addFocusListener(new FocusAdapter() {
             public void focusLost(FocusEvent e) {
-                validatePeriod();
+                validatePeriod(periodField);
             }
         });
+        periodField.addActionListener(e -> validatePeriod(periodField));
+
+        сhannelSubContainerTwo.setFocusable(true);
+        сhannelSubContainerTwo.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                Component c = SwingUtilities.getDeepestComponentAt(сhannelSubContainerTwo, e.getX(), e.getY());
+                if (c == null || (!(c instanceof JTextField) && !(c instanceof AbstractButton))) {
+                    сhannelSubContainerTwo.requestFocusInWindow();
+                }
+            }
+        });
+
         updateUiState();
     }
 
@@ -91,22 +121,47 @@ public class channelSettings {
         return rootPanel;
     }
 
-    private void validatePeriod() {
+    private void validatePeriod(JComponent changedField) {
+        durationField.setBorder(durationFieldDefaultBorder);
+        periodField.setBorder(periodFieldDefaultBorder);
+
+        boolean valid = true;
+        int dur = 0, per = 0;
         try {
-            int dur = Integer.parseInt(durationField.getText().trim());
-            int per = Integer.parseInt(periodField.getText().trim());
-            if (per < dur) {
-                periodField.setBackground(new Color(255, 200, 200));
-                JOptionPane.showMessageDialog(rootPanel,
-                        "Период должен быть >= длительности импульса",
-                        "Ошибка", JOptionPane.WARNING_MESSAGE);
-                periodField.setText(String.valueOf(Math.max(dur, 100)));
-            } else {
-                periodField.setBackground(Color.WHITE);
-            }
+            dur = Integer.parseInt(durationField.getText().trim());
         } catch (NumberFormatException ex) {
-            periodField.setBackground(new Color(255, 200, 200));
+            durationField.setBorder(BorderFactory.createLineBorder(Color.RED));
+            valid = false;
         }
+        try {
+            per = Integer.parseInt(periodField.getText().trim());
+        } catch (NumberFormatException ex) {
+            periodField.setBorder(BorderFactory.createLineBorder(Color.RED));
+            valid = false;
+        }
+
+        if (valid && per < dur) {
+            changedField.setBorder(BorderFactory.createLineBorder(Color.RED));
+            valid = false;
+            if (changedField == periodField) {
+                JOptionPane.showMessageDialog(rootPanel,
+                        "Вы задали период " + per + ", а был период " + lastPeriod
+                                + ". Период не может быть меньше длительности (" + dur + ").",
+                        "Ошибка", JOptionPane.WARNING_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(rootPanel,
+                        "Вы задали длительность " + dur + ", а была длительность " + lastDuration
+                                + ". Длительность не может быть больше периода (" + per + ").",
+                        "Ошибка", JOptionPane.WARNING_MESSAGE);
+            }
+        }
+
+        if (valid) {
+            lastDuration = dur;
+            lastPeriod = per;
+        }
+
+        pulseBtn.setEnabled(valid && !isPulsing && !coordinator.isAnyPulseActive());
     }
 
     private void toggleConstant() {
@@ -135,7 +190,8 @@ public class channelSettings {
     private void firePulseOn(int duration) {
         pulseSeq++;
         String cmd = String.format("@WR%02d 1,%d", channel, duration);
-        sendCommand.setText(cmd + " #" + pulseSeq);
+        sendCommand.setText(cmd);
+        sentValueHeader.setText("Отправленное значение #" + pulseSeq);
         chanLamp.setLampColor(GREEN);
         try {
             service.writeOutput(channel, true, duration);
@@ -311,8 +367,8 @@ public class channelSettings {
         chanControllerContainer.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
         сhannelSubContainerTwo.add(chanControllerContainer, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_VERTICAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(320, -1), new Dimension(320, -1), new Dimension(320, -1), 0, false));
         chanelName = new JLabel();
-        chanelName.setText("Label");
-        chanControllerContainer.add(chanelName, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(50, -1), new Dimension(50, -1), new Dimension(50, -1), 0, false));
+        chanelName.setText("Номер");
+        chanControllerContainer.add(chanelName, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(70, -1), new Dimension(70, -1), new Dimension(70, -1), 0, false));
         final Spacer spacer4 = new Spacer();
         chanControllerContainer.add(spacer4, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         final JPanel panel2 = new JPanel();
@@ -338,22 +394,22 @@ public class channelSettings {
         chanDataTransferLogContainer = new JPanel();
         chanDataTransferLogContainer.setLayout(new GridLayoutManager(4, 3, new Insets(0, 0, 0, 0), -1, -1));
         panel3.add(chanDataTransferLogContainer, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_VERTICAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        final JLabel label1 = new JLabel();
-        label1.setText("Отпраленное значение");
-        chanDataTransferLogContainer.add(label1, new GridConstraints(0, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        sentValueHeader = new JLabel();
+        sentValueHeader.setText("Отпраленное значение");
+        chanDataTransferLogContainer.add(sentValueHeader, new GridConstraints(0, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         sendCommand = new JLabel();
-        sendCommand.setText("Label");
+        sendCommand.setText(" ");
         chanDataTransferLogContainer.add(sendCommand, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JPanel panel4 = new JPanel();
         panel4.setLayout(new GridLayoutManager(2, 2, new Insets(0, 0, 0, 0), -1, -1));
         chanDataTransferLogContainer.add(panel4, new GridConstraints(2, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        final JLabel label2 = new JLabel();
-        label2.setText("Прочитанное значение");
-        panel4.add(label2, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label1 = new JLabel();
+        label1.setText("Прочитанное значение");
+        panel4.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final Spacer spacer6 = new Spacer();
         panel4.add(spacer6, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         readValue = new JLabel();
-        readValue.setText("null");
+        readValue.setText(" ");
         panel4.add(readValue, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JPanel panel5 = new JPanel();
         panel5.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
@@ -363,25 +419,25 @@ public class channelSettings {
         final JPanel panel6 = new JPanel();
         panel6.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
         panel3.add(panel6, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_VERTICAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, new Dimension(300, -1), 0, false));
-        final JLabel label3 = new JLabel();
-        label3.setText("Импульсный режим:");
-        panel6.add(label3, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label2 = new JLabel();
+        label2.setText("Импульсный режим:");
+        panel6.add(label2, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final Spacer spacer8 = new Spacer();
         panel6.add(spacer8, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         final JPanel panel7 = new JPanel();
         panel7.setLayout(new GridLayoutManager(2, 5, new Insets(0, 0, 0, 0), -1, -1));
         panel3.add(panel7, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_VERTICAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        final JLabel label4 = new JLabel();
-        label4.setText("Длит. (мс):");
-        panel7.add(label4, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label3 = new JLabel();
+        label3.setText("Длит. (мс):");
+        panel7.add(label3, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final Spacer spacer9 = new Spacer();
         panel7.add(spacer9, new GridConstraints(1, 4, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         durationField = new JTextField();
         durationField.setText("100");
-        panel7.add(durationField, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(60, -1), new Dimension(60, -1), new Dimension(60, -1), 0, false));
-        final JLabel label5 = new JLabel();
-        label5.setText("Период (мс):");
-        panel7.add(label5, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel7.add(durationField, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(60, -1), new Dimension(60, -1), new Dimension(60, -1), 0, false));
+        final JLabel label4 = new JLabel();
+        label4.setText("Период (мс):");
+        panel7.add(label4, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         periodField = new JTextField();
         periodField.setText("500");
         panel7.add(periodField, new GridConstraints(1, 3, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(60, -1), new Dimension(60, -1), new Dimension(60, -1), 0, false));
