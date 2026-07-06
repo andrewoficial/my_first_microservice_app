@@ -182,7 +182,7 @@ public final class McpsCommunicationService {
         if (on) {
             cmd = durationMs > 0
                 ? String.format("@WR%s 1,%d", ch, durationMs)
-                : String.format("@WR%s 1", ch);
+                : String.format("@WR%s 1,0", ch);
         } else {
             cmd = String.format("@WR%s 0", ch);
         }

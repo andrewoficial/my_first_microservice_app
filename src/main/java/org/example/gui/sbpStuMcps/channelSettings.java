@@ -172,7 +172,7 @@ public class channelSettings {
         }
         isConstantOn = !isConstantOn;
         service.writeOutput(channel, isConstantOn, 0);
-        sendCommand.setText(String.format("@WR%02d %d", channel, isConstantOn ? 1 : 0));
+        sendCommand.setText(String.format("@WR%02d %s", channel, isConstantOn ? "1,0" : "0"));
         updateUiState();
         Timer readTimer = new Timer(150, e -> service.readOutput(channel));
         readTimer.setRepeats(false);
@@ -302,8 +302,12 @@ public class channelSettings {
             pulseStatusLabel.setText("Импульсный режим выключен");
         }
 
-        if (actualOn || isConstantOn) {
+        if (isPulsing) {
+            // chanLamp is managed by firePulseOn/schedulePulseOff during pulse mode
+        } else if (actualOn) {
             chanLamp.setLampColor(GREEN);
+        } else if (isConstantOn) {
+            chanLamp.setLampColor(YELLOW);
         } else {
             chanLamp.setLampColor(RED);
         }
