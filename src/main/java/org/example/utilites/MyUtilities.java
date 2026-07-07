@@ -25,6 +25,7 @@ import org.example.device.protIgm11.modbus.Igm11Modbus;
 import org.example.device.protIgm12.modbus.Igm12Modbus;
 import org.example.device.protMipex2.Mipex2;
 import org.example.device.protOwonSpe3051.OWON_SPE3051;
+import org.example.device.protQdl80a.Qdl80aDevice;
 import org.example.device.protTt5166.TT5166;
 import org.example.device.spbstu.mcps.SPbSTuMcps;
 
@@ -106,6 +107,7 @@ public class MyUtilities {
             case Sens_Mipex2 -> device = new Mipex2(comPort);
             case TT5166 -> device = new TT5166(comPort);
             case DPS150 -> device = new FNIRSI_DPS150(comPort);
+            case QDL80A -> device = new Qdl80aDevice(comPort);
             default -> device = new DEMO_PROTOCOL(comPort);
         }
         return device;
@@ -141,6 +143,7 @@ public class MyUtilities {
             case Sens_Mipex2 -> device = new Mipex2();
             case TT5166 -> device = new TT5166();
             case DPS150 -> device = new FNIRSI_DPS150();
+            case QDL80A -> device = new Qdl80aDevice();
             default -> device = new DEMO_PROTOCOL();
         }
         return device;

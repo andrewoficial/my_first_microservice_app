@@ -34,6 +34,7 @@ public enum ProtocolsList {
     Sens_Cubic("Sens_Cubic"),
     TT5166("TT5166"),
     DPS150("DPS150"),
+    QDL80A("QDL80A"),
     EDWARDS_D397_00_000("EDWARDS_D397_00_000");
 
 
