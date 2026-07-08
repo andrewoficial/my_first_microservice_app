@@ -1,13 +1,12 @@
-package org.example.gui.sbpStuMcps;
+package org.example.gui.devices.stu.mcps.control;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
+import org.example.gui.devices.stu.mcps.AsyncLogger;
 
 import javax.swing.*;
 import javax.swing.border.Border;
-import javax.swing.plaf.FontUIResource;
-import javax.swing.text.StyleContext;
 import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
@@ -15,7 +14,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -51,11 +49,13 @@ public class McpsSequencePulseDialog extends JDialog {
 
     private int lastDuration;
     private int lastPeriod;
+    private volatile int minCommandIntervalMs = 37;
 
-    public McpsSequencePulseDialog(Frame owner, McpsCommunicationService service, AsyncLogger logger) {
+    public McpsSequencePulseDialog(Frame owner, McpsCommunicationService service, AsyncLogger logger, int minCommandIntervalMs) {
         super(owner, "Последовательная подача импульсов", true);
         this.service = service;
         this.logger = logger;
+        this.minCommandIntervalMs = minCommandIntervalMs;
 
         setContentPane(rootPanel);
         setResizable(true);
@@ -114,6 +114,10 @@ public class McpsSequencePulseDialog extends JDialog {
 
     public void setOnSequenceStateChange(Consumer<Boolean> callback) {
         this.onSequenceStateChange = callback;
+    }
+
+    public void setMinCommandIntervalMs(int ms) {
+        this.minCommandIntervalMs = ms;
     }
 
     private void validateInputs(JComponent changedField) {
@@ -184,6 +188,15 @@ public class McpsSequencePulseDialog extends JDialog {
             }
         }
 
+        if (valid && per < minCommandIntervalMs * 2) {
+            periodField.setBorder(BorderFactory.createLineBorder(Color.RED));
+            valid = false;
+            JOptionPane.showMessageDialog(rootPanel,
+                    "Период не может быть меньше " + (minCommandIntervalMs * 2)
+                            + " мс (мин. интервал между командами × 2).",
+                    "Ошибка", JOptionPane.WARNING_MESSAGE);
+        }
+
         if (valid) {
             lastDuration = dur;
             lastPeriod = per;
@@ -223,6 +236,13 @@ public class McpsSequencePulseDialog extends JDialog {
             period = Integer.parseInt(periodField.getText().trim());
             if (duration < 1 || duration > 65535 || period < duration) {
                 throw new NumberFormatException();
+            }
+            if (period < minCommandIntervalMs * 2) {
+                JOptionPane.showMessageDialog(this,
+                        "Период не может быть меньше " + (minCommandIntervalMs * 2)
+                                + " мс (мин. интервал между командами × 2).",
+                        "Ошибка", JOptionPane.WARNING_MESSAGE);
+                return;
             }
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this, "Длительность 1..65535 мс, Период >= длительности");
@@ -356,7 +376,7 @@ public class McpsSequencePulseDialog extends JDialog {
         sequenceStatusLamp.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
         statusPanel.add(sequenceStatusLamp, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(10, 10), new Dimension(10, 10), new Dimension(10, 10), 0, false));
         sequenceStatusLabel = new JLabel();
-        sequenceStatusLabel.setText("Помледовательность не воспроизводиться");
+        sequenceStatusLabel.setText("Последовательность не воспроизводиться");
         statusPanel.add(sequenceStatusLabel, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     }
 

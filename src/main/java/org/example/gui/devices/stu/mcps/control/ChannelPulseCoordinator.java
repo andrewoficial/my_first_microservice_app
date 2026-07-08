@@ -1,4 +1,4 @@
-package org.example.gui.sbpStuMcps;
+package org.example.gui.devices.stu.mcps.control;
 
 public interface ChannelPulseCoordinator {
     boolean isAnyPulseActive();

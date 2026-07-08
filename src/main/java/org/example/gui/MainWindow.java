@@ -153,6 +153,7 @@ public class MainWindow extends JFrame implements Rendeble {
         menuBar.add(menu.createSettingsMenu());
         menuBar.add(menu.createViewMenu(uiThPool));
         menuBar.add(menu.createUtilitiesMenu(uiThPool));
+        menuBar.add(menu.createControlPanelsMenu());
         menuBar.add(menu.createSystemParametrs(uiThPool));
         menuBar.add(menu.createInfo(uiThPool));
         setJMenuBar(menuBar);

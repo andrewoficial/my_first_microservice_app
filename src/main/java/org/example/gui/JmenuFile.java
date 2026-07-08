@@ -14,8 +14,10 @@ import java.util.concurrent.ExecutorService;
 
 import org.example.gui.accu10fd.Acu10fdWindow;
 import org.example.gui.curve.CurveHandlerWindow;
-import org.example.gui.sbpStuMcps.spbStuMcpsMain;
-import org.example.gui.sbpStuMcpsTest.McpsTestFrame;
+import org.example.gui.devices.qidian.qdl80a.control.Qdl80aMain;
+import org.example.gui.devices.qidian.qdl80a.emulation.Qdl80aTestFrame;
+import org.example.gui.devices.stu.mcps.control.spbStuMcpsMain;
+import org.example.gui.devices.stu.mcps.emulation.McpsTestFrame;
 import org.example.gui.graph.ChartWindow;
 import org.example.gui.graph.data.AnswerLoader;
 import org.example.gui.mgstest.MultigassensWindow;
@@ -549,6 +551,96 @@ public class JmenuFile {
         });
 
         return utilitiesMenu;
+    }
+
+    /**
+     * Функция создания меню "Панели управления"
+     */
+    public JMenu createControlPanelsMenu() {
+        JMenu controlPanelsMenu = new JMenu("Панели управления");
+
+        // STU → mcps → пункты
+        JMenu stuMenu = new JMenu("STU");
+        JMenu mcpsMenu = new JMenu("mcps");
+
+        JMenuItem stuControl = new JMenuItem("Панель управления");
+        JMenuItem stuEmulation = new JMenuItem("Панель эмуляции");
+        JMenuItem stuInfo = new JMenuItem("Справочная информация");
+
+        mcpsMenu.add(stuControl);
+        mcpsMenu.add(stuEmulation);
+        mcpsMenu.add(stuInfo);
+        stuMenu.add(mcpsMenu);
+
+        // Qidian → qdl80a → пункты
+        JMenu qdMenu = new JMenu("Qidian");
+        JMenu qdl80aMenu = new JMenu("qdl80a");
+
+        JMenuItem qdControl = new JMenuItem("Панель управления");
+        JMenuItem qdEmulation = new JMenuItem("Панель эмуляции");
+        JMenuItem qdInfo = new JMenuItem("Справочная информация");
+
+        qdl80aMenu.add(qdControl);
+        qdl80aMenu.add(qdEmulation);
+        qdl80aMenu.add(qdInfo);
+        qdMenu.add(qdl80aMenu);
+
+        controlPanelsMenu.add(stuMenu);
+        controlPanelsMenu.add(qdMenu);
+
+        stuControl.addActionListener(e -> {
+            System.out.println("STU MCPS Control Panel");
+            spbStuMcpsMain mcpsPanel = new spbStuMcpsMain();
+            JFrame frame = new JFrame("STU:mcps — Панель управления");
+            frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+            frame.setContentPane(mcpsPanel.getMainPanel());
+            frame.pack();
+            frame.setSize(980, 520);
+            frame.setLocationRelativeTo(null);
+            frame.setVisible(true);
+        });
+
+        stuEmulation.addActionListener(e -> {
+            System.out.println("STU MCPS Emulation Panel");
+            McpsTestFrame testFrame = new McpsTestFrame();
+            testFrame.setVisible(true);
+        });
+
+        stuInfo.addActionListener(e -> {
+            System.out.println("STU MCPS Info");
+            JOptionPane.showMessageDialog(null,
+                    "Раздел находится в разработке",
+                    "Справочная информация",
+                    JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        qdControl.addActionListener(e -> {
+            System.out.println("QDL80A Control Panel");
+            Qdl80aMain qdl80aPanel = new Qdl80aMain();
+            JFrame frame = new JFrame("Qidian:qdl80a — Панель управления");
+            frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+            frame.setContentPane(qdl80aPanel.getMainPanel());
+            frame.pack();
+            frame.setSize(900, 700);
+            frame.setLocationRelativeTo(null);
+            frame.setVisible(true);
+        });
+
+        qdEmulation.addActionListener(e -> {
+            System.out.println("QDL80A Emulation Panel");
+            Qdl80aTestFrame testFrame = new Qdl80aTestFrame();
+            testFrame.setVisible(true);
+        });
+
+        qdInfo.addActionListener(e -> {
+            System.out.println("QDL80A Info");
+            JOptionPane.showMessageDialog(null,
+                    "Раздел находится в разработке",
+                    "Справочная информация",
+                    JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        return controlPanelsMenu;
     }
 }
 

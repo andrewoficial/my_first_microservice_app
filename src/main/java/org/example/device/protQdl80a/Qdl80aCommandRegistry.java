@@ -50,17 +50,16 @@ public class Qdl80aCommandRegistry extends DeviceCommandRegistry {
      * Запрос на чтение регистров (функция 0x03 или 0x04)
      */
     public byte[] buildReadRequest(byte slaveAddr, byte function, short startAddr, short quantity) {
-        ByteBuffer buf = ByteBuffer.allocate(8);
+        ByteBuffer buf = ByteBuffer.allocate(6);
         buf.order(ByteOrder.BIG_ENDIAN);
         buf.put(slaveAddr);
         buf.put(function);
         buf.putShort(startAddr);
         buf.putShort(quantity);
-        byte[] withoutCRC = buf.array();
-        short crc = calculateCRC(withoutCRC);
-        return ByteBuffer.allocate(8 + 2)
+        short crc = calculateCRC(buf.array());
+        return ByteBuffer.allocate(8)
                 .order(ByteOrder.LITTLE_ENDIAN)
-                .put(withoutCRC)
+                .put(buf.array())
                 .putShort(crc)
                 .array();
     }
@@ -88,7 +87,7 @@ public class Qdl80aCommandRegistry extends DeviceCommandRegistry {
     //  CRC16 (Modbus)
     // ============================================================
 
-    private static short calculateCRC(byte[] data) {
+    public static short calculateCRC(byte[] data) {
         int crc = 0xFFFF;
         for (byte b : data) {
             crc ^= (b & 0xFF);
@@ -104,19 +103,28 @@ public class Qdl80aCommandRegistry extends DeviceCommandRegistry {
     }
 
     public static boolean validateCRC(byte[] response) {
-        if (response.length < 4) return false;
+        if (response.length < 4) {
+            log.warn("Слишком короткий ответ для проверки CRC: " + MyUtilities.bytesToHexString(response));
+            return false;
+        }
         int len = response.length;
         byte[] data = Arrays.copyOfRange(response, 0, len - 2);
         short receivedCRC = (short)((response[len-1] & 0xFF) << 8 | (response[len-2] & 0xFF));
         short calcCRC = calculateCRC(data);
-        return calcCRC == receivedCRC;
+        if (calcCRC != receivedCRC) {
+            log.warn("CRC mismatch: received=" + String.format("%04X", receivedCRC) +
+                    ", calculated=" + String.format("%04X", calcCRC) +
+                    ", data=" + MyUtilities.bytesToHexString(data));
+            return false;
+        }
+        return true;
     }
 
     // ============================================================
     //  Парсеры ответов
     // ============================================================
 
-    private AnswerValues parseReadResponse(byte[] response, int numberOfRegisters, String paramName) {
+    public AnswerValues parseReadResponse(byte[] response, int numberOfRegisters, String paramName) {
         if (!validateCRC(response)) {
             log.warn("CRC ошибка");
             return null;

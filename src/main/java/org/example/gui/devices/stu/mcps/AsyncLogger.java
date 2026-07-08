@@ -1,4 +1,4 @@
-package org.example.gui.sbpStuMcps;
+package org.example.gui.devices.stu.mcps;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;

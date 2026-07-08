@@ -1,7 +1,7 @@
-package org.example.gui.sbpStuMcpsTest;
+package org.example.gui.devices.stu.mcps.emulation;
 
-import org.example.gui.sbpStuMcps.AsyncLogger;
-import org.example.gui.sbpStuMcps.McpsCommunicationService;
+import org.example.gui.devices.stu.mcps.AsyncLogger;
+import org.example.gui.devices.stu.mcps.control.McpsCommunicationService;
 
 import javax.swing.*;
 import java.awt.*;

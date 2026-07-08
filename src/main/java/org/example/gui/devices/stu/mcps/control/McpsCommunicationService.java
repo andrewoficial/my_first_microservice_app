@@ -1,12 +1,14 @@
-package org.example.gui.sbpStuMcps;
+package org.example.gui.devices.stu.mcps.control;
 
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
+import org.example.gui.devices.stu.mcps.AsyncLogger;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -167,6 +169,33 @@ public final class McpsCommunicationService {
         if (!connected || command == null || command.isBlank()) return;
         if (!sendQueue.offer(command)) {
             logger.warn("Очередь отправки переполнена, команда отброшена: " + command);
+        }
+    }
+
+    /**
+     * Отправка команды с ожиданием подтверждения (OK).
+     * Блокирует вызывающий поток на время ожидания.
+     * @return true если получен OK в пределах timeoutMs, иначе false
+     */
+    public boolean sendCommandSync(String command, long timeoutMs) {
+        if (!connected || command == null || command.isBlank()) return false;
+        CountDownLatch latch = new CountDownLatch(1);
+        Consumer<String> listener = response -> {
+            if (response.contains("OK")) latch.countDown();
+        };
+        addResponseListener(listener);
+        if (!sendQueue.offer(command)) {
+            logger.warn("Очередь отправки переполнена, команда отброшена: " + command);
+            removeResponseListener(listener);
+            return false;
+        }
+        try {
+            return latch.await(timeoutMs, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        } finally {
+            removeResponseListener(listener);
         }
     }
 

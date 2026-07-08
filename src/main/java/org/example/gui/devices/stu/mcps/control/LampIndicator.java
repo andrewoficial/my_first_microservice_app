@@ -1,4 +1,4 @@
-package org.example.gui.sbpStuMcps;
+package org.example.gui.devices.stu.mcps.control;
 
 import javax.swing.*;
 import java.awt.*;

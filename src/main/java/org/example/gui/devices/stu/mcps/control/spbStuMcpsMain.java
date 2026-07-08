@@ -1,13 +1,16 @@
-package org.example.gui.sbpStuMcps;
+package org.example.gui.devices.stu.mcps.control;
 
 import com.fazecast.jSerialComm.SerialPort;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
+import org.example.gui.devices.stu.mcps.AsyncLogger;
 import org.example.services.comPort.BaudRatesList;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -39,6 +42,7 @@ public class spbStuMcpsMain {
     private JPanel channelsPlaceholderContainer;
     private JButton openLogFileFolder;
     private JButton clearLogFileBtn;
+    private JTextField minCommandIntervalMsInput;
 
     private final AsyncLogger logger;
     private final McpsCommunicationService service;
@@ -48,13 +52,16 @@ public class spbStuMcpsMain {
     private final LampIndicator comLamp = new LampIndicator();
     private final LampIndicator deviceLamp = new LampIndicator();
     private final LampIndicator genLamp = new LampIndicator();
+    private volatile int minCommandIntervalMs = 37;
     private Consumer<String> deviceDetectionListener;
     private Timer deviceDetectionTimer;
 
     public spbStuMcpsMain() {
         logger = new AsyncLogger("mcps_communication.log");
         service = new McpsCommunicationService(logger);
-        channelsPanel = new McpsChannelsPanel(service, logger);
+
+        readMinCommandInterval();
+        channelsPanel = new McpsChannelsPanel(service, logger, minCommandIntervalMs);
 
         channelsPlaceholder.setLayout(new BorderLayout());
         channelsPlaceholder.add(channelsPanel, BorderLayout.CENTER);
@@ -81,6 +88,14 @@ public class spbStuMcpsMain {
         openLogFileFolder.addActionListener(e -> openLogFileFolderAction());
         clearLogFileBtn.addActionListener(e -> clearLogFileAction());
 
+        minCommandIntervalMsInput.addActionListener(e -> updateMinCommandInterval());
+        minCommandIntervalMsInput.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusLost(FocusEvent e) {
+                updateMinCommandInterval();
+            }
+        });
+
         closePortBtn.setEnabled(false);
         seqBtn.setEnabled(false);
 
@@ -96,6 +111,21 @@ public class spbStuMcpsMain {
 
     public JPanel getMainPanel() {
         return mainPanel;
+    }
+
+    private void readMinCommandInterval() {
+        try {
+            minCommandIntervalMs = Integer.parseInt(minCommandIntervalMsInput.getText().trim());
+            if (minCommandIntervalMs < 1) throw new NumberFormatException();
+        } catch (NumberFormatException ex) {
+            minCommandIntervalMs = 37;
+            minCommandIntervalMsInput.setText("37");
+        }
+    }
+
+    private void updateMinCommandInterval() {
+        readMinCommandInterval();
+        channelsPanel.setMinCommandIntervalMs(minCommandIntervalMs);
     }
 
     private void refreshPorts() {
@@ -205,7 +235,7 @@ public class spbStuMcpsMain {
         Window window = SwingUtilities.getWindowAncestor(mainPanel);
         Frame owner = (window instanceof Frame) ? (Frame) window : null;
         if (sequenceDialog == null || !sequenceDialog.isDisplayable()) {
-            sequenceDialog = new McpsSequencePulseDialog(owner, service, logger);
+            sequenceDialog = new McpsSequencePulseDialog(owner, service, logger, minCommandIntervalMs);
             sequenceDialog.setOnSequenceStateChange(active -> {
                 channelsPanel.setGlobalPulseActive(active);
                 logger.info("Sequence active = " + active);
@@ -264,7 +294,7 @@ public class spbStuMcpsMain {
         mainPanel = new JPanel();
         mainPanel.setLayout(new GridLayoutManager(3, 3, new Insets(0, 0, 0, 0), -1, -1));
         connectionPanelContainer = new JPanel();
-        connectionPanelContainer.setLayout(new GridLayoutManager(15, 1, new Insets(0, 0, 0, 0), -1, -1));
+        connectionPanelContainer.setLayout(new GridLayoutManager(17, 1, new Insets(0, 0, 0, 0), -1, -1));
         mainPanel.add(connectionPanelContainer, new GridConstraints(0, 1, 2, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(270, -1), new Dimension(270, -1), new Dimension(270, -1), 0, false));
         final JLabel label1 = new JLabel();
         label1.setText("COM порт:");
@@ -311,7 +341,7 @@ public class spbStuMcpsMain {
         seqBtn.setText("Последовательность импульсов");
         connectionPanelContainer.add(seqBtn, new GridConstraints(13, 0, 1, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final Spacer spacer3 = new Spacer();
-        connectionPanelContainer.add(spacer3, new GridConstraints(14, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        connectionPanelContainer.add(spacer3, new GridConstraints(16, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         final JLabel label4 = new JLabel();
         label4.setText("Операции с выбранным портом");
         connectionPanelContainer.add(label4, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -324,6 +354,12 @@ public class spbStuMcpsMain {
         refreshBtn = new JButton();
         refreshBtn.setText("↻");
         connectionPanelContainer.add(refreshBtn, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(215, -1), new Dimension(215, -1), new Dimension(215, -1), 0, false));
+        minCommandIntervalMsInput = new JTextField();
+        minCommandIntervalMsInput.setText("37");
+        connectionPanelContainer.add(minCommandIntervalMsInput, new GridConstraints(15, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(215, -1), new Dimension(215, -1), new Dimension(215, -1), 0, false));
+        final JLabel label7 = new JLabel();
+        label7.setText("Мин. интервал между командами, мс");
+        connectionPanelContainer.add(label7, new GridConstraints(14, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JScrollPane scrollPane1 = new JScrollPane();
         mainPanel.add(scrollPane1, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 1, false));
         channelsPlaceholderContainer = new JPanel();

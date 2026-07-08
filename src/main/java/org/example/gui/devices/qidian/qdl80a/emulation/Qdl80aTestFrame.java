@@ -1,24 +1,21 @@
-package org.example.gui.sbpStuMcpsTest;
+package org.example.gui.devices.qidian.qdl80a.emulation;
 
-import org.example.gui.sbpStuMcps.AsyncLogger;
+import org.example.gui.devices.stu.mcps.AsyncLogger;
 
 import javax.swing.*;
-import java.awt.*;
 
-public class McpsTestFrame extends JFrame {
+public class Qdl80aTestFrame extends JFrame {
 
-    private final McpsTestResponderPanel responderPanel;
+    private final Qdl80aTestResponderPanel responderPanel;
 
-    public McpsTestFrame() {
-        super("SPB_STU_MCPS Test Responder + Метрики");
+    public Qdl80aTestFrame() {
+        super("QDL80A Test Responder (Modbus RTU Simulator)");
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        setSize(950, 650);
+        setSize(1100, 750);
         setLocationRelativeTo(null);
 
-        AsyncLogger logger = new AsyncLogger("mcps_test_responder.log");
-
-        responderPanel = new McpsTestResponderPanel(logger);
-
+        AsyncLogger logger = new AsyncLogger("qdl80a_test_responder.log");
+        responderPanel = new Qdl80aTestResponderPanel(logger);
         add(responderPanel);
     }
 
@@ -33,7 +30,7 @@ public class McpsTestFrame extends JFrame {
             try {
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             } catch (Exception ignored) {}
-            new McpsTestFrame().setVisible(true);
+            new Qdl80aTestFrame().setVisible(true);
         });
     }
 }

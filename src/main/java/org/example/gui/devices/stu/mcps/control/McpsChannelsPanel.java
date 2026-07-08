@@ -1,4 +1,6 @@
-package org.example.gui.sbpStuMcps;
+package org.example.gui.devices.stu.mcps.control;
+
+import org.example.gui.devices.stu.mcps.AsyncLogger;
 
 import javax.swing.*;
 import java.awt.*;
@@ -19,17 +21,19 @@ public class McpsChannelsPanel extends JPanel implements ChannelPulseCoordinator
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
 
     private final List<channelSettings> blocks = new ArrayList<>();
+    private volatile int minCommandIntervalMs = 37;
     private volatile boolean anyPulseActive = false;
     private ScheduledFuture<?> pollFuture;
 
-    public McpsChannelsPanel(McpsCommunicationService service, AsyncLogger logger) {
+    public McpsChannelsPanel(McpsCommunicationService service, AsyncLogger logger, int minCommandIntervalMs) {
         this.service = service;
         this.logger = logger;
+        this.minCommandIntervalMs = minCommandIntervalMs;
         setLayout(new GridLayout(2, 4, 8, 8));
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         for (int i = 1; i <= CHANNEL_COUNT; i++) {
-            channelSettings block = new channelSettings(i, service, logger, this);
+            channelSettings block = new channelSettings(i, service, logger, this, minCommandIntervalMs);
             blocks.add(block);
             add(block.getRootPanel());
         }
@@ -79,6 +83,13 @@ public class McpsChannelsPanel extends JPanel implements ChannelPulseCoordinator
     public void setAllControlsEnabled(boolean enabled) {
         for (channelSettings b : blocks) {
             b.setControlsEnabled(enabled);
+        }
+    }
+
+    public void setMinCommandIntervalMs(int ms) {
+        this.minCommandIntervalMs = ms;
+        for (channelSettings b : blocks) {
+            b.setMinCommandIntervalMs(ms);
         }
     }
 

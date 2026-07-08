@@ -1,8 +1,9 @@
-package org.example.gui.sbpStuMcps;
+package org.example.gui.devices.stu.mcps.control;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
+import org.example.gui.devices.stu.mcps.AsyncLogger;
 
 import javax.swing.*;
 import javax.swing.border.Border;
@@ -50,6 +51,7 @@ public class channelSettings {
     private int lastDuration;
     private int lastPeriod;
 
+    private volatile int minCommandIntervalMs = 37;
     private volatile boolean isConstantOn = false;
     private volatile boolean actualOn = false;
     private volatile boolean isPulsing = false;
@@ -62,11 +64,12 @@ public class channelSettings {
     private static final Color YELLOW = new Color(255, 200, 0);
     private static final Color RED = Color.RED;
 
-    public channelSettings(int channel, McpsCommunicationService service, AsyncLogger logger, ChannelPulseCoordinator coordinator) {
+    public channelSettings(int channel, McpsCommunicationService service, AsyncLogger logger, ChannelPulseCoordinator coordinator, int minCommandIntervalMs) {
         this.channel = channel;
         this.service = service;
         this.logger = logger;
         this.coordinator = coordinator;
+        this.minCommandIntervalMs = minCommandIntervalMs;
 
         channelName.setText("Канал " + channel);
         chanelName.setText("Канал #" + channel);
@@ -156,6 +159,15 @@ public class channelSettings {
             }
         }
 
+        if (valid && per < minCommandIntervalMs * 2) {
+            periodField.setBorder(BorderFactory.createLineBorder(Color.RED));
+            valid = false;
+            JOptionPane.showMessageDialog(rootPanel,
+                    "Период не может быть меньше " + (minCommandIntervalMs * 2)
+                            + " мс (мин. интервал между командами × 2).",
+                    "Ошибка", JOptionPane.WARNING_MESSAGE);
+        }
+
         if (valid) {
             lastDuration = dur;
             lastPeriod = per;
@@ -171,9 +183,22 @@ public class channelSettings {
             return;
         }
         isConstantOn = !isConstantOn;
-        service.writeOutput(channel, isConstantOn, 0);
-        sendCommand.setText(String.format("@WR%02d %s", channel, isConstantOn ? "1,0" : "0"));
+
+        toggleBtn.setEnabled(false);
+        toggleBtn.setText("...");
+
+        String cmd = String.format("@WR%02d %s", channel, isConstantOn ? "1,0" : "0");
+        boolean ack = service.sendCommandSync(cmd, minCommandIntervalMs * 3);
+
+        if (!ack) {
+            logger.warn("Канал " + channel + " не ответил за " + (minCommandIntervalMs * 3) + "мс");
+            isConstantOn = !isConstantOn;
+        }
+
+        sendCommand.setText(cmd);
+        toggleBtn.setEnabled(true);
         updateUiState();
+
         Timer readTimer = new Timer(150, e -> service.readOutput(channel));
         readTimer.setRepeats(false);
         readTimer.start();
@@ -228,6 +253,13 @@ public class channelSettings {
             period = Integer.parseInt(periodField.getText().trim());
             if (duration < 1 || duration > 65535 || period < duration || period > 65535) {
                 throw new NumberFormatException();
+            }
+            if (period < minCommandIntervalMs * 2) {
+                JOptionPane.showMessageDialog(rootPanel,
+                        "Период не может быть меньше " + (minCommandIntervalMs * 2)
+                                + " мс (мин. интервал между командами × 2).",
+                        "Ошибка", JOptionPane.WARNING_MESSAGE);
+                return;
             }
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(rootPanel,
@@ -315,6 +347,10 @@ public class channelSettings {
         boolean fieldsEnabled = !isPulsing && !coordinator.isAnyPulseActive();
         durationField.setEnabled(fieldsEnabled);
         periodField.setEnabled(fieldsEnabled);
+    }
+
+    void setMinCommandIntervalMs(int ms) {
+        this.minCommandIntervalMs = ms;
     }
 
     void setControlsEnabled(boolean enabled) {
