@@ -43,6 +43,13 @@ public class spbStuMcpsMain {
     private JButton openLogFileFolder;
     private JButton clearLogFileBtn;
     private JTextField minCommandIntervalMsInput;
+    private JLabel queAlarm;
+    private JPanel queAlarmContainer;
+    private JPanel queAlarmIndicator;
+    private JCheckBox backGroundPoolCB;
+    private JLabel throttlingAlarmText;
+    private JPanel throttlingAlarmIndicator;
+    private JPanel throttlingAlarmContainer;
 
     private final AsyncLogger logger;
     private final McpsCommunicationService service;
@@ -52,15 +59,21 @@ public class spbStuMcpsMain {
     private final LampIndicator comLamp = new LampIndicator();
     private final LampIndicator deviceLamp = new LampIndicator();
     private final LampIndicator genLamp = new LampIndicator();
+    private final LampIndicator queLamp = new LampIndicator();
+    private final LampIndicator throttleLamp = new LampIndicator();
     private volatile int minCommandIntervalMs = 37;
     private Consumer<String> deviceDetectionListener;
     private Timer deviceDetectionTimer;
+    private Timer queueMonitorTimer;
+
+    private static final double QUEUE_WARN_RATIO = 0.5;
 
     public spbStuMcpsMain() {
         logger = new AsyncLogger("mcps_communication.log");
         service = new McpsCommunicationService(logger);
 
         readMinCommandInterval();
+        service.setMinCommandIntervalMs(minCommandIntervalMs);
         channelsPanel = new McpsChannelsPanel(service, logger, minCommandIntervalMs);
 
         channelsPlaceholder.setLayout(new BorderLayout());
@@ -70,6 +83,10 @@ public class spbStuMcpsMain {
         comConnectionIndicatorContainerLamp.add(comLamp, BorderLayout.CENTER);
         deviceConnectionIndicatorContainerLamp.setLayout(new BorderLayout());
         deviceConnectionIndicatorContainerLamp.add(deviceLamp, BorderLayout.CENTER);
+        queAlarmIndicator.setLayout(new BorderLayout());
+        queAlarmIndicator.add(queLamp, BorderLayout.CENTER);
+        throttlingAlarmIndicator.setLayout(new BorderLayout());
+        throttlingAlarmIndicator.add(throttleLamp, BorderLayout.CENTER);
 
         for (BaudRatesList rate : BaudRatesList.values()) {
             portComboSpeed.addItem(String.valueOf(rate.getValue()));
@@ -79,7 +96,16 @@ public class spbStuMcpsMain {
         comLamp.setLampColor(Color.RED);
         deviceLamp.setLampColor(Color.RED);
         genLamp.setLampColor(Color.RED);
+        queLamp.setLampColor(Color.GREEN);
+        queAlarm.setText("Очередь команд отсутствует");
+        throttleLamp.setLampColor(Color.GREEN);
+        throttlingAlarmText.setText("Троттлинг не применялся");
         connectionLabel.setText("Порт закрыт");
+
+        service.setThrottleListener(() -> SwingUtilities.invokeLater(() -> {
+            throttleLamp.setLampColor(Color.RED);
+            throttlingAlarmText.setText("Превышен темп команд, применён троттлинг");
+        }));
 
         openPortBtn.addActionListener(e -> openSelectedPort());
         closePortBtn.addActionListener(e -> closePort());
@@ -95,6 +121,11 @@ public class spbStuMcpsMain {
                 updateMinCommandInterval();
             }
         });
+
+        backGroundPoolCB.setSelected(true);
+        backGroundPoolCB.addActionListener(e ->
+                channelsPanel.setBackgroundPollingEnabled(backGroundPoolCB.isSelected()));
+        channelsPanel.setBackgroundPollingEnabled(backGroundPoolCB.isSelected());
 
         closePortBtn.setEnabled(false);
         seqBtn.setEnabled(false);
@@ -125,6 +156,7 @@ public class spbStuMcpsMain {
 
     private void updateMinCommandInterval() {
         readMinCommandInterval();
+        service.setMinCommandIntervalMs(minCommandIntervalMs);
         channelsPanel.setMinCommandIntervalMs(minCommandIntervalMs);
     }
 
@@ -168,6 +200,9 @@ public class spbStuMcpsMain {
         boolean ok = service.openPort(portName);
         if (ok) {
             saveLastPort(portName);
+            service.resetThrottleFlag();
+            throttleLamp.setLampColor(Color.GREEN);
+            throttlingAlarmText.setText("Троттлинг не применялся");
             comLamp.setLampColor(Color.GREEN);
             connectionLabel.setText("Порт открыт");
             openPortBtn.setEnabled(false);
@@ -176,6 +211,7 @@ public class spbStuMcpsMain {
             service.readAllOutputs();
             service.readMode();
             startDeviceDetection();
+            startQueueMonitor();
         } else {
             comLamp.setLampColor(Color.RED);
             connectionLabel.setText("Ошибка открытия порта");
@@ -191,15 +227,44 @@ public class spbStuMcpsMain {
     }
 
     private void onDisconnected() {
+        cancelQueueMonitor();
         comLamp.setLampColor(Color.RED);
         connectionLabel.setText("Порт закрыт");
         deviceLamp.setLampColor(Color.RED);
         deviceConnectionLabel.setText("Устройство не найдено");
         genLamp.setLampColor(Color.RED);
+        queLamp.setLampColor(Color.GREEN);
+        queAlarm.setText("Очередь команд отсутствует");
         openPortBtn.setEnabled(true);
         closePortBtn.setEnabled(false);
         seqBtn.setEnabled(false);
         if (sequenceDialog != null) sequenceDialog.dispose();
+    }
+
+    private void startQueueMonitor() {
+        cancelQueueMonitor();
+        int warnThreshold = (int) (service.getSendQueueCapacity() * QUEUE_WARN_RATIO);
+        queueMonitorTimer = new Timer(200, e -> {
+            int size = service.getSendQueueSize();
+            if (size >= warnThreshold) {
+                queLamp.setLampColor(Color.RED);
+                queAlarm.setText("Очередь растёт (" + size + "), измените настройки");
+            } else if (size > 0) {
+                queLamp.setLampColor(Color.YELLOW);
+                queAlarm.setText("Очередь команд: " + size);
+            } else {
+                queLamp.setLampColor(Color.GREEN);
+                queAlarm.setText("Очередь команд отсутствует");
+            }
+        });
+        queueMonitorTimer.start();
+    }
+
+    private void cancelQueueMonitor() {
+        if (queueMonitorTimer != null) {
+            queueMonitorTimer.stop();
+            queueMonitorTimer = null;
+        }
     }
 
     private void startDeviceDetection() {
@@ -270,6 +335,7 @@ public class spbStuMcpsMain {
     }
 
     public void shutdown() {
+        cancelQueueMonitor();
         if (sequenceDialog != null) sequenceDialog.dispose();
         channelsPanel.shutdown();
         service.shutdown();
@@ -294,30 +360,30 @@ public class spbStuMcpsMain {
         mainPanel = new JPanel();
         mainPanel.setLayout(new GridLayoutManager(3, 3, new Insets(0, 0, 0, 0), -1, -1));
         connectionPanelContainer = new JPanel();
-        connectionPanelContainer.setLayout(new GridLayoutManager(17, 1, new Insets(0, 0, 0, 0), -1, -1));
+        connectionPanelContainer.setLayout(new GridLayoutManager(19, 2, new Insets(0, 0, 0, 0), -1, -1));
         mainPanel.add(connectionPanelContainer, new GridConstraints(0, 1, 2, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(270, -1), new Dimension(270, -1), new Dimension(270, -1), 0, false));
         final JLabel label1 = new JLabel();
         label1.setText("COM порт:");
-        connectionPanelContainer.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        connectionPanelContainer.add(label1, new GridConstraints(0, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         portComboSelect = new JComboBox();
-        connectionPanelContainer.add(portComboSelect, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(215, -1), new Dimension(215, -1), new Dimension(215, -1), 0, false));
+        connectionPanelContainer.add(portComboSelect, new GridConstraints(1, 0, 1, 2, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(215, -1), new Dimension(215, -1), new Dimension(215, -1), 0, false));
         final JLabel label2 = new JLabel();
         label2.setText("Скорость, бод");
-        connectionPanelContainer.add(label2, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        connectionPanelContainer.add(label2, new GridConstraints(2, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         portComboSpeed = new JComboBox();
-        connectionPanelContainer.add(portComboSpeed, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(215, -1), new Dimension(215, -1), new Dimension(215, -1), 0, false));
+        connectionPanelContainer.add(portComboSpeed, new GridConstraints(3, 0, 1, 2, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(215, -1), new Dimension(215, -1), new Dimension(215, -1), 0, false));
         final JLabel label3 = new JLabel();
         label3.setText("Обновить список портов");
-        connectionPanelContainer.add(label3, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        connectionPanelContainer.add(label3, new GridConstraints(4, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         openPortBtn = new JButton();
         openPortBtn.setText("Открыть порт");
-        connectionPanelContainer.add(openPortBtn, new GridConstraints(7, 0, 1, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(215, -1), new Dimension(215, -1), new Dimension(215, -1), 0, false));
+        connectionPanelContainer.add(openPortBtn, new GridConstraints(7, 0, 1, 2, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(215, -1), new Dimension(215, -1), new Dimension(215, -1), 0, false));
         closePortBtn = new JButton();
         closePortBtn.setText("Закрыть порт");
-        connectionPanelContainer.add(closePortBtn, new GridConstraints(8, 0, 1, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(215, -1), new Dimension(215, -1), new Dimension(215, -1), 0, false));
+        connectionPanelContainer.add(closePortBtn, new GridConstraints(8, 0, 1, 2, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(215, -1), new Dimension(215, -1), new Dimension(215, -1), 0, false));
         comConnectionIndicatorContainer = new JPanel();
         comConnectionIndicatorContainer.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        connectionPanelContainer.add(comConnectionIndicatorContainer, new GridConstraints(10, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        connectionPanelContainer.add(comConnectionIndicatorContainer, new GridConstraints(10, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         comConnectionIndicatorContainerLamp = new JPanel();
         comConnectionIndicatorContainerLamp.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
         comConnectionIndicatorContainer.add(comConnectionIndicatorContainerLamp, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(10, 10), new Dimension(10, 10), new Dimension(10, 10), 0, false));
@@ -328,7 +394,7 @@ public class spbStuMcpsMain {
         comConnectionIndicatorContainer.add(spacer1, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         deviceConnectionIndicatorContainer = new JPanel();
         deviceConnectionIndicatorContainer.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        connectionPanelContainer.add(deviceConnectionIndicatorContainer, new GridConstraints(12, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        connectionPanelContainer.add(deviceConnectionIndicatorContainer, new GridConstraints(12, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         deviceConnectionIndicatorContainerLamp = new JPanel();
         deviceConnectionIndicatorContainerLamp.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
         deviceConnectionIndicatorContainer.add(deviceConnectionIndicatorContainerLamp, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(10, 10), new Dimension(10, 10), new Dimension(10, 10), 0, false));
@@ -339,27 +405,52 @@ public class spbStuMcpsMain {
         deviceConnectionIndicatorContainer.add(spacer2, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         seqBtn = new JButton();
         seqBtn.setText("Последовательность импульсов");
-        connectionPanelContainer.add(seqBtn, new GridConstraints(13, 0, 1, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        connectionPanelContainer.add(seqBtn, new GridConstraints(13, 0, 1, 2, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final Spacer spacer3 = new Spacer();
-        connectionPanelContainer.add(spacer3, new GridConstraints(16, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        connectionPanelContainer.add(spacer3, new GridConstraints(17, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         final JLabel label4 = new JLabel();
         label4.setText("Операции с выбранным портом");
-        connectionPanelContainer.add(label4, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        connectionPanelContainer.add(label4, new GridConstraints(6, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label5 = new JLabel();
         label5.setText("Статус выбранного порта");
-        connectionPanelContainer.add(label5, new GridConstraints(9, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        connectionPanelContainer.add(label5, new GridConstraints(9, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JLabel label6 = new JLabel();
         label6.setText("Статус обнаружения устройства");
-        connectionPanelContainer.add(label6, new GridConstraints(11, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        connectionPanelContainer.add(label6, new GridConstraints(11, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         refreshBtn = new JButton();
         refreshBtn.setText("↻");
-        connectionPanelContainer.add(refreshBtn, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(215, -1), new Dimension(215, -1), new Dimension(215, -1), 0, false));
+        connectionPanelContainer.add(refreshBtn, new GridConstraints(5, 0, 1, 2, GridConstraints.ANCHOR_NORTHWEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(215, -1), new Dimension(215, -1), new Dimension(215, -1), 0, false));
         minCommandIntervalMsInput = new JTextField();
         minCommandIntervalMsInput.setText("37");
-        connectionPanelContainer.add(minCommandIntervalMsInput, new GridConstraints(15, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(215, -1), new Dimension(215, -1), new Dimension(215, -1), 0, false));
+        connectionPanelContainer.add(minCommandIntervalMsInput, new GridConstraints(15, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(215, -1), new Dimension(215, -1), new Dimension(215, -1), 0, false));
         final JLabel label7 = new JLabel();
         label7.setText("Мин. интервал между командами, мс");
-        connectionPanelContainer.add(label7, new GridConstraints(14, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        connectionPanelContainer.add(label7, new GridConstraints(14, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        queAlarmContainer = new JPanel();
+        queAlarmContainer.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        connectionPanelContainer.add(queAlarmContainer, new GridConstraints(16, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        queAlarmIndicator = new JPanel();
+        queAlarmIndicator.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        queAlarmContainer.add(queAlarmIndicator, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(10, 10), new Dimension(10, 10), new Dimension(10, 10), 0, false));
+        queAlarm = new JLabel();
+        queAlarm.setText("Очередь команд отсутствует");
+        queAlarmContainer.add(queAlarm, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final Spacer spacer4 = new Spacer();
+        queAlarmContainer.add(spacer4, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        backGroundPoolCB = new JCheckBox();
+        backGroundPoolCB.setText("фоновый опрос состояния");
+        connectionPanelContainer.add(backGroundPoolCB, new GridConstraints(17, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        throttlingAlarmContainer = new JPanel();
+        throttlingAlarmContainer.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        connectionPanelContainer.add(throttlingAlarmContainer, new GridConstraints(18, 0, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        throttlingAlarmIndicator = new JPanel();
+        throttlingAlarmIndicator.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        throttlingAlarmContainer.add(throttlingAlarmIndicator, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(10, 10), new Dimension(10, 10), new Dimension(10, 10), 0, false));
+        throttlingAlarmText = new JLabel();
+        throttlingAlarmText.setText("Тротлинг не применяется");
+        throttlingAlarmContainer.add(throttlingAlarmText, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final Spacer spacer5 = new Spacer();
+        throttlingAlarmContainer.add(spacer5, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         final JScrollPane scrollPane1 = new JScrollPane();
         mainPanel.add(scrollPane1, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 1, false));
         channelsPlaceholderContainer = new JPanel();

@@ -23,6 +23,7 @@ public class McpsChannelsPanel extends JPanel implements ChannelPulseCoordinator
     private final List<channelSettings> blocks = new ArrayList<>();
     private volatile int minCommandIntervalMs = 37;
     private volatile boolean anyPulseActive = false;
+    private volatile boolean backgroundPollingEnabled = true;
     private ScheduledFuture<?> pollFuture;
 
     public McpsChannelsPanel(McpsCommunicationService service, AsyncLogger logger, int minCommandIntervalMs) {
@@ -44,10 +45,14 @@ public class McpsChannelsPanel extends JPanel implements ChannelPulseCoordinator
 
     private void startPolling() {
         pollFuture = scheduler.scheduleAtFixedRate(() -> {
-            if (service.isConnected()) {
+            if (backgroundPollingEnabled && service.isConnected()) {
                 service.readAllOutputs();
             }
         }, 500, POLL_INTERVAL_MS, TimeUnit.MILLISECONDS);
+    }
+
+    public void setBackgroundPollingEnabled(boolean enabled) {
+        this.backgroundPollingEnabled = enabled;
     }
 
     private void handleResponse(String response) {
@@ -70,13 +75,21 @@ public class McpsChannelsPanel extends JPanel implements ChannelPulseCoordinator
                 try {
                     int ch = Integer.parseInt(response.substring(3, 5));
                     if (ch >= 1 && ch <= CHANNEL_COUNT) {
-                        service.readOutput(ch);
+                        scheduleAutoRead(ch);
                     }
                 } catch (Exception ignored) {}
             } else if (response.contains("OK")) {
                 logger.debug("Команда подтверждена: " + response);
             }
         });
+    }
+
+    private void scheduleAutoRead(int channel) {
+        scheduler.schedule(() -> {
+            if (service.isConnected()) {
+                service.readOutput(channel);
+            }
+        }, minCommandIntervalMs, TimeUnit.MILLISECONDS);
     }
 
     @Override

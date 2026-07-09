@@ -33,11 +33,13 @@ public final class McpsCommunicationService {
     private static final int STOP_BITS = SerialPort.ONE_STOP_BIT;
     private static final int PARITY = SerialPort.NO_PARITY;
 
+    private static final int SEND_QUEUE_CAPACITY = 512;
+
     private final AsyncLogger logger;
     private SerialPort serialPort;
     private volatile boolean connected = false;
 
-    private final LinkedBlockingQueue<String> sendQueue = new LinkedBlockingQueue<>(512);
+    private final LinkedBlockingQueue<String> sendQueue = new LinkedBlockingQueue<>(SEND_QUEUE_CAPACITY);
     private Thread sendThread;
     private volatile boolean sendRunning = false;
 
@@ -52,8 +54,49 @@ public final class McpsCommunicationService {
 
     private Consumer<String> connectionStatusListener;
 
+    private volatile int minCommandIntervalMs = 0;
+    private volatile boolean throttled = false;
+    private volatile long lastThrottleTimeMs = 0;
+    private Runnable throttleListener;
+
     public McpsCommunicationService(AsyncLogger logger) {
         this.logger = logger;
+    }
+
+    /**
+     * Минимальный интервал между отправкой кадров на шину (мс).
+     * 0 — троттлинг выключен.
+     */
+    public void setMinCommandIntervalMs(int ms) {
+        this.minCommandIntervalMs = Math.max(0, ms);
+    }
+
+    /**
+     * true, если транспорту пришлось притормозить отправку хотя бы раз
+     * (был превышен темп кадров и сработал rate limit).
+     */
+    public boolean wasThrottled() {
+        return throttled;
+    }
+
+    public long getLastThrottleTimeMs() {
+        return lastThrottleTimeMs;
+    }
+
+    /**
+     * Сбрасывает флаг срабатывания троттлинга (например, после того как
+     * пользователь увидел и подтвердил индикацию).
+     */
+    public void resetThrottleFlag() {
+        throttled = false;
+    }
+
+    /**
+     * Колбек, вызываемый (в потоке sender'а) при каждом срабатывании
+     * троттлинга на транспортном уровне.
+     */
+    public void setThrottleListener(Runnable listener) {
+        this.throttleListener = listener;
     }
 
     public boolean openPort(String portDescriptor) {
@@ -139,15 +182,32 @@ public final class McpsCommunicationService {
 
         sendRunning = true;
         sendThread = new Thread(() -> {
+            long lastSendAt = 0;
             while (sendRunning) {
                 try {
                     String cmd = sendQueue.poll(50, TimeUnit.MILLISECONDS);
                     if (cmd != null && serialPort != null && serialPort.isOpen()) {
+                        int interval = minCommandIntervalMs;
+                        if (interval > 0 && lastSendAt != 0) {
+                            long elapsed = System.currentTimeMillis() - lastSendAt;
+                            long wait = interval - elapsed;
+                            if (wait > 0) {
+                                // Транспортный rate limit: следующий кадр пришёл
+                                // раньше минимального межкадрового интервала —
+                                // притормаживаем шину и сигнализируем наверх.
+                                throttled = true;
+                                lastThrottleTimeMs = System.currentTimeMillis();
+                                Runnable l = throttleListener;
+                                if (l != null) {
+                                    try { l.run(); } catch (Exception ignored) {}
+                                }
+                                Thread.sleep(wait);
+                            }
+                        }
                         byte[] bytes = (cmd + "\r\n").getBytes(StandardCharsets.US_ASCII);
                         serialPort.writeBytes(bytes, bytes.length);
+                        lastSendAt = System.currentTimeMillis();
                         logger.debug("TX: " + cmd);
-                        // Небольшая пауза для RS-485 (можно убрать если устройство быстрое)
-                        // Thread.sleep(2);
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -164,12 +224,39 @@ public final class McpsCommunicationService {
     /**
      * Отправка команды (неблокирующая, через очередь).
      * Команда должна быть без CR LF — они добавятся автоматически.
+     *
+     * Для команд чтения (начинаются с @R, кроме записи @WR) выполняется
+     * дедупликация: если такая же команда чтения уже стоит в очереди, повторная
+     * не добавляется. Это не нарушает очерёдность (существующая команда остаётся
+     * на своём месте) и защищает очередь от разрастания периодическими опросами.
+     * Команды записи (@WR) никогда не дедуплицируются.
      */
     public void sendCommand(String command) {
         if (!connected || command == null || command.isBlank()) return;
+        if (isReadCommand(command) && sendQueue.contains(command)) {
+            return;
+        }
         if (!sendQueue.offer(command)) {
             logger.warn("Очередь отправки переполнена, команда отброшена: " + command);
         }
+    }
+
+    private static boolean isReadCommand(String command) {
+        return command.startsWith("@R");
+    }
+
+    /**
+     * Текущее количество команд, ожидающих отправки.
+     */
+    public int getSendQueueSize() {
+        return sendQueue.size();
+    }
+
+    /**
+     * Максимальная вместимость очереди отправки.
+     */
+    public int getSendQueueCapacity() {
+        return SEND_QUEUE_CAPACITY;
     }
 
     /**
