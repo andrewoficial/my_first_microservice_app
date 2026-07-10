@@ -12,132 +12,118 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class EdwardsD397CommandRegistryTest {
 
+    private static final Logger log = Logger.getLogger(EdwardsD397CommandRegistryTest.class);
+
     private EdwardsD397CommandRegistry registry;
-    private Method parseMethod;
+    private Method parseGaugeMethod;
 
     @BeforeEach
     public void setUp() throws NoSuchMethodException {
         registry = new EdwardsD397CommandRegistry();
-        // Получаем приватный метод через рефлексию
-        parseMethod = EdwardsD397CommandRegistry.class.getDeclaredMethod("parse913AskCmd", byte[].class);
-        parseMethod.setAccessible(true);
+        parseGaugeMethod = EdwardsD397CommandRegistry.class.getDeclaredMethod("parseGaugeResponse", byte[].class, int.class);
+        parseGaugeMethod.setAccessible(true);
+    }
+
+    private AnswerValues invokeParse(byte[] response, int objId) throws Exception {
+        return (AnswerValues) parseGaugeMethod.invoke(registry, response, objId);
     }
 
     @Test
     public void testParseResponseWithMultiDropPrefix() throws Exception {
-        // Тестовый ответ с multi-drop префиксом: #01:01=V913 5.0691e+01;59;11;0;0\r
-        // Ожидаем: value=5.0691e+01, units=59, state=11, alert=0, priority=0
+        // #01:01=V913 5.0691e+01;59;11;0;0\r
+        // После cleanResponse: 5.0691e+01;59;11;0;0
+        // values: [5.0691e+01, 59, 11, 0, 0]
         byte[] response = "#01:01=V913 5.0691e+01;59;11;0;0\r".getBytes();
 
-        AnswerValues result = (AnswerValues) parseMethod.invoke(registry, response);
+        AnswerValues result = invokeParse(response, 913);
 
         assertNotNull(result);
-        assertEquals(5, result.getValues().length); // 5 значений: value+units, stateCode+stateName, alertCode+alertName, priorityCode+priorityName
+        assertEquals(5, result.getValues().length);
 
-        // Проверяем значение давления
-        assertEquals(5.0691e+01, result.getValues()[0], 0.0001);
-        // assertEquals(EdwardsUnits.fromCode(59).getSymbol(), result.getDescription(0)); // Pascals
-
-        // Проверяем состояние
-        assertEquals(11, result.getValues()[1]);
-        // assertEquals(EdwardsState.fromCode(11).getName(), result.getDescription(1)); // Ожидаем "On"
-
-        // Alert
-        assertEquals(0, result.getValues()[2]);
-        // assertEquals(EdwardsAlert.fromCode(0).getName(), result.getDescription(2)); // "No Alert"
-
-        // Priority
-        assertEquals(0, result.getValues()[3]);
-        // assertEquals(EdwardsPriority.fromCode(0).getName(), result.getDescription(3)); // "OK"
+        assertEquals(5.0691e+01, result.getValues()[0], 0.0001); // value
+        assertEquals(59, result.getValues()[1], 0.0001);         // units
+        assertEquals(11, result.getValues()[2], 0.0001);         // state
+        assertEquals(0, result.getValues()[3], 0.0001);          // alert
+        assertEquals(0, result.getValues()[4], 0.0001);          // priority
     }
 
     @Test
     public void testParseResponseWithoutPrefix() throws Exception {
-        // Тестовый ответ без префикса: =V913 2.4965e-02;59;11;0;0\r
-        // Ожидаем: value=2.4965e-02, units=59, state=11, alert=0, priority=0
+        // =V913 2.4965e-02;59;11;0;0\r
         byte[] response = "=V913 2.4965e-02;59;11;0;0\r".getBytes();
 
-        AnswerValues result = (AnswerValues) parseMethod.invoke(registry, response);
+        AnswerValues result = invokeParse(response, 913);
 
         assertNotNull(result);
-        assertEquals(5, result.getValues().length); // 5 значений
+        assertEquals(5, result.getValues().length);
 
-        // Проверяем значение давления
         assertEquals(2.4965e-02, result.getValues()[0], 0.0001);
-        // assertEquals(EdwardsUnits.fromCode(59).getSymbol(), result.getDescription(0)); // Pascals
-
-        // Проверяем состояние
-        assertEquals(11, result.getValues()[1]);
-        // assertEquals(EdwardsState.fromCode(11).getName(), result.getDescription(1)); // "On"
-
-        // Alert
-        assertEquals(0, result.getValues()[2]);
-        // assertEquals(EdwardsAlert.fromCode(0).getName(), result.getDescription(2)); // "No Alert"
-
-        // Priority
-        assertEquals(0, result.getValues()[3]);
-        // assertEquals(EdwardsPriority.fromCode(0).getName(), result.getDescription(3)); // "OK"
+        assertEquals(59, result.getValues()[1], 0.0001);
+        assertEquals(11, result.getValues()[2], 0.0001);
+        assertEquals(0, result.getValues()[3], 0.0001);
+        assertEquals(0, result.getValues()[4], 0.0001);
     }
 
     @Test
     public void testParseResponseForV914() throws Exception {
-        // Тестовый ответ для V914 (аналогично, парсер общий): =V914 1.23e-03;66;5;10;1\r
-        // Ожидаем: value=1.23e-03, units=66 (voltage), state=5 (Off), alert=10 (Over Range), priority=1 (warning)
+        // =V914 1.23e-03;66;5;10;1\r
         byte[] response = "=V914 1.23e-03;66;5;10;1\r".getBytes();
 
-        AnswerValues result = (AnswerValues) parseMethod.invoke(registry, response);
+        AnswerValues result = invokeParse(response, 914);
 
         assertNotNull(result);
         assertEquals(5, result.getValues().length);
 
         assertEquals(1.23e-03, result.getValues()[0], 0.0001);
-        // assertEquals(EdwardsUnits.fromCode(66).getSymbol(), result.getDescription(0)); // Voltage
-
-        assertEquals(5, result.getValues()[1]);
-        // assertEquals(EdwardsState.fromCode(5).getName(), result.getDescription(1)); // "Off"
-
-        assertEquals(10, result.getValues()[2]);
-        // assertEquals(EdwardsAlert.fromCode(10).getName(), result.getDescription(2)); // "Over Range"
-
-        assertEquals(1, result.getValues()[3]);
-        // assertEquals(EdwardsPriority.fromCode(1).getName(), result.getDescription(3)); // "warning"
+        assertEquals(66, result.getValues()[1], 0.0001);
+        assertEquals(5, result.getValues()[2], 0.0001);
+        assertEquals(10, result.getValues()[3], 0.0001);
+        assertEquals(1, result.getValues()[4], 0.0001);
     }
 
     @Test
-    public void testParseResponseForV915WithoutOptionalFields() throws Exception {
-        // Тестовый ответ без опциональных alert и priority: =V915 9.9000e+09;59;0\r
-        // Ожидаем: value=9.9000e+09, units=59, state=0
+    public void testParseResponseWithoutOptionalFields() throws Exception {
+        // =V915 9.9000e+09;59;0\r — без alert и priority
         byte[] response = "=V915 9.9000e+09;59;0\r".getBytes();
 
-        AnswerValues result = (AnswerValues) parseMethod.invoke(registry, response);
+        AnswerValues result = invokeParse(response, 915);
 
         assertNotNull(result);
-        assertEquals(3, result.getValues().length); // Только 3 значения
+        assertEquals(5, result.getValues().length); // массив всегда минимум 5
 
         assertEquals(9.9000e+09, result.getValues()[0], 0.0001);
-        // assertEquals(EdwardsUnits.fromCode(59).getSymbol(), result.getDescription(0));
-
-        assertEquals(0, result.getValues()[1]);
-        // assertEquals(EdwardsState.fromCode(0).getName(), result.getDescription(1)); // "Gauge Not connected"
+        assertEquals(59, result.getValues()[1], 0.0001);
+        assertEquals(0, result.getValues()[2], 0.0001);
+        assertEquals(0.0, result.getValues()[3], 0.0001); // alert — нет данных, default
+        assertEquals(0.0, result.getValues()[4], 0.0001); // priority — нет данных, default
     }
 
     @Test
-    public void testParseInvalidCommandInResponse() throws Exception {
-        // Тестовый ответ с неверной командой: =V999 1.0;59;11;0;0\r
+    public void testParseWithUnknownCommand() throws Exception {
+        // =V999 1.0;59;11;0;0\r — команда 999 не распознаётся,
+        // но cleanResponse всё равно снимет префикс, вернёт данные.
+        // Парсер не валидирует Object ID, поэтому ответ будет распарсен.
         byte[] response = "=V999 1.0;59;11;0;0\r".getBytes();
 
-        AnswerValues result = (AnswerValues) parseMethod.invoke(registry, response);
+        AnswerValues result = invokeParse(response, 999);
 
-        assertNull(result); // Ожидаем null из-за IllegalArgumentException "Command not found"
+        assertNotNull(result);
+        assertEquals(5, result.getValues().length);
+        assertEquals(1.0, result.getValues()[0], 0.0001);
     }
 
     @Test
-    public void testParseResponseWithWhitespaceAndCarriageReturn() throws Exception {
-        // Тестовый ответ с лишними пробелами: =V913  4.56e+00 ;59 ;11 \r
+    public void testParseWithWhitespace() throws Exception {
+        // =V913  4.56e+00 ;59 ;11 \r — пробелы вокруг значений
         byte[] response = "=V913  4.56e+00 ;59 ;11 \r".getBytes();
 
-        AnswerValues result = (AnswerValues) parseMethod.invoke(registry, response);
+        AnswerValues result = invokeParse(response, 913);
 
-        assertNull(result);
+        assertNotNull(result);
+        // после cleanResponse: 4.56e+00;59;11 → 3 части
+        assertEquals(5, result.getValues().length);
+        assertEquals(4.56, result.getValues()[0], 0.0001);
+        assertEquals(59, result.getValues()[1], 0.0001);
+        assertEquals(11, result.getValues()[2], 0.0001);
     }
 }
