@@ -12,12 +12,14 @@ import static org.example.utilites.LittleEndianUtils.bytesToHex;
 
 public class ModbusResponder {
     private static final Logger logger = Logger.getLogger(ModbusResponder.class);
+
     private volatile int address = 1;
     private volatile int baudRateCode = 3; // 3 = 9600
     private volatile int unitCode = 1;     // 1 = кПа
     private volatile int decimalPoints = 1;
     private volatile int zeroOffset = 0;
     private volatile int pv = 0;
+    private volatile int parity = 0;       // 0=None, 1=Odd, 2=Even  (регистр 0x0025)
 
     // Используем ConcurrentHashMap для потокобезопасного доступа
     private final Map<Integer, Short> registers = new ConcurrentHashMap<>();
@@ -35,9 +37,24 @@ public class ModbusResponder {
         registers.put(0x0005, (short) 0);
         registers.put(0x0006, (short) 0);
         registers.put(0x000C, (short) zeroOffset);
+        registers.put(0x0025, (short) parity);
+        // 0x0016 (float) — не хранится в карте, вычисляется динамически
     }
 
-    // Основной метод обработки запроса (синхронизирован для атомарности)
+    // ================== Вспомогательные методы ==================
+
+    /**
+     * Возвращает текущее значение PV в виде float с учётом decimalPoints.
+     * Это значение используется для регистра 0x0016 (IEEE754 float, ABCD).
+     */
+    private float getCurrentFloatValue() {
+        int dp = decimalPoints;
+        if (dp < 0 || dp > 4) dp = 0;
+        return pv / (float) Math.pow(10, dp);
+    }
+
+    // ================== Основной метод обработки запроса ==================
+
     public synchronized byte[] processRequest(byte[] request) {
         logger.info(">> " + bytesToHex(request) + " (" + request.length + " байт)");
         if (request.length < 8) {
@@ -72,6 +89,8 @@ public class ModbusResponder {
         }
     }
 
+    // ================== Чтение (0x03 / 0x04) ==================
+
     private byte[] handleRead(byte[] request) {
         int startAddr = ((request[2] & 0xFF) << 8) | (request[3] & 0xFF);
         int quantity = ((request[4] & 0xFF) << 8) | (request[5] & 0xFF);
@@ -88,6 +107,19 @@ public class ModbusResponder {
 
         for (int i = 0; i < quantity; i++) {
             int regAddr = startAddr + i;
+
+            // Специальная обработка float-регистра 0x0016 (и 0x0017)
+            if (regAddr == 0x0016 || regAddr == 0x0017) {
+                float fval = getCurrentFloatValue();
+                int bits = Float.floatToIntBits(fval);
+                if (regAddr == 0x0016) {
+                    response.putShort((short) (bits >>> 16)); // high word (AB)
+                } else {
+                    response.putShort((short) (bits & 0xFFFF)); // low word (CD)
+                }
+                continue;
+            }
+
             Short val = registers.get(regAddr);
             response.putShort(val != null ? val : (short) 0);
         }
@@ -101,6 +133,8 @@ public class ModbusResponder {
         return result.array();
     }
 
+    // ================== Запись одного регистра (0x06) ==================
+
     private byte[] handleWriteSingle(byte[] request) {
         int regAddr = ((request[2] & 0xFF) << 8) | (request[3] & 0xFF);
         int value = ((request[4] & 0xFF) << 8) | (request[5] & 0xFF);
@@ -111,42 +145,43 @@ public class ModbusResponder {
                 address = value;
                 registers.put(regAddr, (short) value);
                 break;
-            case 0x0001:
-                if (value < 0 || value > 5) return buildExceptionResponse(request[0], request[1], 0x03);
+
+            case 0x0001: // Baud rate (0..7 по документу)
+                if (value < 0 || value > 7) return buildExceptionResponse(request[0], request[1], 0x03);
                 baudRateCode = value;
                 registers.put(regAddr, (short) value);
                 break;
-            case 0x0002:
-                unitCode = value;
-                registers.put(regAddr, (short) value);
-                break;
-            case 0x0003:
-                if (value < 0 || value > 4) return buildExceptionResponse(request[0], request[1], 0x03);
-                decimalPoints = value;
-                registers.put(regAddr, (short) value);
-                break;
-            case 0x0004:
-                pv = value;
-                registers.put(regAddr, (short) value);
-                break;
+
             case 0x000C:
                 zeroOffset = value;
                 registers.put(regAddr, (short) value);
                 break;
-            case 0x000F:
-                // Сохранить – эхо, ничего не делаем
+
+            case 0x0025: // Parity / Serial check bit (0=None, 1=Odd, 2=Even)
+                if (value < 0 || value > 2) return buildExceptionResponse(request[0], request[1], 0x03);
+                parity = value;
+                registers.put(regAddr, (short) value);
                 break;
+
+            case 0x000F:
+                // Save to user area — просто эхо (как требует документ)
+                break;
+
             case 0x0010:
-                // Сброс к заводским
+                // Factory reset
                 address = 1;
                 baudRateCode = 3;
                 unitCode = 1;
                 decimalPoints = 1;
                 zeroOffset = 0;
                 pv = 0;
+                parity = 0;
                 initRegisters();
                 break;
+
             default:
+                // Всё остальное (в т.ч. 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0016) — illegal address
+                // Согласно документу (стр.5): пользователи могут менять только 4 параметра
                 return buildExceptionResponse(request[0], request[1], 0x02);
         }
 
@@ -166,6 +201,8 @@ public class ModbusResponder {
         return result.array();
     }
 
+    // ================== Запись нескольких регистров (0x10) ==================
+
     private byte[] handleWriteMultiple(byte[] request) {
         int startAddr = ((request[2] & 0xFF) << 8) | (request[3] & 0xFF);
         int quantity = ((request[4] & 0xFF) << 8) | (request[5] & 0xFF);
@@ -177,32 +214,27 @@ public class ModbusResponder {
 
         for (int i = 0; i < quantity; i++) {
             int regAddr = startAddr + i;
-            int value = ((request[7 + 2*i] & 0xFF) << 8) | (request[8 + 2*i] & 0xFF);
+            int value = ((request[7 + 2 * i] & 0xFF) << 8) | (request[8 + 2 * i] & 0xFF);
 
             if (regAddr == 0x0000) {
                 if (value < 1 || value > 255) return buildExceptionResponse(request[0], request[1], 0x03);
                 address = value;
                 registers.put(regAddr, (short) value);
             } else if (regAddr == 0x0001) {
-                if (value < 0 || value > 5) return buildExceptionResponse(request[0], request[1], 0x03);
+                if (value < 0 || value > 7) return buildExceptionResponse(request[0], request[1], 0x03);
                 baudRateCode = value;
-                registers.put(regAddr, (short) value);
-            } else if (regAddr == 0x0002) {
-                unitCode = value;
-                registers.put(regAddr, (short) value);
-            } else if (regAddr == 0x0003) {
-                if (value < 0 || value > 4) return buildExceptionResponse(request[0], request[1], 0x03);
-                decimalPoints = value;
-                registers.put(regAddr, (short) value);
-            } else if (regAddr == 0x0004) {
-                pv = value;
                 registers.put(regAddr, (short) value);
             } else if (regAddr == 0x000C) {
                 zeroOffset = value;
                 registers.put(regAddr, (short) value);
+            } else if (regAddr == 0x0025) {
+                if (value < 0 || value > 2) return buildExceptionResponse(request[0], request[1], 0x03);
+                parity = value;
+                registers.put(regAddr, (short) value);
             } else if (regAddr == 0x000F || regAddr == 0x0010) {
-                // игнорируем
+                // игнорируем (save/restore обрабатываются отдельно)
             } else {
+                // 0x0002, 0x0003, 0x0004, 0x0005, 0x0006 и всё остальное — illegal address
                 return buildExceptionResponse(request[0], request[1], 0x02);
             }
         }
@@ -223,6 +255,8 @@ public class ModbusResponder {
         return result.array();
     }
 
+    // ================== Вспомогательные методы ==================
+
     private byte[] buildExceptionResponse(int addr, int func, int code) {
         byte[] data = new byte[3];
         data[0] = (byte) addr;
@@ -241,7 +275,7 @@ public class ModbusResponder {
         int len = frame.length;
         byte[] data = new byte[len - 2];
         System.arraycopy(frame, 0, data, 0, len - 2);
-        short recvCRC = (short)((frame[len-1] & 0xFF) << 8 | (frame[len-2] & 0xFF));
+        short recvCRC = (short) ((frame[len - 1] & 0xFF) << 8 | (frame[len - 2] & 0xFF));
         short calcCRC = calculateCRC(data);
         return recvCRC == calcCRC;
     }
@@ -261,7 +295,7 @@ public class ModbusResponder {
         return (short) crc;
     }
 
-    // ---- Методы для управления из GUI (синхронизированы) ----
+    // ================== Методы для управления из GUI ==================
 
     public synchronized void setPv(int value) {
         pv = value;
@@ -296,11 +330,19 @@ public class ModbusResponder {
         registers.put(0x000C, (short) offset);
     }
 
+    public synchronized void setParity(int p) {
+        if (p < 0 || p > 2) throw new IllegalArgumentException("Parity 0=None, 1=Odd, 2=Even");
+        parity = p;
+        registers.put(0x0025, (short) p);
+    }
+
+    // Getters
     public synchronized int getAddress() { return address; }
     public synchronized int getBaudRateCode() { return baudRateCode; }
     public synchronized int getUnitCode() { return unitCode; }
     public synchronized int getDecimalPoints() { return decimalPoints; }
     public synchronized int getZeroOffset() { return zeroOffset; }
+    public synchronized int getParity() { return parity; }
 
     public synchronized String getBaudRateString() {
         switch (baudRateCode) {
@@ -310,6 +352,17 @@ public class ModbusResponder {
             case 3: return "9600";
             case 4: return "19200";
             case 5: return "38400";
+            case 6: return "57600";
+            case 7: return "115200";
+            default: return "unknown";
+        }
+    }
+
+    public synchronized String getParityString() {
+        switch (parity) {
+            case 0: return "None (N)";
+            case 1: return "Odd (O)";
+            case 2: return "Even (E)";
             default: return "unknown";
         }
     }

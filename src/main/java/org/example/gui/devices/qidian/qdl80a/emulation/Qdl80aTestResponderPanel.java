@@ -32,6 +32,11 @@ public class Qdl80aTestResponderPanel extends JPanel {
     private final JButton setBaudBtn = new JButton("Уст. скорость");
     private final JTextField offsetField = new JTextField("0", 6);
     private final JButton setOffsetBtn = new JButton("Уст. смещение");
+
+    // Четность (0x0025)
+    private final JComboBox<String> parityCombo = new JComboBox<>(new String[]{"None (N)", "Odd (O)", "Even (E)"});
+    private final JButton setParityBtn = new JButton("Уст. четность");
+
     private final JButton setUnitBtn = new JButton("Уст. единицы");
     private final JButton setDecimalBtn = new JButton("Уст. знаки");
     private final JComboBox<String> unitCombo = new JComboBox<>(new String[]{"МПа","кПа","Па","бар","мбар","кгс/см²","PSI","мH₂O","ммH₂O","дюйм H₂O",
@@ -51,6 +56,7 @@ public class Qdl80aTestResponderPanel extends JPanel {
     private final JLabel unitStatus = new JLabel("Единицы: кПа");
     private final JLabel decimalStatus = new JLabel("Десят.: 1");
     private final JLabel offsetStatus = new JLabel("Смещение: 0");
+    private final JLabel parityStatus = new JLabel("Четность: None (N)");
 
     private final List<String> logLines = new CopyOnWriteArrayList<>();
     private static final int MAX_LOG_LINES = 200;
@@ -71,11 +77,11 @@ public class Qdl80aTestResponderPanel extends JPanel {
         this.serialService = new ModbusSerialService(this::handleIncomingData, logger);
 
         setLayout(new BorderLayout(5, 5));
-        setBorder(BorderFactory.createTitledBorder("Эмулятор QDL80A (Modbus RTU)"));
+        setBorder(BorderFactory.createTitledBorder("Эмулятор QDL80A (Modbus RTU) — 100% по протоколу"));
 
         JPanel leftPanel = createLeftPanel();
         JScrollPane leftScroll = new JScrollPane(leftPanel);
-        leftScroll.setPreferredSize(new Dimension(210, 0));
+        leftScroll.setPreferredSize(new Dimension(230, 0));
         leftScroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
         leftScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         leftScroll.setBorder(null);
@@ -105,7 +111,7 @@ public class Qdl80aTestResponderPanel extends JPanel {
         comLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(comLabel);
         p.add(Box.createVerticalStrut(2));
-        portCombo.setMaximumSize(new Dimension(180, 25));
+        portCombo.setMaximumSize(new Dimension(200, 25));
         portCombo.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(portCombo);
         p.add(Box.createVerticalStrut(3));
@@ -118,7 +124,7 @@ public class Qdl80aTestResponderPanel extends JPanel {
         p.add(Box.createVerticalStrut(8));
 
         // ---- Адрес ----
-        JLabel addrLabel = new JLabel("Адрес устройства");
+        JLabel addrLabel = new JLabel("Адрес устройства (0x0000)");
         addrLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(addrLabel);
         p.add(Box.createVerticalStrut(2));
@@ -133,7 +139,7 @@ public class Qdl80aTestResponderPanel extends JPanel {
         p.add(Box.createVerticalStrut(8));
 
         // ---- Скорость ----
-        JLabel baudLabel = new JLabel("Скорость (бод)");
+        JLabel baudLabel = new JLabel("Скорость (0x0001) — 0..7");
         baudLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(baudLabel);
         p.add(Box.createVerticalStrut(2));
@@ -149,8 +155,25 @@ public class Qdl80aTestResponderPanel extends JPanel {
 
         p.add(Box.createVerticalStrut(8));
 
+        // ---- Четность (0x0025) ----
+        JLabel parityLabel = new JLabel("Четность (0x0025)");
+        parityLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(parityLabel);
+        p.add(Box.createVerticalStrut(2));
+        parityCombo.setSelectedIndex(0);
+        parityCombo.setMaximumSize(new Dimension(140, 25));
+        parityCombo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(parityCombo);
+        p.add(Box.createVerticalStrut(3));
+        JPanel parityRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 0));
+        parityRow.add(setParityBtn);
+        parityRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(parityRow);
+
+        p.add(Box.createVerticalStrut(8));
+
         // ---- Смещение нуля ----
-        JLabel offsetLabel = new JLabel("Смещение нуля");
+        JLabel offsetLabel = new JLabel("Смещение нуля (0x000C)");
         offsetLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(offsetLabel);
         p.add(Box.createVerticalStrut(2));
@@ -165,7 +188,7 @@ public class Qdl80aTestResponderPanel extends JPanel {
         p.add(Box.createVerticalStrut(8));
 
         // ---- Единицы ----
-        JLabel unitLabel = new JLabel("Единицы измерения");
+        JLabel unitLabel = new JLabel("Единицы измерения (0x0002) — только чтение по Modbus");
         unitLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(unitLabel);
         p.add(Box.createVerticalStrut(2));
@@ -182,7 +205,7 @@ public class Qdl80aTestResponderPanel extends JPanel {
         p.add(Box.createVerticalStrut(8));
 
         // ---- Десятичные знаки ----
-        JLabel decimalLabel = new JLabel("Десятичных знаков");
+        JLabel decimalLabel = new JLabel("Десятичных знаков (0x0003) — только чтение по Modbus");
         decimalLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(decimalLabel);
         p.add(Box.createVerticalStrut(2));
@@ -199,12 +222,12 @@ public class Qdl80aTestResponderPanel extends JPanel {
         p.add(Box.createVerticalStrut(8));
 
         // ---- PV (значение) ----
-        JLabel pvLabel = new JLabel("PV (значение)");
+        JLabel pvLabel = new JLabel("PV (0x0004) — только чтение по Modbus");
         pvLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(pvLabel);
         p.add(Box.createVerticalStrut(2));
-        valueSlider.setPreferredSize(new Dimension(180, 20));
-        valueSlider.setMaximumSize(new Dimension(180, 20));
+        valueSlider.setPreferredSize(new Dimension(200, 20));
+        valueSlider.setMaximumSize(new Dimension(200, 20));
         valueSlider.setAlignmentX(Component.LEFT_ALIGNMENT);
         valueSlider.setMajorTickSpacing(5000);
         valueSlider.setMinorTickSpacing(1000);
@@ -217,12 +240,12 @@ public class Qdl80aTestResponderPanel extends JPanel {
         p.add(Box.createVerticalStrut(8));
 
         // ---- Частота генератора ----
-        JLabel freqLabelHdr = new JLabel("Частота (Гц)");
+        JLabel freqLabelHdr = new JLabel("Частота генератора (Гц)");
         freqLabelHdr.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(freqLabelHdr);
         p.add(Box.createVerticalStrut(2));
-        freqSlider.setPreferredSize(new Dimension(180, 20));
-        freqSlider.setMaximumSize(new Dimension(180, 20));
+        freqSlider.setPreferredSize(new Dimension(200, 20));
+        freqSlider.setMaximumSize(new Dimension(200, 20));
         freqSlider.setAlignmentX(Component.LEFT_ALIGNMENT);
         freqSlider.setMajorTickSpacing(10);
         freqSlider.setMinorTickSpacing(2);
@@ -254,10 +277,11 @@ public class Qdl80aTestResponderPanel extends JPanel {
     private JPanel createBottomPanel() {
         JPanel bottom = new JPanel(new GridLayout(1, 2, 10, 0));
 
-        JPanel statusPanel = new JPanel(new GridLayout(3, 2, 5, 5));
-        statusPanel.setBorder(BorderFactory.createTitledBorder("Состояние эмулятора"));
+        JPanel statusPanel = new JPanel(new GridLayout(4, 2, 5, 5));
+        statusPanel.setBorder(BorderFactory.createTitledBorder("Состояние эмулятора (по протоколу)"));
         statusPanel.add(addressStatus);
         statusPanel.add(baudStatus);
+        statusPanel.add(parityStatus);
         statusPanel.add(unitStatus);
         statusPanel.add(decimalStatus);
         statusPanel.add(offsetStatus);
@@ -266,7 +290,7 @@ public class Qdl80aTestResponderPanel extends JPanel {
         logArea.setFont(new Font("Monospaced", Font.PLAIN, 11));
         logArea.setRows(8);
         JScrollPane logScroll = new JScrollPane(logArea);
-        logScroll.setBorder(BorderFactory.createTitledBorder("Лог событий"));
+        logScroll.setBorder(BorderFactory.createTitledBorder("Лог событий (Modbus RTU)"));
 
         bottom.add(statusPanel);
         bottom.add(logScroll);
@@ -292,7 +316,7 @@ public class Qdl80aTestResponderPanel extends JPanel {
             responder.setPv(val);
             valueLabel.setText(String.valueOf(val));
             addDataPoint(val);
-            addLog("Установлено PV = " + val);
+            addLog("Установлено PV = " + val + " (через GUI, Modbus read-only)");
         });
 
         // Установка адреса
@@ -326,8 +350,20 @@ public class Qdl80aTestResponderPanel extends JPanel {
             }
             try {
                 responder.setBaudRateCode(code);
-                addLog("Скорость изменена на " + baud);
+                addLog("Скорость изменена на " + baud + " (код " + code + ")");
                 baudStatus.setText("Скорость: " + baud);
+            } catch (IllegalArgumentException ex) {
+                addLog("Ошибка: " + ex.getMessage());
+            }
+        });
+
+        // Установка четности (0x0025)
+        setParityBtn.addActionListener(e -> {
+            int idx = parityCombo.getSelectedIndex();
+            try {
+                responder.setParity(idx);
+                addLog("Четность изменена на " + parityCombo.getSelectedItem() + " (код " + idx + ")");
+                parityStatus.setText("Четность: " + parityCombo.getSelectedItem());
             } catch (IllegalArgumentException ex) {
                 addLog("Ошибка: " + ex.getMessage());
             }
@@ -353,22 +389,22 @@ public class Qdl80aTestResponderPanel extends JPanel {
             freqLabel.setText(String.format("%.1f Гц", frequency));
         });
 
-        // Установка единиц
+        // Установка единиц (только GUI, Modbus — read-only)
         setUnitBtn.addActionListener(e -> {
             int idx = unitCombo.getSelectedIndex();
             responder.setUnitCode(idx);
             String[] names = {"МПа","кПа","Па","бар","мбар","кгс/см²","PSI","мH₂O","ммH₂O","дюйм H₂O",
                     "фут H₂O","ммHg","дюйм Hg","атм","Торр","м","см","мм","кг","°C","pH","°F","пусто"};
             unitStatus.setText("Единицы: " + names[idx]);
-            addLog("Единицы: " + names[idx]);
+            addLog("Единицы (GUI): " + names[idx] + " — по Modbus запись запрещена (0x02)");
         });
 
-        // Установка десятичных знаков
+        // Установка десятичных знаков (только GUI)
         setDecimalBtn.addActionListener(e -> {
             int dp = (Integer) decimalCombo.getSelectedItem();
             responder.setDecimalPoints(dp);
             decimalStatus.setText("Десят.: " + dp);
-            addLog("Десят. знаков: " + dp);
+            addLog("Десят. знаков (GUI): " + dp + " — по Modbus запись запрещена (0x02)");
         });
     }
 
@@ -416,17 +452,14 @@ public class Qdl80aTestResponderPanel extends JPanel {
         genStopBtn.setEnabled(true);
         startTime = System.currentTimeMillis();
 
-        // Увеличим частоту обновления данных до 50 мс для более плавного графика
         generatorTask = scheduler.scheduleAtFixedRate(() -> {
             if (!generatorRunning) return;
             double value;
             long now = System.currentTimeMillis();
             double t = (now - startTime) / 1000.0;
             if ("sine".equals(type)) {
-                // Используем текущую частоту
                 value = 10000 * Math.sin(2 * Math.PI * frequency * t);
             } else {
-                // Случайное блуждание
                 value = currentPV + (Math.random() - 0.5) * 1000;
                 if (value > 32767) value = 32767;
                 if (value < -32768) value = -32768;
@@ -439,7 +472,7 @@ public class Qdl80aTestResponderPanel extends JPanel {
                 valueLabel.setText(String.valueOf(intVal));
                 addDataPoint(intVal);
             });
-        }, 0, 50, TimeUnit.MILLISECONDS); // 20 раз в секунду
+        }, 0, 50, TimeUnit.MILLISECONDS);
     }
 
     private void stopGenerator() {
@@ -462,6 +495,7 @@ public class Qdl80aTestResponderPanel extends JPanel {
         SwingUtilities.invokeLater(() -> {
             addressStatus.setText("Адрес: " + responder.getAddress());
             baudStatus.setText("Скорость: " + responder.getBaudRateString());
+            parityStatus.setText("Четность: " + responder.getParityString());
             String[] names = {"МПа","кПа","Па","бар","мбар","кгс/см²","PSI","мH₂O","ммH₂O","дюйм H₂O",
                     "фут H₂O","ммHg","дюйм Hg","атм","Торр","м","см","мм","кг","°C","pH","°F","пусто"};
             int uc = responder.getUnitCode();
@@ -514,8 +548,7 @@ public class Qdl80aTestResponderPanel extends JPanel {
         scheduler.shutdownNow();
     }
 
-    // ================== Класс осциллографа (без изменений) ==================
-    // ... (оставлен как был) ...
+    // ================== Класс осциллографа ==================
     private static class OscilloscopePanel extends JPanel {
         private final int windowMs;
         private final List<DataPoint> data = new CopyOnWriteArrayList<>();

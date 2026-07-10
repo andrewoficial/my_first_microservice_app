@@ -17,6 +17,7 @@ import org.example.device.command.SingleCommand;
 import org.example.gui.components.*;
 import org.example.gui.mainWindowUtilites.FolderPictureForLog;
 import org.example.gui.mainWindowUtilites.GuiStateManager;
+import org.example.gui.mainWindowUtilites.CommandFieldFormatter;
 import org.example.gui.mainWindowUtilites.PortManager;
 import org.example.gui.mainWindowUtilites.TabManager;
 import org.example.services.AnswerStorage;
@@ -517,8 +518,11 @@ public class MainWindow extends JFrame implements Rendeble {
 
 
                 byte[] cmdForSend = entry.getValue().build(argsValue);
-                log.info("Set command in input field to " + MyUtilities.bytesToHexString(cmdForSend));
-                jtfTextToSend.setText(MyUtilities.bytesToHexString(cmdForSend));
+                boolean isTemplatedAscii = device instanceof TemplatedAscii;
+                String fieldText = CommandFieldFormatter.toFieldText(cmdForSend, isTemplatedAscii);
+                log.info("Set command in input field to " + fieldText
+                        + " (hex " + MyUtilities.bytesToHexString(cmdForSend) + ")");
+                jtfTextToSend.setText(fieldText);
                 leftPanState.setRawCommand(currentActiveClientId.get(), cmdForSend);
                 log.info("Saved  " + MyUtilities.bytesToHexString(jtfTextToSend.getText().getBytes()));
             });

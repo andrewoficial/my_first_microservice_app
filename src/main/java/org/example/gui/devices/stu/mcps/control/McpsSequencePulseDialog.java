@@ -15,9 +15,8 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 public class McpsSequencePulseDialog extends JDialog {
@@ -30,11 +29,12 @@ public class McpsSequencePulseDialog extends JDialog {
     private JPanel sequenceStatusLamp;
     private JLabel sequenceStatusLabel;
     private JPanel statusPanel;
+    private JCheckBox repeatSequence;
 
     private final McpsCommunicationService service;
     private final AsyncLogger logger;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-    private ScheduledFuture<?> cycleFuture;
+    private Future<?> cycleFuture;
 
     private volatile boolean running = false;
     private int sequenceGen = 0;
@@ -70,6 +70,8 @@ public class McpsSequencePulseDialog extends JDialog {
         sequenceStatusLamp.setLayout(new BorderLayout());
         sequenceStatusLamp.add(seqLamp, BorderLayout.CENTER);
         seqLamp.setLampColor(Color.RED);
+
+        repeatSequence.setSelected(true);
 
         startBtn.addActionListener(e -> toggleSequence());
         closeBtn.addActionListener(e -> {
@@ -250,7 +252,7 @@ public class McpsSequencePulseDialog extends JDialog {
         }
 
         if (cycleFuture != null) {
-            cycleFuture.cancel(false);
+            cycleFuture.cancel(true);
             cycleFuture = null;
         }
 
@@ -264,46 +266,49 @@ public class McpsSequencePulseDialog extends JDialog {
 
         if (onSequenceStateChange != null) onSequenceStateChange.accept(true);
 
-        scheduleCycle(gen, duration, period, System.currentTimeMillis());
+        cycleFuture = scheduler.submit(() -> runSequenceLoop(gen, duration, period));
 
         logger.info("Запущена последовательность: " + channelSequence + " | " + duration + "мс / " + period + "мс");
     }
 
-    private void scheduleCycle(int gen, int duration, int period, long cycleStart) {
-        if (!running || gen != sequenceGen) return;
+    /**
+     * Последовательное воспроизведение: на каждый канал отправляется команда
+     * записи и ожидается ответ прибора (OK) прежде, чем перейти к следующей
+     * команде. Между импульсами выдерживается заданный период. Цикл повторяется,
+     * только если включён чек-бокс "Повторять последовательность".
+     */
+    private void runSequenceLoop(int gen, int duration, int period) {
+        try {
+            do {
+                for (int i = 0; i < channelSequence.size(); i++) {
+                    if (!running || gen != sequenceGen) return;
 
-        long now = System.currentTimeMillis();
-        long base = Math.max(now, cycleStart);
-        int cycleCount = channelSequence.size();
-        int cycleDuration = cycleCount * period;
+                    int channel = channelSequence.get(i);
+                    long slotStart = System.currentTimeMillis();
 
-        for (int i = 0; i < cycleCount; i++) {
-            int ch = channelSequence.get(i);
-            long fireAt = base + (long) i * period;
-            long delay = fireAt - System.currentTimeMillis();
-            if (delay < 0) delay = 0;
+                    int ackTimeout = Math.max(1000, period);
+                    boolean acked = service.writeOutputSync(channel, true, duration, ackTimeout);
+                    if (!acked) {
+                        logger.warn("Канал " + channel + ": не получен ответ на команду записи (таймаут)");
+                    }
 
-            final int channel = ch;
-            scheduler.schedule(() -> {
-                if (running && gen == sequenceGen) {
-                    service.writeOutput(channel, true, duration);
+                    long wait = period - (System.currentTimeMillis() - slotStart);
+                    if (wait > 0) Thread.sleep(wait);
                 }
-            }, delay, TimeUnit.MILLISECONDS);
+            } while (running && gen == sequenceGen && repeatSequence.isSelected());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } finally {
+            SwingUtilities.invokeLater(() -> {
+                if (running && gen == sequenceGen) stopSequence();
+            });
         }
-
-        long nextCycleStart = base + cycleDuration;
-        long nextDelay = nextCycleStart - System.currentTimeMillis();
-        if (nextDelay < 0) nextDelay = 0;
-
-        cycleFuture = scheduler.schedule(() -> {
-            scheduleCycle(gen, duration, period, nextCycleStart);
-        }, nextDelay, TimeUnit.MILLISECONDS);
     }
 
     private void stopSequence() {
         running = false;
         if (cycleFuture != null) {
-            cycleFuture.cancel(false);
+            cycleFuture.cancel(true);
             cycleFuture = null;
         }
         startBtn.setText("Старт");
@@ -338,46 +343,49 @@ public class McpsSequencePulseDialog extends JDialog {
      */
     private void $$$setupUI$$$() {
         rootPanel = new JPanel();
-        rootPanel.setLayout(new GridLayoutManager(6, 4, new Insets(10, 10, 10, 10), 5, 5));
+        rootPanel.setLayout(new GridLayoutManager(6, 5, new Insets(10, 10, 10, 10), 5, 5));
         final JLabel label1 = new JLabel();
         label1.setText("Последовательность каналов (через запятую):");
-        rootPanel.add(label1, new GridConstraints(0, 0, 1, 4, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        rootPanel.add(label1, new GridConstraints(0, 0, 1, 5, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         sequenceField = new JTextField();
         sequenceField.setText("1,2,3,2,1,2,3");
-        rootPanel.add(sequenceField, new GridConstraints(1, 0, 1, 4, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(200, -1), null, 0, false));
+        rootPanel.add(sequenceField, new GridConstraints(1, 0, 1, 5, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(200, -1), null, 0, false));
         final JLabel label2 = new JLabel();
         label2.setText("Длительность импульса (мс):");
-        rootPanel.add(label2, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        rootPanel.add(label2, new GridConstraints(2, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         durationField = new JTextField();
         durationField.setText("100");
-        rootPanel.add(durationField, new GridConstraints(2, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(80, -1), null, 0, false));
+        rootPanel.add(durationField, new GridConstraints(2, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(80, -1), null, 0, false));
         final Spacer spacer1 = new Spacer();
-        rootPanel.add(spacer1, new GridConstraints(2, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        rootPanel.add(spacer1, new GridConstraints(2, 4, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         final JLabel label3 = new JLabel();
         label3.setText("Период следования (мс):");
-        rootPanel.add(label3, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        rootPanel.add(label3, new GridConstraints(3, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         periodField = new JTextField();
         periodField.setText("300");
-        rootPanel.add(periodField, new GridConstraints(3, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(80, -1), null, 0, false));
+        rootPanel.add(periodField, new GridConstraints(3, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(80, -1), null, 0, false));
         final Spacer spacer2 = new Spacer();
-        rootPanel.add(spacer2, new GridConstraints(3, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        rootPanel.add(spacer2, new GridConstraints(3, 4, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         final Spacer spacer3 = new Spacer();
-        rootPanel.add(spacer3, new GridConstraints(4, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        rootPanel.add(spacer3, new GridConstraints(4, 1, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         startBtn = new JButton();
         startBtn.setText("Старт");
-        rootPanel.add(startBtn, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(100, 34), null, 0, false));
+        rootPanel.add(startBtn, new GridConstraints(5, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(100, 34), null, 0, false));
         closeBtn = new JButton();
         closeBtn.setText("Закрыть");
-        rootPanel.add(closeBtn, new GridConstraints(5, 3, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        rootPanel.add(closeBtn, new GridConstraints(5, 4, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         statusPanel = new JPanel();
         statusPanel.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
-        rootPanel.add(statusPanel, new GridConstraints(5, 1, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_VERTICAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(320, -1), new Dimension(320, -1), new Dimension(320, -1), 0, false));
+        rootPanel.add(statusPanel, new GridConstraints(5, 2, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_VERTICAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(320, -1), new Dimension(320, -1), new Dimension(320, -1), 0, false));
         sequenceStatusLamp = new JPanel();
         sequenceStatusLamp.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
         statusPanel.add(sequenceStatusLamp, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(10, 10), new Dimension(10, 10), new Dimension(10, 10), 0, false));
         sequenceStatusLabel = new JLabel();
         sequenceStatusLabel.setText("Последовательность не воспроизводиться");
         statusPanel.add(sequenceStatusLabel, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        repeatSequence = new JCheckBox();
+        repeatSequence.setText("Повторять последовательность");
+        rootPanel.add(repeatSequence, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     }
 
     /**

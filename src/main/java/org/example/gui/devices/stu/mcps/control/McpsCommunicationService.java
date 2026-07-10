@@ -305,6 +305,76 @@ public final class McpsCommunicationService {
         sendCommand(cmd);
     }
 
+    /**
+     * Синхронная запись выхода: отправляет команду и ждёт подтверждения (OK)
+     * именно на эту команду, логируя полученный ответ прибора.
+     * Используется в режиме последовательности импульсов, чтобы не начинать
+     * следующую команду, пока не пришёл ответ на предыдущую.
+     *
+     * @return true если ответ получен в пределах timeoutMs, иначе false
+     */
+    public boolean writeOutputSync(int channel, boolean on, int durationMs, long timeoutMs) {
+        String ch = String.format("%02d", channel);
+        String cmd;
+        if (on) {
+            cmd = durationMs > 0
+                ? String.format("@WR%s 1,%d", ch, durationMs)
+                : String.format("@WR%s 1,0", ch);
+        } else {
+            cmd = String.format("@WR%s 0", ch);
+        }
+        return sendCommandSyncLogged(cmd, timeoutMs);
+    }
+
+    /**
+     * Отправка команды с ожиданием ответа именно на неё и логированием ответа.
+     * Ответом считается строка, начинающаяся с того же адреса/команды и
+     * содержащая OK (например, запрос "@WR01 0" -> ответ "@WR01 OK").
+     */
+    public boolean sendCommandSyncLogged(String command, long timeoutMs) {
+        if (!connected || command == null || command.isBlank()) return false;
+
+        String prefix = command.contains(" ") ? command.substring(0, command.indexOf(' ')) : command;
+        CountDownLatch latch = new CountDownLatch(1);
+        final String[] received = new String[1];
+        Consumer<String> listener = response -> {
+            if (response.startsWith(prefix) && response.contains("OK")) {
+                received[0] = response;
+                latch.countDown();
+            }
+        };
+        addResponseListener(listener);
+        logger.info("TX (ожидание ответа): " + command);
+        if (!sendQueue.offer(command)) {
+            logger.warn("Очередь отправки переполнена, команда отброшена: " + command);
+            removeResponseListener(listener);
+            return false;
+        }
+        try {
+            boolean ok = latch.await(timeoutMs, TimeUnit.MILLISECONDS);
+            if (ok) {
+                logger.info("RX ответ на " + command + ": " + received[0]);
+            } else {
+                logger.warn("Таймаут ожидания ответа на команду: " + command);
+            }
+            return ok;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        } finally {
+            removeResponseListener(listener);
+        }
+    }
+
+    /**
+     * Удаляет из очереди отправки все ожидающие команды чтения (@R...),
+     * чтобы во время последовательности импульсов шина не засорялась
+     * фоновым опросом состояния.
+     */
+    public void flushPendingReads() {
+        sendQueue.removeIf(McpsCommunicationService::isReadCommand);
+    }
+
     public void readOutput(int channel) {
         String ch = String.format("%02d", channel);
         sendCommand("@RO" + ch);

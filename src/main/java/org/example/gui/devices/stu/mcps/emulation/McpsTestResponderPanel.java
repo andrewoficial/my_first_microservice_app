@@ -38,6 +38,8 @@ public class McpsTestResponderPanel extends JPanel {
     private final boolean[] channelOnState = new boolean[8];
     private final long[] channelPulseCount = new long[8];
 
+    private String deviceMode = "Manual";   // <-- NEW: for @RDMD support
+
     private static final int CHANNEL_COUNT = 8;
     private static final int WINDOW_MS = 2000;
     private static final int MAX_LOG_LINES = 200;
@@ -147,33 +149,70 @@ public class McpsTestResponderPanel extends JPanel {
         addLog("Слушатель остановлен");
     }
 
+    /**
+     * Обновлённый обработчик ВСЕХ команд протокола из "Протокол ASCII.docx".
+     * Теперь @RO/@RPOU возвращают реальное состояние (синхронно с UI),
+     * добавлены @RDMD, @RI, @RPIN.
+     */
     private void handleIncomingCommand(String response) {
         long now = System.currentTimeMillis();
+        String cmd = response.trim();
 
-        if (response.startsWith("@WR")) {
-            try {
-                String rest = response.substring(3).trim();
+        try {
+            if (cmd.startsWith("@WR")) {
+                String rest = cmd.substring(3).trim();
                 String[] parts = rest.split("[ ,]+");
-                int ch = Integer.parseInt(parts[0]);
-                int state = Integer.parseInt(parts[1]);
+                if (parts.length < 2) return;
 
-                if (ch < 1 || ch > CHANNEL_COUNT) return;
+                String chStr = parts[0];
+                int ch = Integer.parseInt(chStr);
+                if (ch < 1 || ch > CHANNEL_COUNT) {
+                    addLog("Invalid CH in @WR: " + ch);
+                    return;
+                }
+                int state = Integer.parseInt(parts[1]);
+                int idx = ch - 1;
 
                 if (state == 1) {
-                    long duration = parts.length > 2 ? Long.parseLong(parts[2]) : -1;
+                    long duration = parts.length > 2 ? Long.parseLong(parts[2]) : -1L;
                     setChannelOn(ch, now, duration);
-                    service.sendCommand("@WR" + parts[0] + " OK");
-                } else {
+                    service.sendCommand("@WR" + chStr + " OK");
+                } else if (state == 0) {
                     setChannelOff(ch, now);
-                    service.sendCommand("@WR" + parts[0] + " OK");
+                    service.sendCommand("@WR" + chStr + " OK");
                 }
-            } catch (Exception ignored) {}
-        } else if (response.startsWith("@RO") || response.startsWith("@RPOU")) {
-            if (response.startsWith("@RPOU")) {
-                service.sendCommand("@RAOU 00000000");
+            } else if (cmd.startsWith("@RDMD")) {
+                service.sendCommand("@RAMD " + deviceMode);
+                addLog("Read mode → " + deviceMode);
+            } else if (cmd.startsWith("@RI")) {
+                String rest = cmd.substring(3).trim();
+                String chStr = rest.split("[ ,]+")[0];
+                // Входы IN не симулируются в текущей версии UI.
+                // Всегда возвращаем 0. Если нужно — добавим массив состояний + чекбоксы.
+                service.sendCommand("@RA" + chStr + " 0");
+            } else if (cmd.startsWith("@RO")) {
+                String rest = cmd.substring(3).trim();
+                String chStr = rest.split("[ ,]+")[0];
+                int ch = Integer.parseInt(chStr);
+                String val = (ch >= 1 && ch <= CHANNEL_COUNT && channelOnState[ch - 1]) ? "1" : "0";
+                service.sendCommand("@RA" + chStr + " " + val);
+            } else if (cmd.startsWith("@RPIN")) {
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < CHANNEL_COUNT; i++) sb.append('0');
+                service.sendCommand("@RAIN " + sb.toString());
+                addLog("Read IN port");
+            } else if (cmd.startsWith("@RPOU")) {
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < CHANNEL_COUNT; i++) {
+                    sb.append(channelOnState[i] ? '1' : '0');
+                }
+                service.sendCommand("@RAOU " + sb.toString());
+                addLog("Read OUT port: " + sb);
             } else {
-                service.sendCommand(response.replace("@RO", "@RA") + " 0");
+                addLog("Unhandled command: " + cmd);
             }
+        } catch (Exception ex) {
+            addLog("Command parse error: " + ex.getMessage());
         }
 
         oscilloscopePanel.repaint();
@@ -232,7 +271,7 @@ public class McpsTestResponderPanel extends JPanel {
                 double jitter = calcJitter(channelPulseTimes.get(ch));
                 channelStateLamps[idx].setForeground(on ? new Color(0, 220, 80) : Color.GRAY);
                 channelInfoLabels[idx].setText(String.format("CH%02d: %s | #%d | %.1fГц | \u00B1%.0fмс",
-                    ch, on ? "ВКЛ " : "ВЫКЛ", channelPulseCount[idx], freq, jitter));
+                        ch, on ? "ВКЛ " : "ВЫКЛ", channelPulseCount[idx], freq, jitter));
             }
         });
     }

@@ -62,6 +62,7 @@ public class spbStuMcpsMain {
     private final LampIndicator queLamp = new LampIndicator();
     private final LampIndicator throttleLamp = new LampIndicator();
     private volatile int minCommandIntervalMs = 37;
+    private boolean backgroundPollingBeforeSequence = true;
     private Consumer<String> deviceDetectionListener;
     private Timer deviceDetectionTimer;
     private Timer queueMonitorTimer;
@@ -303,6 +304,15 @@ public class spbStuMcpsMain {
             sequenceDialog = new McpsSequencePulseDialog(owner, service, logger, minCommandIntervalMs);
             sequenceDialog.setOnSequenceStateChange(active -> {
                 channelsPanel.setGlobalPulseActive(active);
+                if (active) {
+                    backgroundPollingBeforeSequence = backGroundPoolCB.isSelected();
+                    backGroundPoolCB.setSelected(false);
+                    channelsPanel.setBackgroundPollingEnabled(false);
+                    service.flushPendingReads();
+                } else {
+                    backGroundPoolCB.setSelected(backgroundPollingBeforeSequence);
+                    channelsPanel.setBackgroundPollingEnabled(backgroundPollingBeforeSequence);
+                }
                 logger.info("Sequence active = " + active);
             });
         }

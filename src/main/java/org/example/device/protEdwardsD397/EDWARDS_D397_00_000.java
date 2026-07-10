@@ -7,6 +7,7 @@ import org.apache.log4j.Logger;
 import org.example.device.DeviceCommandListClass;
 import org.example.device.ProtocolComPort;
 import org.example.device.SomeDevice;
+import org.example.device.TemplatedAscii;
 import org.example.device.connectParameters.ComConnectParameters;
 import org.example.device.protArdTerm.ArdTermCommandRegistry;
 import org.example.device.protEctTc290.EctTc290CommandRegistry;
@@ -14,7 +15,7 @@ import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 
 
-public class EDWARDS_D397_00_000 implements SomeDevice, ProtocolComPort {
+public class EDWARDS_D397_00_000 implements SomeDevice, ProtocolComPort, TemplatedAscii {
     private static final Logger log = Logger.getLogger(EDWARDS_D397_00_000.class);
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора

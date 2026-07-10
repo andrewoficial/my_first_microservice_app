@@ -14,6 +14,8 @@ import java.util.concurrent.ExecutorService;
 
 import org.example.gui.accu10fd.Acu10fdWindow;
 import org.example.gui.curve.CurveHandlerWindow;
+import org.example.gui.devices.edvards.d39730880.control.d39730880Main;
+import org.example.gui.devices.edvards.d39730880.emulation.EdwardsTicTestFrame;
 import org.example.gui.devices.qidian.qdl80a.control.Qdl80aMain;
 import org.example.gui.devices.qidian.qdl80a.emulation.Qdl80aTestFrame;
 import org.example.gui.devices.stu.mcps.control.spbStuMcpsMain;
@@ -585,8 +587,22 @@ public class JmenuFile {
         qdl80aMenu.add(qdInfo);
         qdMenu.add(qdl80aMenu);
 
+        // Edwards → D39730880 → пункты
+        JMenu edwardsMenu = new JMenu("Edwards");
+        JMenu d397Menu = new JMenu("D39730880");
+
+        JMenuItem edControl = new JMenuItem("Панель управления");
+        JMenuItem edEmulation = new JMenuItem("Панель эмуляции");
+        JMenuItem edInfo = new JMenuItem("Справочная информация");
+
+        d397Menu.add(edControl);
+        d397Menu.add(edEmulation);
+        d397Menu.add(edInfo);
+        edwardsMenu.add(d397Menu);
+
         controlPanelsMenu.add(stuMenu);
         controlPanelsMenu.add(qdMenu);
+        controlPanelsMenu.add(edwardsMenu);
 
         stuControl.addActionListener(e -> {
             System.out.println("STU MCPS Control Panel");
@@ -634,6 +650,32 @@ public class JmenuFile {
 
         qdInfo.addActionListener(e -> {
             System.out.println("QDL80A Info");
+            JOptionPane.showMessageDialog(null,
+                    "Раздел находится в разработке",
+                    "Справочная информация",
+                    JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        edControl.addActionListener(e -> {
+            System.out.println("Edwards TIC Control Panel");
+            d39730880Main edwardsPanel = new d39730880Main();
+            JFrame frame = new JFrame("Edwards:D39730880 — Панель управления");
+            frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+            frame.setContentPane(edwardsPanel.getMainPanel());
+            frame.pack();
+            frame.setSize(900, 700);
+            frame.setLocationRelativeTo(null);
+            frame.setVisible(true);
+        });
+
+        edEmulation.addActionListener(e -> {
+            System.out.println("Edwards TIC Emulation Panel");
+            EdwardsTicTestFrame testFrame = new EdwardsTicTestFrame();
+            testFrame.setVisible(true);
+        });
+
+        edInfo.addActionListener(e -> {
+            System.out.println("Edwards TIC Info");
             JOptionPane.showMessageDialog(null,
                     "Раздел находится в разработке",
                     "Справочная информация",

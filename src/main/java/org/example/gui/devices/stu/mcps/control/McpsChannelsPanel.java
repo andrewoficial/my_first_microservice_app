@@ -74,7 +74,7 @@ public class McpsChannelsPanel extends JPanel implements ChannelPulseCoordinator
             } else if (response.startsWith("@WR") && response.contains("OK")) {
                 try {
                     int ch = Integer.parseInt(response.substring(3, 5));
-                    if (ch >= 1 && ch <= CHANNEL_COUNT) {
+                    if (ch >= 1 && ch <= CHANNEL_COUNT && backgroundPollingEnabled) {
                         scheduleAutoRead(ch);
                     }
                 } catch (Exception ignored) {}

@@ -1,367 +1,350 @@
 package org.example.device.protEdwardsD397;
 
-
 import org.apache.log4j.Logger;
 import org.example.device.DeviceCommandRegistry;
-
+import org.example.device.TemplatedAscii;
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
 
+import java.util.regex.Pattern;
 
-
+/**
+ * Реестр команд для Edwards TIC (D397).
+ * Поддержка протокола из serial-communications-manual-D397-30-880.
+ *
+ * Основные Object ID (из Table 1 manual):
+ * 902 - TIC Status
+ * 904 - Turbo Pump (статус, on/off, setups)
+ * 905-909 - Turbo speed/power/normal/standby/cycle
+ * 910-912 - Backing pump
+ * 913-936 - Gauges 1..6 (в т.ч. 6-gauge версии)
+ * 916-918,937-939 - Relays
+ * 919,920 - Temperatures
+ * 921-924 - Analogue, Vent, Heater, Air cooler
+ * 940 - Gauge Values (оптимизированный запрос всех датчиков)
+ */
 public class EdwardsD397CommandRegistry extends DeviceCommandRegistry {
     private static final Logger log = Logger.getLogger(EdwardsD397CommandRegistry.class);
 
+    private static final Pattern RESPONSE_PREFIX = Pattern.compile("^[=#\\*][CVS]\\s*(\\d{3,5})");
+    private static final Pattern MULTIDROP_PREFIX = Pattern.compile("^#\\d{2}:\\d{2}");
+
+    public EdwardsD397CommandRegistry() {
+        initCommands();
+    }
+
     @Override
     protected void initCommands() {
-        commandList.addCommand(create913AskCmd());
-        commandList.addCommand(create914AskCmd());
-        commandList.addCommand(create915AskCmd());
-        // Добавление других команд
+        // === СИСТЕМНЫЙ СТАТУС ===
+        commandList.addCommand(create902StatusCmd());
+        commandList.addCommand(create902InfoCmd());
+
+        // === ТУРБОНАСОС ===
+        commandList.addCommand(create904StatusCmd());
+        commandList.addCommand(create904OnOffCmd(true));
+        commandList.addCommand(create904OnOffCmd(false));
+        commandList.addCommand(create904SetupSlaveCmd());
+        commandList.addCommand(create904StartDelayCmd());
+
+        // === ТУРБО СКОРОСТЬ / МОЩНОСТЬ ===
+        commandList.addCommand(create905SpeedCmd());
+        commandList.addCommand(create906PowerCmd());
+        commandList.addCommand(create907NormalCmd());
+        commandList.addCommand(create908StandbyCmd());
+        commandList.addCommand(create908SetStandbyCmd(true));
+        commandList.addCommand(create908SetStandbyCmd(false));
+        commandList.addCommand(create909CycleTimeCmd());
+
+        // === БЭКИНГ ===
+        commandList.addCommand(create910StatusCmd());
+        commandList.addCommand(create910OnOffCmd(true));
+        commandList.addCommand(create910OnOffCmd(false));
+        commandList.addCommand(create910SequenceCmd());
+
+        // === ДАТЧИКИ ДАВЛЕНИЯ (GAUGES) ===
+        commandList.addCommand(createGaugeStatusCmd(913));
+        commandList.addCommand(createGaugeStatusCmd(914));
+        commandList.addCommand(createGaugeStatusCmd(915));
+        commandList.addCommand(createGaugeStatusCmd(934));
+        commandList.addCommand(createGaugeStatusCmd(935));
+        commandList.addCommand(createGaugeStatusCmd(936));
+
+        commandList.addCommand(create940AllGaugesCmd());
+
+        commandList.addCommand(createGaugeOnOffCmd(913, true));
+        commandList.addCommand(createGaugeOnOffCmd(913, false));
+        commandList.addCommand(createGaugeZeroCmd(913));
+        commandList.addCommand(createGaugeCalCmd(913));
+        commandList.addCommand(createGaugeDegasCmd(913));
+        commandList.addCommand(createGaugeNewIdCmd(913));
+
+        // === РЕЛЕ ===
+        commandList.addCommand(createRelayStatusCmd(916));
+        commandList.addCommand(createRelayStatusCmd(917));
+        commandList.addCommand(createRelayStatusCmd(918));
+        commandList.addCommand(createRelayOnOffCmd(916, true));
+        commandList.addCommand(createRelayOnOffCmd(916, false));
+
+        // === ТЕМПЕРАТУРЫ ===
+        commandList.addCommand(create919PsTempCmd());
+        commandList.addCommand(create920InternalTempCmd());
+
+        // === ДРУГИЕ ВАЖНЫЕ ===
+        commandList.addCommand(create921AnalogueOutCmd());
+        commandList.addCommand(create922VentValveCmd());
+        commandList.addCommand(create923HeaterCmd());
+        commandList.addCommand(create924AirCoolerCmd());
     }
 
-// ===== ДАТЧИКИ ДАВЛЕНИЯ (GAUGES) =====
+    // ==================== Фабричные методы команд ====================
 
-    private SingleCommand create913AskCmd() {
-        return new SingleCommand(
-                "?V00913",
-                "?V00913 - Запрос давления с датчика 1 (Gauge 1)",
-                this::parse913AskCmd,
-                5000
-        );
-    }
-
-    private SingleCommand create914AskCmd() {
-        return new SingleCommand(
-                "?V00914",
-                "?V00914 - Запрос давления с датчика 2 (Gauge 2)",
-                this::parse913AskCmd, // Используем тот же парсер, т.к. формат ответа идентичен
-                5000
-        );
-    }
-
-    private SingleCommand create915AskCmd() {
-        return new SingleCommand(
-                "?V00915",
-                "?V00915 - Запрос давления с датчика 3 (Gauge 3)",
-                this::parse913AskCmd, // Используем тот же парсер, т.к. формат ответа идентичен
-                5000
-        );
-    }
-/*
-// ===== ТУРБОНАСОС (TURBO PUMP) =====
-
-    private SingleCommand create904AskCmd() {
-        return new SingleCommand(
-                "?V00904",
-                "?V00904 - Запрос состояния турбонасоса",
-                this::parse904AskCmd,
-                5000
-        );
-    }
-
-    private SingleCommand create904ControlCmd(boolean turnOn) {
-        int state = turnOn ? 1 : 0;
-        String action = turnOn ? "Включение" : "Выключение";
-        return new SingleCommand(
-                "IC904 " + state,
-                "IC904 " + state + " - " + action + " турбонасоса",
-                this::parse904ControlCmd,
-                5000
-        );
-    }
-
-// ===== СКОРОСТЬ ТУРБОНАСОСА (TURBO SPEED) =====
-
-    private SingleCommand create905AskCmd() {
-        return new SingleCommand(
-                "?V00905",
-                "?V00905 - Запрос скорости турбонасоса (%)",
-                this::parse905AskCmd,
-                5000
-        );
-    }
-
-// ===== МОЩНОСТЬ ТУРБОНАСОСА (TURBO POWER) =====
-
-    private SingleCommand create906AskCmd() {
-        return new SingleCommand(
-                "?V00906",
-                "?V00906 - Запрос мощности турбонасоса (Вт)",
-                this::parse906AskCmd,
-                5000
-        );
-    }
-
-// ===== СИСТЕМНЫЙ СТАТУС (SYSTEM STATUS) =====
-
-    private SingleCommand create902AskCmd() {
-        return new SingleCommand(
-                "?V00902",
-                "?V00902 - Запрос системного статуса TIC",
-                this::parse902AskCmd,
-                5000
-        );
+    private SingleCommand create902StatusCmd() {
+        return new SingleCommand("?V00902", "?V00902 - Системный статус TIC", this::parse902Status, 200);
     }
 
     private SingleCommand create902InfoCmd() {
-        return new SingleCommand(
-                "?S00902",
-                "?S00902 - Запрос системной информации (версия, серийный номер)",
-                this::parse902InfoCmd,
-                5000
-        );
+        return new SingleCommand("?S00902", "?S00902 - Информация о системе", this::parse902Info, 100);
     }
 
-// ===== РЕЛЕ (RELAYS) =====
-
-    private SingleCommand create916AskCmd() {
-        return new SingleCommand(
-                "?V00916",
-                "?V00916 - Запрос состояния реле 1",
-                this::parse916AskCmd,
-                5000
-        );
+    private SingleCommand create904StatusCmd() {
+        return new SingleCommand("?V00904", "?V00904 - Статус турбонасоса", this::parseSimpleStatus, 100);
     }
 
-    private SingleCommand create916ControlCmd(boolean turnOn) {
-        int state = turnOn ? 1 : 0;
-        String action = turnOn ? "Включение" : "Выключение";
-        return new SingleCommand(
-                "IC916 " + state,
-                "IC916 " + state + " - " + action + " реле 1",
-                this::parse916ControlCmd,
-                5000
-        );
+    private SingleCommand create904OnOffCmd(boolean on) {
+        int state = on ? 1 : 0;
+        String name = "IC904 " + state;
+        return new SingleCommand(name, name + " - " + (on ? "Включить" : "Выключить") + " турбонасос",
+                this::parseSimpleControlResponse, 100);
     }
 
-// ===== ТЕМПЕРАТУРЫ =====
-
-    private SingleCommand create919AskCmd() {
-        return new SingleCommand(
-                "?V00919",
-                "?V00919 - Запрос температуры блока питания",
-                this::parse919AskCmd,
-                5000
-        );
+    private SingleCommand create904SetupSlaveCmd() {
+        return new SingleCommand("?S00904 4", "?S00904 4 - Slave setup турбонасоса", this::parseTurboSlaveSetup, 150);
     }
 
-    private SingleCommand create920AskCmd() {
-        return new SingleCommand(
-                "?V00920",
-                "?V00920 - Запрос внутренней температуры TIC",
-                this::parse920AskCmd,
-                5000
-        );
+    private SingleCommand create904StartDelayCmd() {
+        return new SingleCommand("?S00904 21", "?S00904 21 - Задержка старта турбонасоса", this::parseSimpleSetup, 100);
     }
 
-// ===== ВСЕ ЗНАЧЕНИЯ ДАТЧИКОВ (ОПТИМИЗИРОВАННЫЙ ЗАПРОС) =====
-
-    private SingleCommand create940AskCmd() {
-        return new SingleCommand(
-                "?V00940",
-                "?V00940 - Запрос всех значений датчиков за один запрос",
-                this::parse940AskCmd,
-                5000
-        );
+    private SingleCommand create905SpeedCmd() {
+        return new SingleCommand("?V00905", "?V00905 - Скорость турбонасоса (%)", this::parseSimpleValue, 100);
     }
-    */
 
+    private SingleCommand create906PowerCmd() {
+        return new SingleCommand("?V00906", "?V00906 - Мощность турбонасоса (Вт)", this::parseSimpleValue, 100);
+    }
 
+    private SingleCommand create907NormalCmd() {
+        return new SingleCommand("?V00907", "?V00907 - На нормальной скорости", this::parseSimpleValue, 100);
+    }
 
-    private AnswerValues parse913AskCmd(byte[] response) {
+    private SingleCommand create908StandbyCmd() {
+        return new SingleCommand("?V00908", "?V00908 - Статус standby", this::parseSimpleValue, 100);
+    }
 
-        log.info("Proceed ?V00913 or ?V00914 or ?V00915  direct");
+    private SingleCommand create908SetStandbyCmd(boolean enable) {
+        int val = enable ? 1 : 0;
+        return new SingleCommand("IC908 " + val, "IC908 " + val + " - Установить standby", this::parseSimpleControlResponse, 100);
+    }
 
-        try {
-            // Парсим сырые данные
-            ParsedResponse parsed = parseEdwardsResponse(response);
+    private SingleCommand create909CycleTimeCmd() {
+        return new SingleCommand("?V00909", "?V00909 - Наработка турбонасоса (часы)", this::parseSimpleValue, 100);
+    }
 
-            // Создаем объект ответа
-            AnswerValues answerValues = new AnswerValues(parsed.parts.length);
+    private SingleCommand create910StatusCmd() {
+        return new SingleCommand("?V00910", "?V00910 - Статус backing pump", this::parseSimpleStatus, 100);
+    }
 
-            // Парсим основные значения
-            double value = Double.parseDouble(parsed.parts[0]);
-            log.info("Parsed value: " + value);
+    private SingleCommand create910OnOffCmd(boolean on) {
+        int state = on ? 1 : 0;
+        return new SingleCommand("IC910 " + state, "IC910 " + state + " - Вкл/выкл backing", this::parseSimpleControlResponse, 100);
+    }
 
-            // Единицы измерения
-            EdwardsUnits units = EdwardsUnits.fromCode(Integer.parseInt(parsed.parts[1]));
-            answerValues.addValue(value, units.getSymbol());
+    private SingleCommand create910SequenceCmd() {
+        return new SingleCommand("?S00910 70", "?S00910 70 - Последовательность backing", this::parseSimpleSetup, 100);
+    }
 
-            // Состояние датчика
-            int stateCode = Integer.parseInt(parsed.parts[2]);
-            String stateName = extractGaugeStateName(stateCode);
-            answerValues.addValue(stateCode, stateName);
+    private SingleCommand createGaugeStatusCmd(int objId) {
+        String cmd = String.format("?V00%03d", objId);
+        return new SingleCommand(cmd, cmd + " - Gauge " + (objId - 912), resp -> parseGaugeResponse(resp, objId), 150);
+    }
 
-            // Alert (если есть)
-            if (parsed.parts.length > 3) {
-                EdwardsAlert alert = EdwardsAlert.fromCode(Integer.parseInt(parsed.parts[3]));
-                answerValues.addValue(Integer.parseInt(parsed.parts[3]), alert.getName());
-            }
+    private SingleCommand create940AllGaugesCmd() {
+        return new SingleCommand("?V00940", "?V00940 - Все значения датчиков (рекомендуется)", this::parse940Response, 300);
+    }
 
-            // Priority (если есть)
-            if (parsed.parts.length > 4) {
-                EdwardsPriority priority = EdwardsPriority.fromCode(Integer.parseInt(parsed.parts[4]));
-                answerValues.addValue(Integer.parseInt(parsed.parts[4]), priority.getName());
-            }
+    private SingleCommand createGaugeOnOffCmd(int objId, boolean on) {
+        int code = on ? 1 : 0;
+        String name = String.format("IC%03d %d", objId, code);
+        return new SingleCommand(name, name + " - Вкл/выкл gauge", this::parseSimpleControlResponse, 100);
+    }
 
-            return answerValues;
-        } catch (NumberFormatException e) {
-            log.warn("Number format error in response: " + new String(response) + e);
-            return null;
-        } catch (IllegalArgumentException e) {
-            log.warn("Failed to parse response: " + e.getMessage());
-            return null;
-        } catch (Exception e) {
-            log.error("Unexpected error while parsing response: " + new String(response)  + e);
-            return null;
+    private SingleCommand createGaugeZeroCmd(int objId) {
+        return new SingleCommand(String.format("IC%03d 3", objId), "Zero gauge", this::parseSimpleControlResponse, 200);
+    }
+
+    private SingleCommand createGaugeCalCmd(int objId) {
+        return new SingleCommand(String.format("IC%03d 4", objId), "Calibrate gauge", this::parseSimpleControlResponse, 5000);
+    }
+
+    private SingleCommand createGaugeDegasCmd(int objId) {
+        return new SingleCommand(String.format("IC%03d 5", objId), "Degas gauge", this::parseSimpleControlResponse, 300);
+    }
+
+    private SingleCommand createGaugeNewIdCmd(int objId) {
+        return new SingleCommand(String.format("IC%03d 2", objId), "New gauge ID", this::parseSimpleControlResponse, 200);
+    }
+
+    private SingleCommand createRelayStatusCmd(int objId) {
+        String cmd = String.format("?V00%03d", objId);
+        return new SingleCommand(cmd, cmd + " - Relay " + (objId - 915), this::parseSimpleStatus, 100);
+    }
+
+    private SingleCommand createRelayOnOffCmd(int objId, boolean on) {
+        int state = on ? 1 : 0;
+        return new SingleCommand(String.format("IC%03d %d", objId, state), "Вкл/выкл реле", this::parseSimpleControlResponse, 100);
+    }
+
+    private SingleCommand create919PsTempCmd() {
+        return new SingleCommand("?V00919", "?V00919 - Температура блока питания", this::parseSimpleValue, 100);
+    }
+
+    private SingleCommand create920InternalTempCmd() {
+        return new SingleCommand("?V00920", "?V00920 - Внутренняя температура TIC", this::parseSimpleValue, 100);
+    }
+
+    private SingleCommand create921AnalogueOutCmd() {
+        return new SingleCommand("?V00921", "?V00921 - Аналоговый выход", this::parseSimpleValue, 100);
+    }
+
+    private SingleCommand create922VentValveCmd() {
+        return new SingleCommand("?V00922", "?V00922 - Vent valve", this::parseSimpleStatus, 100);
+    }
+
+    private SingleCommand create923HeaterCmd() {
+        return new SingleCommand("?V00923", "?V00923 - Heater band", this::parseHeaterResponse, 100);
+    }
+
+    private SingleCommand create924AirCoolerCmd() {
+        return new SingleCommand("?V00924", "?V00924 - Air cooler", this::parseSimpleStatus, 100);
+    }
+
+    // ==================== Парсеры ====================
+
+    private AnswerValues parse902Status(byte[] response) {
+        String s = cleanResponse(response);
+        String[] parts = s.split(";");
+        AnswerValues av = new AnswerValues(parts.length);
+        for (int i = 0; i < parts.length; i++) {
+            try { av.addValue(Double.parseDouble(parts[i]), "part" + i); }
+            catch (Exception e) { av.addValue(0, parts[i]+"raw"); }
         }
+        return av;
     }
 
-    /**
-     * Универсальный парсер ответов Edwards
-     * Обрабатывает форматы: =V913, *V913, #dd:ss=V913 и т.д.
-     */
-    private ParsedResponse parseEdwardsResponse(byte[] response) {
-        if (response == null || response.length == 0) {
-            throw new IllegalArgumentException("Empty response");
+    private AnswerValues parse902Info(byte[] response) {
+        String s = cleanResponse(response);
+        String[] parts = s.split(";");
+        AnswerValues av = new AnswerValues(4);
+        for (int i = 0; i < Math.min(4, parts.length); i++) {
+            av.addValue(0, switch (i) { case 0 -> parts[i]+"type";
+                case 1 -> parts[i]+"swVer";
+                case 2 -> parts[i]+"serial";
+                default -> parts[i]+"picVer"; });
         }
-
-        String responseStr = new String(response).trim();
-        log.debug("Parsing response: " + responseStr);
-        boolean containOnOfCommand = false;
-        String [] commandsPattern = {"V913", "V914", "V915"};
-        String expectedCommand = null;
-        for (String command : commandsPattern) {
-            if(responseStr.contains(command)) {
-                containOnOfCommand = true;
-                expectedCommand = command;
-                break;
-            }
-        }
-        if(!containOnOfCommand) {
-            log.warn("Not contain =V913 or =V914 or =V915 in response: " + responseStr);
-            throw new IllegalArgumentException("Not contain ?V00913 or ?V00914 or ?V00915 in response: " + responseStr);
-        }
-        // Ищем позицию команды в ответе
-        int commandPosition = findCommandPosition(response, expectedCommand);
-        if (commandPosition == -1) {
-            throw new IllegalArgumentException("Command " + expectedCommand + " not found in: " + responseStr);
-        }
-
-        // Извлекаем данные после команды
-        String dataPart = extractDataAfterCommand(responseStr, commandPosition, expectedCommand);
-
-        // Разделяем на части
-        String[] parts = dataPart.split(";");
-
-        // Проверяем минимальное количество частей
-        if (parts.length < 3) {
-            throw new IllegalArgumentException(
-                    String.format("Insufficient data parts: expected at least 3, got %d in: %s",
-                            parts.length, dataPart)
-            );
-        }
-
-        // Проверяем, что все обязательные части могут быть преобразованы в числа
-        validateNumericParts(parts, 3);
-
-        return new ParsedResponse(parts, dataPart);
+        return av;
     }
 
-    /**
-     * Находит позицию команды в массиве байтов
-     */
-    private int findCommandPosition(byte[] response, String expectedCommand) {
-        String responseStr = new String(response);
-        return responseStr.indexOf(expectedCommand);
+    private AnswerValues parseSimpleStatus(byte[] response) {
+        String s = cleanResponse(response);
+        String[] parts = s.split(";");
+        AnswerValues av = new AnswerValues(3);
+        if (parts.length >= 1) av.addValue(safeParseDouble(parts[0]), "state");
+        if (parts.length >= 2) av.addValue(safeParseDouble(parts[1]), "alert");
+        if (parts.length >= 3) av.addValue(safeParseDouble(parts[2]), "priority");
+        return av;
     }
 
-    /**
-     * Извлекает данные после команды
-     */
-    private String extractDataAfterCommand(String responseStr, int commandPosition, String expectedCommand) {
-        int dataStart = commandPosition + expectedCommand.length();
-
-        // Пропускаем пробелы после команды
-        while (dataStart < responseStr.length() && Character.isWhitespace(responseStr.charAt(dataStart))) {
-            dataStart++;
-        }
-
-        if (dataStart >= responseStr.length()) {
-            throw new IllegalArgumentException("No data after command: " + responseStr);
-        }
-
-        String data = responseStr.substring(dataStart);
-
-        // Удаляем возможный carriage return в конце
-        if (data.endsWith("\r")) {
-            data = data.substring(0, data.length() - 1);
-        }
-
-        return data.trim();
+    private AnswerValues parseSimpleValue(byte[] response) {
+        String s = cleanResponse(response);
+        String[] parts = s.split(";");
+        AnswerValues av = new AnswerValues(1);
+        try { av.addValue(Double.parseDouble(parts[0]), " value"); }
+        catch (Exception e) { av.addValue(0, s + " raw"); }
+        return av;
     }
 
-    /**
-     * Извлекает имя состояния датчика
-     */
-    private String extractGaugeStateName(int stateCode) {
-        return EdwardsState.fromCode(stateCode).stream()
-                .filter(EdwardsState::isGaugeState)
-                .findFirst()
-                .map(EdwardsState::getName)
-                .orElse("NotParsed");
+    private AnswerValues parseSimpleControlResponse(byte[] response) {
+        String s = cleanResponse(response);
+        AnswerValues av = new AnswerValues(1);
+        av.addValue(s.startsWith("*C") || s.startsWith("=C") ? 0.0 : -1.0, s.startsWith("*C") || s.startsWith("=C") ? "OK" : "error");
+        return av;
     }
 
-    /**
-     * Проверяет, что указанные части могут быть преобразованы в числа
-     */
-    private void validateNumericParts(String[] parts, int minPartsToCheck) {
-        int partsToCheck = Math.min(minPartsToCheck, parts.length);
+    private AnswerValues parseGaugeResponse(byte[] response, int objId) {
+        String s = cleanResponse(response);
+        String[] parts = s.split(";");
+        AnswerValues av = new AnswerValues(Math.max(5, parts.length));
+        if (parts.length > 0) av.addValue(safeParseDouble(parts[0]), "value");
+        if (parts.length > 1) av.addValue(safeParseDouble(parts[1]), "units");
+        if (parts.length > 2) av.addValue(safeParseDouble(parts[2]), "state");
+        if (parts.length > 3) av.addValue(safeParseDouble(parts[3]), "alert");
+        if (parts.length > 4) av.addValue(safeParseDouble(parts[4]), "priority");
+        return av;
+    }
 
-        for (int i = 0; i < partsToCheck; i++) {
-            try {
-                Double.parseDouble(parts[i]);
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException(
-                        String.format("Invalid numeric format at position %d: '%s'", i, parts[i]), e
-                );
-            }
+    private AnswerValues parse940Response(byte[] response) {
+        String s = cleanResponse(response);
+        String[] parts = s.split(";");
+        AnswerValues av = new AnswerValues(parts.length / 2);
+        for (int i = 0; i + 1 < parts.length; i += 2) {
+            av.addValue(safeParseDouble(parts[i + 1]), "gauge_pos_" + (int) safeParseDouble(parts[i]));
         }
+        return av;
     }
 
-    /**
-     * Вспомогательный класс для хранения распарсенных данных
-     */
-    private static class ParsedResponse {
-        final String[] parts;
-        final String rawData;
-
-        ParsedResponse(String[] parts, String rawData) {
-            this.parts = parts;
-            this.rawData = rawData;
-        }
+    private AnswerValues parseTurboSlaveSetup(byte[] response) {
+        String s = cleanResponse(response);
+        String[] parts = s.split(";");
+        AnswerValues av = new AnswerValues(5);
+        av.addValue(safeParseDouble(parts[0]), "master");
+        av.addValue(safeParseDouble(parts[1]), "units");
+        av.addValue(safeParseDouble(parts[2]), "on_sp");
+        av.addValue(safeParseDouble(parts[3]), "off_sp");
+        av.addValue(safeParseDouble(parts[4]), "enable");
+        return av;
     }
 
-
-
-    /**
-     * Шаблонный метод для парсинга различных ответов
-     */
-    private AnswerValues parseEdwardsResponseWithTemplate(byte[] response,  ResponseParser parser) {
-        try {
-            ParsedResponse parsed = parseEdwardsResponse(response);
-            AnswerValues answer = new AnswerValues(parsed.parts.length);
-            parser.parse(parsed.parts, answer);
-            return answer;
-        } catch (Exception e) {
-            log.warn("Failed to parse {} response: "  + e.getMessage());
-            return null;
-        }
+    private AnswerValues parseSimpleSetup(byte[] response) {
+        AnswerValues av = new AnswerValues(1);
+        av.addValue(0, cleanResponse(response) + " data");
+        return av;
     }
 
-    @FunctionalInterface
-    private interface ResponseParser {
-        void parse(String[] parts, AnswerValues answer) throws Exception;
+    private AnswerValues parseHeaterResponse(byte[] response) {
+        String s = cleanResponse(response);
+        String[] parts = s.split(";");
+        AnswerValues av = new AnswerValues(3);
+        if (parts.length > 0) av.addValue(safeParseDouble(parts[0]), "time");
+        if (parts.length > 1) av.addValue(safeParseDouble(parts[1]), "state");
+        return av;
+    }
+
+    private String cleanResponse(byte[] response) {
+        if (response == null) return "";
+        String s = new String(response).trim();
+        s = MULTIDROP_PREFIX.matcher(s).replaceFirst("");
+        s = RESPONSE_PREFIX.matcher(s).replaceFirst("");
+        s = s.replaceAll("^[\\s=\\*VCS]+", "").trim();
+        if (s.endsWith("\r")) s = s.substring(0, s.length() - 1);
+        return s;
+    }
+
+    private double safeParseDouble(String val) {
+        try { return Double.parseDouble(val.trim()); }
+        catch (Exception e) { return Double.NaN; }
+    }
+
+    public SingleCommand getCommand(String cmdString) {
+        return commandList.getCommand(cmdString);
     }
 }
