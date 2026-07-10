@@ -2,12 +2,13 @@
 package org.example.device;
 
 import com.fazecast.jSerialComm.SerialPort;
-import org.apache.log4j.Logger;
 import org.example.services.AnswerValues;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public interface SomeDevice {
 
-    static final Logger log = Logger.getLogger(SomeDevice.class);
+    static final Logger log = LoggerFactory.getLogger(SomeDevice.class);
 
     long millisPrev = 1000;
 
