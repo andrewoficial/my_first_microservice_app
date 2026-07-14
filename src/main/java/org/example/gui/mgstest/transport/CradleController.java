@@ -1,17 +1,10 @@
 package org.example.gui.mgstest.transport;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.mgstest.model.HidSupportedDevice;
-import org.hid4java.HidDevice;
 
-
-
+@Slf4j
 public class CradleController {
-
-    private final Logger log = Logger.getLogger(CradleController.class);
-
-
-
 
     public void setCoefficientsO2(HidSupportedDevice device) throws Exception {
         double[] coefs = new double[19];
@@ -45,5 +38,5 @@ public class CradleController {
 
 
 
-//FixMe: 711 строчек!!!
+//раньше тут было 711 строчек, а теперь все прекрасно ^^
 }

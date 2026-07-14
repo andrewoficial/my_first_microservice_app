@@ -1,7 +1,6 @@
 package org.example.utilites;
 
 import com.fazecast.jSerialComm.SerialPort;
-import org.apache.log4j.Logger;
 import org.example.device.*;
 import org.example.device.lora.rui420.igm.mesh.Igm10LoraMesh;
 import org.example.device.mgu.usbadcten.MskMguUsbAdc10;
@@ -28,6 +27,8 @@ import org.example.device.protOwonSpe3051.OWON_SPE3051;
 import org.example.device.protQdl80a.Qdl80aDevice;
 import org.example.device.protTt5166.TT5166;
 import org.example.device.spbstu.mcps.SPbSTuMcps;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -36,7 +37,7 @@ import java.util.Arrays;
 import java.util.Date;
 
 public class MyUtilities {
-    private static final Logger log = Logger.getLogger(MyUtilities.class);
+    private static final Logger log = LoggerFactory.getLogger(MyUtilities.class);
 
     public static String separator = ";";
     public static String dotOrPoint = ",";

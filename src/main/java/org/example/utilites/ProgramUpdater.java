@@ -8,7 +8,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import lombok.Getter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.utilites.update.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -18,6 +18,7 @@ import org.json.JSONObject;
  * Поддерживает несколько источников (жёстко заданные GitHub + пользовательский в настройках).
  * Все источники должны эмулировать GitHub Releases API.
  */
+@Slf4j
 public class ProgramUpdater {
 
     // Встроенные источники. GITHUB_NEW можно заполнить позже.
@@ -25,7 +26,6 @@ public class ProgramUpdater {
     private static final String GITHUB_NEW_LIST = ""; // заполни /releases?per_page=100 когда будет новый реп
 
     private static final Path UPDATE_DIR = Paths.get("").toAbsolutePath();
-    private static final Logger log = Logger.getLogger(ProgramUpdater.class);
 
     // Для обратной совместимости со старым getInfo()
     private String lastNotes = "";

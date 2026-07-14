@@ -1,12 +1,11 @@
 package org.example.device.lora.rui420.igm;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Optional;
 
+@Slf4j
 public class IgmTenMessage {  // Renamed from IgmTenParser for consistency with message parsing pattern
-    private static final Logger log = Logger.getLogger(IgmTenMessage.class);
-
     private int temperature; // int °C * 10
     private int gasType; // 1..32, e.g. 1=CH4, 2=C3H8
     private int concentration; // word, value * precision (for CH4 0.01%vol)

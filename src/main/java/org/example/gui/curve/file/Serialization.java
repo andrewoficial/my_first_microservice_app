@@ -1,11 +1,9 @@
 package org.example.gui.curve.file;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.curve.CurveData;
 import org.example.gui.curve.CurveDataTypes;
-import org.example.gui.curve.CurveDeviceCommander;
 import org.example.gui.curve.CurveMetaData;
-
 import javax.swing.*;
 import java.io.BufferedReader;
 import java.io.File;
@@ -13,10 +11,8 @@ import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 public class Serialization {
-    private Logger log = Logger.getLogger(Serialization.class);
-
-
 
     public CurveMetaData fileHeaderToCurveMetaData(String fileHeader) { //updateCurveMetaDara
         log.info("Начинаю разбор метаданных");

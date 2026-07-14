@@ -1,16 +1,13 @@
 package org.example.device.protDemo;
 
-
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
-
 import java.util.Arrays;
 
+@Slf4j
 public class DemoProtocolCommandRegistry extends DeviceCommandRegistry {
-    private static final Logger log = Logger.getLogger(DemoProtocolCommandRegistry.class);
-
     @Override
     protected void initCommands() {
         commandList.addCommand(createFCommand());

@@ -1,16 +1,14 @@
 package org.example.utilites.properties;
 
+import lombok.extern.slf4j.Slf4j;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
-import jakarta.persistence.criteria.CriteriaBuilder;
-import org.apache.log4j.Logger;
-
+@Slf4j
 public class MyPropertiesSettingsLoader {
     private final MyPropertiesFileHandler fileHandler;
     private final Properties properties;
-    private static final Logger log = Logger.getLogger(MyPropertiesSettingsLoader.class);
 
     public MyPropertiesSettingsLoader(MyPropertiesFileHandler fileHandler, Properties properties) {
         this.fileHandler = fileHandler;

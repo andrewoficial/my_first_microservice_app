@@ -1,17 +1,14 @@
 package org.example.gui.devices.qidian.qdl80a.emulation;
 
-import org.apache.log4j.Logger;
-import org.example.gui.devices.qidian.qdl80a.util.DevicesSearch;
-
+import lombok.extern.slf4j.Slf4j;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import static org.example.utilites.LittleEndianUtils.bytesToHex;
 
+@Slf4j
 public class ModbusResponder {
-    private static final Logger logger = Logger.getLogger(ModbusResponder.class);
 
     private volatile int address = 1;
     private volatile int baudRateCode = 3; // 3 = 9600
@@ -56,20 +53,20 @@ public class ModbusResponder {
     // ================== Основной метод обработки запроса ==================
 
     public synchronized byte[] processRequest(byte[] request) {
-        logger.info(">> " + bytesToHex(request) + " (" + request.length + " байт)");
+        log.info(">> " + bytesToHex(request) + " (" + request.length + " байт)");
         if (request.length < 8) {
-            logger.warn("Короткий запрос: " + request.length + " < 8");
+            log.warn("Короткий запрос: " + request.length + " < 8");
             return null;
         }
 
         if (!validateCRC(request)) {
-            logger.warn("CRC ошибка: " + bytesToHex(request));
+            log.warn("CRC ошибка: " + bytesToHex(request));
             return null;
         }
 
         int slaveAddr = request[0] & 0xFF;
         if (slaveAddr != address && slaveAddr != 0) {
-            logger.warn("Адрес " + slaveAddr + " != " + address);
+            log.warn("Адрес " + slaveAddr + " != " + address);
             return null;
         }
 
@@ -84,7 +81,7 @@ public class ModbusResponder {
             case 0x10:
                 return handleWriteMultiple(request);
             default:
-                logger.warn("Неподдерживаемая функция: 0x" + String.format("%02X", function));
+                log.warn("Неподдерживаемая функция: 0x" + String.format("%02X", function));
                 return buildExceptionResponse(slaveAddr, function, 0x01);
         }
     }

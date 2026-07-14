@@ -1,11 +1,10 @@
 package org.example.gui.graph.data;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.services.DeviceAnswer;
 
+@Slf4j
 public class AnswerValidator {
-    private static final Logger log = Logger.getLogger(AnswerValidator.class);
-
     private final AnswerLoader al = new AnswerLoader();
     public boolean isCorrectAnswerValue(DeviceAnswer answer, int tab, int typicalFieldCapacity, int currentFieldCapacity) {
         if (answer == null) {

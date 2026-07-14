@@ -4,7 +4,7 @@ import com.fazecast.jSerialComm.SerialPort;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.protQdl80a.Qdl80aCommandRegistry;
 import org.example.device.protQdl80a.Qdl80aCommunicationService;
 import org.example.gui.devices.qidian.qdl80a.util.DevicesSearch;
@@ -20,8 +20,8 @@ import java.util.Locale;
 import java.util.concurrent.*;
 import java.util.prefs.Preferences;
 
+@Slf4j
 public class Qdl80aMain {
-    private static final Logger log = Logger.getLogger(Qdl80aMain.class);
     private static final String PREFS_NODE = "org/example/gui/qdl80a";
     private static final String LAST_PORT = "lastPort";
     private static final String LAST_BAUD = "lastBaud";

@@ -1,7 +1,7 @@
 package org.example.web.config;
 
 
-import com.zaxxer.hikari.HikariDataSource;
+import org.example.web.repository.UserRepository;
 import org.example.web.service.myUserDetailService.MyUserDetailServiceOffline;
 import org.example.web.service.myUserDetailService.MyUserDetailServiceProduction;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -19,13 +19,12 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
-import javax.sql.DataSource;
 @Profile({ "srv-offline", "srv-online" })
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
     @Bean
-    @ConditionalOnProperty(name = "server.enabled", havingValue = "true", matchIfMissing = false)
+    @ConditionalOnProperty(name = "server.enabled", havingValue = "true" )
     public SecurityConfig serverService() {
         return new SecurityConfig();
     }
@@ -39,17 +38,17 @@ public class SecurityConfig {
 
     @Profile("srv-online")
     @Bean
-    public UserDetailsService userDetailsServiceProduction (){
+    public UserDetailsService userDetailsServiceProduction (UserRepository repository){
         System.out.println("Try find MyUserDetailService in userDetailsServiceOnline");
-        return new MyUserDetailServiceProduction();
+        return new MyUserDetailServiceProduction(repository);
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain (HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain (HttpSecurity http) {
         return http.csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry -> authorizationManagerRequestMatcherRegistry.requestMatchers("api/v1/apps/welcome", "api/v1/apps/new-user").permitAll())
-                //.authorizeHttpRequests(authorizationManagerRequestMatcherRegistry -> authorizationManagerRequestMatcherRegistry.requestMatchers("api/v1/apps/**").authenticated())
-                .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry -> authorizationManagerRequestMatcherRegistry.requestMatchers("**").authenticated())
+                .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry -> authorizationManagerRequestMatcherRegistry.requestMatchers("/api/v1/apps/welcome", "/api/v1/apps/new-user").permitAll())
+                //.authorizeHttpRequests(authorizationManagerRequestMatcherRegistry -> authorizationManagerRequestMatcherRegistry.requestMatchers("/api/v1/apps/**").authenticated())
+                .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry -> authorizationManagerRequestMatcherRegistry.requestMatchers("/**").authenticated())
                 .formLogin(AbstractAuthenticationFilterConfigurer::permitAll)
                 .formLogin(formLogin -> formLogin.loginProcessingUrl("/login")
                         .defaultSuccessUrl("/", true))
@@ -60,17 +59,15 @@ public class SecurityConfig {
     @Profile("srv-offline")
     @Bean
     public AuthenticationProvider authenticationProviderOffline(){
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsServiceOffline());
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsServiceOffline());
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }
 
     @Profile("srv-online")
     @Bean
-    public AuthenticationProvider authenticationProviderProduction(){
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsServiceProduction());
+    public AuthenticationProvider authenticationProviderProduction(UserDetailsService userDetailsService){
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }

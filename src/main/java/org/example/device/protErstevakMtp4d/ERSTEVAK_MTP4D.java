@@ -3,7 +3,7 @@ package org.example.device.protErstevakMtp4d;
 
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.ProtocolComPort;
 import org.example.device.DeviceCommandListClass;
 import org.example.device.SomeDevice;
@@ -12,9 +12,8 @@ import org.example.device.connectParameters.ComConnectParameters;
 import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 
-
+@Slf4j
 public class ERSTEVAK_MTP4D implements SomeDevice, ProtocolComPort, TemplatedAscii {
-    private static final Logger log = Logger.getLogger(ERSTEVAK_MTP4D.class);
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора
     private final SerialPort comPort;

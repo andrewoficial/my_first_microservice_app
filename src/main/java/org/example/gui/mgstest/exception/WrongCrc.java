@@ -2,10 +2,11 @@ package org.example.gui.mgstest.exception;
 
 import java.util.zip.CRC32;
 import java.util.Arrays;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 
+
+@Slf4j
 public class WrongCrc extends IllegalArgumentException{
-    private final Logger log = Logger.getLogger(WrongCrc.class);
     public WrongCrc(byte[] msg, int exceptStart, int exceptEnd, int crcOffset, String comment){
         log.warn("Received message with wrong crc. Message size: " + msg.length +
                 " except start payload position: " + exceptStart + " except end payload position: " + exceptEnd +

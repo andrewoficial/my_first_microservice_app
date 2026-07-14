@@ -3,6 +3,7 @@ package org.example.gui.accu10fd;
 import com.fazecast.jSerialComm.SerialPort;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.Rendeble;
 import org.example.gui.accu10fd.table.AcuTableCreator;
 import org.example.gui.accu10fd.table.AcuTableFileHandler;
@@ -13,8 +14,6 @@ import org.example.services.comPort.BaudRatesList;
 import org.example.services.comPort.ParityList;
 import org.example.utilites.MyUtilities;
 import org.example.utilites.properties.MyProperties;
-import org.apache.log4j.Logger;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -24,8 +23,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.function.IntFunction;
 
+@Slf4j
 public class Acu10fdWindow extends JFrame implements Rendeble {
-    private Logger log = null;
     private final MyProperties prop;
     private final Serialization ser = new Serialization();
 
@@ -68,8 +67,6 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
 
     public Acu10fdWindow(MyProperties prop) {
         $$$setupUI$$$();
-
-        log = Logger.getLogger(Acu10fdWindow.class);
         this.prop = prop;
         setContentPane(mainPane);
         try {

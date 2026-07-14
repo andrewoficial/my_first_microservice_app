@@ -1,18 +1,16 @@
 package org.example.device.protEdwardsD397;
 
 import com.fazecast.jSerialComm.SerialPort;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.utilites.MyUtilities;
-
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
+@Slf4j
 public class EdwardsCommunicationService {
-    private static final Logger log = Logger.getLogger(EdwardsCommunicationService.class);
-
     private SerialPort port;
     private volatile boolean running = false;
     private Thread readerThread;

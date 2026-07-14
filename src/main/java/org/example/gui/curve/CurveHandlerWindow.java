@@ -4,7 +4,7 @@ import com.fazecast.jSerialComm.SerialPort;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.Rendeble;
 import org.example.gui.curve.file.CurveFileAccessException;
 import org.example.gui.curve.file.CurveFileSerializationException;
@@ -39,9 +39,8 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.function.IntFunction;
 
-
+@Slf4j
 public class CurveHandlerWindow extends JFrame implements Rendeble {
-    private Logger log = null;
     private final FileHandler fileHandler;
     private final MyProperties prop;
     private final Serialization ser = new Serialization();
@@ -184,7 +183,6 @@ public class CurveHandlerWindow extends JFrame implements Rendeble {
     public CurveHandlerWindow(MyProperties prop) {
 
         $$$setupUI$$$();
-        log = Logger.getLogger(CurveHandlerWindow.class);
         fileHandler = new FileHandler();
         this.prop = prop;
         setContentPane(mainPane);

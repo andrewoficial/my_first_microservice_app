@@ -1,30 +1,19 @@
 package org.example.gui.mgstest.transport;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.mgstest.exception.MessageDoesNotDeliveredToHidDevice;
 import org.example.gui.mgstest.model.HidSupportedDevice;
 import org.example.gui.mgstest.service.MgsExecutionListener;
 import org.example.gui.mgstest.transport.cmd.CommandModel;
 import org.example.gui.mgstest.util.CrcValidator;
 import org.hid4java.HidDevice;
-
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-
 import static org.example.gui.mgstest.util.CrcValidator.bytesToHex;
 
+@Slf4j
 public class PayLoadSender {
     private final CradleCommunicationHelper communicator = new CradleCommunicationHelper();
-    private final Logger log = Logger.getLogger(PayLoadSender.class);
-
-    public void writeDataEmulator(byte [] payload) {
-        ArrayList<byte[]> parts = CrcValidator.splitIntoParts(payload, 64);
-        for (int i = 0; i < parts.size(); i++) {
-            String partNumber = String.format("%02X", i);
-            System.out.println("01 04 07 02 21 " + partNumber + " " + bytesToHex(parts.get(i)));
-        }
-    }
 
     public byte[] writeDataHid(HidSupportedDevice supportedDevice, byte [] payload, MgsExecutionListener progress, String description, CommandModel model) throws MessageDoesNotDeliveredToHidDevice {
         HidDevice device = supportedDevice.getHidDevice();

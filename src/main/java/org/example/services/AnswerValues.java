@@ -2,11 +2,11 @@ package org.example.services;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 
 
+@Slf4j
 public class AnswerValues {
-    private static final Logger log = Logger.getLogger(AnswerValues.class);
 
     @Getter
     private final double [] values;

@@ -1,14 +1,13 @@
 package org.example.device.lora.rui420;
 
 import lombok.Getter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.utilites.MyUtilities;
-
 import java.util.Optional;
 
+@Slf4j
 public class Rui420Message {
-    private static final Logger log = Logger.getLogger(Rui420Message.class);
-
+    @Getter
     private final byte[] rawMessage;
     @Getter
     private String eventType;

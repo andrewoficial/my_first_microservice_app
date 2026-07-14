@@ -1,6 +1,6 @@
 package parsers.com.edwardsD397;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.protEdwardsD397.EdwardsD397CommandRegistry;
 import org.example.services.AnswerValues;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,9 +10,8 @@ import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Slf4j
 public class EdwardsD397CommandRegistryTest {
-
-    private static final Logger log = Logger.getLogger(EdwardsD397CommandRegistryTest.class);
 
     private EdwardsD397CommandRegistry registry;
     private Method parseGaugeMethod;

@@ -2,7 +2,7 @@ package org.example.device.protMipex2;
 
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandListClass;
 import org.example.device.SomeDevice;
 import org.example.device.TemplatedAscii;
@@ -10,9 +10,8 @@ import org.example.device.connectParameters.ComConnectParameters;
 import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 
-
+@Slf4j
 public class Mipex2  implements SomeDevice, TemplatedAscii {
-    private static final Logger log = Logger.getLogger(Mipex2.class);
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора
     private final SerialPort comPort;

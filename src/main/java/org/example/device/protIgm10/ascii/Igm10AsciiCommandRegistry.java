@@ -1,13 +1,11 @@
 package org.example.device.protIgm10.ascii;
 
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
-
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
-
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
@@ -15,13 +13,11 @@ import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CoderResult;
 import java.util.ArrayList;
 import java.util.Arrays;
-
 import static org.example.utilites.MyUtilities.isCorrectNumberF;
 import static org.example.utilites.MyUtilities.isCorrectNumberFExceptMinus;
 
-
+@Slf4j
 public class Igm10AsciiCommandRegistry extends DeviceCommandRegistry {
-    private static final Logger log = Logger.getLogger(Igm10AsciiCommandRegistry.class);
     private final static Charset charset = Charset.forName("Cp1251");
     private static final CharsetDecoder decoder = charset.newDecoder();
 
@@ -30,8 +26,6 @@ public class Igm10AsciiCommandRegistry extends DeviceCommandRegistry {
         commandList.addCommand(createFCmd());
         commandList.addCommand(createAlmhGuestionCmd());
         commandList.addCommand(createTermQuestionCmd());
-
-        // Добавление других команд
     }
 
     private SingleCommand createFCmd() {

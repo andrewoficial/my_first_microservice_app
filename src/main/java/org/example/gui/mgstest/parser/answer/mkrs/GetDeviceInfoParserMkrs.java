@@ -1,8 +1,7 @@
 package org.example.gui.mgstest.parser.answer.mkrs;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.mgstest.model.answer.GetDeviceInfoModel;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.time.Instant;
@@ -10,9 +9,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
+@Slf4j
 public class GetDeviceInfoParserMkrs {
-    private static final Logger log = Logger.getLogger(GetDeviceInfoParserMkrs.class);
-
     public static GetDeviceInfoModel parse(byte[] data) {
         validateDataLength(data);
 

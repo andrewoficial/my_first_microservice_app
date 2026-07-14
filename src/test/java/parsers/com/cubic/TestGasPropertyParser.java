@@ -1,6 +1,6 @@
 package parsers.com.cubic;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.protCubic.CubicCommandRegistry;
 import org.example.services.AnswerValues;
 import org.junit.jupiter.api.Test;
@@ -8,8 +8,8 @@ import org.junit.jupiter.api.Test;
 import static org.example.utilites.MyUtilities.getCubicUnits;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Slf4j
 public class TestGasPropertyParser {
-    private static final org.apache.log4j.Logger log = Logger.getLogger(TestGasPropertyParser.class);
 
     @Test
     public void  TestGasPropertyParser() {

@@ -1,15 +1,16 @@
 package org.example.gui.mgstest.util;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.zip.CRC32;
-import org.apache.log4j.Logger;
 
+@Slf4j
 public class CrcValidator {
     public static boolean checkCrc(byte[] data, int payloadStart, int payloadEnd, int crcOffset) {
-        final Logger log = Logger.getLogger(CrcValidator.class);
         if(data.length < payloadStart || data.length < payloadEnd || data.length < (crcOffset + 5)){
             log.warn("В проверку payload по crc передан слишком маленький массив данных" +
                     " payloadStart: " + payloadStart +
@@ -138,21 +139,6 @@ public class CrcValidator {
             result.add(part);
         }
         return result;
-    }
-
-
-    public static void writeDataEmulator(ArrayList<byte[]> parts) {
-        for (int i = 0; i < parts.size(); i++) {
-            String partNumber = String.format("%02X", i);
-            System.out.println("01 04 07 02 21 " + partNumber + " " + bytesToHex(parts.get(i)));
-        }
-    }
-
-    public static void readDataEmulator(byte[] requestOffsets) {
-        for (byte offset : requestOffsets) {
-            String partNumber = String.format("%02X", offset);
-            System.out.println("01 04 04 02 23 " + partNumber + " 07");
-        }
     }
 
 }

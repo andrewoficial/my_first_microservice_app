@@ -1,6 +1,5 @@
 package org.example;
 
-import com.formdev.flatlaf.FlatLightLaf;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gui.MainLeftPanelStateCollection;
 import org.example.gui.MainWindow;
@@ -14,7 +13,6 @@ import org.springframework.context.support.GenericApplicationContext;
 import javax.swing.*;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.stream.Stream;
 
 
@@ -30,9 +28,6 @@ public class Main {
                 .run(args);
 
 
-        //Проверка чтения конфига
-        //String confName = context.getEnvironment().getProperty("spring.config.name", "dunno");
-        //System.out.println("Параметр confName: " + confName);
 //        try {
 //            UIManager.setLookAndFeel(new FlatLightLaf());
 //        } catch (UnsupportedLookAndFeelException e) {
@@ -48,7 +43,8 @@ public class Main {
     }
 
     public static void restart(String newProfile) {
-        String savedPort = (mainWindow != null) ? MyProperties.getInstance().getPrt() : "8080";
+        String savedPort = (mainWindow != null && context != null && context.isActive())
+                ? context.getBean(MyProperties.class).getPrt() : "8080";
         System.out.println("Сохранённый порт: " + savedPort);
         // 1. Сохраняем бины ДО закрытия старого контекста
         final MyProperties myProperties;
@@ -112,36 +108,23 @@ public class Main {
         // 5. Обновляем ссылку на контекст только после успешного создания
         context = newContext;
 
+        if (myProperties != null) {
+            MyProperties.restoreInstance(myProperties);
+        }
+
         System.out.println("Spring видит профили после run: "
                 + String.join(", ", context.getEnvironment().getActiveProfiles()));
 
         // 6. Обновляем сервисы в UI
         if (mainWindow != null) {
-            SwingUtilities.invokeLater(() -> {
-                mainWindow.updateServices(
-                        context.getBean(MyProperties.class),
-                        context.getBean(AnyPoolService.class),
-                        context.getBean(MainLeftPanelStateCollection.class)
-                );
-            });
+            SwingUtilities.invokeLater(() -> mainWindow.updateServices(
+                    context.getBean(MyProperties.class),
+                    context.getBean(AnyPoolService.class),
+                    context.getBean(MainLeftPanelStateCollection.class)
+            ));
         }
     }
 
-    // Вспомогательный метод для удаления bean definitions (JDK17+ compatible)
-    private static void removeBeanDefinitions(
-            GenericApplicationContext context,
-            List<Class<?>> beanClasses
-    ) {
-        beanClasses.forEach(clazz -> {
-            String[] beanNames = context.getBeanNamesForType(clazz);
-            for (String beanName : beanNames) {
-                if (context.containsBeanDefinition(beanName)) {
-                    context.removeBeanDefinition(beanName);
-                    System.out.println("Removed bean definition: " + beanName);
-                }
-            }
-        });
-    }
 }
 
 

@@ -1,8 +1,7 @@
 package org.example.gui.autoresponder;
 
 import com.fazecast.jSerialComm.SerialPort;
-import org.apache.log4j.Logger;
-
+import lombok.extern.slf4j.Slf4j;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -16,8 +15,8 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+@Slf4j
 public class DpsEmulatorWindowOld extends JFrame {
-    private static final Logger log = Logger.getLogger(DpsEmulatorWindowOld.class);
     private static final int RESPONSE_TIMEOUT_MS = 250; // Таймаут для накопления пакета
     private static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("HH:mm:ss.SSS");
     private static final String CONFIG_FILE = "./config/dps_emulator_config.properties";

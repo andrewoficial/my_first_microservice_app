@@ -1,11 +1,9 @@
 package org.example.device.protEdwardsD397;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
-import org.example.device.TemplatedAscii;
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
-
 import java.util.regex.Pattern;
 
 /**
@@ -23,8 +21,8 @@ import java.util.regex.Pattern;
  * 921-924 - Analogue, Vent, Heater, Air cooler
  * 940 - Gauge Values (оптимизированный запрос всех датчиков)
  */
+@Slf4j
 public class EdwardsD397CommandRegistry extends DeviceCommandRegistry {
-    private static final Logger log = Logger.getLogger(EdwardsD397CommandRegistry.class);
 
     private static final Pattern RESPONSE_PREFIX = Pattern.compile("^[=#\\*][CVS]\\s*(\\d{3,5})");
     private static final Pattern MULTIDROP_PREFIX = Pattern.compile("^#\\d{2}:\\d{2}");

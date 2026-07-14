@@ -2,7 +2,7 @@ package org.example.services.loggers;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.services.DeviceAnswer;
 import org.example.utilites.MyUtilities;
 import org.example.utilites.properties.MyProperties;
@@ -17,10 +17,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
+@Slf4j
 public class DeviceLogger {
-    private static final Logger log = Logger.getLogger(DeviceLogger.class);
     @Getter
     private static final long LOG_WRITE_INTERVAL = 300L;
     private static final int DEFAULT_BUFFER_LINE_LIMIT = 100; // Значение по умолчанию

@@ -1,13 +1,12 @@
 package org.example.gui.mgstest.transport;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.mgstest.exception.MessageDoesNotDeliveredToHidDevice;
 import org.example.gui.mgstest.model.HidSupportedDevice;
 import org.example.gui.mgstest.service.MgsExecutionListener;
 import org.example.gui.mgstest.transport.hid.SomeHidController;
 import org.example.utilites.MyUtilities;
 import org.hid4java.HidDevice;
-
 import java.util.ArrayList;
 
 /**
@@ -20,9 +19,9 @@ import java.util.ArrayList;
  * - ReaderSequence2() → Включение NFC (cradleSwitchOn)
  * - ReaderSequence3() → Чтение Sensor ID (самая важная команда!)
  */
+@Slf4j
 public class CradleCommunicationHelper {
     SomeHidController hidController = new SomeHidController();
-    private final Logger log = Logger.getLogger(CradleCommunicationHelper.class);
 
     // ====================== СЭМПЛЫ ОТВЕТОВ (оставлены без изменений) ======================
     public final ArrayList<byte[]> WRITE_MAGIK_FIRST_OFFSET_ANSWER_SAMPLES = new ArrayList<>();

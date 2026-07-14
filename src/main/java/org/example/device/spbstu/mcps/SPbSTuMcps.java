@@ -2,24 +2,17 @@ package org.example.device.spbstu.mcps;
 
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandListClass;
 import org.example.device.SomeDevice;
 import org.example.device.ProtocolComPort;
 import org.example.device.TemplatedAscii;
-import org.example.device.command.ArgumentDescriptor;
-import org.example.device.command.SingleCommand;
 import org.example.device.connectParameters.ComConnectParameters;
 import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+@Slf4j
 public class SPbSTuMcps implements SomeDevice, ProtocolComPort, TemplatedAscii {
-    private static final Logger log = Logger.getLogger(SPbSTuMcps.class);
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters();
     private final SerialPort comPort;

@@ -1,17 +1,18 @@
 package org.example.services;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.services.loggers.DeviceLogger;
 import org.example.services.loggers.PoolLogger;
 import org.example.utilites.properties.MyProperties;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+@Slf4j
 @Service
 public class AnswerSaverSync {
     private final ConcurrentMap<Integer, DeviceAnswer> lastAnswers = new ConcurrentHashMap<>();
@@ -19,7 +20,7 @@ public class AnswerSaverSync {
     //private final long MAX_ALLOWED_DIFFERENCE = properties.getSyncSavingAnswerTimerLimitMS(); // Максимальный допустимый разброс
     private long MAX_ALLOWED_DIFFERENCE = 1200; // Максимальный допустимый разброс
     private long SYNC_WINDOW = 950000; // Длительность окна синхронизации
-    private static final Logger log = Logger.getLogger(AnswerSaverSync.class);
+
 
     private long currentSyncStart = System.currentTimeMillis(); // Начало текущего окна
     private final Set<Integer> ignoredThreads = ConcurrentHashMap.newKeySet(); // Потоки, которые временно игнорируются

@@ -1,6 +1,6 @@
 package org.example.gui;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -8,14 +8,12 @@ import org.jfree.chart.plot.XYPlot;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
-
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 
-
+@Slf4j
 public class SimpleChartWindow extends JFrame {
-    private static final Logger log = Logger.getLogger(SimpleChartWindow.class);
     private XYSeries series = new XYSeries("File Data");
     private ChartPanel chartPanel;
 

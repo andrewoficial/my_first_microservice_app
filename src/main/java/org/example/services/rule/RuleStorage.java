@@ -1,10 +1,8 @@
 package org.example.services.rule;
 
-import org.apache.log4j.Logger;
-import org.example.gui.RuleManagmentDialog;
+import lombok.extern.slf4j.Slf4j;
 import org.example.services.rule.com.ComRule;
 import org.springframework.lang.Nullable;
-
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,8 +10,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
+@Slf4j
 public class RuleStorage {
-    private static final Logger log = Logger.getLogger(RuleStorage.class);
     private static final ConcurrentMap<Integer, List<ComRule>> comRules = new ConcurrentHashMap<>();
     private static final RuleStorage instance;
     private static final ConcurrentHashMap<String, ComRule> ruleStorage = new ConcurrentHashMap<>();

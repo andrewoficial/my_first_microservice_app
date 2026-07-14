@@ -1,14 +1,7 @@
 package org.example.services.connectionPool;
 
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
-
-import org.apache.log4j.Logger;
-import org.example.device.ProtocolsList;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.SomeDevice;
 import org.example.device.protVega.VEGA_WAN;
 import org.example.gui.MainLeftPanelStateCollection;
@@ -23,7 +16,9 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.WebSocketClient;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
-
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import javax.swing.*;
 import java.io.IOException;
@@ -36,10 +31,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 
+@Slf4j
 public class WebSocketDataCollector implements Runnable{
-    private final static Logger log = Logger.getLogger(WebSocketDataCollector.class); // Объект логера
     private final MyProperties myProperties = MyProperties.getInstance(); //Объект с параметрами для того, что бы определять тип логирования
     @Getter
     private volatile boolean alive = true; // Признак того, что поток жив (после введения Event всегда истина и сбрасывается в shutdown, раньше сбрасывался если нету клиентов у потока)
@@ -137,7 +131,9 @@ public class WebSocketDataCollector implements Runnable{
             }
         }
         log.info("Начинаю подключение" + url);
-        session = client.doHandshake(new MyTextWebSocketHandler(), headers, URI.create(url)).get();
+
+
+        session = client.execute(new MyTextWebSocketHandler(), headers, URI.create(url)).get();
 
     }
     private void handleDataAvailableEvent(TextMessage message) throws Exception {
@@ -166,8 +162,6 @@ public class WebSocketDataCollector implements Runnable{
             // 6. Передаем данные в обработчик
             messageToGui(null, null, null, rootNode);
 
-        } catch (IOException e) {
-            log.error("Ошибка парсинга JSON: " + e.getMessage());
         } catch (Exception e) {
             log.error("Неожиданная ошибка: " + e.getMessage(), e);
         }
@@ -504,12 +498,9 @@ public class WebSocketDataCollector implements Runnable{
         JsonNode jsonNode = message.path(0);
 
         log.warn("Сообщение отправляется в окно");
-        if(message == null){
-            log.warn("Null message in handler");
-        }
 
-        if(!Objects.equals(message.path("token").asText("token"), "token")){
-            token = message.path("token").asText("token");
+        if(!Objects.equals(message.path("token").asString("token"), "token")){
+            token = message.path("token").asString("token");
         }
 
         if (listener != null) {
@@ -517,10 +508,10 @@ public class WebSocketDataCollector implements Runnable{
             SwingUtilities.invokeLater(() ->
 
                     listener.onDataUpdated(
-                            message.path("clientId").asText("clientId"),
-                            message.path("action").asText("action"),
-                            message.path("data").asText("data"),
-                            message.path("cmd").asText("cmd"),
+                            message.path("clientId").asString("clientId"),
+                            message.path("action").asString("action"),
+                            message.path("data").asString("data"),
+                            message.path("cmd").asString("cmd"),
                             message
                     )
             );

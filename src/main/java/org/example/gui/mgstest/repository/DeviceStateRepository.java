@@ -1,19 +1,15 @@
 // DeviceStateRepository.java
 package org.example.gui.mgstest.repository;
 
-import org.apache.log4j.Logger;
-import org.example.gui.mgstest.MultigassensWindow;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.mgstest.model.DeviceState;
 import org.example.gui.mgstest.model.HidSupportedDevice;
-import org.hid4java.HidDevice;
-
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-
+@Slf4j
 public class DeviceStateRepository implements DeviceRepositoryInterface {
     private final Map<HidSupportedDevice, DeviceState> storage = new ConcurrentHashMap<>();
-    private final Logger log = Logger.getLogger(DeviceStateRepository.class);
     @Override
     public void put(HidSupportedDevice deviceId, DeviceState state) {
         storage.put(deviceId, state);

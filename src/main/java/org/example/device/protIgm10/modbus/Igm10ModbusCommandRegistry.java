@@ -1,20 +1,18 @@
 package org.example.device.protIgm10.modbus;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
 import org.example.device.command.ArgumentDescriptor;
 import org.example.device.command.CommandType;
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
 import org.example.utilites.MyUtilities;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.*;
 
+@Slf4j
 public class Igm10ModbusCommandRegistry extends DeviceCommandRegistry {
-    private static final Logger log = Logger.getLogger(Igm10ModbusCommandRegistry.class);
-
     private int slaveAddress = 1;
 
     private final Map<Integer, String> statusFlags = new HashMap<>();

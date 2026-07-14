@@ -1,23 +1,18 @@
 package org.example.gui.curve.file;
 
 import lombok.Getter;
-import org.apache.log4j.Logger;
-import org.example.gui.curve.CurveHandlerWindow;
-
+import lombok.extern.slf4j.Slf4j;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.io.File;
 
+@Slf4j
 public class FileHandler {
     @Getter
     private String filePath;
-    private Logger log = null;
     @Getter
     File selectedFileToOpen = null;
 
-    public FileHandler() {
-        log = Logger.getLogger(CurveHandlerWindow.class);
-    }
 
     public File selectFileToOpen() throws CurveFileAccessException {
         JFileChooser fileChooser = new JFileChooser();

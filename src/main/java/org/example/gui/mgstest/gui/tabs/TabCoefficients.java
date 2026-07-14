@@ -1,7 +1,7 @@
 package org.example.gui.mgstest.gui.tabs;
 
 import lombok.Setter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.mgstest.gui.names.CoefficientNames;
 import org.example.gui.mgstest.gui.names.CoefficientToolTipsText;
 import org.example.gui.mgstest.model.HidSupportedDevice;
@@ -20,8 +20,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.text.DecimalFormat;
 
+@Slf4j
 public class TabCoefficients extends DeviceTab {
-    private Logger log = Logger.getLogger(TabCoefficients.class);
     private CoefficientNames coefficientNamesNames = new CoefficientNames();
     private CoefficientToolTipsText сoefficientToolTipsText = new CoefficientToolTipsText();
     @Setter

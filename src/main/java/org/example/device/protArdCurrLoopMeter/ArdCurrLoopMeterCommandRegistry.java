@@ -1,23 +1,18 @@
 package org.example.device.protArdCurrLoopMeter;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
 import org.example.device.command.SingleCommand;
-import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
-
 import java.util.Arrays;
-
 import static org.example.utilites.MyUtilities.*;
-import static org.example.utilites.MyUtilities.isCorrectNumberF;
 
+@Slf4j
 public class ArdCurrLoopMeterCommandRegistry extends DeviceCommandRegistry {
-    private final static Logger log = Logger.getLogger(ArdCurrLoopMeterCommandRegistry.class); // Объект логера
 
     @Override
     protected void initCommands() {
         commandList.addCommand(createFCommand());
-        // Добавление других команд
     }
 
     private SingleCommand createFCommand() {

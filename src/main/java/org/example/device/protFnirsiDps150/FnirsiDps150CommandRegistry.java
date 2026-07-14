@@ -1,13 +1,12 @@
 package org.example.device.protFnirsiDps150;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
 import org.example.device.command.ArgumentDescriptor;
 import org.example.device.command.CommandType;
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
 import org.example.utilites.MyUtilities;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
@@ -15,8 +14,8 @@ import java.util.Arrays;
 
 import static org.example.utilites.MyUtilities.getAnyNumber;
 
+@Slf4j
 public class FnirsiDps150CommandRegistry extends DeviceCommandRegistry {
-    private static final Logger log = Logger.getLogger(FnirsiDps150CommandRegistry.class);
 
     // Тип команды
     private static final byte START_SEND    = (byte) 0xF1;

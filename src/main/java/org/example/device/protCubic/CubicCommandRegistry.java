@@ -1,6 +1,6 @@
 package org.example.device.protCubic;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
 import org.example.device.command.SingleCommand;
 import org.example.device.command.ArgumentDescriptor;
@@ -12,9 +12,8 @@ import java.util.*;
 
 import static org.example.utilites.MyUtilities.getCubicUnits;
 
+@Slf4j
 public class CubicCommandRegistry extends DeviceCommandRegistry {
-    private static final Logger log = Logger.getLogger(CubicCommandRegistry.class);
-
     private static final byte IP = 0x11;
     private static final byte ACK = 0x16;
     private static final byte NAK = 0x06;

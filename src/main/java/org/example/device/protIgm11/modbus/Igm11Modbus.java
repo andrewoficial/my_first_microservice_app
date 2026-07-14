@@ -2,7 +2,7 @@ package org.example.device.protIgm11.modbus;
 
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandListClass;
 import org.example.device.ProtocolComPort;
 import org.example.device.SomeDevice;
@@ -11,13 +11,12 @@ import org.example.device.connectParameters.ComConnectParameters;
 import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 import org.example.utilites.MyUtilities;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+@Slf4j
 public class Igm11Modbus implements SomeDevice, ProtocolComPort {
-    private static final Logger log = Logger.getLogger(Igm11Modbus.class);
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters();
     private final SerialPort comPort;

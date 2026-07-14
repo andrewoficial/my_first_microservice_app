@@ -1,14 +1,14 @@
 package org.example.gui.mgstest.parser.answer.mgs;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.mgstest.model.answer.GetAllSettingsModel;
 import org.example.gui.mgstest.util.CrcValidator;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+@Slf4j
 public class GetAllSettingsParser {
-    private static final Logger log = Logger.getLogger(GetAllSettingsParser.class);
+
 
     public static GetAllSettingsModel parse(byte[] data) {
         validateDataLength(data);

@@ -1,7 +1,7 @@
 package org.example.gui.mgstest.gui.tabs;
 
 import lombok.Setter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.mgstest.model.HidSupportedDevice;
 import org.example.gui.mgstest.model.answer.GetDeviceInfoModel;
 import org.example.gui.mgstest.model.DeviceState;
@@ -15,16 +15,14 @@ import org.example.gui.mgstest.transport.cmd.mkrs.GetInfo;
 import org.example.gui.mgstest.util.CrcValidator;
 import org.example.gui.utilites.GuiUtilities;
 import org.example.utilites.Constants;
-
 import javax.swing.*;
-import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
+@Slf4j
 public class TabInfo extends DeviceTab {
-    private Logger log = Logger.getLogger(TabInfo.class);
 
     @Setter
     private HidSupportedDevice selectedDevice;

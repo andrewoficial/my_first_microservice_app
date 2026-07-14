@@ -3,7 +3,7 @@ package org.example.gui;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.services.AnswerStorage;
 import org.example.services.connectionPool.AnyPoolService;
 import org.example.services.rule.ParamMetadata;
@@ -11,7 +11,6 @@ import org.example.services.rule.RuleFactory;
 import org.example.services.rule.RuleStorage;
 import org.example.services.rule.com.*;
 import org.example.utilites.properties.MyProperties;
-
 import javax.swing.*;
 import java.awt.*;
 import java.lang.reflect.InvocationTargetException;
@@ -20,13 +19,11 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
-
 import org.example.services.rule.com.RuleType;
-
 import static org.example.gui.utilites.GuiUtilities.changeFont;
 
+@Slf4j
 public class RuleManagmentDialog extends JDialog {
-    private static final Logger log = Logger.getLogger(RuleManagmentDialog.class);
     private final RuleStorage ruleStorage = RuleStorage.getInstance();
     private final StringBuilder sb = new StringBuilder();
     private JPanel JP_RuleCreate;
@@ -142,7 +139,7 @@ public class RuleManagmentDialog extends JDialog {
                 log.info("Создано правило");
                 log.info(selectedRule.getRuleId());
                 log.info(selectedRule.getDescription());
-                log.info(selectedRule.getRuleType());
+                log.info(selectedRule.getRuleType() + "");
             }
             log.info("Сохраняю правило в коллекцию");
             ruleStorage.addRule(selectedRule);

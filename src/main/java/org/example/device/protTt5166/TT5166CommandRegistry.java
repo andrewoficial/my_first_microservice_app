@@ -1,21 +1,19 @@
 package org.example.device.protTt5166;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
 import org.example.device.command.ArgumentDescriptor;
 import org.example.device.command.CommandType;
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
-import org.example.utilites.MyUtilities;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 public class TT5166CommandRegistry extends DeviceCommandRegistry {
-    private static final Logger log = Logger.getLogger(TT5166CommandRegistry.class);
 
     private final Map<Integer, String> faultMessages = new HashMap<>();
 

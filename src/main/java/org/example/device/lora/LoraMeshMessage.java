@@ -1,12 +1,12 @@
 package org.example.device.lora;
 
-import org.apache.log4j.Logger;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Optional;
 
+@Slf4j
 public class LoraMeshMessage {
-    private static final Logger log = Logger.getLogger(LoraMeshMessage.class);
-
     // Типы пакетов
     public static final int LORA_INVALID = 0;
     public static final int LORA_DIRECT = 1;
@@ -16,14 +16,23 @@ public class LoraMeshMessage {
     public static final int LORA_MAP_REQ = 5;
     public static final int LORA_ACK = 6;
 
+    @Getter
     private int format; // 0..1 bit
+    @Getter
     private int type;   // 2..7 bits
+    @Getter
     private long dest;  // 4 bytes, unsigned
+    @Getter
     private long from;  // 4 bytes
+    @Getter
     private long orig;  // 4 bytes
+    @Getter
     private int msgId;  // 1 byte
+    @Getter
     private int hops;   // 1 byte
+    @Getter
     private int checksum; // 1 byte
+    @Getter
     private byte[] data;  // Полезная нагрузка
 
     private LoraMeshMessage(int format, int type, long dest, long from, long orig, int msgId, int hops, int checksum, byte[] data) {
@@ -133,39 +142,4 @@ public class LoraMeshMessage {
         return val;
     }
 
-    public int getFormat() {
-        return format;
-    }
-
-    public int getType() {
-        return type;
-    }
-
-    public long getDest() {
-        return dest;
-    }
-
-    public long getFrom() {
-        return from;
-    }
-
-    public long getOrig() {
-        return orig;
-    }
-
-    public int getMsgId() {
-        return msgId;
-    }
-
-    public int getHops() {
-        return hops;
-    }
-
-    public int getChecksum() {
-        return checksum;
-    }
-
-    public byte[] getData() {
-        return data;
-    }
 }

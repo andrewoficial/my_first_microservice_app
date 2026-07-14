@@ -1,6 +1,6 @@
 package org.example.device.protQdl80a;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
 import org.example.device.command.SingleCommand;
 import org.example.device.command.ArgumentDescriptor;
@@ -16,8 +16,8 @@ import java.util.Arrays;
  * Реестр команд для QDL80A.
  * Реализует формирование Modbus RTU запросов и парсинг ответов.
  */
+@Slf4j
 public class Qdl80aCommandRegistry extends DeviceCommandRegistry {
-    private static final Logger log = Logger.getLogger(Qdl80aCommandRegistry.class);
 
     // Полином CRC-16/Modbus
     private static final int CRC_POLYNOMIAL = 0xA001;

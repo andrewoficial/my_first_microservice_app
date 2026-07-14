@@ -1,15 +1,15 @@
 package org.example.device.protGpsTest;
 
 import lombok.Getter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.utilites.MyUtilities;
 
+@Slf4j
 public class LoraMyGpsMessage {
     @Getter
     private final char[] hexData;
     private final char[] crcData;
     private final static int MIN_LENGTH = 34;
-    private final static Logger log = Logger.getLogger(LoraMyGpsMessage.class);
 
     // Описание полей {start, length}
     private enum Field {

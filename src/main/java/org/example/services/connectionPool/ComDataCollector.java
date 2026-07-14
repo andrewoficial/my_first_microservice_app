@@ -5,7 +5,7 @@ import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.MainLeftPanelStateCollection;
 import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
@@ -33,8 +33,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 
+@Slf4j
 public class ComDataCollector implements Runnable{
-    private final static Logger log = Logger.getLogger(ComDataCollector.class); // Объект логера
+
     private final AnyPoolService parentService;//Родительский класс для получения единого для всех потомков объекта синхронизаци логирования.
     private final MyProperties myProperties = MyProperties.getInstance(); //Объект с параметрами для того, что бы определять тип логирования
     @Getter

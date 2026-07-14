@@ -1,18 +1,14 @@
 package org.example.gui.graph.ui;
 
 import lombok.Getter;
-import org.apache.log4j.Logger;
-import org.example.gui.graph.ChartWindow;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.swing.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 public class SeriesModel {
-    private static final Logger log = Logger.getLogger(SeriesModel.class);
-
     @Getter
     private Map<String, JCheckBox> jBoxes = new ConcurrentHashMap<>();
 

@@ -1,6 +1,7 @@
 package org.example.web.service.myUserDetailService;
 
 //import org.example.utilites.SpringLoader;
+import lombok.extern.slf4j.Slf4j;
 import org.example.web.config.myUserDetails.MyUserDetails;
 import org.example.web.entity.MyUser;
 import org.example.web.repository.UserRepository;
@@ -18,23 +19,27 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 @Profile({ "srv-offline", "srv-online" })
-@Service
+@Slf4j
 public class MyUserDetailServiceProduction implements UserDetailsService {
 
+    private final UserRepository repository;
 
-    private UserRepository repository;
+    public MyUserDetailServiceProduction(UserRepository repository) {
+        this.repository = repository;
+    }
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        System.out.println("Run MyUserDetailServiceProduction");
+        log.info("run...");
         //Environment env = SpringLoader.ctx.getEnvironment();
         // String[] activeProfiles = env.getActiveProfiles();
         // System.out.println("Active profiles: " + String.join(", ", activeProfiles));
 
 
         Optional <MyUser> user = repository.findByName(username);
-
+        log.info("username {}",  username);
+        log.info("is present {}",  user.isPresent());
 
         return user.map(MyUserDetails::new)
-                .orElseThrow();
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
     }
 }

@@ -1,12 +1,12 @@
 package org.example.device.lora.rui420.igm.mesh;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
 
+@Slf4j
 public class Igm10LoraMeshCommandRegistry extends DeviceCommandRegistry {
-    private static final Logger log = Logger.getLogger(Igm10LoraMeshCommandRegistry.class);
 
     @Override
     protected void initCommands() {

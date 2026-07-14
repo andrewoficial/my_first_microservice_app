@@ -1,16 +1,14 @@
 package org.example.device.protGpsTest;
 
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
-
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
 import org.example.services.loggers.GPS_Loger;
 
-
+@Slf4j
 public class GpsTestCommandRegistry extends DeviceCommandRegistry {
-    private final Logger log = Logger.getLogger(GpsTestCommandRegistry.class);
     private static final int FROM_RAK = 0;
     private static final int FROM_EBYTE = 1;
     private GPS_Loger gpsLogerRak = new GPS_Loger("66_RAK", 5);

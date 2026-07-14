@@ -1,21 +1,19 @@
 package org.example.device.protDynament;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
 import org.example.device.command.SingleCommand;
 import org.example.device.command.ArgumentDescriptor;
 import org.example.device.command.CommandType;
 import org.example.services.AnswerValues;
 import org.example.utilites.MyUtilities;
-
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.*;
 
+@Slf4j
 public class DynamentCommandRegistry extends DeviceCommandRegistry {
-    private static final Logger log = Logger.getLogger(DynamentCommandRegistry.class);
-
     private static final byte DLE = 0x10;
     private static final byte RD = 0x13;
     private static final byte WR = 0x15;

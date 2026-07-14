@@ -1,8 +1,7 @@
 package org.example.gui.autoresponder;
 
 import com.fazecast.jSerialComm.SerialPort;
-import org.apache.log4j.Logger;
-
+import lombok.extern.slf4j.Slf4j;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -14,8 +13,8 @@ import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+@Slf4j
 public class AutoResponderWindow extends JFrame {
-    private static final Logger log = Logger.getLogger(AutoResponderWindow.class);
     private static final int RESPONSE_TIMEOUT_MS = 500; // Таймаут для накопления пакета
     private static final SimpleDateFormat TIME_FORMAT = new SimpleDateFormat("HH:mm:ss.SSS");
 
@@ -295,8 +294,8 @@ public class AutoResponderWindow extends JFrame {
     }
 }
 
+@Slf4j
 class PairStorage {
-    private static final Logger log = Logger.getLogger(PairStorage.class);
     private static final String FILE_PATH = "./config/autoresponder_pairs.txt";
 
     public static List<String[]> load() {

@@ -2,7 +2,7 @@
 package org.example.gui.mgstest.repository;
 
 import lombok.Getter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.mgstest.model.HidSupportedDevice;
 import org.example.utilites.Constants;
 import org.hid4java.HidDevice;
@@ -14,11 +14,10 @@ import java.util.*;
 import static org.example.utilites.Constants.HidCommunication.MIKROSENSE_TARGET_PRODUCT_ID;
 import static org.example.utilites.Constants.HidCommunication.MULTIGASSENSE_TARGET_PRODUCT_ID;
 
+@Slf4j
 public class DeviceRepository {
-
     private final HidServices hidServices;
     private final DeviceRepositoryInterface stateRepository;
-    private final Logger log = Logger.getLogger(DeviceRepository.class);
     @Getter
     private HashSet<HidSupportedDevice> deviceList = new HashSet<>(3);
 

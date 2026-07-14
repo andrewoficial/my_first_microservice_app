@@ -1,16 +1,18 @@
 package org.example.gui.system.logs;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.Appender;
+import ch.qos.logback.core.FileAppender;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
-import org.apache.log4j.Appender;
-import org.apache.log4j.FileAppender;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.Rendeble;
 import org.example.gui.mainWindowUtilites.FolderPictureForLog;
-import org.example.gui.system.resources.DebugWindow;
 import org.example.services.loggers.PoolLogger;
-
+import org.slf4j.LoggerFactory;
 import javax.swing.*;
 import javax.swing.text.DefaultCaret;
 import java.awt.*;
@@ -22,12 +24,12 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
-import java.util.Enumeration;
+import java.util.Iterator;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+@Slf4j
 public class ViewLogsWindow extends JDialog implements Rendeble {
-    private Logger log = null;
     private final JTextArea systemLogArea = new JTextArea();
     private final JTextArea comTransferLogArea = new JTextArea();
     private final JTextArea socketTransferLogArea = new JTextArea();
@@ -61,7 +63,6 @@ public class ViewLogsWindow extends JDialog implements Rendeble {
         createUI();
 
         setContentPane(mainPanel);
-        log = Logger.getLogger(DebugWindow.class);
         log.info("Открыто окно с выводом логов системы");
 
         // Инициализация текстовых областей
@@ -225,20 +226,20 @@ public class ViewLogsWindow extends JDialog implements Rendeble {
 
     private Path getSystemLogPath() {
         try {
-            // Проверяем все аппендеры, включая дочерние логгеры
-            Logger rootLogger = Logger.getRootLogger();
+            LoggerContext loggerContext =
+                    (LoggerContext) LoggerFactory.getILoggerFactory();
+
+            Logger rootLogger = loggerContext.getLogger(Logger.ROOT_LOGGER_NAME);
             Path path = findFileAppenderPath(rootLogger);
             if (path != null) return path;
 
-            // Проверяем логгер текущего класса
-            Logger currentLogger = Logger.getLogger(getClass());
+            Logger currentLogger = loggerContext.getLogger(getClass());
             if (currentLogger != rootLogger) {
                 path = findFileAppenderPath(currentLogger);
                 if (path != null) return path;
             }
 
-            // Проверяем другие возможные логгеры
-            Logger systemLogger = Logger.getLogger("org.example");
+            Logger systemLogger = loggerContext.getLogger("org.example");
             if (systemLogger != rootLogger && systemLogger != currentLogger) {
                 path = findFileAppenderPath(systemLogger);
                 if (path != null) return path;
@@ -247,19 +248,18 @@ public class ViewLogsWindow extends JDialog implements Rendeble {
             log.error("Error getting system log path", e);
         }
 
-        // Fallback с текущей датой
         String fileName = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd")) + " EM-LogFile.log";
         return Paths.get("logs", fileName);
     }
 
     private Path findFileAppenderPath(Logger logger) {
-        Enumeration<Appender> appenders = logger.getAllAppenders();
-        while (appenders.hasMoreElements()) {
-            Appender appender = appenders.nextElement();
+        Iterator<Appender<ILoggingEvent>> appenders = logger.iteratorForAppenders();
+        while (appenders.hasNext()) {
+            Appender appender = appenders.next();
             if (appender instanceof FileAppender) {
-                String filePath = ((FileAppender) appender).getFile();
-                if (filePath != null && !filePath.isEmpty()) {
-                    Path path = Paths.get(filePath);
+                String file = ((FileAppender) appender).getFile();
+                if (file != null && !file.isEmpty()) {
+                    Path path = Paths.get(file);
                     if (Files.exists(path)) {
                         return path;
                     }
@@ -431,4 +431,5 @@ public class ViewLogsWindow extends JDialog implements Rendeble {
     public JComponent $$$getRootComponent$$$() {
         return mainPanel;
     }
+
 }

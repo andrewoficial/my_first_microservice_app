@@ -1,16 +1,15 @@
 package org.example.device.spbstu.mcps;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
 import org.example.device.command.ArgumentDescriptor;
 import org.example.device.command.CommandType;
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
 
-import java.util.Arrays;
 
+@Slf4j
 public class SPbSTuMcpsCommandRegistry extends DeviceCommandRegistry {
-    private static final Logger log = Logger.getLogger(SPbSTuMcpsCommandRegistry.class);
 
     @Override
     protected void initCommands() {

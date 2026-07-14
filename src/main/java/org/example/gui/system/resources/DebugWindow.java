@@ -14,11 +14,11 @@ import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import com.sun.management.OperatingSystemMXBean;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.Rendeble;
 
+@Slf4j
 public class DebugWindow extends JDialog implements Rendeble {
-    private Logger log = null;
     private int countRender = 0;
     private JPanel mainField;
     private JTextArea textArea1;
@@ -51,8 +51,6 @@ public class DebugWindow extends JDialog implements Rendeble {
         setModal(false);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setContentPane(mainField);
-        //Thread.currentThread().setName("NARUTO JavaResourceMonitor");
-        log = Logger.getLogger(DebugWindow.class);
         log.info("Открыто окно с информацией о системе");
         log.info(Thread.currentThread().getName());
         Set<Thread> threadSet = null;

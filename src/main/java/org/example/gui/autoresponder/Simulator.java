@@ -65,7 +65,7 @@ public class Simulator {
             LogUtil.logMessage(window.jtaLog, "Simulated responses sent.");
 
         } catch (Exception ex) {
-            DpsEmulatorWindow.log.error("simulateAll() error", ex);
+            LogUtil.logMessage(window.jtaLog, "simulateAll() error" + ex);
         }
     }
 
@@ -130,7 +130,7 @@ public class Simulator {
                 LogUtil.logMessage(window.jtaLog, "Simulated graph sent.");
 
             } catch (Exception ex) {
-                DpsEmulatorWindow.log.error("simulateForGraph() error", ex);
+                LogUtil.logMessage(window.jtaLog, "simulateForGraph() error" + ex);
             }
         }).start();
     }

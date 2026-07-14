@@ -1,24 +1,16 @@
 package org.example.device.protErstevakMtp4d;
 
-
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
-
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
-
 import java.util.Arrays;
 
-
-
-
+@Slf4j
 public class ErstevakMtp4dCommandRegistry extends DeviceCommandRegistry {
-    private static final Logger log = Logger.getLogger(ErstevakMtp4dCommandRegistry.class);
-
     @Override
     protected void initCommands() {
         commandList.addCommand(createMcmd());
-        // Добавление других команд
     }
 
     private SingleCommand createMcmd() {

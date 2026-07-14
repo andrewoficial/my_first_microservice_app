@@ -1,7 +1,7 @@
 package org.example.gui.mgstest.gui.tabs;
 
 import lombok.Setter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.mgstest.model.HidSupportedDevice;
 import org.example.gui.mgstest.model.answer.MipexResponseModel;
 import org.example.gui.mgstest.model.DeviceState;
@@ -16,14 +16,13 @@ import org.example.gui.mgstest.transport.cmd.mgs.transfer.SendExternalUartComman
 import org.example.gui.mgstest.transport.cmd.mgs.transfer.SendSpiCommand;
 import org.example.gui.mgstest.transport.cmd.mgs.transfer.SendUartCommand;
 import org.example.utilites.Constants;
-
 import javax.swing.*;
 import java.awt.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+@Slf4j
 public class UartHistory extends DeviceTab {
-    private Logger log = Logger.getLogger(UartHistory.class);
     @Setter
     private CradleController cradleController;
     @Setter

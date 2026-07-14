@@ -1,8 +1,11 @@
 package org.example.gui.autoresponder;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.*;
 import java.util.Properties;
 
+@Slf4j
 public class ConfigManager {
     private static final String CONFIG_FILE = "./config/dps_emulator_config.properties";
 
@@ -23,7 +26,7 @@ public class ConfigManager {
                 LogUtil.logMessage(window.jtaLog, "Config loaded");
                 window.updateIndicators();
             } catch (IOException ex) {
-                DpsEmulatorWindow.log.error("Error loading config", ex);
+                LogUtil.logMessage(window.jtaLog, "Error loading config" + ex);
             }
         }
     }
@@ -45,7 +48,7 @@ public class ConfigManager {
             prop.store(output, null);
             LogUtil.logMessage(window.jtaLog, "Config saved");
         } catch (IOException io) {
-            DpsEmulatorWindow.log.error("Error saving config", io);
+            LogUtil.logMessage(window.jtaLog, "Error saving config" + io);
         }
     }
 }

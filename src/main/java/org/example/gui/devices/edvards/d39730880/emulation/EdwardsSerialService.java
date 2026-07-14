@@ -3,16 +3,13 @@ package org.example.gui.devices.edvards.d39730880.emulation;
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
-import org.apache.log4j.Logger;
-
+import lombok.extern.slf4j.Slf4j;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
 
+@Slf4j
 public class EdwardsSerialService {
-
-    private static final Logger log = Logger.getLogger(EdwardsSerialService.class);
-
     private final Function<String, String> commandHandler;
     private SerialPort port;
     private volatile boolean running = false;

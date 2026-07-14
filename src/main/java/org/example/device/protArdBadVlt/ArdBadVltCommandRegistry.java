@@ -1,19 +1,16 @@
 package org.example.device.protArdBadVlt;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
-
 import static org.example.utilites.MyUtilities.*;
 
+@Slf4j
 public class ArdBadVltCommandRegistry extends DeviceCommandRegistry {
-    private final static Logger log = Logger.getLogger(ArdBadVltCommandRegistry.class); // Объект логера
-
     @Override
     protected void initCommands() {
         commandList.addCommand(createFCommand());
-        // Добавление других команд
     }
 
     private SingleCommand createFCommand() {

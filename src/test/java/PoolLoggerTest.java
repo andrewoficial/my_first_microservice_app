@@ -1,5 +1,5 @@
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.ProtocolsList;
 import org.example.device.SomeDevice;
 import org.example.services.DeviceAnswer;
@@ -26,8 +26,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@Slf4j
 class PoolLoggerTest {
-    private static final Logger log = Logger.getLogger(PoolLoggerTest.class);
     private static final String FIXED_TIME_STR = "2025-08-08T22:00:42.682Z";
     private static final Instant FIXED_INSTANT = Instant.parse(FIXED_TIME_STR);
     private static final Clock FIXED_CLOCK = Clock.fixed(FIXED_INSTANT, ZoneId.systemDefault());

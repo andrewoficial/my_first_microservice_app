@@ -1,19 +1,16 @@
 package org.example.gui.mainWindowUtilites;
 
-import org.apache.log4j.Logger;
-import org.example.device.ProtocolsList;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.MainLeftPanelState;
 import org.example.gui.MainLeftPanelStateCollection;
 import org.example.services.comPort.BaudRatesList;
 import org.example.services.comPort.DataBitsList;
 import org.example.services.comPort.StopBitsList;
-import org.example.utilites.properties.MyPropertiesSettingsLoader;
-
 import javax.swing.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@Slf4j
 public class GuiStateManager {
-    private static final Logger log = Logger.getLogger(GuiStateManager.class);
     private final MainLeftPanelStateCollection state;
     private final AtomicInteger currentTab;
 

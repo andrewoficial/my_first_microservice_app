@@ -1,15 +1,13 @@
 package org.example.gui.mgstest.parser.answer.mgs;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.mgstest.model.answer.GetGasRangeModel;
 import org.example.gui.mgstest.util.CrcValidator;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+@Slf4j
 public class GetGasRangeParser {
-    private static final Logger log = Logger.getLogger(GetGasRangeParser.class);
-
     public static GetGasRangeModel parse(byte[] data) {
         validateDataLength(data);
 

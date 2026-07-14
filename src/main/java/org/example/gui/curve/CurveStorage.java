@@ -1,12 +1,11 @@
 package org.example.gui.curve;
 
-import org.apache.log4j.Logger;
-
+import lombok.extern.slf4j.Slf4j;
 import java.util.HashMap;
 
+@Slf4j
 public class CurveStorage {
-    private Logger log = Logger.getLogger(CurveStorage .class);
-    private HashMap <String, CurveData> curves = new HashMap<>();
+    private final HashMap <String, CurveData> curves = new HashMap<>();
 
     public boolean isEmpty(){
         return curves.isEmpty();
@@ -51,6 +50,7 @@ public class CurveStorage {
         }
         curves.remove(name);
     }
+
     public boolean isContains(String name){
         if(name == null || name.isEmpty()){
             log.warn("Попытка получить кривую с пустым именем");

@@ -1,20 +1,17 @@
 package org.example.device.protArdTerm;
 
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
-
 import static org.example.utilites.MyUtilities.*;
 
+@Slf4j
 public class ArdTermCommandRegistry extends DeviceCommandRegistry {
-    private static final Logger log = Logger.getLogger(ArdTermCommandRegistry.class);
-
     @Override
     protected void initCommands() {
         commandList.addCommand(createFCommand());
-        // Добавление других команд
     }
 
     private SingleCommand createFCommand() {

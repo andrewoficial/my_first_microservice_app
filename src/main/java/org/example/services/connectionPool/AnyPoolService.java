@@ -1,7 +1,7 @@
 package org.example.services.connectionPool;
 
 import lombok.Getter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.ProtocolsList;
 import org.example.gui.MainLeftPanelStateCollection;
 import org.example.services.AnswerSaverSync;
@@ -26,12 +26,12 @@ import java.util.stream.IntStream;
  */
 
 @Service
+@Slf4j
 public class AnyPoolService {
     private final ExecutorService thPool = Executors.newCachedThreadPool();
 
     @Getter
     private final ArrayList <ComDataCollector> comDataCollectors = new ArrayList<>();
-    private final Logger log = Logger.getLogger(AnyPoolService.class);
     private final ComPort comPort;
     private MyProperties properties;
     @Getter

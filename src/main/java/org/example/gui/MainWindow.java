@@ -1,12 +1,13 @@
 package org.example.gui;
 
+import ch.qos.logback.classic.Logger;
 import com.fazecast.jSerialComm.SerialPort;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
 import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.Main;
 import org.example.device.ProtocolComPort;
 import org.example.device.ProtocolsList;
@@ -31,6 +32,7 @@ import org.example.services.loggers.DeviceLogger;
 import org.example.utilites.*;
 import org.example.services.connectionPool.ComDataCollector;
 import org.example.utilites.properties.MyProperties;
+import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
@@ -53,9 +55,8 @@ import java.util.function.IntSupplier;
 import static org.example.utilites.Constants.Gui.Windows.DEVICE_NAME_LIMIT;
 import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 
-
+@Slf4j
 public class MainWindow extends JFrame implements Rendeble {
-    private final static Logger log = Logger.getLogger(MainWindow.class);//Внешний логгер
     private ExecutorService uiThPool = Executors.newCachedThreadPool(); //Поток GUI
     private MainLeftPanelStateCollection leftPanState; // Класс, хранящий состояние клиентов (настройки в памяти)
     private MyProperties prop; //Файл настроек
@@ -398,8 +399,6 @@ public class MainWindow extends JFrame implements Rendeble {
 
     private void openComPort() {
         updateClassFromGui();
-        log.info(leftPanState.getBaudRateValue(currentActiveClientId.get()));
-
 
         addCustomMessage(portManager.openPort(currentActiveClientId.get(), getCurrComSelection(), getCurrProtocolSelection()));
         checkIsUsedPort(); //Выставляет блокировки кнопки открыть/закрыть
@@ -893,7 +892,9 @@ public class MainWindow extends JFrame implements Rendeble {
     private void saveParameters() {
         log.debug("Обновление файла настроек со вкладки" + currentActiveTab + " и ИД клиента " + currentActiveClientId.get());
         prop.setLastLeftPanel(leftPanState);
-        prop.setLogLevel(Logger.getRootLogger().getLevel());
+        prop.setLogLevel(
+                ((Logger) LoggerFactory.getLogger(
+                        org.slf4j.Logger.ROOT_LOGGER_NAME)).getLevel());
         prop.setTabCounter(currentTabCount.get());
         prop.setIdentAndTabBounding(AnswerStorage.getDeviceTabPair());
 
@@ -1145,7 +1146,4 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
 
-    private void createUIComponents() {
-        // TODO: place custom component creation code here
-    }
 }

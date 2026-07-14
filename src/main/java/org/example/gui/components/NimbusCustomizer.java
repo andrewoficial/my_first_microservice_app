@@ -1,18 +1,16 @@
 package org.example.gui.components;
 
-import org.apache.log4j.Logger;
-import javax.swing.*;
-import javax.swing.plaf.BorderUIResource;
-import javax.swing.plaf.DimensionUIResource;
-import java.awt.*;
+import lombok.extern.slf4j.Slf4j;
 
+import javax.swing.*;
+import java.awt.*;
 
 /**
  * Класс для кастомизации Nimbus LookAndFeel.
  * Содержит статический метод для применения всех настроек.
  */
+@Slf4j
 public class NimbusCustomizer {
-    final public static Logger log = org.apache.log4j.Logger.getLogger(NimbusCustomizer.class);//Внешний логгер
     final public static Color accent = new Color(83, 83, 83);
     final public static Color defBackground = new Color(0x3D, 0x3D, 0x3D);
     final public static Color disabledBackground = new Color(0x2D, 0x2D, 0x2D);

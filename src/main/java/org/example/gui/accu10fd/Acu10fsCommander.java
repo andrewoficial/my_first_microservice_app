@@ -3,9 +3,8 @@ package org.example.gui.accu10fd;
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.utilites.MyUtilities;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -13,19 +12,16 @@ import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+@Slf4j
 public class Acu10fsCommander {
     private static byte DEVICE_ADDRESS = 0x01;
     private static final int RESPONSE_TIMEOUT_MS = 500;
     private static final int READ_RETRIES = 10;
-    private static final int[] TEST_BAUD_RATES = {
-            4800, 9600, 19200, 38400, 57600, 115200, 9600
-    };
-    private static final int TEST_REGISTER = 0x0078; // DevAddr
-
+    private static final int[] TEST_BAUD_RATES = { 4800, 9600, 19200, 38400, 57600, 115200, 9600 };
+    private static final int TEST_REGISTER = 0x0078; // DevAddress
     private int detectedBaudRate = -1;
     @Getter @Setter
     private SerialPort comPort;
-    private final Logger log = Logger.getLogger(Acu10fsCommander.class);
     @Getter
     private AtomicBoolean busyStatus = new AtomicBoolean(false);
     public Acu10fsCommander(SerialPort port) {

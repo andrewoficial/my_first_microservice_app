@@ -2,7 +2,7 @@ package org.example.device.lora.rui420.igm.mesh;
 
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.Answerable;
 import org.example.device.DeviceCommandListClass;
 import org.example.device.ProtocolComPort;
@@ -15,8 +15,8 @@ import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 import org.example.utilites.MyUtilities;
 
+@Slf4j
 public class Igm10LoraMesh implements SomeDevice, ProtocolComPort, Answerable {
-    private static final Logger log = Logger.getLogger(Igm10LoraMesh.class);
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора
     private final SerialPort comPort;
@@ -162,8 +162,8 @@ public class Igm10LoraMesh implements SomeDevice, ProtocolComPort, Answerable {
             Rui420Message.parse(lastAnswerBytes)
                     .flatMap(rui -> {
                         log.info(rui.getEventType());
-                        log.info(rui.getDbi());
-                        log.info(rui.getSnr());
+                        log.info(rui.getDbi() + "");
+                        log.info(rui.getSnr() + "");
                         log.info("Payload: " + MyUtilities.bytesToHexString(rui.getPayload()));
                         return LoraMeshMessage.parse(rui.getPayload());
                     })

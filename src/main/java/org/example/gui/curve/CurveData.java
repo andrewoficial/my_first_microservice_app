@@ -2,28 +2,24 @@ package org.example.gui.curve;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
+
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 public class CurveData {
-    private Logger log = Logger.getLogger(CurveStorage .class);
-
     @Getter @Setter
     private CurveMetaData curveMetaData = new CurveMetaData();
-
     List<Map.Entry<Double, Double>> curvePoints = new ArrayList<>();
-
-
 
     public void addCurvePoint(Double measurement, Double temperature) {
         if(isTemperatureIncorrect(measurement, temperature)) return;
         if(isAddingDenied()) return;
         curvePoints.add(new LinkedHashMap.SimpleEntry<>(measurement, temperature));
-
     }
 
     public void addCurvePointFromString(String measurement, String temperature) {

@@ -1,21 +1,19 @@
 package org.example.device.protDvk4rd;
 
-import org.apache.log4j.Logger;
 import org.example.device.DeviceCommandRegistry;
-
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
-
 import java.util.Arrays;
-
 import static org.example.utilites.MyUtilities.*;
 import static org.example.utilites.MyUtilities.isCorrectNumberF;
 import org.example.device.protDvk4rd.parsers.FULUParser;
 import org.example.device.protDvk4rd.parsers.FULSParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Dvk4rdCommandRegistry extends DeviceCommandRegistry {
-    private static final Logger log = Logger.getLogger(Dvk4rdCommandRegistry.class);
+    private static final Logger log = LoggerFactory.getLogger(Dvk4rdCommandRegistry.class);
     private final FULUParser fuluParser = new FULUParser();
     private final FULSParser fulsParser = new FULSParser();
     @Override

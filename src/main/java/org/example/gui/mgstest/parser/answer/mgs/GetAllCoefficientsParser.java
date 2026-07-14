@@ -1,16 +1,16 @@
 package org.example.gui.mgstest.parser.answer.mgs;
 
-import org.apache.log4j.Logger;
+
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.mgstest.exception.WrongCrc;
 import org.example.gui.mgstest.model.answer.GetAllCoefficientsModel;
 import org.example.gui.mgstest.util.CrcValidator;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 
+@Slf4j
 public class GetAllCoefficientsParser {
-    private static final Logger log = Logger.getLogger(GetAllCoefficientsParser.class);
 
     private static void validateDataLength(byte[] data) {
         if (data.length < 310) {

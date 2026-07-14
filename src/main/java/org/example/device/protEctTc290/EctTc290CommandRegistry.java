@@ -1,20 +1,14 @@
 package org.example.device.protEctTc290;
 
-
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
-
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
-
 import java.util.Arrays;
-
 import static org.example.utilites.MyUtilities.isCorrectNumberWithDot;
 
-
+@Slf4j
 public class EctTc290CommandRegistry extends DeviceCommandRegistry {
-    private static final Logger log = Logger.getLogger(EctTc290CommandRegistry.class);
-
     @Override
     protected void initCommands() {
         commandList.addCommand(createCrdgDirect());
@@ -23,7 +17,6 @@ public class EctTc290CommandRegistry extends DeviceCommandRegistry {
         commandList.addCommand(createKrdgBroadcast());
         commandList.addCommand(createSrdgDirect());
         commandList.addCommand(createSrdgBroadcast());
-        // Добавление других команд
     }
 
     private SingleCommand createCrdgDirect() {
@@ -370,16 +363,5 @@ public class EctTc290CommandRegistry extends DeviceCommandRegistry {
         }
         return answerValues;
 
-    }
-
-    // Вынесенные методы для повторного использования
-    private double parseSubResponse(byte[] subResponse) {
-        // Общая логика преобразования байтов в число
-        return 0.0;
-    }
-
-    private boolean validateCrc(byte[] response) {
-        // Логика проверки CRC
-        return false;
     }
 }

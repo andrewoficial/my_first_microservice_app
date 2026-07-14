@@ -2,7 +2,7 @@ package org.example.gui.mgstest;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.Rendeble;
 import org.example.gui.components.SimpleTabbedPane;
 import org.example.gui.mgstest.gui.tabs.*;
@@ -25,9 +25,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 
+@Slf4j
 public class MultigassensWindow extends JFrame implements Rendeble, MgsExecutionListener {
-    private final Logger log = Logger.getLogger(MultigassensWindow.class);
-
     private JList<HidSupportedDevice> deviceList;
     private DefaultListModel<HidSupportedDevice> listModel = new DefaultListModel<>();
     private JPanel contentPane;

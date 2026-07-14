@@ -1,21 +1,17 @@
 package org.example.gui;
 
 import lombok.Getter;
-import org.apache.log4j.Logger;
-import org.example.services.AnswerStorage;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
+@Slf4j
 public class MainLeftPanelStateCollection {
     private static volatile MainLeftPanelStateCollection instance = null;
-
-    private static final Logger log = Logger.getLogger(MainLeftPanelStateCollection.class);
     private final ConcurrentHashMap<Integer, Integer> clientIdTab = new ConcurrentHashMap<>(); // <RandomID, TabNumber>
     @Getter
     private final ConcurrentHashMap<Integer, MainLeftPanelState> clientIdTabState = new ConcurrentHashMap<>();

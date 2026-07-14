@@ -2,7 +2,7 @@ package org.example.gui.graph;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.MainLeftPanelState;
 import org.example.gui.MainLeftPanelStateCollection;
 import org.example.gui.Rendeble;
@@ -21,7 +21,6 @@ import org.jfree.chart.plot.*;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.data.time.*;
 import org.jfree.data.xy.XYDataset;
-
 import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import java.awt.*;
@@ -39,12 +38,12 @@ import javax.swing.event.ChangeListener;
 
 import static org.example.utilites.MyUtilities.convertToLocalDateViaMilisecond;
 
+@Slf4j
 public class ChartWindow extends JFrame implements Rendeble {
     private final MainLeftPanelStateCollection panelStateCollection = MainLeftPanelStateCollection.getInstance();
     private static final int HEIGHT_THRESHOLD = 15;
     private static final int WIDTH_THRESHOLD = 5;
     private static final int CONTROL_PANEL_MARGIN = 38;
-    private static final Logger log = Logger.getLogger(ChartWindow.class);
     private volatile boolean isGraphBusy = false;
     private final TimeSeriesCollection collection = new TimeSeriesCollection();
 

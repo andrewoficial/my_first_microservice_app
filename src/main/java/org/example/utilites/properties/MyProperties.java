@@ -3,9 +3,7 @@ package org.example.utilites.properties;
 import jakarta.annotation.PreDestroy;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.log4j.Category;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.ProtocolsList;
 import org.example.gui.MainLeftPanelState;
 import org.example.gui.MainLeftPanelStateCollection;
@@ -19,6 +17,7 @@ import org.example.services.comPort.BaudRatesList;
 import org.example.services.comPort.DataBitsList;
 import org.example.services.comPort.ParityList;
 import org.example.services.comPort.StopBitsList;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -32,11 +31,11 @@ import org.springframework.stereotype.Component;
  * <p>Refactored: 2025-01-05</p>
  */
 
+@Slf4j
 @Component
 @ConfigurationProperties(prefix = "app")
 public class MyProperties {
     private static MyProperties INSTANCE;
-    private static Logger log = Logger.getLogger(MyProperties.class);
 
     @Value("${spring.profiles.active:dunno}") // Берем профиль или "dunno", если не установлен
     private String activeProfile;
@@ -171,10 +170,15 @@ public class MyProperties {
     private MyPropertiesSettingsLoader settingsLoader;
     private java.util.Properties properties;
 
-    // Приватный конструктор для Singleton
+    // Приватный конструктор для Singleton (используется Spring'ом через рефлексию)
     private MyProperties() {
         log.info("Вызван приватный конструктор");
         initializeProperties();
+        INSTANCE = this;
+    }
+
+    public static void restoreInstance(MyProperties instance) {
+        INSTANCE = instance;
     }
 
     // Конструктор для Spring
@@ -207,12 +211,16 @@ public class MyProperties {
         if (INSTANCE == null) {
             synchronized (MyProperties.class) {
                 if (INSTANCE == null) {
+                    log.warn("Вызван конструктор MyProperties вне Spring");
                     return null;
+                    //На память и дароботку
+                    //ReadMe нужно помещать в контекст спринга, потому что потом он создает свой. Получается две независимые сущности.
 //                    log.info("Создаю инстанс при getInstance");
 //                    MyProperties myProperties = new MyProperties();
 //                    myProperties.initializeProperties();
 //                    INSTANCE = myProperties;
 //                    log.info("Количество вкладок " + INSTANCE.getTabCounter());
+
                 }
             }
         }
@@ -380,7 +388,7 @@ public class MyProperties {
         settingsLoader.setStringArray("ports", ports, true);
     }
 
-    public void setLogLevel(org.apache.log4j.Level level) {
+    public void setLogLevel(ch.qos.logback.classic.Level level) {
         this.logLevel = String.valueOf(level);
         properties.setProperty("logLevel", String.valueOf(level));
         fileHandler.updateFileFromProperties(properties);
@@ -552,8 +560,8 @@ public class MyProperties {
         log.debug("Обновлено значение secondGasAcu10fdConcentration для acu10fd : " + concentration);
     }
 
-    public org.apache.log4j.Level getLogLevel() {
-        return Level.toLevel(logLevel);
+    public ch.qos.logback.classic.Level getLogLevel() {
+        return ch.qos.logback.classic.Level.toLevel(logLevel);
     }
 
 
@@ -562,15 +570,11 @@ public class MyProperties {
     }
 
     private void updateLogLevel(String logLevel) {
-        {
-            Logger root = Logger.getRootLogger();
-            Enumeration allLoggers = root.getLoggerRepository().getCurrentCategories();
-            root.setLevel(Level.toLevel(this.logLevel));
-            while (allLoggers.hasMoreElements()) {
-                Category tmpLogger = (Category) allLoggers.nextElement();
-                tmpLogger.setLevel(Level.toLevel(this.logLevel));
-            }
-        }
+        ch.qos.logback.classic.Logger rootLogger =
+            (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(
+                org.slf4j.Logger.ROOT_LOGGER_NAME);
+        rootLogger.setLevel(
+            ch.qos.logback.classic.Level.toLevel(logLevel, ch.qos.logback.classic.Level.WARN));
     }
 
     private void updateLeftPanelStateCollectionClass() {

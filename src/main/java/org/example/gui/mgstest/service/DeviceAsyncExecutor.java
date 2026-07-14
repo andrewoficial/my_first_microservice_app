@@ -1,21 +1,18 @@
 package org.example.gui.mgstest.service;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.mgstest.model.DeviceState;
 import org.example.gui.mgstest.model.HidSupportedDevice;
 import org.example.gui.mgstest.repository.DeviceStateRepository;
 import org.example.gui.mgstest.transport.CommandParameters;
 import org.example.gui.mgstest.transport.DeviceCommand;
 import org.example.gui.mgstest.transport.HidCommandName;
-import org.hid4java.HidDevice;
-
 import javax.swing.*;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
+@Slf4j
 public class DeviceAsyncExecutor {
-    private static final Logger log = Logger.getLogger(DeviceAsyncExecutor.class);
-    
     private final ExecutorService executorService;
     private final DeviceStateRepository stateRepository;
     private final Map<HidSupportedDevice, Future<?>> runningTasks;

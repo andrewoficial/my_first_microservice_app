@@ -1,9 +1,8 @@
 package org.example.gui.devices.qidian.qdl80a.util;
 
 import com.fazecast.jSerialComm.SerialPort;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.protQdl80a.Qdl80aCommandRegistry;
-
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
@@ -15,9 +14,8 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+@Slf4j
 public class DevicesSearch extends JDialog {
-
-    private static final Logger log = Logger.getLogger(DevicesSearch.class);
 
     private static final int[] BAUDRATES = {1200, 2400, 4800, 9600, 19200, 38400};
     private static final int MIN_ADDRESS = 1;

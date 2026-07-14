@@ -2,7 +2,7 @@ package org.example.device.protQdl80a;
 
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandListClass;
 import org.example.device.NonAscii;
 import org.example.device.ProtocolComPort;
@@ -21,9 +21,8 @@ import java.util.List;
  * Реализация протокола для датчика QDL80A (Anhui Qudian).
  * Протокол: Modbus RTU, RS-485, half-duplex.
  */
+@Slf4j
 public class Qdl80aDevice implements SomeDevice, NonAscii, ProtocolComPort {
-    private static final Logger log = Logger.getLogger(Qdl80aDevice.class);
-
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters();
     private final SerialPort comPort;

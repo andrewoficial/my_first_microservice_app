@@ -2,17 +2,15 @@ package org.example.gui;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
-import com.intellij.uiDesigner.core.Spacer;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.utilites.properties.MyProperties;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+@Slf4j
 public class LogSettingWindows extends JDialog {
-    private static final Logger log = Logger.getLogger(LogSettingWindows.class);
     private JPanel parametrPanel;
     private JCheckBox CB_needSyncSaving;
     private JButton btn_syncSave;

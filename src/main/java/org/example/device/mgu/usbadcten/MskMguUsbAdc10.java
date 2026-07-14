@@ -2,7 +2,7 @@ package org.example.device.mgu.usbadcten;
 
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandListClass;
 import org.example.device.ProtocolComPort;
 import org.example.device.SomeDevice;
@@ -12,12 +12,11 @@ import org.example.device.connectParameters.ComConnectParameters;
 import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 import org.example.utilites.MyUtilities;
-
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
+@Slf4j
 public class MskMguUsbAdc10 implements SomeDevice, ProtocolComPort, TemplatedAscii {
-    private static final Logger log = Logger.getLogger(MskMguUsbAdc10.class);
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора
     private final SerialPort comPort;

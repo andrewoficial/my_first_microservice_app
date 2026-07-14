@@ -1,14 +1,13 @@
 package org.example.gui.mgstest.transport.hid;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.utilites.MyUtilities;
 import org.hid4java.HidDevice;
 import java.util.Arrays;
 import static org.example.utilites.Constants.HidCommunication.*;
 
-
+@Slf4j
 public class SomeHidController implements HidCommunicator {
-    private final Logger log = Logger.getLogger(SomeHidController.class);
 
     /**
      * Sends data to HID device with zero padding

@@ -1,28 +1,23 @@
 package org.example.gui;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.protVega.VEGA_WAN;
-import org.example.services.AnswerValues;
-import org.example.services.DeviceAnswer;
 import org.example.services.connectionPool.AnyPoolService;
 import org.example.services.connectionPool.WebSocketDataCollector;
 import org.example.services.loggers.DeviceLogger;
 import org.example.utilites.properties.MyProperties;
-import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.WebSocketClient;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
-import org.springframework.web.socket.handler.TextWebSocketHandler;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -33,14 +28,12 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.net.ConnectException;
-import java.net.URI;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 
+@Slf4j
 public class WebSocketWindow extends JDialog implements Rendeble {
-    private final static Logger log = Logger.getLogger(WebSocketWindow.class);//Внешний логгер
     private MyProperties prop; //Файл настроек
     private AnyPoolService anyPoolService; //Сервис опросов (разных протоколов)
     private WebSocketDataCollector webSocketDataCollector;
@@ -104,13 +97,9 @@ public class WebSocketWindow extends JDialog implements Rendeble {
                 prop.setVegaLogin(login.getText());
 
                 String jsonString;
-                try {
-                    jsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode);
-                    updateTextInPane1("Отправляем команду: " + jsonString);
-                    webSocketDataCollector.sendOnce(jsonString, 99, true);
-                } catch (JsonProcessingException exp) {
-                    throw new RuntimeException(exp);
-                }
+                jsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode);
+                updateTextInPane1("Отправляем команду: " + jsonString);
+                webSocketDataCollector.sendOnce(jsonString, 99, true);
             }
         });
 
@@ -249,13 +238,11 @@ public class WebSocketWindow extends JDialog implements Rendeble {
 
 
         String jsonString;
-        try {
-            jsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
-            updateTextInPane1("Отправляем команду: " + jsonString);
-            webSocketDataCollector.sendOnce(jsonString, 99, true);
-        } catch (JsonProcessingException exp) {
-            throw new RuntimeException(exp);
-        }
+
+        jsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
+        updateTextInPane1("Отправляем команду: " + jsonString);
+        webSocketDataCollector.sendOnce(jsonString, 99, true);
+
 
     }
 
@@ -268,13 +255,10 @@ public class WebSocketWindow extends JDialog implements Rendeble {
         }
 
         String jsonString;
-        try {
-            jsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
-            updateTextInPane1("Отправляем команду: " + jsonString);
-            webSocketDataCollector.sendOnce(jsonString, 99, true);
-        } catch (JsonProcessingException exp) {
-            throw new RuntimeException(exp);
-        }
+        jsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
+        updateTextInPane1("Отправляем команду: " + jsonString);
+        webSocketDataCollector.sendOnce(jsonString, 99, true);
+
     }
 
     private void processGatewaysResponse(JsonNode rootNode) {
@@ -621,13 +605,11 @@ public class WebSocketWindow extends JDialog implements Rendeble {
             request.set("devices_list", mapper.createArrayNode().add(deviceNode));
 
             String jsonString;
-            try {
-                jsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
-                updateTextInPane1("Отправляем команду: " + jsonString);
-                webSocketDataCollector.sendOnce(jsonString, 99, true);
-            } catch (JsonProcessingException exp) {
-                throw new RuntimeException(exp);
-            }
+
+            jsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(request);
+            updateTextInPane1("Отправляем команду: " + jsonString);
+            webSocketDataCollector.sendOnce(jsonString, 99, true);
+
 
             dispose();
         }

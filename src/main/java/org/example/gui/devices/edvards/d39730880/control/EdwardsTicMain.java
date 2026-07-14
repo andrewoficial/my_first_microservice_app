@@ -1,18 +1,17 @@
 package org.example.gui.devices.edvards.d39730880.control;
 
 import com.fazecast.jSerialComm.SerialPort;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.protEdwardsD397.EdwardsCommunicationService;
 import org.example.device.protEdwardsD397.EdwardsD397CommandRegistry;
 import org.example.utilites.MyUtilities;
-
 import javax.swing.*;
 import java.awt.*;
 import java.util.concurrent.*;
 import java.util.prefs.Preferences;
 
+@Slf4j
 public class EdwardsTicMain {
-    private static final Logger log = Logger.getLogger(EdwardsTicMain.class);
     private static final String PREFS_NODE = "org/example/gui/edwards/tic";
     private static final String LAST_PORT = "lastPort";
     private static final String LAST_BAUD = "lastBaud";

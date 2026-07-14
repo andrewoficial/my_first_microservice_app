@@ -1,15 +1,13 @@
 package org.example.gui.mgstest.parser.answer.mgs;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.mgstest.model.answer.GetAlarmsModel;
 import org.example.gui.mgstest.util.CrcValidator;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+@Slf4j
 public class GetAlarmsParser {
-    private static final Logger log = Logger.getLogger(GetAlarmsParser.class);
-
     public static GetAlarmsModel parse(byte[] data) {
         validateDataLength(data);
 

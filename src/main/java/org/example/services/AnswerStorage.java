@@ -1,16 +1,14 @@
 package org.example.services;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.utilites.MyUtilities;
-
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
 
+@Slf4j
 public class AnswerStorage {
     public static final ConcurrentHashMap<Integer, Integer> queueOffset = new ConcurrentHashMap<>();
-
-    private static final Logger log = Logger.getLogger(AnswerStorage.class);
 
     private static final ThreadLocal<StringBuilder> sbAnswer = ThreadLocal.withInitial(StringBuilder::new);
     private static final ConcurrentHashMap<Integer, ConcurrentLinkedQueue<DeviceAnswer>> answersByTab = new ConcurrentHashMap<>();

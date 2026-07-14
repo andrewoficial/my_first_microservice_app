@@ -1,7 +1,7 @@
 package org.example.gui.mgstest.gui.tabs;
 
 import lombok.Setter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.mgstest.gui.names.GasLists;
 import org.example.gui.mgstest.model.ElementOfGasesListGui;
 import org.example.gui.mgstest.model.HidSupportedDevice;
@@ -9,19 +9,17 @@ import org.example.gui.mgstest.model.answer.GetAlarmsModel;
 import org.example.gui.mgstest.model.answer.GetGasRangeModel;
 import org.example.gui.mgstest.model.answer.GetSensStatusModel;
 import org.example.gui.mgstest.model.answer.GetVRangeModel;
-
 import org.example.gui.mgstest.model.DeviceState;
 import org.example.gui.mgstest.service.DeviceAsyncExecutor;
 import org.example.gui.mgstest.transport.CommandParameters;
 import org.example.gui.mgstest.transport.cmd.mgs.metrology.*;
-
 import javax.swing.*;
 import java.awt.*;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 public class TabMetrology extends DeviceTab {
-    private final Logger log = Logger.getLogger(TabMetrology.class);
 
     @Setter
     private HidSupportedDevice selectedDevice;

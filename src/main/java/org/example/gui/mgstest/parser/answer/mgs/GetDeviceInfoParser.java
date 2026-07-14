@@ -1,15 +1,14 @@
 package org.example.gui.mgstest.parser.answer.mgs;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.mgstest.model.answer.GetDeviceInfoModel;
 import org.example.gui.mgstest.util.CrcValidator;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Date;
 
+@Slf4j
 public class GetDeviceInfoParser {
-    private static final Logger log = Logger.getLogger(GetDeviceInfoParser.class);
     
     // Bitmasks for HW flags
     private static final int HW_LORA = 0x01;

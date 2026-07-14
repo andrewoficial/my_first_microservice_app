@@ -4,26 +4,22 @@ import com.fazecast.jSerialComm.SerialPort;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.protEdwardsD397.EdwardsCommunicationService;
 import org.example.device.protEdwardsD397.EdwardsD397CommandRegistry;
 import org.example.gui.devices.edvards.d39730880.util.EdwardsDevicesSearch;
 import org.example.utilites.MyUtilities;
-
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
-import javax.swing.plaf.FontUIResource;
-import javax.swing.text.StyleContext;
 import java.awt.*;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.*;
 import java.util.prefs.Preferences;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Slf4j
 public class d39730880Main {
-    private static final Logger log = Logger.getLogger(d39730880Main.class);
     private static final String PREFS_NODE = "org/example/gui/edwards/tic";
     private static final String LAST_PORT = "lastPort";
     private static final String LAST_BAUD = "lastBaud";

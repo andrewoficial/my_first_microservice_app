@@ -1,6 +1,6 @@
 package org.example.device.protMipex2;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
 import org.example.device.command.ArgumentDescriptor;
 import org.example.device.command.CommandType;
@@ -8,20 +8,17 @@ import org.example.device.command.SingleCommand;
 import org.example.device.protMipex2.parsers.ZERO2Parser;
 import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
-
 import java.util.Arrays;
-
 import static org.example.utilites.MyUtilities.*;
 
+@Slf4j
 public class Mipex2CommandRegistry extends DeviceCommandRegistry {
-    private static final Logger log = Logger.getLogger(Mipex2CommandRegistry.class);
     private final ZERO2Parser fuluParser = new ZERO2Parser();
     @Override
     protected void initCommands() {
         commandList.addCommand(createFCommand());
         commandList.addCommand(createFuluCommand());
         commandList.addCommand(createSetConcCommand());
-        // Добавление других команд
     }
 
     private SingleCommand createFCommand() {

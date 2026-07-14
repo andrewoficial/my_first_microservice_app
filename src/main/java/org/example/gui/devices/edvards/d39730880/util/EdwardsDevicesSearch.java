@@ -1,7 +1,7 @@
 package org.example.gui.devices.edvards.d39730880.util;
 
 import com.fazecast.jSerialComm.SerialPort;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -14,10 +14,8 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+@Slf4j
 public class EdwardsDevicesSearch extends JDialog {
-
-    private static final Logger log = Logger.getLogger(EdwardsDevicesSearch.class);
-
     private static final int[] BAUDRATES = {9600, 19200, 38400};
 
     private final DefaultTableModel tableModel;

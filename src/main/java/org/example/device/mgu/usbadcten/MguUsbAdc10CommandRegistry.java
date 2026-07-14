@@ -1,30 +1,26 @@
 package org.example.device.mgu.usbadcten;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
 import org.example.utilites.MyUtilities;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
+@Slf4j
 public class MguUsbAdc10CommandRegistry extends DeviceCommandRegistry {
-    private static final Logger log = Logger.getLogger(MguUsbAdc10CommandRegistry.class);
 
     @Override
     protected void initCommands() {
         commandList.addCommand(createGinfCmd());
         commandList.addCommand(createGconCmd());
         commandList.addCommand(createGdtaCmd());
-        // Добавление ошибочных команд
         commandList.addCommand(createErrvCmd());
         commandList.addCommand(createErrdCmd());
     }
-
-    // ===== КОМАНДЫ УСТРОЙСТВА =====
 
     private SingleCommand createGinfCmd() {
         return new SingleCommand(

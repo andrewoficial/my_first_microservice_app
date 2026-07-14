@@ -1,18 +1,13 @@
 package org.example.services.rule.com;
 
 import lombok.Getter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.SomeDevice;
 import org.example.device.protOwonSpe3051.OWON_SPE3051;
-import org.example.services.connectionPool.ComDataCollector;
-
-import java.io.Serializable;
-import java.util.Arrays;
-import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 public class OwonVoltLinearRule implements ComRule {
-    private final static Logger log = Logger.getLogger(OwonVoltLinearRule.class); // Объект логера
     @Getter
     private final String ruleId;
 

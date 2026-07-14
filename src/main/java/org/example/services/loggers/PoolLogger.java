@@ -4,34 +4,24 @@
  */
 package org.example.services.loggers;
 
-import org.apache.log4j.Logger;
-import org.example.device.SomeDevice;
+import lombok.extern.slf4j.Slf4j;
 import org.example.services.DeviceAnswer;
 import org.example.utilites.MyUtilities;
-
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.text.SimpleDateFormat;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 
-import static org.example.device.SomeDevice.log;
-
+@Slf4j
 public class PoolLogger {
-    private static final Logger log = Logger.getLogger(PoolLogger.class);
     private static final long DEFAULT_LOG_WRITE_INTERVAL = 100L;
     private static final int DEFAULT_BUFFER_LIMIT = 50;
 

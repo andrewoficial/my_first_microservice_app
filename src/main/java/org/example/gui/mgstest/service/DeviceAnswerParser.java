@@ -1,7 +1,7 @@
 // DeviceAnswerParser.java
 package org.example.gui.mgstest.service;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.mgstest.model.HidSupportedDevice;
 import org.example.gui.mgstest.model.answer.*;
 import org.example.gui.mgstest.model.DeviceState;
@@ -12,12 +12,11 @@ import org.example.gui.mgstest.repository.DeviceStateRepository;
 import org.example.gui.mgstest.transport.CradleController;
 import org.example.gui.mgstest.transport.HidCommandName;
 import org.hid4java.HidDevice;
-
 import java.util.List;
 
+@Slf4j
 public class DeviceAnswerParser {
-    private static final Logger log = Logger.getLogger(DeviceAnswerParser.class);
-    
+
     private final CradleController cradleController;
     private final DeviceStateRepository stateRepository;
     

@@ -1,20 +1,18 @@
 package org.example.device.protBelead;
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
 import org.example.device.command.SingleCommand;
 import org.example.device.command.ArgumentDescriptor;
 import org.example.device.command.CommandType;
 import org.example.services.AnswerValues;
 import org.example.utilites.MyUtilities;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.*;
 
+@Slf4j
 public class BeLeadCommandRegistry extends DeviceCommandRegistry {
-    private static final Logger log = Logger.getLogger(BeLeadCommandRegistry.class);
-
     private static final byte START = (byte) 0xA5;
     private static final byte RD = 0x13;
     private static final byte WR = 0x15;

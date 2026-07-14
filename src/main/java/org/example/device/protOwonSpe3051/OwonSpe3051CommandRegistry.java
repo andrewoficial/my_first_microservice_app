@@ -1,22 +1,18 @@
 package org.example.device.protOwonSpe3051;
 
 
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
-
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
 
-
+@Slf4j
 public class OwonSpe3051CommandRegistry extends DeviceCommandRegistry {
-    private static final Logger log = Logger.getLogger(OwonSpe3051CommandRegistry.class);
-
     @Override
     protected void initCommands() {
         commandList.addCommand(createMeasCurrCmd());
         commandList.addCommand(createMeasVoltCmd());
         commandList.addCommand(createGetVoltCmd());
-        // Добавление других команд
     }
 
     private SingleCommand createMeasCurrCmd() {

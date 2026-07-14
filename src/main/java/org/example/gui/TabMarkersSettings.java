@@ -2,28 +2,22 @@ package org.example.gui;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
-import org.apache.log4j.Logger;
-
+import lombok.extern.slf4j.Slf4j;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-
 import org.example.services.AnswerStorage;
 import org.example.services.connectionPool.AnyPoolService;
 import org.example.utilites.properties.MyProperties;
 
 
-import static org.example.utilites.MyUtilities.createDeviceByProtocol;
-
-
+@Slf4j
 public class TabMarkersSettings extends JDialog {
-    private static final Logger log = Logger.getLogger(TabMarkersSettings.class);
     private final AnyPoolService anyPoolService;
     private JTextField TF_marker;
     private JComboBox CB_tabsList;

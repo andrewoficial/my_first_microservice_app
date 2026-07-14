@@ -1,17 +1,13 @@
 package org.example.gui;
 
-
-import org.apache.log4j.Category;
-import org.apache.log4j.Logger;
-
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.concurrent.ExecutorService;
-
+import ch.qos.logback.classic.Level;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.accu10fd.Acu10fdWindow;
 import org.example.gui.curve.CurveHandlerWindow;
 import org.example.gui.devices.edvards.d39730880.control.d39730880Main;
@@ -30,9 +26,8 @@ import org.example.services.connectionPool.AnyPoolService;
 import org.example.utilites.properties.MyProperties;
 
 
-
+@Slf4j
 public class JmenuFile {
-    private static final Logger logger = Logger.getLogger(JmenuFile.class);
     private MyProperties prop;
     private final AnyPoolService anyPoolService;
     private final AnswerLoader answerLoader = new AnswerLoader();
@@ -42,7 +37,7 @@ public class JmenuFile {
         this.prop = extProp;
         this.anyPoolService = anyPoolService;
         if(anyPoolService == null){
-            logger.warn("В конструктор JmenuFile передан null anyPoolService");
+            log.warn("В конструктор JmenuFile передан null anyPoolService");
         }
     }
 
@@ -178,51 +173,45 @@ public class JmenuFile {
         JMenuItem logging  = new JMenuItem("Ведение лога");
         JMenuItem server  = new JMenuItem("Сервер");
         JMenuItem debugging = new JMenuItem("Отладка");
-        // меню-переключатели
-        JRadioButtonMenuItem one = new JRadioButtonMenuItem("Работа в обычном режиме");
-        JRadioButtonMenuItem two = new JRadioButtonMenuItem("Работа в режиме отладки");
+        // меню-переключатели уровня логирования
+        JRadioButtonMenuItem heavyModeItem = new JRadioButtonMenuItem("Работа в нагруженном режиме");
+        JRadioButtonMenuItem normalModeItem = new JRadioButtonMenuItem("Работа в обычном режиме");
+        JRadioButtonMenuItem debugModeItem = new JRadioButtonMenuItem("Работа в режиме отладки");
         // организуем переключатели в логическую группу
         ButtonGroup bg = new ButtonGroup();
-        bg.add(one);
-        bg.add(two);
+        bg.add(heavyModeItem);
+        bg.add(normalModeItem);
+        bg.add(debugModeItem);
         // добавим все в меню
         viewMenu.add(logging);
         viewMenu.add(server);
         viewMenu.add(debugging);
         // разделитель можно создать и явно
         viewMenu.add( new JSeparator());
-        viewMenu.add(one);
-        viewMenu.add(two);
+        viewMenu.add(heavyModeItem);
+        viewMenu.add(normalModeItem);
+        viewMenu.add(debugModeItem);
 
-        one.addActionListener(new ActionListener(){
+        heavyModeItem.addActionListener(new ActionListener(){
            @Override
            public void actionPerformed(ActionEvent arg0) {
-               //Logger.getLogger(JmenuFile.class).setLevel(Level.ERROR);
-               System.out.println("Level ERROR");
-               Logger root = Logger.getRootLogger();
-               Enumeration allLoggers = root.getLoggerRepository().getCurrentCategories();
-               root.setLevel(org.apache.log4j.Level.ERROR);
-               while (allLoggers.hasMoreElements()){
-                   Category tmpLogger = (Category) allLoggers.nextElement();
-                   tmpLogger .setLevel(org.apache.log4j.Level.ERROR);
-               }
-               prop.setLogLevel(root.getLevel());
+               setLogLevelForAllLoggers(Level.ERROR);
            }
         });
-        two.addActionListener(new ActionListener(){
+        normalModeItem.addActionListener(new ActionListener(){
             @Override
             public void actionPerformed(ActionEvent arg0) {
-                //Logger.getLogger(JmenuFile.class).setLevel(Level.DEBUG);
-                Logger root = Logger.getRootLogger();
-                Enumeration allLoggers = root.getLoggerRepository().getCurrentCategories();
-                root.setLevel(org.apache.log4j.Level.DEBUG);
-                while (allLoggers.hasMoreElements()){
-                    Category tmpLogger = (Category) allLoggers.nextElement();
-                    tmpLogger .setLevel(org.apache.log4j.Level.DEBUG);
-                }
-                prop.setLogLevel(root.getLevel());
+                setLogLevelForAllLoggers(Level.INFO);
             }
         });
+        debugModeItem.addActionListener(new ActionListener(){
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                setLogLevelForAllLoggers(Level.DEBUG);
+            }
+        });
+
+
         logging.addActionListener(new ActionListener()
         {
             @Override
@@ -250,7 +239,12 @@ public class JmenuFile {
         return viewMenu;
     }
 
-
+    private void setLogLevelForAllLoggers(ch.qos.logback.classic.Level level) {
+        ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger)
+                org.slf4j.LoggerFactory.getLogger( org.slf4j.Logger.ROOT_LOGGER_NAME);
+        rootLogger.setLevel(level);
+        prop.setLogLevel(rootLogger.getLevel());
+    }
 
     /**
      * Функция создания меню "Представления"

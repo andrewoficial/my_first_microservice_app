@@ -2,16 +2,15 @@ package org.example.gui.curve;
 
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.utilites.MyUtilities;
-
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.IntConsumer;
 
+@Slf4j
 public class CurveDeviceCommander {
     private SerialPort comPort;
-    private Logger log = Logger.getLogger(CurveDeviceCommander.class);
     @Getter
     private volatile boolean inSendingProcess = false;
     @Getter

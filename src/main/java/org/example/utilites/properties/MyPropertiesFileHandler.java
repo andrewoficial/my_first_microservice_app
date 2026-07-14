@@ -2,9 +2,7 @@ package org.example.utilites.properties;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.log4j.Logger;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.io.*;
@@ -14,8 +12,8 @@ import java.nio.file.Paths;
 import java.util.Properties;
 
 @Component
+@Slf4j
 public class MyPropertiesFileHandler {
-    private static Logger log = null;
 
 
 
@@ -24,8 +22,6 @@ public class MyPropertiesFileHandler {
     private File settingFile = null;
 
     public MyPropertiesFileHandler(){
-        //Thread.currentThread().setName("MyProperties");
-        log = Logger.getLogger(MyPropertiesFileHandler.class);
         log.debug("Загружаю файл configAccess.properties");
         try {
             Path configDir = Paths.get("config");

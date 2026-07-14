@@ -1,7 +1,7 @@
 package org.example.gui.mgstest.gui.tabs;
 
 import lombok.Setter;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.gui.mgstest.gui.names.SettingNames;
 import org.example.gui.mgstest.model.HidSupportedDevice;
 import org.example.gui.mgstest.model.answer.GetAllSettingsModel;
@@ -9,13 +9,12 @@ import org.example.gui.mgstest.model.DeviceState;
 import org.example.gui.mgstest.service.DeviceAsyncExecutor;
 import org.example.gui.mgstest.transport.DeviceCommand;
 import org.example.gui.mgstest.transport.cmd.mgs.GetAllSettings;
-
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 
+@Slf4j
 public class TabSettings extends DeviceTab {
-    private Logger log = Logger.getLogger(TabSettings.class);
     private SettingNames settingNames = new SettingNames();
     @Setter
     private HidSupportedDevice selectedDevice;

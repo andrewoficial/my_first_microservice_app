@@ -1,7 +1,7 @@
 package org.example.gui.autoresponder;
 
 import com.fazecast.jSerialComm.SerialPort;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.swing.*;
 import java.awt.*;
@@ -17,8 +17,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.example.gui.autoresponder.DumpGenerator.safetyGetValue;
 
+@Slf4j
 public class DpsEmulatorWindow extends JFrame {
-    public static final Logger log = Logger.getLogger(DpsEmulatorWindow.class);
     private static final int RESPONSE_TIMEOUT_MS = 250; // Таймаут для накопления пакета
 
     private JPanel mainPanel;

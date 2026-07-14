@@ -1,4 +1,4 @@
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.services.AnswerValues;
 import org.example.services.DeviceAnswer;
 import org.example.services.loggers.DeviceLogger;
@@ -29,8 +29,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@Slf4j
 class DeviceLoggerTest {
-    private static final Logger log = Logger.getLogger(DeviceLoggerTest.class);
     private static final String UTC_ZONE = "UTC+03:00";
     private static final String TIME_FOR_TEST = "2025-08-08T22:00:42.682Z";
     private static final Instant INSTANT_FOR_TEST = Instant.parse(TIME_FOR_TEST);

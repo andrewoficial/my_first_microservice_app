@@ -1,11 +1,10 @@
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.example.device.SomeDevice;
 import org.example.services.connectionPool.ComDataCollector;
 import org.example.services.loggers.DeviceLogger;
-import org.example.utilites.properties.MyProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -15,7 +14,6 @@ import org.example.services.AnswerStorage;
 import org.example.services.DeviceAnswer;
 import org.example.device.ProtocolsList;
 import org.example.services.connectionPool.AnyPoolService;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -27,16 +25,14 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.atomic.AtomicReferenceArray;
-
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
+@Slf4j
 public class ComDataCollectorTest {
-    private static Logger log = Logger.getLogger(ComDataCollectorTest.class);
     private ComDataCollector collector;
     private SerialPort mockPort;
     private MainLeftPanelStateCollection mockState;
