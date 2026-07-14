@@ -11,7 +11,6 @@ public class DemoProtocolCommandRegistry extends DeviceCommandRegistry {
     @Override
     protected void initCommands() {
         commandList.addCommand(createFCommand());
-        // Добавление других команд
     }
 
     private SingleCommand createFCommand() {
@@ -26,16 +25,5 @@ public class DemoProtocolCommandRegistry extends DeviceCommandRegistry {
     private AnswerValues parseFResponse(byte[] response) {
         log.warn("Получен ответ от демо-протокола: " + Arrays.toString(response));
         return null;
-    }
-
-    // Вынесенные методы для повторного использования
-    private double parseSubResponse(byte[] subResponse) {
-        // Общая логика преобразования байтов в число
-        return 0.0;
-    }
-
-    private boolean validateCrc(byte[] response) {
-        // Логика проверки CRC
-        return false;
     }
 }
