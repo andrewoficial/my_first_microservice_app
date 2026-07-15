@@ -33,7 +33,7 @@ public class RenderThread implements Runnable{
                     Thread.sleep(renderDelay/ 2L);
                     //System.out.println("Sleep " + (Math.min((millisLimit / 3), 300L)) + " time limit is " + millisLimit);
                 } catch (InterruptedException e) {
-                    //throw new RuntimeException(e);
+                    Thread.currentThread().interrupt(); // Восстанавливаем флаг для корректного завершения потока
                 }
             }
 

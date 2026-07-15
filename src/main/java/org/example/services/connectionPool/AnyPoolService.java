@@ -53,7 +53,7 @@ public class AnyPoolService {
 
 
         if (psSearch != null) {
-            log.info("Изменение существующего потока. Отправка префикса "  + state.getPrefix(clientId) + " и команды " + state.getCommand(clientId));
+            log.info("Изменение существующего потока. Отправка префикса ["  + state.getPrefix(clientId) + "] и команды [" + state.getCommand(clientId) + "]");
             log.info("Binary: " + MyUtilities.bytesToHexString(state.getCommand(clientId).getBytes()));
             processExistingComDataCollector(state, psSearch, clientId, pool, isBtn, poolDelay);
             return " Добавление вкладки к существующему потоку ";

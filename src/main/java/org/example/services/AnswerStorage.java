@@ -126,12 +126,7 @@ public class AnswerStorage {
     }
 
     public static Integer getTabByIdent(String ident) {
-        if(deviceTabPairs.containsKey(ident)){
-            return deviceTabPairs.get(ident);
-        }else{
-            return 0;
-        }
-
+        return deviceTabPairs.getOrDefault(ident, 0);
     }
 
     public static String getIdentByTab(Integer tab) {
@@ -200,29 +195,18 @@ public class AnswerStorage {
             GraphDataRepository.getInstance().addData(clientId, command, answer);
         }
 
-
-        if( answer.getFieldCount() > 0 &&  answer.getAnswerReceivedValues() != null && answer.getAnswerReceivedValues().getValues() != null && answer.getAnswerReceivedValues().getValues().length >= 1 &&
-                answer.getAnswerReceivedValues().getUnits() != null && answer.getAnswerReceivedValues().getUnits().length >= 1){
-        }else{
-        }
-
-
-        if(answersByTab != null && answersByTab.containsKey(clientId) && answersByTab.get(clientId) != null) {
-            // Очистка старых записей
-            if (answersByTab.get(clientId).size() > MAX_ANSWERS_PER_TAB) {
-                log.info("Для клиента" + clientId + " найдено записей больше допустимого (" + MAX_ANSWERS_PER_TAB + ") инициирована очистка");
-                queueOffset.putIfAbsent(clientId, 0);
-                queue = answersByTab.get(clientId);
-
-                while (queue.size() > MAX_ANSWERS_PER_TAB) {
-                    DeviceAnswer removed = queue.poll();
-                    if (removed != null) {
-                        queueOffset.put(clientId, (queueOffset.get(clientId) + 1));
-                        log.info("Удален устаревший ответ [" + clientId + "]: " + removed.getRequestSendTime() + " сдвиг окна хранилища установлен на " + queueOffset.get(clientId));
-                    } else {
-                        log.warn("Ошибка очистки ответов [" + clientId + "]: очередь оказалась пустой");
-                        break;
-                    }
+        // Очистка старых записей — используем уже полученный queue вместо повторных get()
+        if (queue.size() > MAX_ANSWERS_PER_TAB) {
+            log.info("Для клиента" + clientId + " найдено записей больше допустимого (" + MAX_ANSWERS_PER_TAB + ") инициирована очистка");
+            while (queue.size() > MAX_ANSWERS_PER_TAB) {
+                DeviceAnswer removed = queue.poll();
+                if (removed != null) {
+                    // Атомарный инкремент вместо read-modify-write гонки
+                    int newOffset = queueOffset.merge(clientId, 1, Integer::sum);
+                    log.info("Удален устаревший ответ [" + clientId + "]: " + removed.getRequestSendTime() + " сдвиг окна хранилища установлен на " + newOffset);
+                } else {
+                    log.warn("Ошибка очистки ответов [" + clientId + "]: очередь оказалась пустой");
+                    break;
                 }
             }
         }
@@ -231,40 +215,46 @@ public class AnswerStorage {
     }
     public static TabAnswerPart getAnswersQueForTab(Integer lastPosition, Integer clientId, boolean showCommands) {
         ConcurrentLinkedQueue<DeviceAnswer> queue = answersByTab.getOrDefault(clientId, new ConcurrentLinkedQueue<>());
-        int lastPositionBeforeCorrection = lastPosition;
-        List<DeviceAnswer> tabAnswers = new ArrayList<>(queue);
-        int size = tabAnswers.size();
         int queueOffsetInt = queueOffset.getOrDefault(clientId, 0);
 
-        if (lastPosition < queueOffsetInt) {
-            lastPosition = queueOffsetInt;
+        // Позиция устарела (очистка удалила элементы до нашей позиции) — сбрасываем
+        int effectivePosition = Math.max(lastPosition, queueOffsetInt);
+        int realPosition = effectivePosition - queueOffsetInt;
+
+        StringBuilder sb = sbAnswer.get();
+        sb.setLength(0);
+
+        // Итерируем без копирования всей очереди в ArrayList.
+        // ConcurrentLinkedQueue.iterator() — weakly consistent, не аллоцирует список.
+        // При overflow cleanup между вызовами возможны дубли — это безопасно:
+        // maxLength в renderData() обрежет старое, данные не теряются.
+        int idx = 0;
+        for (DeviceAnswer answer : queue) {
+            if (idx >= realPosition) {
+                appendAnswer(sb, answer, showCommands);
+            }
+            idx++;
         }
 
-        int realPosition = lastPosition - queueOffsetInt;
-
-        if (realPosition >= size || realPosition < 0) {
-            return new TabAnswerPart("", queueOffsetInt + size);
-        }
-
-        StringBuilder sb = new StringBuilder();
-        for (int i = realPosition; i < size; i++) {
-            appendAnswer(sb, tabAnswers.get(i), showCommands);
-        }
-
-        return new TabAnswerPart(sb.toString(), queueOffsetInt + size);
+        // Возвращаем текущий размер очереди + offset как позицию для следующего вызова.
+        // Это гарантирует: (1) данные не теряются, (2) нет бесконечных дублей,
+        // (3) при overflow cleanup позиция корректируется через queueOffset.
+        return new TabAnswerPart(sb.toString(), queueOffsetInt + queue.size());
     }
 
     public static TabAnswerPart getAnswersQueForWeb(Integer lastPosition, Integer clientId, boolean showCommands) {
         ConcurrentLinkedQueue<DeviceAnswer> queue = answersByTab.getOrDefault(clientId, new ConcurrentLinkedQueue<>());
-        List<DeviceAnswer> tabAnswers = new ArrayList<>(queue);
-        int size = tabAnswers.size();
 
         StringBuilder sb = new StringBuilder();
-        for (int i = lastPosition; i < size; i++) {
-            appendAnswer(sb, tabAnswers.get(i), showCommands);
+        int idx = 0;
+        for (DeviceAnswer answer : queue) {
+            if (idx >= lastPosition) {
+                appendAnswer(sb, answer, showCommands);
+            }
+            idx++;
         }
 
-        return new TabAnswerPart(sb.toString(), size);
+        return new TabAnswerPart(sb.toString(), idx);
     }
 
 
@@ -272,9 +262,9 @@ public class AnswerStorage {
         StringBuilder sb = sbAnswer.get();
         sb.setLength(0);
 
-        List<DeviceAnswer> tabAnswers = List.copyOf(answersByTab.getOrDefault(tabNumber, new ConcurrentLinkedQueue<>()));
-        if(tabAnswers != null) {
-            for (DeviceAnswer answer : tabAnswers) {
+        ConcurrentLinkedQueue<DeviceAnswer> queue = answersByTab.getOrDefault(tabNumber, null);
+        if (queue != null) {
+            for (DeviceAnswer answer : queue) {
                 appendAnswer(sb, answer, showCommands);
             }
         }
@@ -282,13 +272,8 @@ public class AnswerStorage {
     }
 
     private static void appendAnswer(StringBuilder sb, DeviceAnswer answer, boolean showCommands) {
-        if (sb == null) {
-            log.error("Передан null StringBuilder в appendAnswer");
-            sb = new StringBuilder();
-        }
-
         if (answer == null) {
-            log.error("Передан NULL answer в склейку ответов для вывода в GUI");
+            log.warn("Передан NULL answer в склейку ответов для вывода в GUI");
             return;
         }
 
@@ -345,6 +330,19 @@ public class AnswerStorage {
         }
 
         return snapshot.subList(size - range, size);
+    }
+
+    public static DeviceAnswer getLastAnswerForTab(int tabNumber) {
+        ConcurrentLinkedQueue<DeviceAnswer> queue = answersByTab.getOrDefault(tabNumber, null);
+        if (queue == null || queue.isEmpty()) {
+            return null;
+        }
+        // Iterator — weakly consistent, последний элемент точно присутствует
+        DeviceAnswer last = null;
+        for (DeviceAnswer answer : queue) {
+            last = answer;
+        }
+        return last;
     }
 
     public static void removeAnswersForTab(int tabNum) {

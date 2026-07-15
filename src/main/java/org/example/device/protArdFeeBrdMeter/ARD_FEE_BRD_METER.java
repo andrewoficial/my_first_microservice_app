@@ -150,7 +150,7 @@ public class ARD_FEE_BRD_METER implements SomeDevice, ProtocolComPort {
         if (lastAnswerBytes != null && lastAnswerBytes.length > 0) {
             lastAnswer.setLength(0);
             if (commands.isKnownCommand(cmdToSend)) {
-                answerValues = commands.getCommand(cmdToSend).getResult(lastAnswerBytes); //Получение значений в ответе
+                answerValues = commands.getCommand(cmdToSend).getResult(lastAnswerBytes);
                 if(answerValues != null){
                     for (int i = 0; i < answerValues.getValues().length; i++) {
                         lastAnswer.append(String.valueOf(answerValues.getValues()[i]).replace(".", ","));
@@ -162,18 +162,17 @@ public class ARD_FEE_BRD_METER implements SomeDevice, ProtocolComPort {
                     for (byte lastAnswerByte : lastAnswerBytes) {
                         lastAnswer.append((char) lastAnswerByte);
                     }
-                    log.info("Cant create answers obj (error in answer)");
+                    log.warn("Failed to parse answer for command '{}'", cmdToSend);
                 }
             }else {
                 for (byte lastAnswerByte : lastAnswerBytes) {
                     lastAnswer.append((char) lastAnswerByte);
                 }
-                log.info("Cant create answers obj (unknown command)");
+                log.warn("Unknown command '{}'", cmdToSend);
             }
         }else{
-            log.info("empty received");
+            log.debug("Empty received");
         }
-        //parseMMESU(lastAnswerBytes);
     }
 
     public String getAnswer(){
@@ -198,67 +197,6 @@ public class ARD_FEE_BRD_METER implements SomeDevice, ProtocolComPort {
     public AnswerValues getValues(){
         return this.answerValues;
     }
-
-
-    private void parseMMESU(byte[] response) {
-// Преобразование byte[] в строку
-        StringBuilder sb = new StringBuilder();
-        for (byte b : response) {
-            sb.append((char) b);
-        }
-
-// Разделение строки по символу табуляции
-        String[] parts = sb.toString().split("\t");
-
-// Проверка количества элементов, чтобы избежать ошибок при доступе
-        if (parts.length >= 13) { // Убедимся, что данные пришли полностью
-            answerValues = new AnswerValues(13);
-            try {
-                // Преобразование и обработка значений
-                double vltToAmperN0 = Double.parseDouble(parts[0]);
-                double vltToAmperN1 = Double.parseDouble(parts[2]);
-                double vltConsumer = Double.parseDouble(parts[4]);
-                double cur0 = Double.parseDouble(parts[6]);
-                double cur1 = Double.parseDouble(parts[8]);
-                String gainStat = parts[10]; // `gainStat` - строка или другой тип данных?
-                double cur0Corr = Double.parseDouble(parts[11]);
-                double cur1Corr = Double.parseDouble(parts[13]);
-                double termBMF = Double.parseDouble(parts[15]);
-                double presBMF = Double.parseDouble(parts[17]);
-                double hydmBM = Double.parseDouble(parts[19]);
-                double currRes = Double.parseDouble(parts[21]);
-
-                double gainStatus = - 1.0;
-                if(gainStat.equals("OFF")) gainStatus = 0.0;
-                if(gainStat.equals("ON")) gainStatus = 1.0;
-
-                // Добавление значений в `answerValues` (или другая обработка)
-                answerValues.addValue(vltToAmperN0, " V");
-                answerValues.addValue(vltToAmperN1, " V");
-                answerValues.addValue(vltConsumer, " V");
-                answerValues.addValue(cur0, " mA");
-                answerValues.addValue(cur1, " mA");
-                answerValues.addValue(gainStatus, "");
-                answerValues.addValue(cur0Corr, " mA");
-                answerValues.addValue(cur1Corr, " mA");
-                answerValues.addValue(termBMF, " °C");
-                answerValues.addValue(presBMF, " mm Hg");
-                answerValues.addValue(hydmBM, " %");
-                answerValues.addValue(currRes, " mA");
-
-                System.out.println("Data parsed successfully!");
-
-            } catch (NumberFormatException e) {
-                System.out.println("Error parsing number: " + e.getMessage());
-                answerValues.addValue(-88.88, "ERR");
-            }
-        } else {
-            System.out.println("Incomplete response data");
-            answerValues.addValue(-99.99, "ERR");
-        }
-
-    }
-
 
 
 }

@@ -149,12 +149,12 @@ public class ArdFCommandParsersTest {
             Arguments.of("termBM", "00123", true),
             Arguments.of("presBM", "00456", true),
             Arguments.of("hydmBM", "00789", true),
-            Arguments.of("currResF", "0001234", true),
+            Arguments.of("currResF", "01234", true),
             Arguments.of("serial", "1234567", true),
             // Bad characters
             Arguments.of("termBM", "00A23", false),
             Arguments.of("presBM", "0045X", false),
-            // Negative handling (some fields allow it)
+            // Negative handling (serial allows minus at position 0)
             Arguments.of("serial", "-123456", true),
             // Too short / empty
             Arguments.of("termBM", "", false),
@@ -163,11 +163,55 @@ public class ArdFCommandParsersTest {
     }
 
     private byte[] makeFeeBrdStyleResponseWithField(String field, String value) {
-        // Simplified builder matching the many "Wrong isCorrectNumberF position" checks in the real code
-        byte[] r = new byte[73];
-        String s = "F\t" + value + "\t" + " ".repeat(50) + value + "\t" + (char)0x0D;
-        byte[] data = s.getBytes();
-        System.arraycopy(data, 0, r, 0, Math.min(data.length, r.length));
+        // Correct fixed-width layout matching ArdFeeBrdMeterCommandRegistry.parseFResponse:
+        // Byte 0: 0x0E (start marker)
+        // [1..5]:TermBM [6]:tab [7..11]:PresBM [12]:tab [13..17]:hydmBM [18]:tab
+        // [19..23]:thre_V [24]:tab [25..29]:cur_One [30]:tab [31..35]:cur_Two [36]:tab
+        // [37..41]:c_One_Poly [42]:tab [43..47]:c_Two_Poly [48]:tab [49..53]:currResF [54]:tab
+        // [55..59]:stat [60]:tab [61..68]:serial [69]:tab [70]:CRC [71]:trailing
+        byte[] r = new byte[72];
+        java.util.Arrays.fill(r, (byte) '0'); // All fields default to '0' digits
+        r[0] = 0x0E; // Start marker
+
+        // Place tab separators between fields
+        r[6] = 0x09; r[12] = 0x09; r[18] = 0x09; r[24] = 0x09;
+        r[30] = 0x09; r[36] = 0x09; r[42] = 0x09; r[48] = 0x09;
+        r[54] = 0x09; r[60] = 0x09; r[69] = 0x09;
+
+        // Field offset/length table
+        int offset = -1, length = 5;
+        switch (field) {
+            case "termBM":   offset = 1;  break;
+            case "presBM":   offset = 7;  break;
+            case "hydmBM":   offset = 13; break;
+            case "thre_V":   offset = 19; break;
+            case "cur_One":  offset = 25; break;
+            case "cur_Two":  offset = 31; break;
+            case "c_One_Poly": offset = 37; break;
+            case "c_Two_Poly": offset = 43; break;
+            case "currResF": offset = 49; break;
+            case "stat":     offset = 55; break;
+            case "serial":   offset = 61; length = 8; break;
+        }
+
+        if (offset >= 0 && !value.isEmpty()) {
+            byte[] valBytes = value.getBytes();
+            if (valBytes.length <= length) {
+                // Right-align in field, pad left with '0' (or handle minus for serial)
+                byte[] padded = new byte[length];
+                java.util.Arrays.fill(padded, (byte) '0');
+                if (valBytes[0] == '-' && length > 1) {
+                    // Negative: minus at pos 0, digits right-aligned after it
+                    padded[0] = (byte) '-';
+                    int digitsLen = valBytes.length - 1;
+                    System.arraycopy(valBytes, 1, padded, length - digitsLen, digitsLen);
+                } else {
+                    System.arraycopy(valBytes, 0, padded, length - valBytes.length, valBytes.length);
+                }
+                System.arraycopy(padded, 0, r, offset, length);
+            }
+        }
+
         r[70] = org.example.utilites.MyUtilities.calculateCRCforF(r);
         return r;
     }

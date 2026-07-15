@@ -19,17 +19,17 @@ import org.example.services.rule.RuleStorage;
 import org.example.services.rule.com.ComRule;
 import org.example.utilites.properties.MyProperties;
 
-import java.time.Instant;
-import java.time.ZoneId;
-import java.util.concurrent.ConcurrentLinkedQueue;
-
 import java.io.ByteArrayOutputStream;
 import java.net.ConnectException;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.LockSupport;
 
 import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 
@@ -59,8 +59,18 @@ public class ComDataCollector implements Runnable{
     private final ConcurrentLinkedQueue<ReceivedData> incomingMessages = new ConcurrentLinkedQueue<>();
     private volatile long requestTimestamp = 0;
     private final long RESPONSE_TIMEOUT_MS = 1500; // Таймаут ожидания ответа
+    // ToDo
+    //  FIXME: volatile гарантирует видимость, но не атомарность read-modify-write.
+    //  sendOnce() пишет deviceAnswer = new DeviceAnswer(...), а saveReceivedByEvent() читает и модифицирует его.
+    //  Оба метода могут вызываться из разных контекстов (опросный поток vs обработчик события).
+    //  Возможна гонка: saveReceivedByEvent начнёт работу с deviceAnswer, а sendOnce перезапишет его посередине.
+    //  Решение: либо передавать deviceAnswer как параметр, либо использовать AtomicReference.
     private volatile DeviceAnswer deviceAnswer;
     private volatile ComRule currentComRule;
+
+    // Переиспользуемые буферы для handleDataAvailableEvent — избегаем аллокаций на каждый входящий пакет
+    private final ByteArrayOutputStream reusableBuffer = new ByteArrayOutputStream(2049);
+    private final byte[] reusableChunk = new byte[2049];
 
     private MainLeftPanelStateCollection collection;
     private int clientId;
@@ -149,10 +159,8 @@ public class ComDataCollector implements Runnable{
     }
 
     public void handleDataAvailableEvent() {
-        // 2. Используйте ByteArrayOutputStream для накопления байтов
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        // Переиспользуемые буферы (reusableBuffer, reusableChunk) — без аллокаций
         int sizeLimit = 2048;
-        byte[] chunk = new byte[sizeLimit + 1];
         long delay = 150L;
         if(device != null){
             if(device.getMillisReadLimit() != 0){
@@ -160,32 +168,27 @@ public class ComDataCollector implements Runnable{
             }
         }
 
-
         try {
+            reusableBuffer.reset();
             int dataAvailable = comPort.bytesAvailable();
             while (dataAvailable > 0) {
-                int bytesRead = comPort.readBytes(chunk, Math.min(chunk.length, dataAvailable));
-                // 3. Записываем сырые байты в буфер
-                buffer.write(chunk, 0, bytesRead);
-                if (buffer.size() >= sizeLimit) {
-                    buffer.reset();
+                int bytesRead = comPort.readBytes(reusableChunk, Math.min(reusableChunk.length, dataAvailable));
+                reusableBuffer.write(reusableChunk, 0, bytesRead);
+                if (reusableBuffer.size() >= sizeLimit) {
+                    reusableBuffer.reset();
                     log.warn("Переполнение буффера при приёме данных, сделан сброс");
                     return;
                 }
-                sleepSafely(delay);
+                sleepSafely(delay);//Нужно, что бы собрать посылку целиком, зависит от протокола
                 dataAvailable = comPort.bytesAvailable();
             }
 
-            // 4. Получаем массив байтов без преобразования в строку
-            byte[] receivedBytes = buffer.toByteArray();
+            byte[] receivedBytes = reusableBuffer.toByteArray();
             if (receivedBytes.length > 0) {
-                // 5. Добавляем массив байтов в очередь
-
                 incomingMessages.add(new ReceivedData(receivedBytes, comDataCollectorWaitingForAnswer.get(), System.currentTimeMillis()));
-                //log.info("Добавлено сообщение в очередь: " + MyUtilities.bytesToHexString(receivedBytes));
             }
-        } catch (Exception e) {  // Или конкретнее, напр. IOException | RuntimeException
-            log.warn("Исключение в обработке данных из порта", e);  // Лог с трассой
+        } catch (Exception e) {
+            log.warn("Исключение в обработке данных из порта", e);
         }finally {
             comDataCollectorBusy.set(false);
             comPort.addDataListener(serialPortDataListener);
@@ -226,44 +229,25 @@ public class ComDataCollector implements Runnable{
         comPort.addDataListener(serialPortDataListener);
         log.info("Listener attached on run for " + comPort.getSystemPortName());
 
-        int limit = 1;
-        int counter = 0;
         while ((!Thread.currentThread().isInterrupted()) && alive) {
             if ( ! clientsMap.isEmpty() && shouldPollBecauseTimer()) {
                 millisPrev = System.currentTimeMillis();
-                //log.info("Run  flopBusyFlag");
-                flopBusyFlag();
-                //log.info("Run  processIncomingMessages");
+
+                flopBusyFlag();//Сброс занятости немного сомнительно, выглядит как костыль, но пока оставить
+                processIncomingMessages();//Проверка наличия и обработка принятых данных
+
+                poolRules();//Отправка команд, требующих ответа и меняющихся во времени
                 processIncomingMessages();
 
-                //log.info("Run  poolRules");
-                poolRules();
-                //log.info("Run  processIncomingMessages");
+                pollCommands();//Отправка одной и той же команды, введенной пользователем
                 processIncomingMessages();
-
-                //log.info("Run  pollCommands");
-                pollCommands();
-                //log.info("Run  processIncomingMessages");
-                processIncomingMessages();
-
-                if(counter < limit) {
-                    if(comPort.bytesAvailable() > 0){
-                        handleDataAvailableEvent();
-                        comPort.flushIOBuffers();
-                    }
-                    //log.info("Слушатель будет добавлен еще " + (limit - counter) + " раз (отключено)");
-                    counter++;
-                    //comPort.addDataListener(serialPortDataListener);
-                }
-
-            } else {
-                processIncomingMessages();
-                sleepSafely(Math.min(poolDelay / 5, 100L));
+            }else{
+                sleepSafely(50);
             }
         }
     }
     private boolean shouldPollBecauseTimer() {
-        return System.currentTimeMillis() - millisPrev > 100;
+        return System.currentTimeMillis() - millisPrev > 1;//Не зависит от частоты опроса
     }
 
     private void flopBusyFlag(){
@@ -330,33 +314,28 @@ public class ComDataCollector implements Runnable{
 
                 sendOnce(client.prefix, client.command, client.clientId, true);
                 comPort.addDataListener(serialPortDataListener);
-                //waitForComDataCollectorWaitingAnswer(1500);
-                //comDataCollectorWaitingForAnswer.set(false);//Разрешаю по таймауту
+
             }
         }
 
     }
 
-    private void waitForComDataCollectorBusy(int totalLimit) {
-        if(totalLimit < 20) totalLimit = 20;
-        int i = totalLimit / 20;
-        while (comDataCollectorBusy.get() && i < totalLimit) {
-            sleepSafely(20);
-            i++;
+    private void waitForComDataCollectorBusy(int totalLimitMs) {
+        if(totalLimitMs < 20) totalLimitMs = 20;
+        long deadline = System.nanoTime() + (totalLimitMs * 1_000_000L);
+        while (comDataCollectorBusy.get() && System.nanoTime() < deadline) {
+            Thread.onSpinWait(); // JVM-подсказка: мы в busy-wait, ускоряет на современных CPU
+            LockSupport.parkNanos(1_000_000L); // 1ms вместо 20ms — более точное ожидание
         }
     }
-    private void waitForComDataCollectorWaitingAnswer(int totalLimit) {
-        if(totalLimit < 20) totalLimit = 20;
-        int i = totalLimit / 20;
-        while (comDataCollectorWaitingForAnswer.get() && i < totalLimit) {
-            sleepSafely(20);
-            i++;
-        }
-    }
+
     private void sleepSafely(long millis) {
         try {
             Thread.sleep(millis);
         } catch (InterruptedException e) {
+            // Восстанавливаем флаг прерывания, чтобы верхний цикл (while (!isInterrupted())) мог его обработать и корректно завершить поток.
+            // Без этого shutdown() через thread.interrupt() не сработает — поток будет спать вечно.
+            Thread.currentThread().interrupt();
             log.warn("Произошла ошибка при попытке сна" + e.getMessage());
         }
     }
@@ -451,11 +430,8 @@ public class ComDataCollector implements Runnable{
             if(answer == null || answer.length == 0){
                 return;
             }
-            StringBuilder sb = new StringBuilder();
-            for (byte b : answer) {//ToDo переделать на массив
-                sb.append((char) b);
-            }
-            sendOnce("", sb.toString(), currentDirection.get(), false);
+            // Конвертация byte[] в String без аллокации StringBuilder на каждый вызов
+            sendOnce("", new String(answer, java.nio.charset.StandardCharsets.US_ASCII), currentDirection.get(), false);
         }
     }
     public void saveReceivedByEvent(byte[] message, boolean responseRequested, long receiveTimestamp) {
@@ -517,11 +493,7 @@ public class ComDataCollector implements Runnable{
                 log.warn("ПУСТАЯ СТРОКА ОТВЕТА  ПЕРЕДАНА В ОБЪЕКТ ОТВЕТА метка времени в ответе" + deviceAnswer.getAnswerReceivedTime() +
                         " количество полей в ответе " + deviceAnswer.getFieldCount() +
                         " для строки от устройства [" + Arrays.toString(message) + "] ");
-                StringBuilder sb = new StringBuilder();
-                for (byte b : message) {
-                    sb.append((char) b);
-                }
-                answer = sb.toString();
+                answer = new String(message, java.nio.charset.StandardCharsets.US_ASCII);
                 log.info("После коррекции " + answer);
             }
         }catch (Exception e){

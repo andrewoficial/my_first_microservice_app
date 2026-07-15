@@ -5,12 +5,34 @@ import org.example.device.DeviceCommandRegistry;
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
-import java.util.Arrays;
+
 import static org.example.utilites.MyUtilities.*;
-import static org.example.utilites.MyUtilities.isCorrectNumberF;
 
 @Slf4j
 public class ArdFeeBrdMeterCommandRegistry extends DeviceCommandRegistry {
+
+    private static final int F_RESPONSE_MIN_LENGTH = 71;
+
+    private static final int[][] F_FIELDS = {
+            {1,  5, 100},   // TermBM    °C
+            {7,  5,  10},   // PresBM    mmHg
+            {13, 5,   1},   // hydmBM    %
+            {19, 5, 100},   // thre_V    V (pwr)
+            {25, 5, 1000},  // cur_One   A
+            {31, 5, 1000},  // cur_Two   A
+            {37, 5, 1000},  // c_One_Poly A
+            {43, 5, 1000},  // c_Two_Poly A
+            {49, 5, 1000},  // currResF  A
+            {55, 5,    1},  // stat      st
+            {61, 8,    1},  // serialNumber SN
+    };
+
+    private static final String[] F_UNITS = {
+            " °C", " mmHg", " %", " V (pwr)", " A", " A", " A", " A", " A", " st", " SN"
+    };
+
+    private static final int SERIAL_NUMBER_INDEX = 10;
+
     @Override
     protected void initCommands() {
         commandList.addCommand(createFCommand());
@@ -26,315 +48,41 @@ public class ArdFeeBrdMeterCommandRegistry extends DeviceCommandRegistry {
     }
 
     private AnswerValues parseFResponse(byte[] response) {
-        AnswerValues answerValues = null;
-//"F" - direct
-        answerValues = null;
-        //System.out.println("Proceed CRDG direct");
-        String example = "02750\t07518\t00023\t00323\t08614\t01695\t06353\t03314\t03314\t00001\t08500012\t0x0D";
-
-        if (response.length >= 68) {
-            if (response[70] != calculateCRCforF(response)) {
-                System.out.println("ERROR CRC for F");
-                System.out.println("Expected CRC " + calculateCRCforF(response) + " received " + response[70]);
-            }
-            double termBM = 0.0;
-            double presBM = 0.0;
-            double hydmBM = 0.0;
-            double thre_V = 0.0;
-            double cur_One = 0.0;
-            double cur_Two = 0.0;
-            double c_One_Poly = 0.0;
-            double c_Two_Poly = 0.0;
-            double currResF = 0.0;
-            double stat = 0.0;
-            double serialNumber = 0.0;
-            answerValues = new AnswerValues(11);
-
-            // TermBM (positions 1-6, /100)
-            if (isCorrectNumberF(Arrays.copyOfRange(response, 1, 6))) {
-                double val = parseAsciiField(response, 1, 5, 100.0);
-                answerValues.addValue(val, " °C");
-            } else {
-                System.out.println("Wrong isCorrectNumberF position " + Arrays.toString(Arrays.copyOfRange(response, 1, 6)));
-                answerValues.addValue(-99.99, " °C(ERR)");
-            }
-
-            // PresBM (7-12, /10)
-            if (isCorrectNumberF(Arrays.copyOfRange(response, 7, 12))) {
-                double val = parseAsciiField(response, 7, 5, 10.0);
-                answerValues.addValue(val, " mmHg");
-            } else {
-                System.out.println("Wrong isCorrectNumberF position (press)" + Arrays.toString(Arrays.copyOfRange(response, 7, 12)));
-                answerValues.addValue(-99.99, " mmHg(ERR)");
-            }
-
-            // hydmBM (13-18, /1)
-            if (isCorrectNumberF(Arrays.copyOfRange(response, 13, 18))) {
-                answerValues.addValue(parseAsciiField(response, 13, 5, 1.0), " %");
-            } else {
-                System.out.println("Wrong isCorrectNumberF position (hydmBM)" + Arrays.toString(Arrays.copyOfRange(response, 13, 18)));
-                answerValues.addValue(-99.99, " %(ERR)");
-            }
-
-            // thre_V (19-24, /100)
-            if (isCorrectNumberF(Arrays.copyOfRange(response, 19, 24))) {
-                answerValues.addValue(parseAsciiField(response, 19, 5, 100.0), " V (pwr)");
-            } else {
-                System.out.println("Wrong isCorrectNumberF position (thre_V)" + Arrays.toString(Arrays.copyOfRange(response, 19, 24)));
-                answerValues.addValue(-99.99, " V (pwr) (ERR)");
-            }
-
-
-            // cur_One (25-30, /1000)
-            if (isCorrectNumberF(Arrays.copyOfRange(response, 25, 30))) {
-                answerValues.addValue(parseAsciiField(response, 25, 5, 1000.0), " A");
-            } else {
-                System.out.println("Wrong isCorrectNumberF position (cur_One)" + Arrays.toString(Arrays.copyOfRange(response, 25, 30)));
-                answerValues.addValue(-99.99, " A (ERR)");
-            }
-
-            byte[] subResponse = Arrays.copyOfRange(response, 31, 36);  //Сила тока шунт два до полинома
-            if (isCorrectNumberF(subResponse)) {
-                boolean isNegative = false;
-                boolean success = true;
-                // Преобразуем байты ASCII-чисел вручную
-                for (int i = 0; i < subResponse.length; i++) {
-                    byte b = subResponse[i];
-
-                    if (b == '-' && i == 0) {
-                        isNegative = true;
-                        continue;
-                    }
-                    // Проверяем, что символ – цифра
-                    if (b >= '0' && b <= '9') {
-                        cur_Two = cur_Two * 10 + (b - '0');
-                    } else {
-                        cur_Two = 0.0;
-                        success = false;
-                        break;
-                    }
-                }
-
-                // Применяем десятичный порядок для получения числа в формате 123.45
-                if (success) {
-                    cur_Two /= 1000.0; // Сдвигаем запятую на два знака влево
-                    cur_Two = isNegative ? -cur_Two : cur_Two; // Применяем знак
-                    answerValues.addValue(cur_Two, " A");
-                    //System.out.println(termBM);
-                } else {
-                    answerValues.addValue(-88.88, " A (ERR)");
-                }
-            } else {
-                System.out.println("Wrong isCorrectNumberF position (cur_Two)" + Arrays.toString(subResponse));
-                answerValues.addValue(-99.99, " A (ERR)");
-            }
-
-            subResponse = Arrays.copyOfRange(response, 37, 42);  //Сила тока шунт один после полинома
-            if (isCorrectNumberF(subResponse)) {
-                boolean isNegative = false;
-                boolean success = true;
-                // Преобразуем байты ASCII-чисел вручную
-                for (int i = 0; i < subResponse.length; i++) {
-                    byte b = subResponse[i];
-
-                    if (b == '-' && i == 0) {
-                        isNegative = true;
-                        continue;
-                    }
-                    // Проверяем, что символ – цифра
-                    if (b >= '0' && b <= '9') {
-                        c_One_Poly = c_One_Poly * 10 + (b - '0');
-                    } else {
-                        c_One_Poly = 0.0;
-                        success = false;
-                        break;
-                    }
-                }
-
-                // Применяем десятичный порядок для получения числа в формате 123.45
-                if (success) {
-                    c_One_Poly /= 1000.0; // Сдвигаем запятую на два знака влево
-                    c_One_Poly = isNegative ? -c_One_Poly : c_One_Poly; // Применяем знак
-                    answerValues.addValue(c_One_Poly, " A");
-                    //System.out.println(termBM);
-                } else {
-                    answerValues.addValue(-88.88, " A (ERR)");
-                }
-            } else {
-                System.out.println("Wrong isCorrectNumberF position (c_One_Poly)" + Arrays.toString(subResponse));
-                answerValues.addValue(-99.99, " A (ERR)");
-            }
-
-            subResponse = Arrays.copyOfRange(response, 43, 48);  //Сила тока шунт два после полинома
-            if (isCorrectNumberF(subResponse)) {
-                boolean isNegative = false;
-                boolean success = true;
-                // Преобразуем байты ASCII-чисел вручную
-                for (int i = 0; i < subResponse.length; i++) {
-                    byte b = subResponse[i];
-                    if (b == '-' && i == 0) {
-                        isNegative = true;
-                        continue;
-                    }
-                    // Проверяем, что символ – цифра
-                    if (b >= '0' && b <= '9') {
-                        c_Two_Poly = c_Two_Poly * 10 + (b - '0');
-                    } else {
-                        c_Two_Poly = 0.0;
-                        success = false;
-                        break;
-                    }
-                }
-
-                // Применяем десятичный порядок для получения числа в формате 123.45
-                if (success) {
-                    c_Two_Poly /= 1000.0; // Сдвигаем запятую на два знака влево
-                    c_Two_Poly = isNegative ? -c_Two_Poly : c_Two_Poly; // Применяем знак
-                    answerValues.addValue(c_Two_Poly, " A");
-                    //System.out.println(termBM);
-                } else {
-                    answerValues.addValue(-88.88, " A (ERR)");
-                }
-            } else {
-                System.out.println("Wrong isCorrectNumberF position (c_Two_Poly)" + Arrays.toString(subResponse));
-                answerValues.addValue(-99.99, " A (ERR)");
-            }
-
-            subResponse = Arrays.copyOfRange(response, 49, 54);  //Сила тока выбранный результат (ардуиной)
-            if (isCorrectNumberF(subResponse)) {
-                boolean isNegative = false;
-                boolean success = true;
-                // Преобразуем байты ASCII-чисел вручную
-                for (int i = 0; i < subResponse.length; i++) {
-                    byte b = subResponse[i];
-                    if (b == '-' && i == 0) {
-                        isNegative = true;
-                        continue;
-                    }
-                    // Проверяем, что символ – цифра
-                    if (b >= '0' && b <= '9') {
-                        currResF = currResF * 10 + (b - '0');
-                    } else {
-                        currResF = 0.0;
-                        success = false;
-                        break;
-                    }
-
-                }
-
-                // Применяем десятичный порядок для получения числа в формате 123.45
-                if (success) {
-                    currResF /= 1000.0; // Сдвигаем запятую на два знака влево
-                    currResF = isNegative ? -currResF : currResF; // Применяем знак
-                    answerValues.addValue(currResF, " A");
-                    //System.out.println(termBM);
-                } else {
-                    answerValues.addValue(-88.88, " A (ERR)");
-                }
-            } else {
-                System.out.println("Wrong isCorrectNumberF position (currResF)" + Arrays.toString(subResponse));
-                answerValues.addValue(-99.99, " A (ERR)");
-            }
-
-            subResponse = Arrays.copyOfRange(response, 55, 60);  //Статус
-            if (isCorrectNumberF(subResponse)) {
-                boolean isNegative = false;
-                boolean success = true;
-                // Преобразуем байты ASCII-чисел вручную
-                for (int i = 0; i < subResponse.length; i++) {
-                    byte b = subResponse[i];
-                    if (b == '-' && i == 0) {
-                        isNegative = true;
-                        continue;
-                    }
-                    // Проверяем, что символ – цифра
-                    if (b >= '0' && b <= '9') {
-                        stat = stat * 10 + (b - '0');
-                    } else {
-                        stat = 0.0;
-                        success = false;
-                        break;
-                    }
-
-                }
-
-                // Применяем десятичный порядок для получения числа в формате 123.45
-                if (success) {
-                    //stat /= 1000.0; // Сдвигаем запятую на два знака влево
-                    stat = isNegative ? - stat : stat; // Применяем знак
-                    answerValues.addValue(stat, " st");
-                    //System.out.println(termBM);
-                } else {
-                    answerValues.addValue(-88.88, " st (ERR)");
-                }
-            } else {
-                System.out.println("Wrong isCorrectNumberF position (stat)" + Arrays.toString(subResponse));
-                answerValues.addValue(-99.99, " st (ERR)");
-            }
-
-            subResponse = Arrays.copyOfRange(response, 61, 69);  //Серийный номер
-            if (isCorrectNumberF(subResponse)) {
-                boolean isNegative = false;
-                boolean success = true;
-                // Преобразуем байты ASCII-чисел вручную
-                for (int i = 0; i < subResponse.length; i++) {
-                    byte b = subResponse[i];
-                    if (b == '-' && i == 0) {
-                        isNegative = true;
-                        continue;
-                    }
-                    // Проверяем, что символ – цифра
-                    if (b >= '0' && b <= '9') {
-                        serialNumber = serialNumber * 10 + (b - '0');
-                    } else {
-                        serialNumber = 0.0;
-                        success = false;
-                        break;
-                    }
-
-                }
-
-                // Применяем десятичный порядок для получения числа в формате 123.45
-                if (success) {
-                    //stat /= 1000.0; // Сдвигаем запятую на два знака влево
-                    if(AnswerStorage.getTabByIdent(String.valueOf(serialNumber)) != null){
-                        answerValues.setDirection(AnswerStorage.getTabByIdent(String.valueOf(serialNumber)));
-                    }
-
-                    serialNumber = isNegative ? - serialNumber : serialNumber; // Применяем знак
-                    answerValues.addValue(serialNumber, " SN");
-                    //System.out.println(termBM);
-                } else {
-                    answerValues.addValue(-88.88, " SN (ERR)");
-                }
-            } else {
-                System.out.println("Wrong isCorrectNumberF position (serialNumber)" + Arrays.toString(subResponse));
-                answerValues.addValue(-99.99, " SN (ERR)");
-            }
-
-
-
-
-            return answerValues;
-        } else {
-            System.out.println("Wrong answer length " + response.length);
-            for (byte b : response) {
-                System.out.print(b + " ");
-            }
-            System.out.println();
+        if (response.length < F_RESPONSE_MIN_LENGTH) {
+            log.warn("F response too short: {} bytes (expected >= {})", response.length, F_RESPONSE_MIN_LENGTH);
+            return null;
         }
-        return null;
 
-    }
+        byte expectedCrc = calculateCRCforF(response);
+        if (response[70] != expectedCrc) {
+            log.warn("CRC mismatch for F: expected 0x{} got 0x{}", String.format("%02X", expectedCrc), String.format("%02X", response[70]));
+            return null;
+        }
 
-    // Вынесенные методы для повторного использования
-    private double parseSubResponse(byte[] subResponse) {
-        // Общая логика преобразования байтов в число
-        return 0.0;
-    }
+        AnswerValues answerValues = new AnswerValues(F_FIELDS.length);
 
-    private boolean validateCrc(byte[] response) {
-        // Логика проверки CRC
-        return false;
+        for (int i = 0; i < F_FIELDS.length; i++) {
+            int offset = F_FIELDS[i][0];
+            int length = F_FIELDS[i][1];
+            double divisor = F_FIELDS[i][2];
+            String unit = F_UNITS[i];
+
+            Double val = parseAsciiFieldChecked(response, offset, length, divisor);
+            if (val == null) {
+                log.warn("Invalid F field at offset {}: {}", offset, new String(response, offset, length));
+                return null;
+            }
+            answerValues.addValue(val, unit);
+        }
+
+        // Serial number → direction lookup
+        double serialNumber = answerValues.getValues()[SERIAL_NUMBER_INDEX];
+        String snStr = String.valueOf((long) serialNumber);
+        Integer tab = AnswerStorage.getTabByIdent(snStr);
+        if (tab != null) {
+            answerValues.setDirection(tab);
+        }
+
+        return answerValues;
     }
 }

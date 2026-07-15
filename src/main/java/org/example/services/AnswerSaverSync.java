@@ -78,6 +78,12 @@ public class AnswerSaverSync {
         }
     }
 
+    // FIXME: doLog блокирует все опрашивающие потоки из-за synchronized + файловый I/O внутри монитора.
+    //  ПЛАН РЕФАКТОРИНГА:
+    //  1. Создать отдельный поток-слушатель (BlockingQueue<DeviceAnswer>), накапливающий данные для записи.
+    //  2. Синхронизация ТОЛЬКО по передаче сообщения в логер (queue.put()).
+    //  3. Логер работает в отдельном потоке, читает из очереди и пишет в файл.
+    //  4. Тротлинг на 100ms — не писать в файл чаще раза в 100ms, чтобы файловую систему не убивать.
     public synchronized void doLog(DeviceAnswer answer, int threadId, PoolLogger poolLogger, DeviceLogger devLogger) {
         //log.info("Было принято к рассмотрению логирование ответа от threadId: " + threadId);
         if (shouldSaveAnswer(answer, threadId)) {

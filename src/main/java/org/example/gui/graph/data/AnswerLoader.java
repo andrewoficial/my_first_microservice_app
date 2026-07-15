@@ -6,7 +6,6 @@ import org.example.services.DeviceAnswer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -19,11 +18,10 @@ public class AnswerLoader {
     }
 
     private ArrayList<String> loadUnitsForTab(int tab) {
-        List<DeviceAnswer> answers = AnswerStorage.getAnswersForGraph(tab);
-        if (answers.isEmpty()) {
+        DeviceAnswer selectedAnswer = AnswerStorage.getLastAnswerForTab(tab);
+        if (selectedAnswer == null) {
             return new ArrayList<>();
         }
-        DeviceAnswer selectedAnswer = answers.get(answers.size() - 1);
 
         if (Objects.equals(selectedAnswer.getClientId(), tab)) {
             if (tab == 0 && selectedAnswer.getFieldCount() == 0) {

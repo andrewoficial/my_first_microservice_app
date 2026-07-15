@@ -408,6 +408,27 @@ public class MyUtilities {
         return raw / divisor;
     }
 
+    public static Double parseAsciiFieldChecked(byte[] response, int start, int length, double divisor) {
+        if (response == null || start + length > response.length) {
+            return null;
+        }
+        boolean negative = false;
+        long value = 0;
+        for (int i = start; i < start + length; i++) {
+            byte b = response[i];
+            if (b == '-' && i == start) {
+                negative = true;
+                continue;
+            }
+            if (b >= '0' && b <= '9') {
+                value = value * 10 + (b - '0');
+            } else {
+                return null;
+            }
+        }
+        return (negative ? -value : value) / divisor;
+    }
+
     // === VERY SIMILAR: Byte / String / Hex conversion helpers ===
     public static String bytesToHexString(byte[] bytes) {
         if(bytes == null) return  null;
