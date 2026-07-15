@@ -28,7 +28,7 @@ public class AnswerValidator {
 
         if(typicalFieldCapacity == 0){
             log.warn("Передан currentFieldCapacity == 0");
-            typicalFieldCapacity = al.getUnitsArrayForTab(tab).size();
+            typicalFieldCapacity = al.getUnitsArrayForSelectedClientOrTab(tab).size();
         }
 
         if (currentFieldCapacity != typicalFieldCapacity) {

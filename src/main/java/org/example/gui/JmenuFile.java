@@ -300,7 +300,7 @@ public class JmenuFile {
 
                 // Обновление списка чек-боксов
                 for (Integer tab : tabs) {
-                    int fieldsCounter = answerLoader.getUnitsArrayForTab(tab).size();
+                    int fieldsCounter = answerLoader.getUnitsArrayForSelectedClientOrTab(tab).size();
                     tabsFieldCapacity.add(fieldsCounter);
                 }
 

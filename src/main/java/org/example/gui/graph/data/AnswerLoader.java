@@ -14,7 +14,7 @@ public class AnswerLoader {
 
     private final ConcurrentHashMap<Integer, ArrayList<String>> cache = new ConcurrentHashMap<>();
 
-    public ArrayList<String> getUnitsArrayForTab(int tab) {
+    public ArrayList<String> getUnitsArrayForSelectedClientOrTab(int tab) {
         return cache.computeIfAbsent(tab, this::loadUnitsForTab);
     }
 

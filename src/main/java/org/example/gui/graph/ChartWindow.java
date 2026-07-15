@@ -3,7 +3,6 @@ package org.example.gui.graph;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import lombok.extern.slf4j.Slf4j;
-import org.example.gui.MainLeftPanelState;
 import org.example.gui.MainLeftPanelStateCollection;
 import org.example.gui.Rendeble;
 import org.example.gui.graph.data.AnswerLoader;
@@ -74,6 +73,8 @@ public class ChartWindow extends JFrame implements Rendeble {
     private final Map<String, String> seriesNameToCommand = new HashMap<>();
     private final Map<Integer, String> lastStableCommand = new HashMap<>();
     private final Set<JCheckBox> addedToPanel = Collections.newSetFromMap(new IdentityHashMap<>());
+    // Cached TimeSeries refs: tabId → command → TimeSeries[]
+    private final Map<Integer, Map<String, TimeSeries[]>> cachedSeriesRefs = new HashMap<>();
 
 
     public ChartWindow() {
@@ -320,6 +321,7 @@ public class ChartWindow extends JFrame implements Rendeble {
                 }
                 lastStableCommand.put(tab, currentStable);
                 lastProcessedTime.put(tab, 0L);
+                cachedSeriesRefs.remove(tab);
                 ansLoader.invalidateCache(tab);
             }
         }
@@ -331,7 +333,7 @@ public class ChartWindow extends JFrame implements Rendeble {
             String stableCmd = AnswerStorage.getStableCommand(tab);
             if (stableCmd == null) continue;
 
-            ArrayList<String> unitsInAnswer = ansLoader.getUnitsArrayForTab(tab);
+            ArrayList<String> unitsInAnswer = ansLoader.getUnitsArrayForSelectedClientOrTab(tab);
             if (unitsInAnswer == null || unitsInAnswer.isEmpty()) continue;
 
             if (addCheckBoxesForTab(tab, stableCmd, unitsInAnswer)) {
@@ -408,10 +410,12 @@ public class ChartWindow extends JFrame implements Rendeble {
             String stableCmd = AnswerStorage.getStableCommand(tab);
             if (stableCmd == null) continue;
 
-            ArrayList<String> unitsInAnswer = ansLoader.getUnitsArrayForTab(tab);
+            ArrayList<String> unitsInAnswer = ansLoader.getUnitsArrayForSelectedClientOrTab(tab);
             if (unitsInAnswer == null) continue;
 
-            for (int j = 0; j < unitsInAnswer.size(); j++) {
+            int fieldCount = unitsInAnswer.size();
+            TimeSeries[] refs = new TimeSeries[fieldCount];
+            for (int j = 0; j < fieldCount; j++) {
                 String seriesName = generateNameForSeries(tab, stableCmd, j, unitsInAnswer);
                 if (collection.getSeries(seriesName) == null) {
                     TimeSeries ts = new TimeSeries(seriesName);
@@ -420,7 +424,9 @@ public class ChartWindow extends JFrame implements Rendeble {
                     seriesNameToTabId.put(seriesName, tab);
                     seriesNameToCommand.put(seriesName, stableCmd);
                 }
+                refs[j] = collection.getSeries(seriesName);
             }
+            cachedSeriesRefs.computeIfAbsent(tab, k -> new HashMap<>()).put(stableCmd, refs);
         }
     }
 
@@ -432,15 +438,9 @@ public class ChartWindow extends JFrame implements Rendeble {
             long fromTime = lastProcessedTime.getOrDefault(tab, 0L);
             final long[] maxTime = {fromTime};
 
-            ArrayList<String> unitsInAnswer = ansLoader.getUnitsArrayForTab(tab);
-            if (unitsInAnswer == null) continue;
-
-            int fieldCount = unitsInAnswer.size();
-            TimeSeries[] seriesRefs = new TimeSeries[fieldCount];
-            for (int j = 0; j < fieldCount; j++) {
-                String seriesName = generateNameForSeries(tab, stableCmd, j, unitsInAnswer);
-                seriesRefs[j] = collection.getSeries(seriesName);
-            }
+            TimeSeries[] seriesRefs = cachedSeriesRefs.getOrDefault(tab, Collections.emptyMap()).get(stableCmd);
+            if (seriesRefs == null) continue;
+            int fieldCount = seriesRefs.length;
 
             GraphDataRepository.getInstance().forEachHistoryPoint(tab, stableCmd, point -> {
                 if (point.getEpochMilli() > fromTime) {
@@ -500,7 +500,7 @@ public class ChartWindow extends JFrame implements Rendeble {
             String stableCmd = AnswerStorage.getStableCommand(tab);
             if (stableCmd == null) continue;
 
-            ArrayList<String> unitsInAnswer = ansLoader.getUnitsArrayForTab(tab);
+            ArrayList<String> unitsInAnswer = ansLoader.getUnitsArrayForSelectedClientOrTab(tab);
             if (unitsInAnswer == null) continue;
 
             for (int j = 0; j < unitsInAnswer.size(); j++) {
