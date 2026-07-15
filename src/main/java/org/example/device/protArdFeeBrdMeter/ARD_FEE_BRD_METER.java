@@ -4,16 +4,26 @@ import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandListClass;
+import org.example.device.ProtocolComPort;
 import org.example.device.SomeDevice;
 import org.example.device.connectParameters.ComConnectParameters;
 import org.example.services.AnswerValues;
 import org.example.services.comPort.*;
 
 @Slf4j
-public class ARD_FEE_BRD_METER implements SomeDevice {
+public class ARD_FEE_BRD_METER implements SomeDevice, ProtocolComPort {
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора
     private final SerialPort comPort;
+
+    @Getter
+    private final DataBitsList defaultDataBit = DataBitsList.B8;
+    @Getter
+    private final ParityList defaultParity= ParityList.P_NO;
+    @Getter
+    private final BaudRatesList defaultBaudRate = BaudRatesList.B57600;
+    @Getter
+    private final StopBitsList defaultStopBit = StopBitsList.S1;
 
     private final DeviceCommandListClass commands;
     private final ArdFeeBrdMeterCommandRegistry commandRegistry;
@@ -152,16 +162,16 @@ public class ARD_FEE_BRD_METER implements SomeDevice {
                     for (byte lastAnswerByte : lastAnswerBytes) {
                         lastAnswer.append((char) lastAnswerByte);
                     }
-                    log.info("ARD_FEE_BRD_METER Cant create answers obj (error in answer)");
+                    log.info("Cant create answers obj (error in answer)");
                 }
             }else {
                 for (byte lastAnswerByte : lastAnswerBytes) {
                     lastAnswer.append((char) lastAnswerByte);
                 }
-                log.info("DVK_4RD Cant create answers obj (unknown command)");
+                log.info("Cant create answers obj (unknown command)");
             }
         }else{
-            log.info("DVK_4RD empty received");
+            log.info("empty received");
         }
         //parseMMESU(lastAnswerBytes);
     }

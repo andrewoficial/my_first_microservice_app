@@ -823,7 +823,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 jpFolderIconPanel.revalidate();
                 jpFolderIconPanel.repaint();
             } else {
-                log.info("Not started" );
+                log.info("File saving not started" );
                 jpFolderIconPanel.removeAll();
                 JPanel btnPane = fpg.getPicContainer("Not available", true, false, null);
                 jpFolderIconPanel.add(btnPane);

@@ -12,31 +12,31 @@ import org.example.gui.graph.ui.SeriesModel;
 import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
 import org.example.services.DeviceAnswer;
+import org.example.services.GraphDataRepository;
 import org.jfree.chart.*;
 import org.jfree.chart.axis.LogarithmicAxis;
 import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.entity.ChartEntity;
 import org.jfree.chart.entity.XYItemEntity;
 import org.jfree.chart.plot.*;
+import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.data.time.*;
 import org.jfree.data.xy.XYDataset;
 import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
+import java.awt.event.*;
+import java.awt.geom.Rectangle2D;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
 
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-
-import static org.example.utilites.MyUtilities.convertToLocalDateViaMilisecond;
 
 @Slf4j
 public class ChartWindow extends JFrame implements Rendeble {
@@ -45,6 +45,7 @@ public class ChartWindow extends JFrame implements Rendeble {
     private static final int WIDTH_THRESHOLD = 5;
     private static final int CONTROL_PANEL_MARGIN = 38;
     private volatile boolean isGraphBusy = false;
+    private volatile boolean showTooltip = true;
     private final TimeSeriesCollection collection = new TimeSeriesCollection();
 
     private JPanel window;
@@ -57,6 +58,7 @@ public class ChartWindow extends JFrame implements Rendeble {
 
     private final JTextField selectedValue = new JTextField();
     private final JTextField lastReceivedValue = new JTextField();
+    private final JCheckBox showTooltipCheckBox = new JCheckBox("Показывать значения всех кривых во всплывающем окне", true);
     private int range = 0;
 
     private ChartPanel chartPanel = null;
@@ -66,6 +68,7 @@ public class ChartWindow extends JFrame implements Rendeble {
     private final SeriesModel seriesVisibility = new SeriesModel();
     private final AnswerLoader ansLoader = new AnswerLoader();
     private final AnswerValidator ansValidator = new AnswerValidator();
+    private final Map<Integer, Long> lastProcessedTime = new ConcurrentHashMap<>();
 
 
     public ChartWindow() {
@@ -129,15 +132,71 @@ public class ChartWindow extends JFrame implements Rendeble {
 
         // Панель с графиком
         JFreeChart chart = createChart(collection);
-        chartPanel = new ChartPanel(chart);
+        chartPanel = new ChartPanel(chart) {
+            @Override
+            public String getToolTipText(MouseEvent e) {
+                if (!showTooltip) return null;
+                JFreeChart ch = getChart();
+                if (ch == null) return null;
+                XYPlot plot = ch.getXYPlot();
+                if (plot == null) return null;
+
+                Rectangle2D dataArea = getScreenDataArea();
+                if (dataArea == null || !dataArea.contains(e.getPoint())) return null;
+
+                ValueAxis domainAxis = plot.getDomainAxis();
+                double xValue = domainAxis.java2DToValue(e.getX(), dataArea, plot.getDomainAxisEdge());
+
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd HH:mm:ss.SSS");
+                String formattedDate = sdf.format(new Date((long) xValue));
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("<html><div style='background-color:white; color:black; padding:3px; border:1px solid gray;'>");
+                sb.append("<b>").append(formattedDate).append("</b><br>");
+
+                TimeSeriesCollection tsc = (TimeSeriesCollection) plot.getDataset();
+                XYItemRenderer renderer = plot.getRenderer();
+
+                for (int i = 0; i < tsc.getSeriesCount(); i++) {
+                    if (renderer == null || !renderer.isSeriesVisible(i)) continue;
+
+                    TimeSeries ts = tsc.getSeries(i);
+                    String seriesName = (String) ts.getKey();
+                    Double y = getYValueAtX(ts, xValue);
+
+                    if (y != null && !Double.isNaN(y)) {
+                        sb.append(String.format("<b>%s:</b> %.4f<br>", seriesName, y));
+                    }
+                }
+                sb.append("</div></html>");
+                return sb.toString();
+            }
+        };
+        chartPanel.setDisplayToolTips(true);
+        chartPanel.setInitialDelay(200);
         chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         chartPanel.setBackground(Color.white);
 
         // Нижняя панель управления
-        controlPanel.setLayout(new FlowLayout());
-        controlPanel.add(slider);
-        controlPanel.add(lastReceivedValue);
-        controlPanel.add(selectedValue);
+        controlPanel.setLayout(new BoxLayout(controlPanel, BoxLayout.Y_AXIS));
+
+        JPanel row1 = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        row1.add(new JLabel("Последнее принятое: "));
+        row1.add(lastReceivedValue);
+
+        JPanel row2 = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        row2.add(new JLabel("Значение выбранной точки: "));
+        row2.add(selectedValue);
+
+        JPanel row3 = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        row3.add(new JLabel("Размер выборки: "));
+        row3.add(slider);
+        showTooltipCheckBox.addActionListener(e -> showTooltip = showTooltipCheckBox.isSelected());
+        row3.add(showTooltipCheckBox);
+
+        controlPanel.add(row1);
+        controlPanel.add(row2);
+        controlPanel.add(row3);
 
 
         // Добавляем в главное окно
@@ -161,6 +220,7 @@ public class ChartWindow extends JFrame implements Rendeble {
             @Override
             public void stateChanged(ChangeEvent e) {
                 range = slider.getValue();
+                updateSeriesMaxItemCount(range);
             }
         });
 
@@ -239,6 +299,54 @@ public class ChartWindow extends JFrame implements Rendeble {
         return chart;
     }
 
+    private Double getYValueAtX(TimeSeries series, double targetX) {
+        if (series.getItemCount() == 0) return null;
+
+        int low = 0;
+        int high = series.getItemCount() - 1;
+
+        while (low <= high) {
+            int mid = (low + high) / 2;
+            TimeSeriesDataItem item = series.getDataItem(mid);
+            double midX = item.getPeriod().getFirstMillisecond();
+
+            if (Math.abs(midX - targetX) < 0.5) {
+                Number yNum = item.getValue();
+                return (yNum != null) ? yNum.doubleValue() : null;
+            }
+
+            if (midX < targetX) {
+                low = mid + 1;
+            } else {
+                high = mid - 1;
+            }
+        }
+
+        Double y1 = null;
+        if (low < series.getItemCount()) {
+            TimeSeriesDataItem item1 = series.getDataItem(low);
+            Number yNum = item1.getValue();
+            y1 = (yNum != null) ? yNum.doubleValue() : null;
+        }
+
+        Double y2 = null;
+        if (high >= 0) {
+            TimeSeriesDataItem item2 = series.getDataItem(high);
+            Number yNum = item2.getValue();
+            y2 = (yNum != null) ? yNum.doubleValue() : null;
+        }
+
+        if (y1 == null) return y2;
+        if (y2 == null) return y1;
+
+        double x1 = series.getDataItem(low).getPeriod().getFirstMillisecond();
+        double x2 = series.getDataItem(high).getPeriod().getFirstMillisecond();
+        double d1 = Math.abs(x1 - targetX);
+        double d2 = Math.abs(x2 - targetX);
+
+        return (d1 <= d2) ? y1 : y2;
+    }
+
     private void updateCB() {
         // Обновление списка чек-боксов
         for (Integer tab : AnswerStorage.getListOfTabsInStorage()) {
@@ -290,6 +398,7 @@ public class ChartWindow extends JFrame implements Rendeble {
                     public void actionPerformed(ActionEvent e) {
                         boolean isSelected = seriesVisibility.getJBoxes().get(nameForSeries).isSelected();
                         seriesVisibility.setVisibility(e.getActionCommand(), isSelected);
+                        applySeriesVisibility();
                     }
                 });
             }
@@ -323,53 +432,99 @@ public class ChartWindow extends JFrame implements Rendeble {
     }
 
     private synchronized void getLastData() {
-
-        log.info("Начинаю получение данных");
-        // Get the list of all tab numbers
-        log.info("Получил список клиентов" + AnswerStorage.getListOfTabsInStorage().toString());
         updateCB();
-        log.info("Закончил обновление чекбоксов ");
-        int pointer = 0;
-        collection.removeAllSeries();//Удаление всех серий
-        StringBuilder sb = new StringBuilder();
+
+        ensureAllSeriesExist();
+        addNewPointsToSeries();
+        applySeriesVisibility();
+
+        updateLastReceivedValue();
+        refreshControlPane();
+    }
+
+    private void ensureAllSeriesExist() {
         for (Integer tab : AnswerStorage.getListOfTabsInStorage()) {
-            log.info("Просматриваю для клиента " + tab);
-            List<DeviceAnswer> recentAnswers = AnswerStorage.getRecentAnswersForGraph(tab, range);
-
             ArrayList<String> unitsInAnswer = ansLoader.getUnitsArrayForTab(tab);
-
+            if (unitsInAnswer == null) continue;
             for (int j = 0; j < unitsInAnswer.size(); j++) {
                 String seriesName = generateNameForSeries(tab, j, unitsInAnswer);
-                log.info("Запрашиваю данные для " + seriesName);
-                //log.info("Для вкладки " + tab + " для ответа " + j + " был получен указатель " + pointer);
-                //ToDo Защита от других команд вначале опроса (поиск существующих ответов)
+                if (collection.getSeries(seriesName) == null) {
+                    TimeSeries ts = new TimeSeries(seriesName);
+                    ts.setMaximumItemCount(range);
+                    collection.addSeries(ts);
+                }
+            }
+        }
+    }
 
+    private void addNewPointsToSeries() {
+        for (Integer tab : AnswerStorage.getListOfTabsInStorage()) {
+            long fromTime = lastProcessedTime.getOrDefault(tab, 0L);
+            final long[] maxTime = {fromTime};
 
-                if (seriesVisibility.isVisible(seriesName)) {
-                    collection.addSeries(new TimeSeries(seriesName)); //Добавление новой (Только если нужно)
-                    log.info("pointer " + seriesName + " will be showed");
-                    Double lastPointValue = null;
-                    for (DeviceAnswer answer : recentAnswers) {
-                        //log.info("answer tab " + answer.getTabNumber() + " field ");
+            ArrayList<String> unitsInAnswer = ansLoader.getUnitsArrayForTab(tab);
+            if (unitsInAnswer == null) continue;
 
-                        if (ansValidator.isCorrectAnswerValue(answer, tab, unitsInAnswer.size(), answer.getFieldCount())) {
-
-                            AnswerValues currentAnswers = answer.getAnswerReceivedValues();
-                            double currentValues = currentAnswers.getValues()[j];
-                            Millisecond millisecond = new Millisecond(convertToLocalDateViaMilisecond(answer.getAnswerReceivedTime()));
-
-                            collection.getSeries(collection.getSeries().size() - 1).addOrUpdate(millisecond, currentValues);
-                            lastPointValue = currentValues;
-                            //log.info("addOrUpdate " + millisecond + " " + currentValues);
+            GraphDataRepository.getInstance().forEachHistoryPoint(tab, point -> {
+                if (point.getEpochMilli() > fromTime) {
+                    Millisecond ms = point.toJFreeMillisecond();
+                    for (int j = 0; j < point.getFieldCount() && j < unitsInAnswer.size(); j++) {
+                        String seriesName = generateNameForSeries(tab, j, unitsInAnswer);
+                        TimeSeries ts = collection.getSeries(seriesName);
+                        if (ts != null) {
+                            Double val = point.getValue(j);
+                            if (val != null) {
+                                ts.addOrUpdate(ms, val);
+                            }
                         }
                     }
-                    sb.append("[").append(lastPointValue).append("] ").append(seriesName).append("   ");
+                    maxTime[0] = Math.max(maxTime[0], point.getEpochMilli());
                 }
-                pointer++;
+            });
+
+            lastProcessedTime.put(tab, maxTime[0]);
+        }
+    }
+
+    private void applySeriesVisibility() {
+        JFreeChart chart = chartPanel.getChart();
+        if (chart == null) return;
+        XYPlot plot = chart.getXYPlot();
+        if (plot == null) return;
+        XYItemRenderer renderer = plot.getRenderer();
+        if (renderer == null) return;
+
+        for (int i = 0; i < collection.getSeriesCount(); i++) {
+            String seriesName = (String) collection.getSeriesKey(i);
+            boolean visible = seriesVisibility.isVisible(seriesName);
+            renderer.setSeriesVisible(i, visible);
+            renderer.setSeriesVisibleInLegend(i, visible);
+        }
+    }
+
+    private void updateSeriesMaxItemCount(int maxCount) {
+        for (int i = 0; i < collection.getSeriesCount(); i++) {
+            collection.getSeries(i).setMaximumItemCount(maxCount);
+        }
+    }
+
+    private void updateLastReceivedValue() {
+        StringBuilder sb = new StringBuilder();
+        for (Integer tab : AnswerStorage.getListOfTabsInStorage()) {
+            ArrayList<String> unitsInAnswer = ansLoader.getUnitsArrayForTab(tab);
+            if (unitsInAnswer == null) continue;
+            for (int j = 0; j < unitsInAnswer.size(); j++) {
+                String seriesName = generateNameForSeries(tab, j, unitsInAnswer);
+                if (seriesVisibility.isVisible(seriesName)) {
+                    TimeSeries ts = collection.getSeries(seriesName);
+                    if (ts != null && ts.getItemCount() > 0) {
+                        double lastVal = ts.getValue(ts.getItemCount() - 1).doubleValue();
+                        sb.append("[").append(String.format("%.4f", lastVal)).append("] ").append(seriesName).append("   ");
+                    }
+                }
             }
         }
         lastReceivedValue.setText(sb.toString());
-        refreshControlPane();
     }
 
 

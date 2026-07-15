@@ -119,6 +119,10 @@ public class AnswerStorage {
         ConcurrentLinkedQueue<DeviceAnswer> queue = answersByTab.computeIfAbsent(clientId, k -> new ConcurrentLinkedQueue<>());
         queue.add(answer);
 
+        // TODO: заменить старое хранилище на GraphDataRepository
+        // Параллельное хранилище для графика с децимацией (LongGas-подход)
+        GraphDataRepository.getInstance().addData(clientId, answer);
+
 
 
         if( answer.getFieldCount() > 0 &&  answer.getAnswerReceivedValues() != null && answer.getAnswerReceivedValues().getValues() != null && answer.getAnswerReceivedValues().getValues().length >= 1 &&
