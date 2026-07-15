@@ -17,8 +17,61 @@ public class AnswerStorage {
     private static final ConcurrentLinkedQueue<Integer> clientsList = new ConcurrentLinkedQueue<>();
     private static final int MAX_ANSWERS_PER_TAB = 20_000;
 
+    // Command stability tracking
+    private static final int STABLE_THRESHOLD = 3;
+    private static final ConcurrentHashMap<Integer, CommandBuffer> commandBuffers = new ConcurrentHashMap<>();
+
+    private static class CommandBuffer {
+        private final ConcurrentLinkedDeque<String> buffer = new ConcurrentLinkedDeque<>();
+        private volatile String stableCommand = null;
+
+        synchronized void recordCommand(String command) {
+            buffer.addLast(command);
+            while (buffer.size() > STABLE_THRESHOLD) {
+                buffer.removeFirst();
+            }
+            updateStability();
+        }
+
+        private void updateStability() {
+            if (buffer.isEmpty()) {
+                stableCommand = null;
+                return;
+            }
+            if (buffer.size() == 1) {
+                String prev = stableCommand;
+                stableCommand = buffer.peekFirst();
+                if (prev == null) {
+                    log.info("Command STABILIZED (first seen): '{}' for buffer: {}", stableCommand, buffer);
+                }
+                return;
+            }
+            String first = buffer.peekFirst();
+            boolean allSame = true;
+            for (String cmd : buffer) {
+                if (!cmd.equals(first)) {
+                    allSame = false;
+                    break;
+                }
+            }
+            String prev = stableCommand;
+            stableCommand = allSame ? first : null;
+            if (prev == null && stableCommand != null) {
+                log.info("Command STABILIZED: '{}' for buffer: {}", stableCommand, buffer);
+            } else if (prev != null && stableCommand == null) {
+                log.info("Command UNSTABLE (was '{}'), buffer: {}", prev, buffer);
+            } else if (prev != null && !prev.equals(stableCommand)) {
+                log.info("Command SWITCHED: '{}' → '{}', buffer: {}", prev, stableCommand, buffer);
+            }
+        }
+
+        String getStableCommand() {
+            return stableCommand;
+        }
+    }
+
     public static void registerDeviceTabPair(String ident, Integer clientId) {
-        tabDevicePairs.put(clientId, ident); // Добавлено
+        tabDevicePairs.put(clientId, ident);
 
         log.info("Регистрирую связку устройства с вкладкой. Device id: " + ident + " and clientId: " + clientId);
         log.info("После регистрации размер хранилища: " + tabDevicePairs.size());
@@ -64,8 +117,11 @@ public class AnswerStorage {
         return new ArrayList<>(answersByTab.keySet());
     }
 
+    public static Set<Integer> getTabsInStorage(){
+        return answersByTab.keySet();
+    }
+
     public static ConcurrentHashMap<Integer, String> getDeviceTabPair() {
-        //log.info("Вызвано получение коллекции ассоциаций. Размер коллекции " + tabDevicePairs.size());
         return tabDevicePairs;
     }
 
@@ -80,6 +136,16 @@ public class AnswerStorage {
 
     public static String getIdentByTab(Integer tab) {
         return tabDevicePairs.getOrDefault(tab, null);
+    }
+
+    public static boolean isCommandStable(Integer tabId) {
+        CommandBuffer cb = commandBuffers.get(tabId);
+        return cb != null && cb.getStableCommand() != null;
+    }
+
+    public static String getStableCommand(Integer tabId) {
+        CommandBuffer cb = commandBuffers.get(tabId);
+        return cb != null ? cb.getStableCommand() : null;
     }
 
     public static void addAnswer(DeviceAnswer answer) {
@@ -115,21 +181,29 @@ public class AnswerStorage {
             return;
         }
 
+        // Record command and check stability
+        String command = answer.getRequestSendString();
+        if (command != null) {
+            command = command.trim();
+        }
+        if (command != null && !command.isEmpty()) {
+            commandBuffers.computeIfAbsent(clientId, k -> new CommandBuffer())
+                    .recordCommand(command);
+        }
+
         // Добавление ответа
         ConcurrentLinkedQueue<DeviceAnswer> queue = answersByTab.computeIfAbsent(clientId, k -> new ConcurrentLinkedQueue<>());
         queue.add(answer);
 
-        // TODO: заменить старое хранилище на GraphDataRepository
-        // Параллельное хранилище для графика с децимацией (LongGas-подход)
-        GraphDataRepository.getInstance().addData(clientId, answer);
-
+        // Store in GraphDataRepository — always store, regardless of stability
+        if (command != null && !command.isEmpty()) {
+            GraphDataRepository.getInstance().addData(clientId, command, answer);
+        }
 
 
         if( answer.getFieldCount() > 0 &&  answer.getAnswerReceivedValues() != null && answer.getAnswerReceivedValues().getValues() != null && answer.getAnswerReceivedValues().getValues().length >= 1 &&
                 answer.getAnswerReceivedValues().getUnits() != null && answer.getAnswerReceivedValues().getUnits().length >= 1){
-            //log.info("Сообщение от клиента ["+clientId+"] принято к сохранению (всего: "+answersByTab.get(clientId).size()+")" + answer.getAnswerReceivedValues().getValues()[0] + " " +answer.getAnswerReceivedValues().getUnits()[0]);
         }else{
-            //log.info("Сообщение от клиента ["+clientId+"] принято к сохранению (всего: "+answersByTab.get(clientId).size()+")" + " (в ответе только строка)" + answer.getAnswerReceivedString());
         }
 
 
@@ -147,7 +221,7 @@ public class AnswerStorage {
                         log.info("Удален устаревший ответ [" + clientId + "]: " + removed.getRequestSendTime() + " сдвиг окна хранилища установлен на " + queueOffset.get(clientId));
                     } else {
                         log.warn("Ошибка очистки ответов [" + clientId + "]: очередь оказалась пустой");
-                        break; // Выйти из цикла, если очередь неожиданно пуста
+                        break;
                     }
                 }
             }
@@ -162,14 +236,12 @@ public class AnswerStorage {
         int size = tabAnswers.size();
         int queueOffsetInt = queueOffset.getOrDefault(clientId, 0);
 
-        // Корректируем lastPosition относительно смещения
         if (lastPosition < queueOffsetInt) {
             lastPosition = queueOffsetInt;
         }
 
         int realPosition = lastPosition - queueOffsetInt;
 
-        // Если реальная позиция выходит за пределы текущего размера
         if (realPosition >= size || realPosition < 0) {
             return new TabAnswerPart("", queueOffsetInt + size);
         }
@@ -179,8 +251,6 @@ public class AnswerStorage {
             appendAnswer(sb, tabAnswers.get(i), showCommands);
         }
 
-        //log.info("getAnswersQueForTab: clientId=" + clientId + ", lastPositionBeforeCorrection = "+lastPositionBeforeCorrection+", lastPosition=" + lastPosition + ", queueOffsetInt=" + queueOffsetInt);
-        // Возвращаем новую позицию как смещение + текущий размер
         return new TabAnswerPart(sb.toString(), queueOffsetInt + size);
     }
 
@@ -194,7 +264,6 @@ public class AnswerStorage {
             appendAnswer(sb, tabAnswers.get(i), showCommands);
         }
 
-        // Возвращаем новую позицию как смещение + текущий размер
         return new TabAnswerPart(sb.toString(), size);
     }
 
@@ -223,7 +292,6 @@ public class AnswerStorage {
             return;
         }
 
-        // Блок запроса
         if (showCommands) {
             LocalDateTime requestTime = answer.getRequestSendTime();
             String requestString = answer.getRequestSendString();
@@ -241,7 +309,6 @@ public class AnswerStorage {
                     .append("\n");
         }
 
-        // Блок ответа
         LocalDateTime answerTime = answer.getAnswerReceivedTime();
         String answerString = answer.getAnswerReceivedString();
         if (answerTime == null) {
@@ -277,11 +344,11 @@ public class AnswerStorage {
             return snapshot;
         }
 
-        return snapshot.subList(size - range, size); // Берём последние `range` элементов
+        return snapshot.subList(size - range, size);
     }
 
     public static void removeAnswersForTab(int tabNum) {
-        tabDevicePairs.remove(tabNum); // Если используется обратная мапа
+        tabDevicePairs.remove(tabNum);
     }
 
     public static int getQueueOffsetForClient(int clientId) {

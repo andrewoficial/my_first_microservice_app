@@ -108,6 +108,8 @@ public class ComDataCollector implements Runnable{
         this.collection = state;
         this.poolDelay = poolDelay;
         clientsMap.put(clientId, new ClientData(clientId, needLog, true, "", "", null, poolDelay));
+        currentDirection.set(clientId);
+        log.info("Set direction on opening port " + comPort.getSystemPortName() + " for client " + clientId);
 
         serialPortDataListener = new SerialPortDataListener() {
             @Override
@@ -220,6 +222,10 @@ public class ComDataCollector implements Runnable{
         Thread.currentThread().setName("Thread Pool Tab " + comPort.getSystemPortName());
         log.info("Запущен поток опроса " + Thread.currentThread().getName() + " для вкладки порта " + comPort.getSystemPortName());
         millisPrev = System.currentTimeMillis() - (poolDelay * 2); // Инициализация таймера
+
+        comPort.addDataListener(serialPortDataListener);
+        log.info("Listener attached on run for " + comPort.getSystemPortName());
+
         int limit = 1;
         int counter = 0;
         while ((!Thread.currentThread().isInterrupted()) && alive) {

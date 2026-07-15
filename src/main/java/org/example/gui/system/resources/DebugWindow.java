@@ -1,10 +1,14 @@
 package org.example.gui.system.resources;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -12,28 +16,31 @@ import java.util.Set;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
-import com.intellij.uiDesigner.core.Spacer;
 import com.sun.management.OperatingSystemMXBean;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gui.Rendeble;
 
 @Slf4j
-public class DebugWindow extends JDialog implements Rendeble {
+public class DebugWindow extends JFrame implements Rendeble {
+    private static DebugWindow instance;
+
     private int countRender = 0;
     private JPanel mainField;
-    private JTextArea textArea1;
-    private JProgressBar PB_Memory;
-    private JProgressBar PB_Cpu;
-    private JLabel LB_Cpu;
-    private JLabel LB_Memory;
-    private JTextArea TA_sysInfo;
-    private JLabel MyLable;
-    private JTextField textField1;
+    private JPanel mainContainer;
+    private JLabel memoryLabel;
+    private JProgressBar memoryProgress;
+    private JLabel cpuLabel;
+    private JProgressBar cpuProgress;
+    private JScrollPane scrollPaneForTable;
+    private JPanel containerForTable;
+    private JTable threadsInfoTable;
 
+    private JTextArea systemInfoTextArea;
+
+    private DefaultTableModel threadTableModel;
+    private String systemInfoSnapshot = "";
     private Runtime runtime = Runtime.getRuntime();
-
     private NumberFormat format = NumberFormat.getInstance();
-
     private long timerWinUpdate = System.currentTimeMillis();
     private DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private LocalDateTime now = LocalDateTime.now();
@@ -47,26 +54,108 @@ public class DebugWindow extends JDialog implements Rendeble {
     private Set<Thread> threadSet;
 
     public DebugWindow() {
-
-        setModal(false);
+        super();
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        setContentPane(mainField);
+        add(mainField);
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                instance = null;
+                log.info("Debug window closed, instance cleared");
+            }
+        });
+
+        threadTableModel = new DefaultTableModel(new String[]{"Thread", "State"}, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        threadsInfoTable.setModel(threadTableModel);
+        threadsInfoTable.setBackground(Color.DARK_GRAY);
+        threadsInfoTable.setForeground(Color.WHITE);
+        threadsInfoTable.setGridColor(Color.DARK_GRAY);
+        threadsInfoTable.getTableHeader().setBackground(Color.DARK_GRAY);
+        threadsInfoTable.getTableHeader().setForeground(Color.WHITE);
+
+        String userDir = System.getProperty("user.dir");
+        String jarPath = "N/A";
+        try {
+            Object loc = this.getClass().getProtectionDomain().getCodeSource().getLocation();
+            if (loc != null) jarPath = loc.toString();
+        } catch (Exception ignored) {
+        }
+
+        String logsSize = "N/A";
+        File logsDir = new File(userDir, "logs");
+        if (logsDir.isDirectory()) {
+            logsSize = formatSize(dirSize(logsDir));
+        }
+
+        File appDrive = new File(userDir);
+        long freeBytes = appDrive.getFreeSpace();
+
+        String screenInfo = "N/A";
+        try {
+            GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+            GraphicsDevice gd = ge.getDefaultScreenDevice();
+            int w = gd.getDisplayMode().getWidth();
+            int h = gd.getDisplayMode().getHeight();
+            double scaleX = gd.getDefaultConfiguration().getDefaultTransform().getScaleX();
+            int dpi = (int) Math.round(96 * scaleX);
+            int scalePercent = (int) Math.round(scaleX * 100);
+            screenInfo = w + "x" + h + "  DPI=" + dpi + "  Scale=" + scalePercent + "%";
+        } catch (Exception ignored) {
+        }
+
+        systemInfoTextArea.setText("");
+        systemInfoTextArea.append("User:        " + System.getProperty("user.name"));
+        systemInfoTextArea.append("\nOS:          " + System.getProperty("os.name") + " " + System.getProperty("os.arch"));
+        systemInfoTextArea.append("\nJava:        " + System.getProperty("java.version"));
+        systemInfoTextArea.append("\nJRE:         " + System.getProperty("java.home"));
+        systemInfoTextArea.append("\nProcessors:  " + Runtime.getRuntime().availableProcessors());
+        systemInfoTextArea.append("\nScreen:      " + screenInfo);
+        systemInfoTextArea.append("\nUser dir:    " + userDir);
+        systemInfoTextArea.append("\nJAR:         " + jarPath);
+        systemInfoTextArea.append("\nFree disk:   " + formatSize(freeBytes));
+        systemInfoTextArea.append("\nLogs size:   " + logsSize);
+
+        systemInfoSnapshot = systemInfoTextArea.getText();
+
         log.info("Открыто окно с информацией о системе");
-        log.info(Thread.currentThread().getName());
-        Set<Thread> threadSet = null;
-        TA_sysInfo.append(" OS: ");
-        TA_sysInfo.append(System.getProperty("os.name"));
-        TA_sysInfo.append(" Architecture: ");
-        TA_sysInfo.append(System.getProperty("os.arch"));
-        TA_sysInfo.append("\r\n");
-        TA_sysInfo.append(" Java version: ");
-        TA_sysInfo.append(System.getProperty("java.version"));
-        TA_sysInfo.append("\r\n");
-        TA_sysInfo.append(" Runtime path (method one): ");
-        TA_sysInfo.append(String.valueOf(this.getClass().getProtectionDomain().getCodeSource().getLocation()));
-        TA_sysInfo.append("\r\n");
-        TA_sysInfo.append(" Runtime path (method two): ");
-        TA_sysInfo.append(new File(".").getAbsolutePath());
+    }
+
+    public static DebugWindow getInstance() {
+        if (instance == null || !instance.isDisplayable()) {
+            instance = new DebugWindow();
+        }
+        return instance;
+    }
+
+    private static long dirSize(File dir) {
+        long size = 0;
+        File[] files = dir.listFiles();
+        if (files != null) {
+            for (File f : files) {
+                if (f.isFile()) {
+                    size += f.length();
+                } else if (f.isDirectory()) {
+                    size += dirSize(f);
+                }
+            }
+        }
+        return size;
+    }
+
+    private static String formatSize(long bytes) {
+        if (bytes < 1024) return bytes + " B";
+        double kb = bytes / 1024.0;
+        if (kb < 1024) return String.format("%.1f KB", kb);
+        double mb = kb / 1024.0;
+        if (mb < 1024) return String.format("%.1f MB", mb);
+        double gb = mb / 1024.0;
+        return String.format("%.2f GB", gb);
     }
 
 
@@ -89,38 +178,49 @@ public class DebugWindow extends JDialog implements Rendeble {
     public void renderData() {
         updateData();
         StringBuilder sb = new StringBuilder();
-        sb.append("\n free memory: " + format.format(freeMemory / 1024) + "\n");
-        log.info("free memory: " + format.format(freeMemory / 1024));
 
-        sb.append("allocated memory: " + format.format(allocatedMemory / 1024) + "\n");
-        log.info("allocated memory: " + format.format(allocatedMemory / 1024));
+        long usedMemory = allocatedMemory - freeMemory;
+        sb.append("RAM Used:     ").append(format.format(usedMemory / 1024)).append(" KB\n");
+        sb.append("RAM Allocated:").append(format.format(allocatedMemory / 1024)).append(" KB\n");
+        sb.append("RAM Max:      ").append(format.format(maxMemory / 1024)).append(" KB\n");
+        sb.append("RAM Free:     ").append(format.format(freeMemory / 1024)).append(" KB\n");
 
-        sb.append("max memory: " + format.format(maxMemory / 1024) + "\n");
-        log.info("max memory: " + format.format(maxMemory / 1024));
+        sb.append("CPU: ").append(String.format("%.1f", startSystemAverage)).append("%\n");
 
-        sb.append("total free memory: " + format.format((freeMemory + (maxMemory - allocatedMemory)) / 1024) + "\n");
-        log.info("total free memory: " + format.format((freeMemory + (maxMemory - allocatedMemory)) / 1024));
+        long uptimeMs = ManagementFactory.getRuntimeMXBean().getUptime();
+        long sec = uptimeMs / 1000;
+        sb.append("Uptime: ").append(sec / 3600).append("h ")
+                .append((sec % 3600) / 60).append("m ")
+                .append(sec % 60).append("s\n");
 
-        PB_Memory.setMaximum(Math.toIntExact(maxMemory / 1024L));
-        PB_Memory.setMinimum(0);
-        PB_Memory.setValue(Math.toIntExact(allocatedMemory / 1024L));
+        ThreadMXBean tBean = ManagementFactory.getThreadMXBean();
+        sb.append("Threads: ").append(tBean.getThreadCount())
+                .append(" (peak: ").append(tBean.getPeakThreadCount())
+                .append(", daemon: ").append(tBean.getDaemonThreadCount()).append(")\n");
 
-        PB_Memory.setMinimum(0);
-        PB_Memory.setMinimum(100);
-        PB_Cpu.setValue((int) startSystemAverage);
+        sb.append("GC pools: ").append(ManagementFactory.getGarbageCollectorMXBeans().size()).append("\n");
 
-        //System.out.println(startSystemAverage);
+        systemInfoTextArea.setText(systemInfoSnapshot + "\n" + sb.toString());
+
+        memoryProgress.setMaximum(Math.toIntExact(maxMemory / 1024L));
+        memoryProgress.setMinimum(0);
+        memoryProgress.setValue(Math.toIntExact(allocatedMemory / 1024L));
+        memoryLabel.setText(String.format("Память: %d / %d KB", allocatedMemory / 1024, maxMemory / 1024));
+
+        cpuProgress.setMinimum(0);
+        cpuProgress.setMaximum(100);
+        cpuProgress.setValue((int) Math.max(0, Math.min(100, startSystemAverage)));
+        cpuLabel.setText(String.format("Процессор: %.1f%%", startSystemAverage));
+
+        threadTableModel.setRowCount(0);
         for (Thread thread : threadSet) {
-            sb.append("\t");
-            sb.append(thread.getName());
-            sb.append("\n");
+            threadTableModel.addRow(new Object[]{thread.getName(), thread.getState().name()});
         }
-        textArea1.setText(sb.toString());
+
         countRender++;
         if (countRender > 20) {
-            System.gc(); //Runtime.getRuntime().gc();
+            System.gc();
         }
-
     }
 
     @Override
@@ -144,31 +244,31 @@ public class DebugWindow extends JDialog implements Rendeble {
      */
     private void $$$setupUI$$$() {
         mainField = new JPanel();
-        mainField.setLayout(new GridLayoutManager(3, 1, new Insets(0, 0, 0, 0), -1, -1));
+        mainField.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
         mainField.setOpaque(true);
         mainField.setPreferredSize(new Dimension(450, 450));
-        final JPanel panel1 = new JPanel();
-        panel1.setLayout(new GridLayoutManager(5, 1, new Insets(0, 0, 0, 0), -1, -1));
-        mainField.add(panel1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(350, 350), new Dimension(350, 350), new Dimension(350, 350), 0, false));
-        PB_Memory = new JProgressBar();
-        panel1.add(PB_Memory, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JScrollPane scrollPane1 = new JScrollPane();
-        panel1.add(scrollPane1, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
-        textArea1 = new JTextArea();
-        textArea1.setEditable(false);
-        scrollPane1.setViewportView(textArea1);
-        PB_Cpu = new JProgressBar();
-        panel1.add(PB_Cpu, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        LB_Cpu = new JLabel();
-        LB_Cpu.setText("Процессор");
-        panel1.add(LB_Cpu, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        LB_Memory = new JLabel();
-        LB_Memory.setText("Память");
-        panel1.add(LB_Memory, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final Spacer spacer1 = new Spacer();
-        mainField.add(spacer1, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
-        TA_sysInfo = new JTextArea();
-        mainField.add(TA_sysInfo, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(150, 50), null, 0, false));
+        mainContainer = new JPanel();
+        mainContainer.setLayout(new GridLayoutManager(5, 1, new Insets(0, 0, 0, 0), -1, -1));
+        mainField.add(mainContainer, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, new Dimension(450, 450), new Dimension(450, 450), new Dimension(500, -1), 0, false));
+        memoryProgress = new JProgressBar();
+        mainContainer.add(memoryProgress, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        cpuProgress = new JProgressBar();
+        mainContainer.add(cpuProgress, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        cpuLabel = new JLabel();
+        cpuLabel.setText("Процессор");
+        mainContainer.add(cpuLabel, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        memoryLabel = new JLabel();
+        memoryLabel.setText("Память");
+        mainContainer.add(memoryLabel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        scrollPaneForTable = new JScrollPane();
+        mainContainer.add(scrollPaneForTable, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        containerForTable = new JPanel();
+        containerForTable.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
+        scrollPaneForTable.setViewportView(containerForTable);
+        systemInfoTextArea = new JTextArea();
+        containerForTable.add(systemInfoTextArea, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        threadsInfoTable = new JTable();
+        containerForTable.add(threadsInfoTable, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(150, 50), null, 0, false));
     }
 
     /**

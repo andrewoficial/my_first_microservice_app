@@ -1,6 +1,7 @@
 package org.example.services;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 final class GraphHistory {
@@ -41,13 +42,19 @@ final class GraphHistory {
         return totalSampleCount;
     }
 
-    synchronized void forEachPoint(Consumer<GraphPoint> consumer) {
-        for (GraphPoint[] chunk : merged) {
+    void forEachPoint(Consumer<GraphPoint> consumer) {
+        List<GraphPoint[]> mergedSnapshot;
+        List<GraphPoint> tailSnapshot;
+        synchronized (this) {
+            mergedSnapshot = List.copyOf(merged);
+            tailSnapshot = List.copyOf(tail);
+        }
+        for (GraphPoint[] chunk : mergedSnapshot) {
             for (GraphPoint point : chunk) {
                 consumer.accept(point);
             }
         }
-        for (GraphPoint point : tail) {
+        for (GraphPoint point : tailSnapshot) {
             consumer.accept(point);
         }
     }

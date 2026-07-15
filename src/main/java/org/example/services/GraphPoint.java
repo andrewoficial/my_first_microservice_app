@@ -9,6 +9,7 @@ public final class GraphPoint {
 
     private final long epochMilli;
     private final double[] values;
+    private Millisecond cachedMillisecond;
 
     public GraphPoint(long epochMilli, double[] values) {
         this.epochMilli = epochMilli;
@@ -53,6 +54,9 @@ public final class GraphPoint {
     }
 
     public Millisecond toJFreeMillisecond() {
-        return new Millisecond(new Date(epochMilli));
+        if (cachedMillisecond == null) {
+            cachedMillisecond = new Millisecond(new Date(epochMilli));
+        }
+        return cachedMillisecond;
     }
 }

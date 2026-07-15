@@ -103,14 +103,17 @@ public class JmenuFile {
             @Override
             public void actionPerformed(ActionEvent arg0) {
                 System.out.println("Debug Window");
-                DebugWindow logWindows = new DebugWindow();
-                logWindows.setName("Debug Window");
-                logWindows.setTitle("Debug Window");
-                logWindows.pack();
-                logWindows.setModal(false);
-                logWindows.setVisible(true);
-                logWindows.startMonitor();
-                thPool.submit(new RenderThread(logWindows));
+                DebugWindow logWindows = DebugWindow.getInstance();
+                if (!logWindows.isVisible()) {
+                    logWindows.setName("Debug Window");
+                    logWindows.setTitle("Debug Window");
+                    logWindows.pack();
+                    logWindows.setVisible(true);
+                    logWindows.startMonitor();
+                    thPool.submit(new RenderThread(logWindows));
+                } else {
+                    logWindows.toFront();
+                }
 
 
             }
