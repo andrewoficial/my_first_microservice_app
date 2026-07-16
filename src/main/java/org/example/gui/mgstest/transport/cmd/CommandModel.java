@@ -1,6 +1,6 @@
 package org.example.gui.mgstest.transport.cmd;
 
-import org.example.services.comPort.StringEndianList;
+import org.example.services.transport.serial.StringEndianList;
 
 public interface CommandModel {
     String getCommandName();

@@ -6,6 +6,7 @@ import org.example.device.DeviceCommandRegistry;
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
+import org.example.services.SpringContextHolder;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
@@ -385,8 +386,9 @@ public class Igm10AsciiCommandRegistry extends DeviceCommandRegistry {
                 // Применяем десятичный порядок для получения числа в формате 123.45
                 if (success) {
                     //stat /= 1000.0; // Сдвигаем запятую на два знака влево
-                    if(AnswerStorage.getTabByIdent(String.valueOf(serialNumber)) != null){
-                        answerValues.setDirection(AnswerStorage.getTabByIdent(String.valueOf(serialNumber)));
+                    AnswerStorage as = SpringContextHolder.getBean(AnswerStorage.class);
+                    if(as != null && as.getTabByIdent(String.valueOf(serialNumber)) != null){
+                        answerValues.setDirection(as.getTabByIdent(String.valueOf(serialNumber)));
                     }
 
 

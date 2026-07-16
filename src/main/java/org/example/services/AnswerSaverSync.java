@@ -17,6 +17,7 @@ import java.util.concurrent.ConcurrentMap;
 public class AnswerSaverSync {
     private final ConcurrentMap<Integer, DeviceAnswer> lastAnswers = new ConcurrentHashMap<>();
     private final MyProperties properties;
+    private final AnswerStorage answerStorage;
     //private final long MAX_ALLOWED_DIFFERENCE = properties.getSyncSavingAnswerTimerLimitMS(); // Максимальный допустимый разброс
     private long MAX_ALLOWED_DIFFERENCE = 1200; // Максимальный допустимый разброс
     private long SYNC_WINDOW = 950000; // Длительность окна синхронизации
@@ -26,8 +27,9 @@ public class AnswerSaverSync {
     private final Set<Integer> ignoredThreads = ConcurrentHashMap.newKeySet(); // Потоки, которые временно игнорируются
 
     @Autowired
-    public AnswerSaverSync(MyProperties properties) {
+    public AnswerSaverSync(MyProperties properties, AnswerStorage answerStorage) {
         this.properties = properties;
+        this.answerStorage = answerStorage;
     }
     public synchronized boolean shouldSaveAnswer(DeviceAnswer answer, int threadId) {
         //log.info("Начинаю принятие решения для threadId: " + threadId);
@@ -71,7 +73,7 @@ public class AnswerSaverSync {
 
     public synchronized void addAnswer(DeviceAnswer answer, int threadId) {
         if (shouldSaveAnswer(answer, threadId)) {
-            AnswerStorage.addAnswer(answer); // Статическое хранилище
+            answerStorage.addAnswer(answer); // Хранилище ответов
             //log.info("Ответ сохранен для threadId: " + threadId);
         } else {
             //log.info("Ответ от threadId " + threadId + " отклонен.");

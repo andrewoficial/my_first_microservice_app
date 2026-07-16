@@ -12,7 +12,7 @@ import org.example.device.lora.LoraMeshMessage;
 import org.example.device.lora.rui420.Rui420Message;
 import org.example.device.lora.rui420.igm.IgmTenMessage;
 import org.example.services.AnswerValues;
-import org.example.services.comPort.*;
+import org.example.services.transport.serial.*;
 import org.example.utilites.MyUtilities;
 
 @Slf4j

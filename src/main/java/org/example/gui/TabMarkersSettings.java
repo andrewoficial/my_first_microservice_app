@@ -19,6 +19,7 @@ import org.example.utilites.properties.MyProperties;
 @Slf4j
 public class TabMarkersSettings extends JDialog {
     private final AnyPoolService anyPoolService;
+    private final AnswerStorage answerStorage;
     private JTextField TF_marker;
     private JComboBox CB_tabsList;
     private JButton BT_addPair;
@@ -28,7 +29,7 @@ public class TabMarkersSettings extends JDialog {
     private MyProperties properties;
     private StringBuilder sb = new StringBuilder();
 
-    public TabMarkersSettings(MyProperties prop, AnyPoolService anyPoolService) {
+    public TabMarkersSettings(MyProperties prop, AnyPoolService anyPoolService, AnswerStorage answerStorage) {
         if (anyPoolService == null) {
             log.warn("В конструктор TabMarkersSettings передан null anyPoolService");
         }
@@ -36,6 +37,7 @@ public class TabMarkersSettings extends JDialog {
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setContentPane(mainPanel);
         this.anyPoolService = anyPoolService;
+        this.answerStorage = answerStorage;
 
         updateList();
         updateTabList();
@@ -46,22 +48,22 @@ public class TabMarkersSettings extends JDialog {
                 log.info("Нажата кнопка добавления пары 'адрес' - 'вкладка'");
                 String ident = TF_marker.getText();
                 ArrayList<Integer> clientsIdArray = new ArrayList<>();
-                ConcurrentLinkedQueue<Integer> clientsId = AnswerStorage.getClientsList();
+                ConcurrentLinkedQueue<Integer> clientsId = answerStorage.getClientsList();
                 clientsIdArray.addAll(clientsId);
                 log.info("ident " + ident + " clientId " + clientsIdArray.get(CB_tabsList.getSelectedIndex()));
                 if (ident.length() > 1)
-                    AnswerStorage.registerDeviceTabPair(ident, clientsIdArray.get(CB_tabsList.getSelectedIndex()));
+                    answerStorage.registerDeviceTabPair(ident, clientsIdArray.get(CB_tabsList.getSelectedIndex()));
 
                 updateList();
                 updateTabList();
-                prop.setIdentAndTabBounding(AnswerStorage.getDeviceTabPair());
+                prop.setIdentAndTabBounding(answerStorage.getDeviceTabPair());
             }
         });
     }
 
     private void updateTabList() {
         CB_tabsList.removeAllItems();
-        ConcurrentLinkedQueue<Integer> clientsId = AnswerStorage.getClientsList();
+        ConcurrentLinkedQueue<Integer> clientsId = answerStorage.getClientsList();
         int count = 0;
         for (Integer id : clientsId) {
             CB_tabsList.addItem("dev" + (count + 1) + " (id:" + id + ")");
@@ -72,7 +74,7 @@ public class TabMarkersSettings extends JDialog {
     private void updateList() {
         log.info("Вызвано обновление списка ассоциаций");
         sb.setLength(0);
-        ConcurrentHashMap<Integer, String> pairs = AnswerStorage.getDeviceTabPair();
+        ConcurrentHashMap<Integer, String> pairs = answerStorage.getDeviceTabPair();
         log.info("Количество ассоциаций в хранилище " + pairs.size());
         int probablyTabId = 1;
         for (Map.Entry<Integer, String> stringIntegerEntry : pairs.entrySet()) {

@@ -1,31 +1,32 @@
 package org.example.gui.mainWindowUtilites;
 
-import org.example.gui.MainLeftPanelState;
+import org.example.services.TabService;
 import org.example.gui.MainLeftPanelStateCollection;
-import org.example.services.AnswerStorage;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class TabManager {
     private final JTabbedPane tabbedPane;
     private final MainLeftPanelStateCollection stateCollection;
+    private final TabService tabService;
     private final Map<Integer, JTextPane> logPanels;
     private final Map<Integer, Integer> positions;
     private final AtomicInteger tabCounter = new AtomicInteger();
     private final JButton button_RemoveDev;
 
-    public TabManager(JTabbedPane pane, 
+    public TabManager(JTabbedPane pane,
                      MainLeftPanelStateCollection stateCollection,
+                     TabService tabService,
                      Map<Integer, JTextPane> logPanels,
                      Map<Integer, Integer> positions,
                       JButton button_RemoveDev) {
         this.tabbedPane = pane;
         this.stateCollection = stateCollection;
+        this.tabService = tabService;
         this.logPanels = logPanels;
         this.positions = positions;
         this.button_RemoveDev = button_RemoveDev;
@@ -33,23 +34,12 @@ public class TabManager {
 
     public void addTab() {
         int newTabIndex = tabbedPane.getTabCount();
-        int newClientId = stateCollection.getClientIdByTabNumber(newTabIndex);
-        if (newClientId == -1) {
-            newClientId = stateCollection.getNewRandomId();
-            stateCollection.addPairClientIdTabNumber(newClientId, newTabIndex);
-            MainLeftPanelState state = new MainLeftPanelState();
-            state.setTabNumber(newTabIndex);
-            state.setClientId(newClientId);
-            stateCollection.addOrUpdateIdState(newClientId, state);
-        }
-        AnswerStorage.addInTabsList(newClientId);
-        // Создание компонентов вкладки
-        JTextPane logPanel = createLogPanel(newClientId);
+        TabService.TabInfo info = tabService.addTab(newTabIndex);
+
+        JTextPane logPanel = createLogPanel(info.getClientId());
         JPanel tabPanel = createTabPanel(logPanel);
+        initializeMaps(info.getClientId(), logPanel);
 
-        initializeMaps(newClientId, logPanel);
-
-        // Добавление вкладки
         tabbedPane.addTab("dev" + (newTabIndex + 1), tabPanel);
         updateUIAfterAdd(newTabIndex);
     }
@@ -58,50 +48,28 @@ public class TabManager {
         int tabToRemove = tabbedPane.getSelectedIndex();
         if (tabToRemove < 0) return;
 
-        Integer clientId = stateCollection.getClientIdByTabNumber(tabToRemove);
+        Integer clientId = tabService.getClientIdByTab(tabToRemove);
         if (clientId == null) return;
 
-        // Удаление данных
-        removeClientData(clientId);
+        tabService.removeTab(tabToRemove);
         tabbedPane.removeTabAt(tabToRemove);
-        AnswerStorage.removeInTabsList(clientId);
-        // Перестройка маппингов
-        rebuildMappings(tabToRemove);
-        updateUIAfterRemove();
-    }
 
-    // вспомогательные для removeTab
-    private void removeClientData(int clientId) {
-        stateCollection.removeEntryByClientId(clientId);
+        // Обновление GUI-маппингов
         positions.remove(clientId);
         logPanels.remove(clientId);
-        AnswerStorage.removeAnswersForTab(clientId);
-    }
 
-
-    private void rebuildMappings(int removedTab) {
-        Map<Integer, Integer> clientIdToOldTab = new LinkedHashMap<>();
-        Map<Integer, JTextPane> updatedLogPanelsMap = new HashMap<>();
-
-        for (int i = 0; i < tabbedPane.getTabCount() + 1; i++) {
-            Integer clientId = stateCollection.getClientIdByTabNumber(i);
-            if (clientId != null && clientId != -1) {
-                clientIdToOldTab.put(clientId, i);
-            }
-        }
-
-        clientIdToOldTab.forEach((clientId, oldTab) -> {
-            if (oldTab < removedTab) {
-                stateCollection.addOrUpdateClientIdTabNumber(clientId, oldTab);
-                updatedLogPanelsMap.put(clientId, logPanels.get(clientId));
-            } else if (oldTab > removedTab) {
-                stateCollection.addOrUpdateClientIdTabNumber(clientId, oldTab - 1);
-                updatedLogPanelsMap.put(clientId, logPanels.get(clientId));
+        Map<Integer, Integer> newMappings = tabService.rebuildTabMappings(tabToRemove, tabbedPane.getTabCount());
+        Map<Integer, JTextPane> updatedLogPanels = new HashMap<>();
+        newMappings.forEach((cid, newTab) -> {
+            JTextPane pane = logPanels.get(cid);
+            if (pane != null) {
+                updatedLogPanels.put(cid, pane);
             }
         });
-
         logPanels.clear();
-        logPanels.putAll(updatedLogPanelsMap);
+        logPanels.putAll(updatedLogPanels);
+
+        updateUIAfterRemove();
     }
 
     private void updateUIAfterRemove() {
@@ -115,7 +83,6 @@ public class TabManager {
             tabbedPane.setTitleAt(i, "dev" + (i + 1));
         }
     }
-    // вспомогательные для removeTab конец
 
     private void updateUIAfterAdd(int tabIndex) {
         tabCounter.set(tabbedPane.getTabCount());

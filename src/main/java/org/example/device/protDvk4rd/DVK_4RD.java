@@ -2,6 +2,7 @@ package org.example.device.protDvk4rd;
 
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
+import org.example.services.transport.serial.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,7 +10,6 @@ import org.example.device.DeviceCommandListClass;
 import org.example.device.SomeDevice;
 import org.example.device.connectParameters.ComConnectParameters;
 import org.example.services.AnswerValues;
-import org.example.services.comPort.*;
 
 
 public class DVK_4RD  implements SomeDevice {

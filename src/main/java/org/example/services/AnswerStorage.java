@@ -2,26 +2,34 @@ package org.example.services;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.utilites.MyUtilities;
+import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
 
 @Slf4j
+@Service
 public class AnswerStorage {
-    public static final ConcurrentHashMap<Integer, Integer> queueOffset = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Integer, Integer> queueOffset = new ConcurrentHashMap<>();
 
-    private static final ThreadLocal<StringBuilder> sbAnswer = ThreadLocal.withInitial(StringBuilder::new);
-    private static final ConcurrentHashMap<Integer, ConcurrentLinkedQueue<DeviceAnswer>> answersByTab = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<String, Integer> deviceTabPairs = new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<Integer, String> tabDevicePairs = new ConcurrentHashMap<>();
-    private static final ConcurrentLinkedQueue<Integer> clientsList = new ConcurrentLinkedQueue<>();
-    private static final int MAX_ANSWERS_PER_TAB = 20_000;
+    private final ThreadLocal<StringBuilder> sbAnswer = ThreadLocal.withInitial(StringBuilder::new);
+    private final ConcurrentHashMap<Integer, ConcurrentLinkedQueue<DeviceAnswer>> answersByTab = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Integer> deviceTabPairs = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Integer, String> tabDevicePairs = new ConcurrentHashMap<>();
+    private final ConcurrentLinkedQueue<Integer> clientsList = new ConcurrentLinkedQueue<>();
+    private final int MAX_ANSWERS_PER_TAB = 20_000;
+
+    private final GraphDataRepository graphDataRepository;
 
     // Command stability tracking
-    private static final int STABLE_THRESHOLD = 3;
-    private static final ConcurrentHashMap<Integer, CommandBuffer> commandBuffers = new ConcurrentHashMap<>();
+    private final int STABLE_THRESHOLD = 3;
+    private final ConcurrentHashMap<Integer, CommandBuffer> commandBuffers = new ConcurrentHashMap<>();
 
-    private static class CommandBuffer {
+    public AnswerStorage(GraphDataRepository graphDataRepository) {
+        this.graphDataRepository = graphDataRepository;
+    }
+
+    private class CommandBuffer {
         private final ConcurrentLinkedDeque<String> buffer = new ConcurrentLinkedDeque<>();
         private volatile String stableCommand = null;
 
@@ -70,18 +78,22 @@ public class AnswerStorage {
         }
     }
 
-    public static void registerDeviceTabPair(String ident, Integer clientId) {
+    public int getQueueOffset(int clientId) {
+        return queueOffset.getOrDefault(clientId, 0);
+    }
+
+    public void registerDeviceTabPair(String ident, Integer clientId) {
         tabDevicePairs.put(clientId, ident);
 
         log.info("Регистрирую связку устройства с вкладкой. Device id: " + ident + " and clientId: " + clientId);
         log.info("После регистрации размер хранилища: " + tabDevicePairs.size());
     }
 
-    public static ConcurrentLinkedQueue<Integer> getClientsList(){
+    public ConcurrentLinkedQueue<Integer> getClientsList(){
         return clientsList;
     }
 
-    public static void addInTabsList(Integer clientId){
+    public void addInTabsList(Integer clientId){
         if(clientId == null){
             log.warn("Попытка добавить клиента с null id ");
             return;
@@ -89,7 +101,7 @@ public class AnswerStorage {
         clientsList.add(clientId);
     }
 
-    public static void removeInTabsList(Integer clientId){
+    public void removeInTabsList(Integer clientId){
         if(clientId == null){
             log.warn("Попытка удалить клиента с null id ");
             return;
@@ -101,49 +113,49 @@ public class AnswerStorage {
         clientsList.remove(clientId);
     }
 
-    public static boolean isInTabsList(Integer clientId) {
+    public boolean isInTabsList(Integer clientId) {
         if(clientId == null){
             log.warn("Попытка удалить клиента с null id ");
             return false;
         }
         return clientsList.contains(clientId);
     }
-    public static int getAnswersQueueForClient(int clientId){
+    public int getAnswersQueueForClient(int clientId){
         ConcurrentLinkedQueue<DeviceAnswer> queue = answersByTab.get(clientId);
         return queue != null ? queue.size() : 0;
     }
 
-    public static List<Integer> getListOfTabsInStorage(){
+    public List<Integer> getListOfTabsInStorage(){
         return new ArrayList<>(answersByTab.keySet());
     }
 
-    public static Set<Integer> getTabsInStorage(){
+    public Set<Integer> getTabsInStorage(){
         return answersByTab.keySet();
     }
 
-    public static ConcurrentHashMap<Integer, String> getDeviceTabPair() {
+    public ConcurrentHashMap<Integer, String> getDeviceTabPair() {
         return tabDevicePairs;
     }
 
-    public static Integer getTabByIdent(String ident) {
+    public Integer getTabByIdent(String ident) {
         return deviceTabPairs.getOrDefault(ident, 0);
     }
 
-    public static String getIdentByTab(Integer tab) {
+    public String getIdentByTab(Integer tab) {
         return tabDevicePairs.getOrDefault(tab, null);
     }
 
-    public static boolean isCommandStable(Integer tabId) {
+    public boolean isCommandStable(Integer tabId) {
         CommandBuffer cb = commandBuffers.get(tabId);
         return cb != null && cb.getStableCommand() != null;
     }
 
-    public static String getStableCommand(Integer tabId) {
+    public String getStableCommand(Integer tabId) {
         CommandBuffer cb = commandBuffers.get(tabId);
         return cb != null ? cb.getStableCommand() : null;
     }
 
-    public static void addAnswer(DeviceAnswer answer) {
+    public void addAnswer(DeviceAnswer answer) {
         // Блок базовых проверок
         if (answer == null) {
             log.error("Отклонено сохранение ответа [ объект ответа null ]");
@@ -192,7 +204,7 @@ public class AnswerStorage {
 
         // Store in GraphDataRepository — always store, regardless of stability
         if (command != null && !command.isEmpty()) {
-            GraphDataRepository.getInstance().addData(clientId, command, answer);
+            graphDataRepository.addData(clientId, command, answer);
         }
 
         // Очистка старых записей — используем уже полученный queue вместо повторных get()
@@ -213,7 +225,7 @@ public class AnswerStorage {
 
 
     }
-    public static TabAnswerPart getAnswersQueForTab(Integer lastPosition, Integer clientId, boolean showCommands) {
+    public TabAnswerPart getAnswersQueForTab(Integer lastPosition, Integer clientId, boolean showCommands) {
         ConcurrentLinkedQueue<DeviceAnswer> queue = answersByTab.getOrDefault(clientId, new ConcurrentLinkedQueue<>());
         int queueOffsetInt = queueOffset.getOrDefault(clientId, 0);
 
@@ -242,7 +254,7 @@ public class AnswerStorage {
         return new TabAnswerPart(sb.toString(), queueOffsetInt + queue.size());
     }
 
-    public static TabAnswerPart getAnswersQueForWeb(Integer lastPosition, Integer clientId, boolean showCommands) {
+    public TabAnswerPart getAnswersQueForWeb(Integer lastPosition, Integer clientId, boolean showCommands) {
         ConcurrentLinkedQueue<DeviceAnswer> queue = answersByTab.getOrDefault(clientId, new ConcurrentLinkedQueue<>());
 
         StringBuilder sb = new StringBuilder();
@@ -258,7 +270,7 @@ public class AnswerStorage {
     }
 
 
-    public static String getAnswersForTab(Integer tabNumber, boolean showCommands) {
+    public String getAnswersForTab(Integer tabNumber, boolean showCommands) {
         StringBuilder sb = sbAnswer.get();
         sb.setLength(0);
 
@@ -271,7 +283,7 @@ public class AnswerStorage {
         return sb.toString();
     }
 
-    private static void appendAnswer(StringBuilder sb, DeviceAnswer answer, boolean showCommands) {
+    private void appendAnswer(StringBuilder sb, DeviceAnswer answer, boolean showCommands) {
         if (answer == null) {
             log.warn("Передан NULL answer в склейку ответов для вывода в GUI");
             return;
@@ -310,7 +322,7 @@ public class AnswerStorage {
                 .append("\n");
     }
 
-    public static List<DeviceAnswer> getAnswersForGraph(Integer tabNumber) {
+    public List<DeviceAnswer> getAnswersForGraph(Integer tabNumber) {
         ConcurrentLinkedQueue<DeviceAnswer> answers = answersByTab.getOrDefault(tabNumber, null);
         if(answers != null) {
             return List.copyOf(answers);
@@ -320,7 +332,7 @@ public class AnswerStorage {
         }
     }
 
-    public static List<DeviceAnswer> getRecentAnswersForGraph(Integer tabNumber, int range) {
+    public List<DeviceAnswer> getRecentAnswersForGraph(Integer tabNumber, int range) {
 
         List<DeviceAnswer> snapshot = List.copyOf(answersByTab.getOrDefault(tabNumber, new ConcurrentLinkedQueue<>()));
 
@@ -332,7 +344,7 @@ public class AnswerStorage {
         return snapshot.subList(size - range, size);
     }
 
-    public static DeviceAnswer getLastAnswerForTab(int tabNumber) {
+    public DeviceAnswer getLastAnswerForTab(int tabNumber) {
         ConcurrentLinkedQueue<DeviceAnswer> queue = answersByTab.getOrDefault(tabNumber, null);
         if (queue == null || queue.isEmpty()) {
             return null;
@@ -345,11 +357,11 @@ public class AnswerStorage {
         return last;
     }
 
-    public static void removeAnswersForTab(int tabNum) {
+    public void removeAnswersForTab(int tabNum) {
         tabDevicePairs.remove(tabNum);
     }
 
-    public static int getQueueOffsetForClient(int clientId) {
+    public int getQueueOffsetForClient(int clientId) {
         if(queueOffset == null || queueOffset.get(clientId) == null){
             return 0;
         }

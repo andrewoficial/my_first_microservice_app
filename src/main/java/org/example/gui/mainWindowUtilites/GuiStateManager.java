@@ -3,9 +3,9 @@ package org.example.gui.mainWindowUtilites;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gui.MainLeftPanelState;
 import org.example.gui.MainLeftPanelStateCollection;
-import org.example.services.comPort.BaudRatesList;
-import org.example.services.comPort.DataBitsList;
-import org.example.services.comPort.StopBitsList;
+import org.example.services.transport.serial.BaudRatesList;
+import org.example.services.transport.serial.DataBitsList;
+import org.example.services.transport.serial.StopBitsList;
 import javax.swing.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -70,7 +70,7 @@ public class GuiStateManager {
     }
 
     private int ensureClientId() {
-        int clientId = state.getClientIdByTabNumber(currentTab.get());
+        int clientId = state.findClientIdByTabNumber(currentTab.get());
         if (clientId == -1) {
             clientId = state.getNewRandomId();
             state.addPairClientIdTabNumber(clientId, currentTab.get());

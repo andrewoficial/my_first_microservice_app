@@ -4,7 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.gui.mgstest.exception.MessageDoesNotDeliveredToHidDevice;
 import org.example.gui.mgstest.model.HidSupportedDevice;
 import org.example.gui.mgstest.service.MgsExecutionListener;
-import org.example.gui.mgstest.transport.hid.SomeHidController;
+import org.example.services.transport.hid.HidCommunicatorImpl;
 import org.example.utilites.MyUtilities;
 import org.hid4java.HidDevice;
 import java.util.ArrayList;
@@ -21,7 +21,7 @@ import java.util.ArrayList;
  */
 @Slf4j
 public class CradleCommunicationHelper {
-    SomeHidController hidController = new SomeHidController();
+    HidCommunicatorImpl hidController = new HidCommunicatorImpl();
 
     // ====================== СЭМПЛЫ ОТВЕТОВ (оставлены без изменений) ======================
     public final ArrayList<byte[]> WRITE_MAGIK_FIRST_OFFSET_ANSWER_SAMPLES = new ArrayList<>();

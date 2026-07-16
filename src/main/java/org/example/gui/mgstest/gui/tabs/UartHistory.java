@@ -11,7 +11,7 @@ import org.example.gui.mgstest.transport.CommandParameters;
 import org.example.gui.mgstest.transport.CradleController;
 import org.example.gui.mgstest.transport.DeviceCommand;
 import org.example.gui.mgstest.transport.cmd.mkrs.transfer.SendCommandMkrs;
-import org.example.services.comPort.StringEndianList;
+import org.example.services.transport.serial.StringEndianList;
 import org.example.gui.mgstest.transport.cmd.mgs.transfer.SendExternalUartCommand;
 import org.example.gui.mgstest.transport.cmd.mgs.transfer.SendSpiCommand;
 import org.example.gui.mgstest.transport.cmd.mgs.transfer.SendUartCommand;
@@ -118,7 +118,7 @@ public class UartHistory extends DeviceTab {
         appendToHistory("Команда: " + command, "Ожидание ответа...");
 
         // Получаем выбранные значения из выпадающих списков
-        org.example.services.comPort.StringEndianList ending = (org.example.services.comPort.StringEndianList) lineEndingComboBox.getSelectedItem();
+        StringEndianList ending = (StringEndianList) lineEndingComboBox.getSelectedItem();
         TransportDirection direction = (TransportDirection) directionComboBox.getSelectedItem();
 
         if(selectedDevice.getDeviceType() == Constants.SupportedHidDeviceType.MULTIGASSENSE) {

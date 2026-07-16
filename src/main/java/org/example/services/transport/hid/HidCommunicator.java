@@ -1,4 +1,4 @@
-package org.example.gui.mgstest.transport.hid;
+package org.example.services.transport.hid;
 
 import org.hid4java.HidDevice;
 

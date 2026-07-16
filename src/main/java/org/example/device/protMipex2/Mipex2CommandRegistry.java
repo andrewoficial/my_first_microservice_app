@@ -8,6 +8,7 @@ import org.example.device.command.SingleCommand;
 import org.example.device.protMipex2.parsers.ZERO2Parser;
 import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
+import org.example.services.SpringContextHolder;
 import java.util.Arrays;
 import static org.example.utilites.MyUtilities.*;
 
@@ -379,8 +380,9 @@ public class Mipex2CommandRegistry extends DeviceCommandRegistry {
 
                     serialNumber = isNegative ? - serialNumber : serialNumber; // Применяем знак
                     answerValues.addValue(serialNumber, " SN");
-                    if(AnswerStorage.getTabByIdent(String.valueOf(serialNumber)) != null){
-                        answerValues.setDirection(AnswerStorage.getTabByIdent(String.valueOf(serialNumber)));
+                    AnswerStorage as = SpringContextHolder.getBean(AnswerStorage.class);
+                    if(as != null && as.getTabByIdent(String.valueOf(serialNumber)) != null){
+                        answerValues.setDirection(as.getTabByIdent(String.valueOf(serialNumber)));
                     }
                     //System.out.println(termBM);
                 } else {

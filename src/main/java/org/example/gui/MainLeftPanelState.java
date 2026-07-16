@@ -2,6 +2,8 @@ package org.example.gui;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.example.services.connection.ConnectionType;
+
 import static org.example.utilites.Constants.Gui.Windows.DEVICE_NAME_LIMIT;
 
 @Setter
@@ -36,6 +38,9 @@ public class MainLeftPanelState {
     private int tabNumber = 0;
 
     private int comPortComboNumber = 0;
+
+    /** Per-tab transport: COM / HID / WEBSOCKET — drives left panel CardLayout. */
+    private ConnectionType connectionType = ConnectionType.COM;
 
     private byte [] rawCommand = null;
 

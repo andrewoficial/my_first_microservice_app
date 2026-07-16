@@ -9,14 +9,12 @@
 package org.example.web.controller;
 
 
-import org.example.gui.MainLeftPanelStateCollection;
-import org.example.gui.MainWindow;
-import org.example.services.AnswerStorage;
+import lombok.RequiredArgsConstructor;
 import org.example.services.TabAnswerPart;
+import org.example.services.TabService;
+import org.example.services.PollingService;
 import org.example.web.entity.MyUser;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -25,14 +23,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Profile({ "srv-offline", "srv-online" })
-@Validated // в классе будет использоваться валидация по аннотациям
+@Validated
 @RestController
-@RequestMapping("/api/v1/apps") // обработка запросов, начинающихся с ./genre
+@RequestMapping("/api/v1/apps")
+@RequiredArgsConstructor
 public class StateMeasureController {
 
-    @Autowired
-    private MainLeftPanelStateCollection leftPanelStateCollection;
-
+    private final TabService tabService;
+    private final PollingService pollingService;
 
     @GetMapping("/welcome")
     public String welcome(){
@@ -46,30 +44,27 @@ public class StateMeasureController {
 
     @PostMapping("/new-user")
     public String addUser(@RequestBody MyUser user){
-
         return user.getName()+" is saved";
     }
 
     @GetMapping("/state/pool/{tabNumber}")
     public Map<String, Object> getCurrentData(@PathVariable Integer tabNumber, @RequestParam Integer lastPosition) {
-        int clientId = 0;
-        if(leftPanelStateCollection != null){
-            clientId = leftPanelStateCollection.getClientIdByTabNumber(tabNumber);
-        }
-        TabAnswerPart tabAnswerPart = AnswerStorage.getAnswersQueForWeb(lastPosition, clientId, true);
+        TabAnswerPart tabAnswerPart = tabService.getTabData(tabNumber, lastPosition, true);
 
         Map<String, Object> response = new HashMap<>();
         response.put("answerPart", tabAnswerPart.getAnswerPart());
-        response.put("newLastPosition", tabAnswerPart.getPosition()); // Передаем обновленную последнюю позицию
+        response.put("newLastPosition", tabAnswerPart.getPosition());
 
         return response;
     }
 
     @PostMapping("/state/send/{tabNumber}/{command}")
     public String sendCommand(@PathVariable Integer tabNumber, @PathVariable String command) {
-        System.out.println("Try send " + command);
-        // Выполняем отправку команды
-        //MainWindow.webSend(tabNumber, command);
+        Integer clientId = tabService.getClientIdByTab(tabNumber);
+        if (clientId == null || clientId == -1) {
+            return "Tab not found";
+        }
+        pollingService.sendOnce(clientId, "", command);
         return "OK";
     }
 }

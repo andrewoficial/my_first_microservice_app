@@ -2,6 +2,7 @@ package org.example.device.protDvk4rd.parsers;
 
 import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
+import org.example.services.SpringContextHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,11 +96,12 @@ public class FULUParser {
                 }
             }
 
-            if (success) {
+                if (success) {
                 serialNumber = isNegative ? -serialNumber : serialNumber;
                 answerValues.addValue(serialNumber, " SN");
-                if (AnswerStorage.getTabByIdent(String.valueOf(serialNumber)) != null) {
-                    answerValues.setDirection(AnswerStorage.getTabByIdent(String.valueOf(serialNumber)));
+                AnswerStorage as = SpringContextHolder.getBean(AnswerStorage.class);
+                if (as != null && as.getTabByIdent(String.valueOf(serialNumber)) != null) {
+                    answerValues.setDirection(as.getTabByIdent(String.valueOf(serialNumber)));
                 }
             } else {
                 log.warn("FULU parsing: Invalid serial number format: {}", serialField);

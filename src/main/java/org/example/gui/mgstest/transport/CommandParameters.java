@@ -3,7 +3,7 @@ package org.example.gui.mgstest.transport;
 import lombok.Getter;
 import lombok.Setter;
 import org.example.gui.mgstest.model.answer.GetSensStatusModel;
-import org.example.services.comPort.StringEndianList;
+import org.example.services.transport.serial.StringEndianList;
 
 @Getter @Setter
 public class CommandParameters {

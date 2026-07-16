@@ -6,7 +6,7 @@ import org.example.device.ProtocolsList;
 import org.example.gui.MainLeftPanelStateCollection;
 import org.example.services.AnswerSaverSync;
 import org.example.services.AnswerStorage;
-import org.example.services.comPort.ComPort;
+import org.example.services.transport.serial.ComPort;
 import org.example.utilites.MyUtilities;
 import org.example.utilites.properties.MyProperties;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,12 +36,14 @@ public class AnyPoolService {
     private MyProperties properties;
     @Getter
     private final AnswerSaverSync answerSaverLogger;
+    private final AnswerStorage answerStorage;
 
     @Autowired
-    public AnyPoolService(ComPort comPort, MyProperties properties1) {
+    public AnyPoolService(ComPort comPort, MyProperties properties1, AnswerSaverSync answerSaverLogger, AnswerStorage answerStorage) {
         this.comPort = comPort;
         this.properties = properties1;
-        answerSaverLogger = new AnswerSaverSync(properties);
+        this.answerSaverLogger = answerSaverLogger;
+        this.answerStorage = answerStorage;
     }
 
     public String createOrUpdateComDataCollector(MainLeftPanelStateCollection state, int clientId, int selectedComPort, int selectedProtocol, boolean pool, boolean isBtn, int poolDelay) throws ConnectException {
@@ -104,7 +106,7 @@ public class AnyPoolService {
         avaComPorts.setPort(comPortNumber);
         ProtocolsList protocol = ProtocolsList.getLikeArrayEnum(protocolIndex);
         try {
-            ComDataCollector toAdd = new ComDataCollector(state, protocol, state.getPrefix(clientId), state.getCommand(clientId), avaComPorts.activePort, poolDelay, false, clientId, this);
+            ComDataCollector toAdd = new ComDataCollector(state, protocol, state.getPrefix(clientId), state.getCommand(clientId), avaComPorts.activePort, poolDelay, false, clientId, this, answerStorage);
             this.addComDataCollector(toAdd);
             setupNewCollector(clientId, pool, isBtn, state);
         }catch (ConnectException exp){
@@ -294,7 +296,7 @@ public class AnyPoolService {
                 int pointer = comDataCollectors.size() - 1;
                 comDataCollectors.get(pointer).getComPort().closePort();
                 comDataCollectors.get(pointer).removeDeviceFromComDataCollector(pointer);
-                AnswerStorage.removeAnswersForTab(pointer);
+                answerStorage.removeAnswersForTab(pointer);
                 comDataCollectors.remove(pointer);
             }
         }

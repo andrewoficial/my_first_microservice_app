@@ -1,4 +1,4 @@
-package org.example.gui;
+package org.example.gui.main;
 
 import ch.qos.logback.classic.Logger;
 import com.fazecast.jSerialComm.SerialPort;
@@ -15,22 +15,33 @@ import org.example.device.SomeDevice;
 import org.example.device.TemplatedAscii;
 import org.example.device.command.ArgumentDescriptor;
 import org.example.device.command.SingleCommand;
+import org.example.gui.*;
 import org.example.gui.components.*;
+import org.example.gui.main.left.hidParamForm;
+import org.example.gui.main.left.wsParamForm;
 import org.example.gui.mainWindowUtilites.FolderPictureForLog;
 import org.example.gui.mainWindowUtilites.GuiStateManager;
 import org.example.gui.mainWindowUtilites.CommandFieldFormatter;
-import org.example.gui.mainWindowUtilites.PortManager;
 import org.example.gui.mainWindowUtilites.TabManager;
 import org.example.services.AnswerStorage;
+import org.example.services.ConnectionSettingsService;
+import org.example.services.PollingService;
+import org.example.services.PortLifecycleService;
+import org.example.services.TabService;
+import org.example.services.connection.ConnectionType;
 import org.example.services.connectionPool.AnyPoolService;
+import org.example.services.transport.hid.HidDeviceEntry;
+import org.example.services.transport.hid.HidDeviceTypeFilter;
+import org.example.services.transport.hid.HidPort;
 import org.example.services.TabAnswerPart;
-import org.example.services.comPort.BaudRatesList;
-import org.example.services.comPort.DataBitsList;
-import org.example.services.comPort.ParityList;
-import org.example.services.comPort.StopBitsList;
+import org.example.services.transport.serial.BaudRatesList;
+import org.example.services.transport.serial.DataBitsList;
+import org.example.services.transport.serial.ParityList;
+import org.example.services.transport.serial.StopBitsList;
 import org.example.services.loggers.DeviceLogger;
 import org.example.utilites.*;
 import org.example.services.connectionPool.ComDataCollector;
+import org.example.utilites.Constants;
 import org.example.utilites.properties.MyProperties;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +51,6 @@ import javax.swing.event.ChangeListener;
 import javax.swing.text.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.net.ConnectException;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -61,9 +71,13 @@ public class MainWindow extends JFrame implements Rendeble {
     private MainLeftPanelStateCollection leftPanState; // Класс, хранящий состояние клиентов (настройки в памяти)
     private MyProperties prop; //Файл настроек
     private AnyPoolService anyPoolService; //Сервис опросов (разных протоколов)
+    private ConnectionSettingsService connectionSettingsService; //Сервис управления настройками подключения
+    private PortLifecycleService portLifecycleService; //Сервис жизненного цикла портов
+    private PollingService pollingService; //Сервис управления опросом
+    private TabService tabService; //Сервис управления вкладками
+    private final AnswerStorage answerStorage;
     private final GuiStateManager guiStateManager;
     private final TabManager tabManager;
-    private final PortManager portManager;
 
     private final ConcurrentHashMap<Integer, Integer> lastReceivedPositionFromStorageMap = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Integer, JTextPane> logDataTransferJtextPanelsMap = new ConcurrentHashMap<>();
@@ -73,11 +87,13 @@ public class MainWindow extends JFrame implements Rendeble {
     private final AtomicInteger currentActiveTab = new AtomicInteger(); //Текущая активная (выбранная) вкладка
     private final AtomicInteger currentActiveClientId = new AtomicInteger();
     private boolean initialCalls = true;
+    /** Skip writing connection type back to state while applying model → GUI. */
+    private boolean suppressConnectionTypeEvents = false;
     private String lastFolderState = null; // Кешированное состояние папки для избежания лишних repaint
 
     private JPanel jpMainPanel;
     private JPanel jpAddRemove;
-    private JPanel jpComPortSetup;
+    private JPanel jpConnectionSetup;
     private JPanel jpTerminalHistory;
     private JPanel jpConnectionType;
     private JPanel jpFolderIconPanel;
@@ -93,7 +109,19 @@ public class MainWindow extends JFrame implements Rendeble {
     private JComboBox<String> jcbParity;
     private JComboBox<Integer> jcbStopBit;
     private JComboBox<String> jcbProtocol;
-    private JComboBox<String> jcbConnectionType;
+    private JComboBox<ConnectionType> jcbConnectionType;
+
+    /**
+     * Host for connection setup cards (COM form content / HID form); not recreated on switch.
+     */
+    private JPanel connectionCardsPanel;
+    private CardLayout connectionCardsLayout;
+    private hidParamForm hidParamForm;
+    private wsParamForm wsParamForm;
+    /**
+     * HID inventory (transport layer, twin of ComPort). Not a polling daemon.
+     */
+    private final HidPort hidPort = new HidPort();
 
     private JButton jbComOpen;
     private JButton jbComClose;
@@ -129,6 +157,8 @@ public class MainWindow extends JFrame implements Rendeble {
     private JPanel jpNeedPool;
     private JTextField jtfDevName;
     private JLabel devName;
+    private JPanel clientName;
+    private JPanel clientSettings;
 
 
     private void initUI() {
@@ -151,7 +181,7 @@ public class MainWindow extends JFrame implements Rendeble {
         assert prop != null;
         //log.info("prop driver " + prop.getDrv());
         JMenuBar menuBar = new JMenuBar();
-        JmenuFile menu = new JmenuFile(prop, anyPoolService);
+        JmenuFile menu = new JmenuFile(prop, anyPoolService, answerStorage);
         menuBar.add(menu.createFileMenu());
         menuBar.add(menu.createSettingsMenu());
         menuBar.add(menu.createViewMenu(uiThPool));
@@ -200,13 +230,284 @@ public class MainWindow extends JFrame implements Rendeble {
         }
     }
 
+    /**
+     * Fills connection-type combo (COM/HID/WebSocket) and wraps setup panels in CardLayout.
+     * Existing COM widgets stay as-is inside {@link #jpConnectionSetup};
+     * HID → {@link hidParamForm}; WebSocket → {@link wsParamForm}.
+     * Switching only shows the matching card — no rebuild of components.
+     */
+    private void initConnectionTypeUi() {
+        connectionCardsLayout = new CardLayout();
+        connectionCardsPanel = new JPanel(connectionCardsLayout);
 
-    public MainWindow(MyProperties myProperties, AnyPoolService anyPoolService, MainLeftPanelStateCollection leftPanelStateCollection) {
+        Container setupParent = jpConnectionSetup.getParent();
+        if (setupParent == null) {
+            log.error("jpConnectionSetup has no parent — connection type switcher skipped");
+            return;
+        }
+        setupParent.remove(jpConnectionSetup);
+        connectionCardsPanel.add(jpConnectionSetup, ConnectionType.COM.name());
+
+        hidParamForm = new hidParamForm();
+        connectionCardsPanel.add(hidParamForm.getRootPanel(), ConnectionType.HID.name());
+        initHidDeviceListUi();
+
+        wsParamForm = new wsParamForm();
+        connectionCardsPanel.add(wsParamForm.getRootPanel(), ConnectionType.WEBSOCKET.name());
+        initWsParamFormUi();
+
+        setupParent.add(connectionCardsPanel, BorderLayout.CENTER);
+
+        DefaultComboBoxModel<ConnectionType> model = new DefaultComboBoxModel<>();
+        for (ConnectionType type : ConnectionType.selectableValues()) {
+            model.addElement(type);
+        }
+        jcbConnectionType.setModel(model);
+        jcbConnectionType.setSelectedItem(ConnectionType.COM);
+        jcbConnectionType.addActionListener(e -> {
+            if (suppressConnectionTypeEvents) {
+                return;
+            }
+            ConnectionType selected = (ConnectionType) jcbConnectionType.getSelectedItem();
+            persistConnectionTypeForActiveClient(selected);
+            showConnectionTypePanel(selected);
+        });
+
+        showConnectionTypePanel(ConnectionType.COM);
+        log.debug("Connection type UI: cards COM/HID/WEBSOCKET");
+    }
+
+    private void persistConnectionTypeForActiveClient(ConnectionType type) {
+        if (type == null || leftPanState == null) {
+            return;
+        }
+        int clientId = currentActiveClientId.get();
+        if (clientId < 0 || !leftPanState.containClientId(clientId)) {
+            return;
+        }
+        leftPanState.setConnectionType(clientId, type);
+        log.debug("connectionType for clientId={} → {}", clientId, type.name());
+    }
+
+    /**
+     * Restore connection-type combo + CardLayout card from LeftPane state for active client.
+     * Called on tab switch (via updateGuiFromClass).
+     */
+    private void applyConnectionTypeFromModel() {
+        if (jcbConnectionType == null || leftPanState == null) {
+            return;
+        }
+        int clientId = currentActiveClientId.get();
+        if (clientId < 0 || !leftPanState.containClientId(clientId)) {
+            return;
+        }
+        ConnectionType type = leftPanState.getConnectionType(clientId);
+        if (type == null || !type.isSelectable()) {
+            type = ConnectionType.COM;
+        }
+        suppressConnectionTypeEvents = true;
+        try {
+            jcbConnectionType.setSelectedItem(type);
+            if (jcbConnectionType.getSelectedItem() != type) {
+                jcbConnectionType.setSelectedItem(ConnectionType.COM);
+                type = ConnectionType.COM;
+            }
+            showConnectionTypePanel(type);
+        } finally {
+            suppressConnectionTypeEvents = false;
+        }
+    }
+
+    /**
+     * WS panel combos + field defaults (full apply from MyProperties after {@code prop} is set).
+     * Connect/poll wiring — later (WebSocketDataCollector / AnyPoolService).
+     */
+    private void initWsParamFormUi() {
+        if (wsParamForm == null) {
+            return;
+        }
+        DefaultComboBoxModel<String> authModel = new DefaultComboBoxModel<>();
+        authModel.addElement("Login / Password");
+        authModel.addElement("Key");
+        wsParamForm.getAuthTypeCombo().setModel(authModel);
+        wsParamForm.getAuthTypeCombo().setSelectedIndex(0);
+
+        // Same device protocols as COM for now (MGS/MKRS etc. later via WS path)
+        DefaultComboBoxModel<String> protocolModel = new DefaultComboBoxModel<>();
+        for (String name : ProtocolsList.getValues()) {
+            protocolModel.addElement(name);
+        }
+        wsParamForm.getProtocolCombo().setModel(protocolModel);
+
+        if ("user".equals(wsParamForm.getTimeoutField().getText())) {
+            wsParamForm.getTimeoutField().setText("5000");
+        }
+    }
+
+    /** Prefill from Vega/WS settings used by {@link org.example.gui.WebSocketWindow}. */
+    private void applyWsFormDefaultsFromProperties() {
+        if (wsParamForm == null || prop == null) {
+            return;
+        }
+        String address = prop.getVegaAddress();
+        if (address != null && !address.isBlank()) {
+            applyWsAddressAndPort(address.trim());
+        }
+        if (prop.getVegaLogin() != null) {
+            wsParamForm.getLoginField().setText(prop.getVegaLogin());
+        }
+        if (prop.getVegaPassword() != null) {
+            wsParamForm.getPasswordField().setText(prop.getVegaPassword());
+        }
+    }
+
+    /**
+     * Accepts full URL {@code ws://host:port/...} or host-only; fills address + port fields.
+     */
+    private void applyWsAddressAndPort(String raw) {
+        String host = raw;
+        String port = wsParamForm.getPortField().getText();
+        try {
+            String stripped = raw;
+            if (stripped.startsWith("ws://")) {
+                stripped = stripped.substring(5);
+            } else if (stripped.startsWith("wss://")) {
+                stripped = stripped.substring(6);
+            }
+            int slash = stripped.indexOf('/');
+            if (slash >= 0) {
+                stripped = stripped.substring(0, slash);
+            }
+            int colon = stripped.lastIndexOf(':');
+            if (colon > 0 && colon < stripped.length() - 1) {
+                host = stripped.substring(0, colon);
+                port = stripped.substring(colon + 1);
+            } else {
+                host = stripped;
+            }
+        } catch (Exception e) {
+            log.debug("WS address parse fallback for '{}': {}", raw, e.getMessage());
+            host = raw;
+        }
+        wsParamForm.getAddressField().setText(host);
+        wsParamForm.getPortField().setText(port);
+    }
+
+    /** Full URL for collectors / WebSocketDataCollector (same style as Vega address). */
+    public String buildWsUrlFromForm() {
+        if (wsParamForm == null) {
+            return prop != null ? prop.getVegaAddress() : "ws://127.0.0.1:8002";
+        }
+        String host = wsParamForm.getAddressField().getText().trim();
+        String port = wsParamForm.getPortField().getText().trim();
+        if (host.startsWith("ws://") || host.startsWith("wss://")) {
+            return host;
+        }
+        if (port == null || port.isBlank()) {
+            return "ws://" + host;
+        }
+        return "ws://" + host + ":" + port;
+    }
+
+    /**
+     * HID list UI: same role as COM port combo + «Обновить список».
+     * Scan/filter logic lives in {@link HidPort} (product id filter from Multigassens DeviceRepository).
+     * Does not start a polling collector — that is the next step.
+     */
+    private void initHidDeviceListUi() {
+        if (hidParamForm == null) {
+            return;
+        }
+        DefaultComboBoxModel<HidDeviceTypeFilter> maskModel = new DefaultComboBoxModel<>();
+        for (HidDeviceTypeFilter filter : HidDeviceTypeFilter.values()) {
+            maskModel.addElement(filter);
+        }
+        hidParamForm.getDeviceTypeMaskCombo().setModel(maskModel);
+        hidParamForm.getDeviceTypeMaskCombo().setSelectedItem(HidDeviceTypeFilter.ALL);
+
+        // Form stub labels checkbox as «Лог» — treat as «filter known product ids»
+        hidParamForm.getFilterByTypeCheckBox().setText("Только известные");
+        hidParamForm.getFilterByTypeCheckBox().setSelected(true);
+        hidParamForm.getFilterByTypeCheckBox().setToolTipText(
+                "pid MultigasSense=" + Constants.HidCommunication.MULTIGASSENSE_TARGET_PRODUCT_ID
+                        + ", MikroSense=" + Constants.HidCommunication.MIKROSENSE_TARGET_PRODUCT_ID);
+
+        hidParamForm.getUpdateListButton().addActionListener(e -> updateHidDeviceList());
+        hidParamForm.getFilterByTypeCheckBox().addActionListener(e -> updateHidDeviceList());
+        hidParamForm.getDeviceTypeMaskCombo().addActionListener(e -> updateHidDeviceList());
+        hidParamForm.getFoundDevicesCombo().addActionListener(e -> {
+            Object selected = hidParamForm.getFoundDevicesCombo().getSelectedItem();
+            if (selected instanceof HidDeviceEntry entry) {
+                hidPort.setDevice(entry);
+                log.debug("Выбрано HID: {}", entry.getDisplayLabel());
+            }
+        });
+    }
+
+    private void updateHidDeviceList() {
+        if (hidParamForm == null) {
+            return;
+        }
+        hidPort.updateDevices();
+        boolean knownOnly = hidParamForm.getFilterByTypeCheckBox().isSelected();
+        HidDeviceTypeFilter mask = (HidDeviceTypeFilter) hidParamForm.getDeviceTypeMaskCombo().getSelectedItem();
+        Constants.SupportedHidDeviceType typeFilter =
+                mask != null ? mask.getDeviceType() : null;
+
+        List<HidDeviceEntry> list = hidPort.listDevices(knownOnly, typeFilter);
+        JComboBox<HidDeviceEntry> found = hidParamForm.getFoundDevicesCombo();
+        HidDeviceEntry previous = found.getSelectedItem() instanceof HidDeviceEntry e ? e : null;
+
+        DefaultComboBoxModel<HidDeviceEntry> model = new DefaultComboBoxModel<>();
+        for (HidDeviceEntry entry : list) {
+            model.addElement(entry);
+        }
+        found.setModel(model);
+
+        if (previous != null) {
+            for (int i = 0; i < model.getSize(); i++) {
+                if (previous.equals(model.getElementAt(i))) {
+                    found.setSelectedIndex(i);
+                    hidPort.setDevice(model.getElementAt(i));
+                    return;
+                }
+            }
+        }
+        if (model.getSize() > 0) {
+            found.setSelectedIndex(0);
+            hidPort.setDevice(model.getElementAt(0));
+        } else {
+            hidPort.setDevice((HidDeviceEntry) null);
+        }
+        log.info("HID list UI: {} item(s), knownOnly={}, mask={}", model.getSize(), knownOnly, mask);
+    }
+
+    private void showConnectionTypePanel(ConnectionType type) {
+        if (type == null || connectionCardsLayout == null || connectionCardsPanel == null) {
+            return;
+        }
+        connectionCardsLayout.show(connectionCardsPanel, type.name());
+        if (type == ConnectionType.HID) {
+            updateHidDeviceList();
+        }
+        connectionCardsPanel.revalidate();
+        connectionCardsPanel.repaint();
+        log.debug("Показана панель подключения: {}", type);
+    }
+
+    public ConnectionType getSelectedConnectionType() {
+        Object selected = jcbConnectionType != null ? jcbConnectionType.getSelectedItem() : null;
+        return selected instanceof ConnectionType ct ? ct : ConnectionType.COM;
+    }
+
+
+    public MainWindow(MyProperties myProperties, AnyPoolService anyPoolService, MainLeftPanelStateCollection leftPanelStateCollection, ConnectionSettingsService connectionSettingsService, PortLifecycleService portLifecycleService, PollingService pollingService, TabService tabService, AnswerStorage answerStorage) {
         if (leftPanelStateCollection == null) {
             log.warn("В конструктор MainWindow передан null leftPanelStateCollection");
         }
         NimbusCustomizer.customize();
         $$$setupUI$$$();
+        initConnectionTypeUi();
         log.debug("Подготовка к рендеру окна....");
         if (anyPoolService == null || myProperties == null) {
             log.warn("В конструктор MainWindow передан null anyPoolService/comPorts/myProperties");
@@ -214,6 +515,12 @@ public class MainWindow extends JFrame implements Rendeble {
 
         this.anyPoolService = anyPoolService;
         this.prop = myProperties;
+        this.connectionSettingsService = connectionSettingsService;
+        this.portLifecycleService = portLifecycleService;
+        this.pollingService = pollingService;
+        this.tabService = tabService;
+        this.answerStorage = answerStorage;
+        applyWsFormDefaultsFromProperties();
 
         createMenu();
         currentActiveClientId.set(restoreParameters());
@@ -241,8 +548,7 @@ public class MainWindow extends JFrame implements Rendeble {
 
 
         guiStateManager = new GuiStateManager(leftPanState, currentActiveTab);
-        tabManager = new TabManager(jtpDevicesTerminal, leftPanState, logDataTransferJtextPanelsMap, lastReceivedPositionFromStorageMap, jbRemoveDev);
-        portManager = new PortManager(anyPoolService, prop, guiStateManager, leftPanState);
+        tabManager = new TabManager(jtpDevicesTerminal, leftPanState, tabService, logDataTransferJtextPanelsMap, lastReceivedPositionFromStorageMap, jbRemoveDev);
         updateComPortList();
 
         log.debug("Добавление слушателей действий");
@@ -279,10 +585,7 @@ public class MainWindow extends JFrame implements Rendeble {
         });
 
         currentActiveTab.set(0);
-        currentActiveClientId.set(leftPanState.getClientIdByTabNumber(currentActiveTab.get()));
-        if (currentActiveClientId.get() == -1) {
-            currentActiveClientId.set(checkAndCreateGuiStateClass());
-        }
+        currentActiveClientId.set(connectionSettingsService.ensureClientId(currentActiveTab.get()));
         lastReceivedPositionFromStorageMap.put(currentActiveClientId.get(), 0);
 
         int tabCount = Math.max(0, prop.getTabCounter());
@@ -402,47 +705,43 @@ public class MainWindow extends JFrame implements Rendeble {
 
     private void openComPort() {
         updateClassFromGui();
-
-        addCustomMessage(portManager.openPort(currentActiveClientId.get(), getCurrComSelection(), getCurrProtocolSelection()));
-        checkIsUsedPort(); //Выставляет блокировки кнопки открыть/закрыть
-        if (anyPoolService.findComDataCollectorByClientId(currentActiveClientId.get()) != null) {
-            prop.setPortForTab(anyPoolService.findComDataCollectorByClientId(currentActiveClientId.get()).getComPort().getSystemPortName(), currentActiveTab.get());
-
+        PortLifecycleService.PortOpenResult result = portLifecycleService.openPort(
+                currentActiveClientId.get(), getCurrComSelection(), getCurrProtocolSelection());
+        addCustomMessage(result.getMessage());
+        checkIsUsedPort();
+        if (result.isSuccess() && result.getPortSystemName() != null) {
+            prop.setPortForTab(result.getPortSystemName(), currentActiveTab.get());
         }
         saveParameters();
     }
 
     private void closeComPort() {
-        addCustomMessage(portManager.closePort(currentActiveClientId.get()));
-        checkIsUsedPort(); //Блокировка кнопок
+        addCustomMessage(portLifecycleService.closePort(currentActiveClientId.get()));
+        checkIsUsedPort();
         updateFolderPicture();
     }
 
     private void updateDevName() {
-        leftPanState.setDevName(currentActiveClientId.get(), jtfDevName.getText());
+        connectionSettingsService.setDeviceName(currentActiveClientId.get(), jtfDevName.getText());
         if (jtfDevName.getText() != null && jtfDevName.getText().length() <= DEVICE_NAME_LIMIT && jtfDevName.getText().length() > 1) {
             jtpDevicesTerminal.setTitleAt(currentActiveTab.get(), jtfDevName.getText());
         }
     }
 
     private void updateParity() {
-        leftPanState.setParityBits(currentActiveClientId.get(), jcbParity.getSelectedIndex());
-        leftPanState.setParityBitsValue(currentActiveClientId.get(), jcbParity.getSelectedIndex());
+        connectionSettingsService.updateParity(currentActiveClientId.get(), jcbParity.getSelectedIndex());
     }
 
     private void updateBaudRate() {
-        leftPanState.setBaudRate(currentActiveClientId.get(), jcbBaudRate.getSelectedIndex());
-        leftPanState.setBaudRateValue(currentActiveClientId.get(), BaudRatesList.getNameLikeArray(jcbBaudRate.getSelectedIndex()));
+        connectionSettingsService.updateBaudRate(currentActiveClientId.get(), jcbBaudRate.getSelectedIndex());
     }
 
     private void updateStopBit() {
-        leftPanState.setStopBits(currentActiveClientId.get(), jcbStopBit.getSelectedIndex());
-        leftPanState.setStopBitsValue(currentActiveClientId.get(), StopBitsList.getNameLikeArray(jcbStopBit.getSelectedIndex()));
+        connectionSettingsService.updateStopBits(currentActiveClientId.get(), jcbStopBit.getSelectedIndex());
     }
 
     private void updateDataBits() {
-        leftPanState.setDataBits(currentActiveClientId.get(), jcbDataBits.getSelectedIndex());
-        leftPanState.setDataBitsValue(currentActiveClientId.get(), DataBitsList.getNameLikeArray(jcbDataBits.getSelectedIndex()));
+        connectionSettingsService.updateDataBits(currentActiveClientId.get(), jcbDataBits.getSelectedIndex());
     }
 
     private void updateProtocol() {
@@ -598,12 +897,7 @@ public class MainWindow extends JFrame implements Rendeble {
 
     // Обработчики действий
     private void updatePoolDelay() {
-        log.info("Инициировано обновление периода опроса для вкладки {" + currentActiveTab + "}");
-        Optional.ofNullable(getComDataCollectorSafe())
-                .ifPresent(collector -> {
-                    collector.setPoolDelay(getPoolDelayFromGui());
-                    log.info("Выполнено обновление периода опроса для вкладки {" + currentActiveTab + "}");
-                });
+        pollingService.updatePoolDelay(currentActiveClientId.get(), getPoolDelayFromGui());
     }
 
     private void updateTextAndSendFromEnter() {
@@ -612,15 +906,12 @@ public class MainWindow extends JFrame implements Rendeble {
 
         if (uiThPool.isShutdown() || uiThPool.isTerminated()) {
             log.info("Перезапуск пула потоков рендера...");
-            uiThPool = Executors.newSingleThreadExecutor(); // Создаём новый пул
+            uiThPool = Executors.newSingleThreadExecutor();
             uiThPool.submit(new RenderThread(this));
         }
-
-
     }
 
     private void updateTextAndSendFromCheckBox() {
-        //if ()
         updateTextToSend();
         startSend(false);
         renderData();
@@ -635,19 +926,13 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
     private void updateLogCheckBox() {
-        ComDataCollector ps = anyPoolService.findComDataCollectorByClientId(currentActiveClientId.get());
-        if (ps != null) {
-            ps.setNeedLog(jCbNeedLog.isSelected(), currentActiveClientId.get());
-        } else {
-            log.info("Для текущей влкадки потока опроса не существует");
-        }
+        pollingService.toggleLog(currentActiveClientId.get(), jCbNeedLog.isSelected());
         updateFolderPicture();
     }
 
     // Вспомогательные методы
     private ComDataCollector getComDataCollectorSafe() {
-        List<ComDataCollector> collectors = anyPoolService.getComDataCollectors();
-        return collectors.size() > currentActiveTab.get() ? collectors.get(currentActiveTab.get()) : null;
+        return pollingService.getCollector(currentActiveTab.get(), leftPanState.getSize());
     }
 
     private boolean isValidTab() {
@@ -666,14 +951,13 @@ public class MainWindow extends JFrame implements Rendeble {
 
     public void startSend(boolean isBtn) {
         saveParameters();
-        try {
-            //isBtn - вызов по кнопке / pool - вызов про чекбоксу
-            anyPoolService.createOrUpdateComDataCollector(leftPanState, currentActiveClientId.get(), getCurrComSelection(), getCurrProtocolSelection(),
-                    getNeedPoolState(), isBtn, getCurrPoolDelay());
-            updateFolderPictureMethod();
-        } catch (ConnectException e) {
-            addCustomMessage(" Ошибка начала отправки " + e.getMessage());
+        PollingService.StartSendResult result = pollingService.startPolling(
+                currentActiveClientId.get(), getCurrComSelection(), getCurrProtocolSelection(),
+                getNeedPoolState(), isBtn, getCurrPoolDelay());
+        if (!result.isSuccess()) {
+            addCustomMessage(result.getErrorMessage());
         }
+        updateFolderPictureMethod();
     }
 
     private void updateComPortSelectorFromProp() {
@@ -694,18 +978,7 @@ public class MainWindow extends JFrame implements Rendeble {
 
 
     private int checkAndCreateGuiStateClass() {
-        int clientId = leftPanState.getClientIdByTabNumber(currentActiveTab.get());
-        if (clientId == -1) {
-            log.warn(" Для вкладки " + currentActiveTab + " clientId получился " + clientId + " создаю объект состояния");
-            clientId = leftPanState.getNewRandomId();
-            leftPanState.addPairClientIdTabNumber(clientId, currentActiveTab.get());
-            MainLeftPanelState state = new MainLeftPanelState();
-            state.setTabNumber(currentActiveTab.get());
-            state.setClientId(clientId);
-            leftPanState.addOrUpdateIdState(clientId, state);
-            return clientId;
-        }
-        return clientId;
+        return connectionSettingsService.ensureClientId(currentActiveTab.get());
     }
 
     private void updateGuiFromClass() {
@@ -714,6 +987,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 jcbBaudRate, jcbProtocol, jtfTextToSend,
                 jtfPrefToSend, jtfDevName
         );
+        applyConnectionTypeFromModel();
     }
 
 
@@ -726,31 +1000,26 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
     private void readAndUpdateInputPrefAndCommandValues() {
-        //log.info("Изменение в поле ввода префикса или команды");
         if (leftPanState.containClientId(currentActiveTab.get())) {
-            ComDataCollector ps = anyPoolService.getComDataCollectors().get(currentActiveTab.get());
-            if (ps != null)
-                anyPoolService.findComDataCollectorByClientId(currentActiveClientId.get()).setTextToSendString(leftPanState.getPrefix(currentActiveClientId.get()), leftPanState.getCommand(currentActiveClientId.get()), currentActiveClientId.get());
+            pollingService.updateCommand(currentActiveClientId.get(),
+                    leftPanState.getPrefix(currentActiveClientId.get()),
+                    leftPanState.getCommand(currentActiveClientId.get()));
             saveParameters();
-
         }
     }
 
     private void checkIsUsedPort() {
-        anyPoolService.closeUnusedComConnection(currentTabCount.get());
-        boolean alreadyOpen = anyPoolService.isComPortInUse(getCurrComSelection());
-        jCbNeedPool.setEnabled(alreadyOpen);
-        jbTerminalSend.setEnabled(alreadyOpen);
-        jbComOpen.setEnabled(!alreadyOpen);
-        jcbProtocol.setEnabled(!alreadyOpen);
-        jbComClose.setEnabled(alreadyOpen);
+        PortLifecycleService.PortStatus status = portLifecycleService.checkPortStatus(
+                getCurrComSelection(), currentActiveTab.get());
 
-        int rootTab = anyPoolService.getRootTabForComConnection(getCurrComSelection());
-        if (rootTab >= -1)
-            return;
-        if (rootTab != currentActiveTab.get() && alreadyOpen) {
-            addCustomMessage("Управление выбранным ком-портом возможно на вкладке 'dev" + (rootTab + 1) + "' ");
-            log.info("Управление выбранным ком-портом возможно на вкладке 'dev" + (rootTab + 1) + "' Просматриваемая вкладка " + currentActiveTab);
+        jCbNeedPool.setEnabled(status.isPortInUse());
+        jbTerminalSend.setEnabled(status.isPortInUse());
+        jbComOpen.setEnabled(!status.isPortInUse());
+        jcbProtocol.setEnabled(!status.isPortInUse());
+        jbComClose.setEnabled(status.isPortInUse());
+
+        if (status.getWarningMessage() != null) {
+            addCustomMessage(status.getWarningMessage());
             jbComClose.setEnabled(false);
             jbComOpen.setEnabled(false);
             jcbProtocol.setEnabled(false);
@@ -862,7 +1131,7 @@ public class MainWindow extends JFrame implements Rendeble {
 
         try {
             int lastPosition = lastReceivedPositionFromStorageMap.getOrDefault(clientId, 0); //  ConcurrentHashMap<Integer, Integer>
-            int queueOffsetInt = AnswerStorage.queueOffset.getOrDefault(clientId, 0);
+            int queueOffsetInt = answerStorage.getQueueOffset(clientId);
 
             // Синхронизация доступа к позиции
             if (lastPosition < queueOffsetInt) {
@@ -870,7 +1139,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 lastReceivedPositionFromStorageMap.put(clientId, lastPosition);
             }
 
-            TabAnswerPart an = AnswerStorage.getAnswersQueForTab(lastPosition, clientId, true);
+            TabAnswerPart an = answerStorage.getAnswersQueForTab(lastPosition, clientId, true);
 
             if (an.getAnswerPart() == null || an.getAnswerPart().isEmpty()) {
                 //log.info("Нет новых данных для клиента [" + clientId + "]");
@@ -917,7 +1186,7 @@ public class MainWindow extends JFrame implements Rendeble {
                 ((Logger) LoggerFactory.getLogger(
                         org.slf4j.Logger.ROOT_LOGGER_NAME)).getLevel());
         prop.setTabCounter(currentTabCount.get());
-        prop.setIdentAndTabBounding(AnswerStorage.getDeviceTabPair());
+        prop.setIdentAndTabBounding(answerStorage.getDeviceTabPair());
 
     }
 
@@ -980,13 +1249,13 @@ public class MainWindow extends JFrame implements Rendeble {
         jpConnectionSettings.setMinimumSize(new Dimension(275, 594));
         jpConnectionSettings.setPreferredSize(new Dimension(275, 627));
         panel1.add(jpConnectionSettings, cc.xy(1, 1, CellConstraints.CENTER, CellConstraints.TOP));
-        jpComPortSetup = new JPanel();
-        jpComPortSetup.setLayout(new GridLayoutManager(13, 1, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.setEnabled(true);
-        jpConnectionSettings.add(jpComPortSetup, BorderLayout.CENTER);
+        jpConnectionSetup = new JPanel();
+        jpConnectionSetup.setLayout(new GridLayoutManager(13, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jpConnectionSetup.setEnabled(true);
+        jpConnectionSettings.add(jpConnectionSetup, BorderLayout.CENTER);
         jpDataBits = new JPanel();
         jpDataBits.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(jpDataBits, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        jpConnectionSetup.add(jpDataBits, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         jlbComDataBits = new JLabel();
         jlbComDataBits.setText("Биты данных");
         jpDataBits.add(jlbComDataBits, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -996,7 +1265,7 @@ public class MainWindow extends JFrame implements Rendeble {
         jpDataBits.add(spacer1, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         jpParity = new JPanel();
         jpParity.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(jpParity, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        jpConnectionSetup.add(jpParity, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         jlbComParity = new JLabel();
         jlbComParity.setText("Чётность");
         jpParity.add(jlbComParity, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -1008,7 +1277,7 @@ public class MainWindow extends JFrame implements Rendeble {
         jpParity.add(spacer2, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         jpComStopBit = new JPanel();
         jpComStopBit.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(jpComStopBit, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        jpConnectionSetup.add(jpComStopBit, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         jlbComStopBit = new JLabel();
         jlbComStopBit.setText("Стоп бит");
         jpComStopBit.add(jlbComStopBit, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -1018,7 +1287,7 @@ public class MainWindow extends JFrame implements Rendeble {
         jpComStopBit.add(spacer3, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         jpOpenClose = new JPanel();
         jpOpenClose.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(jpOpenClose, new GridConstraints(9, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, 1, new Dimension(240, 29), new Dimension(240, 29), null, 0, false));
+        jpConnectionSetup.add(jpOpenClose, new GridConstraints(9, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, 1, new Dimension(240, 29), new Dimension(240, 29), null, 0, false));
         jbComOpen = new JButton();
         jbComOpen.setAlignmentY(0.0f);
         jbComOpen.setHideActionText(false);
@@ -1030,7 +1299,7 @@ public class MainWindow extends JFrame implements Rendeble {
         jpOpenClose.add(jbComClose, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(100, 25), new Dimension(119, 25), new Dimension(200, 200), 0, false));
         jpComPorts = new JPanel();
         jpComPorts.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(jpComPorts, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        jpConnectionSetup.add(jpComPorts, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         jlbComPorts = new JLabel();
         jlbComPorts.setText("Порт");
         jpComPorts.add(jlbComPorts, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -1043,7 +1312,7 @@ public class MainWindow extends JFrame implements Rendeble {
         jpComPorts.add(spacer4, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         jpProtocol = new JPanel();
         jpProtocol.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(jpProtocol, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        jpConnectionSetup.add(jpProtocol, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         jlbComProtocol = new JLabel();
         jlbComProtocol.setText("Протокол");
         jpProtocol.add(jlbComProtocol, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -1055,7 +1324,7 @@ public class MainWindow extends JFrame implements Rendeble {
         jpProtocol.add(spacer5, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         jpNeedPool = new JPanel();
         jpNeedPool.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(jpNeedPool, new GridConstraints(11, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        jpConnectionSetup.add(jpNeedPool, new GridConstraints(11, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         jCbNeedPool = new JCheckBox();
         jCbNeedPool.setText("Опрос  ");
         jpNeedPool.add(jCbNeedPool, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -1067,7 +1336,7 @@ public class MainWindow extends JFrame implements Rendeble {
         jpNeedPool.add(jtfPoolDelay, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         jpAddRemove = new JPanel();
         jpAddRemove.setLayout(new GridLayoutManager(1, 2, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(jpAddRemove, new GridConstraints(12, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, 1, new Dimension(240, 29), new Dimension(240, 29), null, 0, false));
+        jpConnectionSetup.add(jpAddRemove, new GridConstraints(12, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, 1, new Dimension(240, 29), new Dimension(240, 29), null, 0, false));
         jbAddDev = new JButton();
         jbAddDev.setAlignmentX(0.0f);
         jbAddDev.setAlignmentY(0.0f);
@@ -1081,14 +1350,14 @@ public class MainWindow extends JFrame implements Rendeble {
         jpAddRemove.add(jbRemoveDev, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(100, 25), new Dimension(119, 25), new Dimension(200, 200), 0, false));
         final JPanel panel2 = new JPanel();
         panel2.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(panel2, new GridConstraints(8, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(-1, 100), new Dimension(-1, 100), new Dimension(-1, 100), 0, false));
+        jpConnectionSetup.add(panel2, new GridConstraints(8, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(-1, 100), new Dimension(-1, 100), new Dimension(-1, 100), 0, false));
         jbComUpdateList = new JButton();
         jbComUpdateList.setHideActionText(false);
         jbComUpdateList.setText("Обновить список портов");
         panel2.add(jbComUpdateList, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(260, 25), new Dimension(400, 200), 0, false));
         final JPanel panel3 = new JPanel();
         panel3.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(panel3, new GridConstraints(10, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        jpConnectionSetup.add(panel3, new GridConstraints(10, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         jbComSearch = new JButton();
         jbComSearch.setAlignmentY(0.0f);
         jbComSearch.setAutoscrolls(false);
@@ -1098,7 +1367,7 @@ public class MainWindow extends JFrame implements Rendeble {
         final JPanel panel4 = new JPanel();
         panel4.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
         panel4.setEnabled(true);
-        jpComPortSetup.add(panel4, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        jpConnectionSetup.add(panel4, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         jlbComBaudRate = new JLabel();
         jlbComBaudRate.setBackground(new Color(-11184811));
         jlbComBaudRate.setText("Скорость   ");
@@ -1110,7 +1379,7 @@ public class MainWindow extends JFrame implements Rendeble {
         panel4.add(spacer6, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         final JPanel panel5 = new JPanel();
         panel5.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(panel5, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        jpConnectionSetup.add(panel5, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
         jCbNeedLog = new JCheckBox();
         jCbNeedLog.setEnabled(true);
         jCbNeedLog.setText("Лог");
@@ -1125,19 +1394,19 @@ public class MainWindow extends JFrame implements Rendeble {
         panel5.add(jpFolderIconPanel, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         final JPanel panel6 = new JPanel();
         panel6.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        jpComPortSetup.add(panel6, new GridConstraints(7, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, 1, 1, null, null, null, 0, false));
+        jpConnectionSetup.add(panel6, new GridConstraints(7, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, 1, 1, null, null, null, 0, false));
         jbSetTypicalParametrs = new JButton();
         jbSetTypicalParametrs.setHorizontalTextPosition(0);
         jbSetTypicalParametrs.setText("Задать стандартные параметры");
         jbSetTypicalParametrs.setToolTipText("Задает параметры скорости для выбранного протокола");
         panel6.add(jbSetTypicalParametrs, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
-        final JPanel panel7 = new JPanel();
-        panel7.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
-        jpConnectionSettings.add(panel7, BorderLayout.NORTH);
+        clientSettings = new JPanel();
+        clientSettings.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jpConnectionSettings.add(clientSettings, BorderLayout.NORTH);
         jpConnectionType = new JPanel();
         jpConnectionType.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
         jpConnectionType.setEnabled(true);
-        panel7.add(jpConnectionType, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        clientSettings.add(jpConnectionType, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         jlbConnectionType = new JLabel();
         jlbConnectionType.setText("Тип соединения");
         jpConnectionType.add(jlbConnectionType, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -1147,16 +1416,16 @@ public class MainWindow extends JFrame implements Rendeble {
         jpConnectionType.add(jcbConnectionType, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(120, -1), new Dimension(120, -1), new Dimension(120, -1), 0, false));
         final Spacer spacer7 = new Spacer();
         jpConnectionType.add(spacer7, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final JPanel panel8 = new JPanel();
-        panel8.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        panel7.add(panel8, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        clientName = new JPanel();
+        clientName.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
+        clientSettings.add(clientName, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         devName = new JLabel();
         devName.setText("Имя вкладки");
-        panel8.add(devName, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        clientName.add(devName, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final Spacer spacer8 = new Spacer();
-        panel8.add(spacer8, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        clientName.add(spacer8, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         jtfDevName = new JTextField();
-        panel8.add(jtfDevName, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
+        clientName.add(jtfDevName, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
     }
 
     /**

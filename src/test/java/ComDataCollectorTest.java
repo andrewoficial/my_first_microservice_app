@@ -38,6 +38,7 @@ public class ComDataCollectorTest {
     private MainLeftPanelStateCollection mockState;
     private AnyPoolService mockParentService;
     private DeviceLogger mockLogger;
+    private AnswerStorage mockAnswerStorage;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -54,20 +55,20 @@ public class ComDataCollectorTest {
         when(mockState.getParityBitsValue(anyInt())).thenReturn(0);
         when(mockPort.isOpen()).thenReturn(true);
 
-        // Мокирование статического метода
-        try (MockedStatic<AnswerStorage> ignored = mockStatic(AnswerStorage.class)) {
-            collector = new ComDataCollector(
-                    mockState,
-                    ProtocolsList.DEMO_PROTOCOL,
-                    "",
-                    "TEST",
-                    mockPort,
-                    1000,
-                    true,
-                    1,
-                    mockParentService
-            );
-        }
+        // Мокирование AnswerStorage
+        mockAnswerStorage = mock(AnswerStorage.class);
+        collector = new ComDataCollector(
+                mockState,
+                ProtocolsList.DEMO_PROTOCOL,
+                "",
+                "TEST",
+                mockPort,
+                1000,
+                true,
+                1,
+                mockParentService,
+                mockAnswerStorage
+        );
 
         // Подмена логгера через рефлексию
         Field clientsMapField = ComDataCollector.class.getDeclaredField("clientsMap");
@@ -199,7 +200,7 @@ public class ComDataCollectorTest {
         final int MESSAGE_COUNT = 500; // Количество сообщений
 
         // Очищаем хранилище ответов перед тестом
-        AnswerStorage.removeAnswersForTab(CLIENT_ID);
+        mockAnswerStorage.removeAnswersForTab(CLIENT_ID);
 
         // Подготавливаем тестовые данные
         List<byte[]> testDataList = new ArrayList<>();
@@ -288,13 +289,13 @@ public class ComDataCollectorTest {
         // ========== ПРОВЕРКА ==========
         // Ждем обработки всех сообщений
         await().atMost(500, TimeUnit.SECONDS).untilAsserted(() -> {
-            List<DeviceAnswer> answers = AnswerStorage.getAnswersForGraph(CLIENT_ID);
+            List<DeviceAnswer> answers = mockAnswerStorage.getAnswersForGraph(CLIENT_ID);
             assertEquals(MESSAGE_COUNT, answers.size(),
                     "Все сообщения должны быть сохранены в хранилище");
         });
 
         // Проверяем содержимое сообщений
-        List<DeviceAnswer> answers = AnswerStorage.getAnswersForGraph(CLIENT_ID);
+        List<DeviceAnswer> answers = mockAnswerStorage.getAnswersForGraph(CLIENT_ID);
         Map<String, Integer> contentCount = new HashMap<>();
 
         for (DeviceAnswer answer : answers) {

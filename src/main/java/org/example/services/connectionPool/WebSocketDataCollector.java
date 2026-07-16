@@ -65,11 +65,13 @@ public class WebSocketDataCollector implements Runnable{
     private final long RESPONSE_TIMEOUT_MS = 3000;  // Таймаут ожидания ответа
     private int clientId;
     private DataUpdateListener listener;
+    private final AnswerStorage answerStorage;
 
 
-    public WebSocketDataCollector(VEGA_WAN protocol, String url, int poolDelay, boolean needLog, Integer clientId, DataUpdateListener handleDataUpdate) throws ConnectException  {
+    public WebSocketDataCollector(VEGA_WAN protocol, String url, int poolDelay, boolean needLog, Integer clientId, DataUpdateListener handleDataUpdate, AnswerStorage answerStorage) throws ConnectException  {
         super();
         this.listener = handleDataUpdate;
+        this.answerStorage = answerStorage;
         ObjectMapper objectMapper = new ObjectMapper();
         ObjectNode message = objectMapper.createObjectNode();
         message.put("clientId", "sys");
@@ -346,7 +348,7 @@ public class WebSocketDataCollector implements Runnable{
             return;
         }
 
-        AnswerStorage.addAnswer(answer);//Answer Storage
+        answerStorage.addAnswer(answer);
         PoolLogger.getInstance().writeLine(answer); //Sum log
 
         DeviceLogger deviceLogger;

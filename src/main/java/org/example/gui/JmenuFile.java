@@ -31,11 +31,13 @@ public class JmenuFile {
     private MyProperties prop;
     private final AnyPoolService anyPoolService;
     private final AnswerLoader answerLoader = new AnswerLoader();
+    private final AnswerStorage answerStorage;
 
-    public JmenuFile (MyProperties extProp, AnyPoolService anyPoolService){
+    public JmenuFile (MyProperties extProp, AnyPoolService anyPoolService, AnswerStorage answerStorage){
         super();
         this.prop = extProp;
         this.anyPoolService = anyPoolService;
+        this.answerStorage = answerStorage;
         if(anyPoolService == null){
             log.warn("В конструктор JmenuFile передан null anyPoolService");
         }
@@ -296,7 +298,7 @@ public class JmenuFile {
                 ArrayList<Integer> tabsFieldCapacity = new ArrayList<>();
 
                 // Get the list of all tab numbers
-                tabs.addAll(AnswerStorage.getListOfTabsInStorage());
+                tabs.addAll(answerStorage.getListOfTabsInStorage());
 
                 // Обновление списка чек-боксов
                 for (Integer tab : tabs) {
@@ -333,7 +335,7 @@ public class JmenuFile {
         JMenuItem hidDevices  = new JMenuItem("HID - устройвства");
         JMenuItem commandList  = new JMenuItem("Список команд");
         JMenuItem tabMarkersSetting  = new JMenuItem("Переадресация вкладок");
-        JMenuItem webSocket  = new JMenuItem("webSocket");
+        JMenuItem webSocket  = new JMenuItem("WebSocket (Vega)");
         JMenuItem bleScan  = new JMenuItem("bleScan");
         JMenuItem customRules = new JMenuItem("Пользовательские правила");
         JMenuItem curveWindow = new JMenuItem("Полиномы TC290");
@@ -395,7 +397,7 @@ public class JmenuFile {
             @Override
             public void actionPerformed(ActionEvent arg0) {
                 System.out.println("webSocketWindow Window");
-                WebSocketWindow webSocketWindow = new WebSocketWindow(prop);
+                WebSocketWindow webSocketWindow = new WebSocketWindow(prop, answerStorage);
                 webSocketWindow.setName("webSocketWindow Window");
                 webSocketWindow.setTitle("webSocketWindow Window");
                 webSocketWindow.pack();
@@ -444,7 +446,7 @@ public class JmenuFile {
             public void actionPerformed(ActionEvent arg0) {
                 System.out.println("asdfasdf" + arg0.toString() + "sdfsdf");
                 System.out.println("Tab Marker Setting");
-                TabMarkersSettings tabMarkersSettings = new TabMarkersSettings(prop, anyPoolService);
+                TabMarkersSettings tabMarkersSettings = new TabMarkersSettings(prop, anyPoolService, answerStorage);
                 tabMarkersSettings.setName("Tab Marker Setting");
                 tabMarkersSettings.setTitle("Tab Marker Setting");
                 tabMarkersSettings.pack();
@@ -461,7 +463,7 @@ public class JmenuFile {
          public void actionPerformed(ActionEvent arg0) {
              System.out.println("arguments [" + arg0.toString() + "] ");
              System.out.println("Custom Rules Setting");
-             RuleManagmentDialog ruleManagmentDialog = new RuleManagmentDialog(prop, anyPoolService);
+             RuleManagmentDialog ruleManagmentDialog = new RuleManagmentDialog(prop, anyPoolService, answerStorage);
              ruleManagmentDialog.setName("Rules Setting");
              ruleManagmentDialog.setTitle("Rules Setting");
              ruleManagmentDialog.pack();

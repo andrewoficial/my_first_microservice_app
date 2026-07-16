@@ -9,7 +9,7 @@ import org.example.device.SomeDevice;
 import org.example.device.command.SingleCommand;
 import org.example.device.connectParameters.ComConnectParameters;
 import org.example.services.AnswerValues;
-import org.example.services.comPort.*;
+import org.example.services.transport.serial.*;
 import org.example.utilites.MyUtilities;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

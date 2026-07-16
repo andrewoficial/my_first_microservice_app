@@ -47,15 +47,17 @@ public class RuleManagmentDialog extends JDialog {
     private RuleType selectedRuleType;
     private ComRule selectedRule;
     private ArrayList<Integer> clientsIdGui = new ArrayList<>();
+    private final AnswerStorage answerStorage;
 
     //Порядковый номер в выпадашке: номер клиента -- правило. Потому что многие ко многим.
     private HashMap<Integer, Map<Integer, ComRule>> guiPairRuleAndClients = new HashMap<>();
 
-    public RuleManagmentDialog(MyProperties prop, AnyPoolService anyPoolService) {
+    public RuleManagmentDialog(MyProperties prop, AnyPoolService anyPoolService, AnswerStorage answerStorage) {
         System.out.println("Run");
         if (anyPoolService == null) {
             log.warn("В конструктор RuleManagmentDialog передан null anyPoolService");
         }
+        this.answerStorage = answerStorage;
         System.out.println("2");
         setModal(false);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
@@ -177,7 +179,7 @@ public class RuleManagmentDialog extends JDialog {
         log.info("Вызвано обновление списка клиентов");
 
         JC_Clients.removeAllItems();
-        ConcurrentLinkedQueue<Integer> clientsId = AnswerStorage.getClientsList();
+        ConcurrentLinkedQueue<Integer> clientsId = answerStorage.getClientsList();
 
         System.out.println(clientsId.size());
         int count = 0;

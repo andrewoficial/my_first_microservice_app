@@ -4,7 +4,7 @@ import org.example.gui.mgstest.model.HidSupportedDevice;
 import org.example.gui.mgstest.service.MgsExecutionListener;
 import org.example.gui.mgstest.transport.*;
 import org.example.gui.mgstest.transport.cmd.AbstractCommand;
-import org.example.services.comPort.StringEndianList;
+import org.example.services.transport.serial.StringEndianList;
 
 import static org.example.gui.mgstest.util.CrcValidator.bytesToHexNoSpace;
 

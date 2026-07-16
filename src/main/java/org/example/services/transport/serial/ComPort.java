@@ -3,7 +3,7 @@
 
 Переделать в коллекцию асинхронную (volatite) (зочем?)
  */
-package org.example.services.comPort;
+package org.example.services.transport.serial;
 
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;

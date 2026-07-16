@@ -1,6 +1,6 @@
 package org.example.gui.mgstest.transport.cmd;
 
-import org.example.services.comPort.StringEndianList;
+import org.example.services.transport.serial.StringEndianList;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;

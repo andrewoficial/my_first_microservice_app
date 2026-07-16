@@ -3,6 +3,7 @@ package org.example.gui.graph.data;
 import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
 import org.example.services.DeviceAnswer;
+import org.example.services.SpringContextHolder;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,7 +19,8 @@ public class AnswerLoader {
     }
 
     private ArrayList<String> loadUnitsForTab(int tab) {
-        DeviceAnswer selectedAnswer = AnswerStorage.getLastAnswerForTab(tab);
+        AnswerStorage answerStorage = SpringContextHolder.getBean(AnswerStorage.class);
+        DeviceAnswer selectedAnswer = answerStorage.getLastAnswerForTab(tab);
         if (selectedAnswer == null) {
             return new ArrayList<>();
         }

@@ -8,15 +8,16 @@ import org.example.device.ProtocolsList;
 import org.example.gui.MainLeftPanelState;
 import org.example.gui.MainLeftPanelStateCollection;
 import org.example.services.AnswerStorage;
+import org.example.services.connection.ConnectionType;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 
-import org.example.services.comPort.BaudRatesList;
-import org.example.services.comPort.DataBitsList;
-import org.example.services.comPort.ParityList;
-import org.example.services.comPort.StopBitsList;
+import org.example.services.transport.serial.BaudRatesList;
+import org.example.services.transport.serial.DataBitsList;
+import org.example.services.transport.serial.ParityList;
+import org.example.services.transport.serial.StopBitsList;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -182,12 +183,15 @@ public class MyProperties {
     }
 
     // Конструктор для Spring
-    public MyProperties(boolean fromSpringContext, MainLeftPanelStateCollection mainLeftPanelStateCollection) {
+    private AnswerStorage answerStorage;
+
+    public MyProperties(boolean fromSpringContext, MainLeftPanelStateCollection mainLeftPanelStateCollection, AnswerStorage answerStorage) {
         log.info("Вызван публичный конструтор с параметром fromSpringContext " + fromSpringContext);
         if (fromSpringContext) {
             synchronized (MyProperties.class) {
                 if (INSTANCE == null) {
                     leftPanelStateCollection = mainLeftPanelStateCollection;
+                    this.answerStorage = answerStorage;
                     log.info("Задаю инстанс при запуске спринга");
                     initializeProperties();
                     INSTANCE = this;
@@ -199,6 +203,7 @@ public class MyProperties {
                     log.info("Количество вкладок " + INSTANCE.getTabCounter());
                     log.info("activeProfile (динамический перезапуск?)" + this.activeProfile);
                     leftPanelStateCollection = mainLeftPanelStateCollection;
+                    this.answerStorage = answerStorage;
                 }
             }
         } else {
@@ -211,7 +216,7 @@ public class MyProperties {
         if (INSTANCE == null) {
             synchronized (MyProperties.class) {
                 if (INSTANCE == null) {
-                    log.warn("Вызван конструктор MyProperties вне Spring");
+                    //log.warn("Вызван конструктор MyProperties вне Spring");
                     return null;
                     //На память и дароботку
                     //ReadMe нужно помещать в контекст спринга, потому что потом он создает свой. Получается две независимые сущности.
@@ -597,7 +602,9 @@ public class MyProperties {
         Map<String, BiConsumer<Integer, String>> stringSetters = Map.of(
                 "command", leftPanelStateCollection::setCommandToSend,
                 "prefix", leftPanelStateCollection::setPrefixToSend,
-                "visibleName", leftPanelStateCollection::setVisibleName
+                "visibleName", leftPanelStateCollection::setVisibleName,
+                "connectionType", (clientId, name) ->
+                        leftPanelStateCollection.setConnectionType(clientId, ConnectionType.fromStoredName(name))
         );
 
         // Чтение параметров из настроек
@@ -634,16 +641,20 @@ public class MyProperties {
             if (values != null) {
                 for (int i = 0; i < values.length; i++) {
                     if (values[i] != null) {
-                        int clientId = leftPanelStateCollection.getClientIdByTabNumber(tabNumber[i]);
+                        // find* — без WARN: miss при загрузке файла нормален до первой пары
+                        int clientId = leftPanelStateCollection.findClientIdByTabNumber(tabNumber[i]);
 
                         if (clientId == -1) {
-                            // Создаем новый клиент, если не найден
                             clientId = leftPanelStateCollection.getNewRandomId();
                             MainLeftPanelState state = new MainLeftPanelState();
                             state.setClientId(clientId);
                             state.setTabNumber(tabNumber[i]);
+                            // addPair сам пишет одну INFO «Создана связка…»
+                            // (раньше: getClientId WARN + addPair→getClientId WARN = 2 ложных WARN на вкладку)
                             leftPanelStateCollection.addPairClientIdTabNumber(clientId, tabNumber[i]);
                             leftPanelStateCollection.addOrUpdateIdState(clientId, state);
+                            log.info("MyProperties: вкладка из файла tabNumber={} → clientId={} (первое поле: {})",
+                                    tabNumber[i], clientId, paramName);
                         }
 
                         setter.accept(clientId, values[i]);
@@ -671,7 +682,7 @@ public class MyProperties {
         String[] propertyKeys = {
                 "clientId", "tabNumber", "protocol", "protocolCode", "baudRate", "baudRateCode",
                 "stopBits", "stopBitsCode", "dataBits", "dataBitsCode",
-                "parityBit", "parityBitCode", "command", "prefix", "visibleName"
+                "parityBit", "parityBitCode", "command", "prefix", "visibleName", "connectionType"
         };
         for (String key : propertyKeys) {
             propertyBuilders.put(key, new StringBuilder());
@@ -699,6 +710,8 @@ public class MyProperties {
             propertyBuilders.get("command").append(state.getCommand()).append(", ");
             propertyBuilders.get("prefix").append(state.getPrefix()).append(", ");
             propertyBuilders.get("visibleName").append(state.getVisibleName()).append(", ");
+            ConnectionType ct = state.getConnectionType() != null ? state.getConnectionType() : ConnectionType.COM;
+            propertyBuilders.get("connectionType").append(ct.name()).append(", ");
         }
 
         // Удаляем лишние запятые и пробелы, экранируем специальные символы
@@ -744,7 +757,7 @@ public class MyProperties {
                 continue;
             }
 
-            AnswerStorage.registerDeviceTabPair(ident, tabNumber);
+            answerStorage.registerDeviceTabPair(ident, tabNumber);
         }
 
         //log.info("Успешно загружены пары идентификаторов устройств и вкладок: " + AnswerStorage.deviceTabPairs);

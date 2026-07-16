@@ -10,6 +10,7 @@ import org.example.gui.graph.data.AnswerValidator;
 import org.example.gui.graph.ui.SeriesModel;
 import org.example.services.AnswerStorage;
 import org.example.services.GraphDataRepository;
+import org.example.services.SpringContextHolder;
 import org.jfree.chart.*;
 import org.jfree.chart.axis.LogarithmicAxis;
 import org.jfree.chart.axis.NumberAxis;
@@ -311,8 +312,9 @@ public class ChartWindow extends JFrame implements Rendeble {
     }
 
     private void detectStabilityChanges() {
-        for (Integer tab : AnswerStorage.getTabsInStorage()) {
-            String currentStable = AnswerStorage.getStableCommand(tab);
+        AnswerStorage answerStorage = SpringContextHolder.getBean(AnswerStorage.class);
+        for (Integer tab : answerStorage.getTabsInStorage()) {
+            String currentStable = answerStorage.getStableCommand(tab);
             String prevStable = lastStableCommand.get(tab);
 
             if (!Objects.equals(currentStable, prevStable)) {
@@ -328,9 +330,10 @@ public class ChartWindow extends JFrame implements Rendeble {
     }
 
     private void updateCB() {
+        AnswerStorage answerStorage = SpringContextHolder.getBean(AnswerStorage.class);
         boolean newCheckboxesAdded = false;
-        for (Integer tab : AnswerStorage.getTabsInStorage()) {
-            String stableCmd = AnswerStorage.getStableCommand(tab);
+        for (Integer tab : answerStorage.getTabsInStorage()) {
+            String stableCmd = answerStorage.getStableCommand(tab);
             if (stableCmd == null) continue;
 
             ArrayList<String> unitsInAnswer = ansLoader.getUnitsArrayForSelectedClientOrTab(tab);
@@ -405,9 +408,10 @@ public class ChartWindow extends JFrame implements Rendeble {
     }
 
     private void ensureAllSeriesExist() {
+        AnswerStorage answerStorage = SpringContextHolder.getBean(AnswerStorage.class);
         int maxItems = limitDataCheckBox.isSelected() ? range : Integer.MAX_VALUE;
-        for (Integer tab : AnswerStorage.getTabsInStorage()) {
-            String stableCmd = AnswerStorage.getStableCommand(tab);
+        for (Integer tab : answerStorage.getTabsInStorage()) {
+            String stableCmd = answerStorage.getStableCommand(tab);
             if (stableCmd == null) continue;
 
             ArrayList<String> unitsInAnswer = ansLoader.getUnitsArrayForSelectedClientOrTab(tab);
@@ -431,8 +435,9 @@ public class ChartWindow extends JFrame implements Rendeble {
     }
 
     private void addNewPointsToSeries() {
-        for (Integer tab : AnswerStorage.getTabsInStorage()) {
-            String stableCmd = AnswerStorage.getStableCommand(tab);
+        AnswerStorage answerStorage = SpringContextHolder.getBean(AnswerStorage.class);
+        for (Integer tab : answerStorage.getTabsInStorage()) {
+            String stableCmd = answerStorage.getStableCommand(tab);
             if (stableCmd == null) continue;
 
             long fromTime = lastProcessedTime.getOrDefault(tab, 0L);
@@ -442,7 +447,7 @@ public class ChartWindow extends JFrame implements Rendeble {
             if (seriesRefs == null) continue;
             int fieldCount = seriesRefs.length;
 
-            GraphDataRepository.getInstance().forEachHistoryPoint(tab, stableCmd, point -> {
+            SpringContextHolder.getBean(GraphDataRepository.class).forEachHistoryPoint(tab, stableCmd, point -> {
                 if (point.getEpochMilli() > fromTime) {
                     Millisecond ms = point.toJFreeMillisecond();
                     for (int j = 0; j < point.getFieldCount() && j < fieldCount; j++) {
@@ -463,6 +468,7 @@ public class ChartWindow extends JFrame implements Rendeble {
     }
 
     private void applySeriesVisibility() {
+        AnswerStorage answerStorage = SpringContextHolder.getBean(AnswerStorage.class);
         JFreeChart chart = chartPanel.getChart();
         if (chart == null) return;
         XYPlot plot = chart.getXYPlot();
@@ -478,7 +484,7 @@ public class ChartWindow extends JFrame implements Rendeble {
             boolean userVisible = seriesVisibility.isVisible(seriesName);
             boolean commandVisible = false;
             if (tabId != null && seriesCommand != null) {
-                String stableCmd = AnswerStorage.getStableCommand(tabId);
+                String stableCmd = answerStorage.getStableCommand(tabId);
                 commandVisible = (stableCmd != null && seriesCommand.equals(stableCmd));
             }
 
@@ -495,9 +501,10 @@ public class ChartWindow extends JFrame implements Rendeble {
     }
 
     private void updateLastReceivedValue() {
+        AnswerStorage answerStorage = SpringContextHolder.getBean(AnswerStorage.class);
         StringBuilder sb = new StringBuilder(256);
-        for (Integer tab : AnswerStorage.getTabsInStorage()) {
-            String stableCmd = AnswerStorage.getStableCommand(tab);
+        for (Integer tab : answerStorage.getTabsInStorage()) {
+            String stableCmd = answerStorage.getStableCommand(tab);
             if (stableCmd == null) continue;
 
             ArrayList<String> unitsInAnswer = ansLoader.getUnitsArrayForSelectedClientOrTab(tab);

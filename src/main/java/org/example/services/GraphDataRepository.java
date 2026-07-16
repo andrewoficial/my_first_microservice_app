@@ -1,17 +1,14 @@
 package org.example.services;
 
+import org.springframework.stereotype.Service;
+
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
+@Service
 public class GraphDataRepository {
 
-    private static final GraphDataRepository INSTANCE = new GraphDataRepository();
-
     private final ConcurrentHashMap<Integer, ConcurrentHashMap<String, GraphHistory>> histories = new ConcurrentHashMap<>();
-
-    public static GraphDataRepository getInstance() {
-        return INSTANCE;
-    }
 
     public void addData(Integer tabId, String command, DeviceAnswer answer) {
         if (tabId == null || command == null || answer == null) return;

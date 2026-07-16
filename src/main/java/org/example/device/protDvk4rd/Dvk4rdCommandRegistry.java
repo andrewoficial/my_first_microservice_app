@@ -4,6 +4,7 @@ import org.example.device.DeviceCommandRegistry;
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
+import org.example.services.SpringContextHolder;
 import java.util.Arrays;
 import static org.example.utilites.MyUtilities.*;
 import static org.example.utilites.MyUtilities.isCorrectNumberF;
@@ -370,8 +371,9 @@ public class Dvk4rdCommandRegistry extends DeviceCommandRegistry {
 
                     serialNumber = isNegative ? - serialNumber : serialNumber; // Применяем знак
                     answerValues.addValue(serialNumber, " SN");
-                    if(AnswerStorage.getTabByIdent(String.valueOf(serialNumber)) != null){
-                        answerValues.setDirection(AnswerStorage.getTabByIdent(String.valueOf(serialNumber)));
+                    AnswerStorage as = SpringContextHolder.getBean(AnswerStorage.class);
+                    if(as != null && as.getTabByIdent(String.valueOf(serialNumber)) != null){
+                        answerValues.setDirection(as.getTabByIdent(String.valueOf(serialNumber)));
                     }
                     //System.out.println(termBM);
                 } else {

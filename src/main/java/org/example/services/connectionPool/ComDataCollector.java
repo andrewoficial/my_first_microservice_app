@@ -9,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.gui.MainLeftPanelStateCollection;
 import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
-import org.example.services.comPort.*;
 import org.example.services.DeviceAnswer;
 import org.example.services.loggers.DeviceLogger;
 import org.example.services.loggers.PoolLogger;
@@ -17,6 +16,7 @@ import org.example.device.ProtocolsList;
 import org.example.device.*;
 import org.example.services.rule.RuleStorage;
 import org.example.services.rule.com.ComRule;
+import org.example.services.transport.serial.ComPort;
 import org.example.utilites.properties.MyProperties;
 
 import java.io.ByteArrayOutputStream;
@@ -37,6 +37,7 @@ import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 public class ComDataCollector implements Runnable{
 
     private final AnyPoolService parentService;//Родительский класс для получения единого для всех потомков объекта синхронизаци логирования.
+    private final AnswerStorage answerStorage;
     private final MyProperties myProperties = MyProperties.getInstance(); //Объект с параметрами для того, что бы определять тип логирования
     @Getter
     private volatile boolean alive = true; // Признак того, что поток жив (после введения Event всегда истина и сбрасывается в shutdown, раньше сбрасывался если нету клиентов у потока)
@@ -88,9 +89,10 @@ public class ComDataCollector implements Runnable{
         }
     }
 
-    public ComDataCollector(MainLeftPanelStateCollection state, ProtocolsList protocol, String prefix, String command, SerialPort comPort, int poolDelay, boolean needLog, Integer clientId, AnyPoolService parentService) throws ConnectException {
+    public ComDataCollector(MainLeftPanelStateCollection state, ProtocolsList protocol, String prefix, String command, SerialPort comPort, int poolDelay, boolean needLog, Integer clientId, AnyPoolService parentService, AnswerStorage answerStorage) throws ConnectException {
         super();
         this.parentService = parentService;
+        this.answerStorage = answerStorage;
         if(protocol == null || command == null || prefix == null || comPort == null || clientId  == null || state == null){
             log.error("Один из параметров конструктора передан как null");
             return;
@@ -553,7 +555,7 @@ public class ComDataCollector implements Runnable{
         }
 
         try {
-            AnswerStorage.addAnswer(answer);//Answer Storage
+            answerStorage.addAnswer(answer);
         }catch (Exception e){
             log.error("Исключение при выполнении saveAndLogSome" + e.getMessage());
             return;

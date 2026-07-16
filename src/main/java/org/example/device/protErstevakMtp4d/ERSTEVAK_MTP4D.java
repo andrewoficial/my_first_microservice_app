@@ -10,7 +10,7 @@ import org.example.device.SomeDevice;
 import org.example.device.TemplatedAscii;
 import org.example.device.connectParameters.ComConnectParameters;
 import org.example.services.AnswerValues;
-import org.example.services.comPort.*;
+import org.example.services.transport.serial.*;
 
 @Slf4j
 public class ERSTEVAK_MTP4D implements SomeDevice, ProtocolComPort, TemplatedAscii {

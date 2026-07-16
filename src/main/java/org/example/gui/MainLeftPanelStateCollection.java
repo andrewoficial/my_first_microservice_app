@@ -2,6 +2,7 @@ package org.example.gui;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.example.services.connection.ConnectionType;
 import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.Map;
@@ -62,7 +63,7 @@ public class MainLeftPanelStateCollection {
         return forReturn;
     }
     public boolean removeEntryByClientId(Integer clientId){
-        if (clientId != null && clientId >= 0 && getTabNumberByClientId(clientId) != -1) {
+        if (clientId != null && clientId >= 0 && findTabNumberByClientId(clientId) != -1) {
             clientIdTab.remove(clientId);
             clientIdTabState.remove(clientId);
             return true;
@@ -72,72 +73,117 @@ public class MainLeftPanelStateCollection {
     public boolean addOrUpdateIdState(Integer clientId, MainLeftPanelState paneState){
         if (clientId != null && paneState != null && clientId >= 0) {
             clientIdTabState.put(clientId, paneState);
-            log.info("Done addOrUpdateIdState for clientId " + clientId + " rab number " + paneState.getTabNumber());
+            log.debug("Обновлён state clientId={} tabNumber={}", clientId, paneState.getTabNumber());
             return true;
         }
         return false;
     }
-    public Integer getTabNumberByClientId(Integer clientId){
-        if (clientId != null && clientId >= 0 && !clientIdTab.isEmpty()) {
-            for (Map.Entry<Integer, Integer> integerIntegerEntry : clientIdTab.entrySet()) {
-                if (Objects.equals(integerIntegerEntry.getKey(), clientId)) {
-                    return integerIntegerEntry.getKey();
-                }
+
+    /**
+     * Silent clientId → tabNumber. Returns -1 if missing.
+     * Prefer this for existence checks (no WARN/noise).
+     */
+    public int findTabNumberByClientId(Integer clientId) {
+        if (clientId == null || clientId < 0) {
+            return -1;
+        }
+        Integer tab = clientIdTab.get(clientId);
+        return tab != null ? tab : -1;
+    }
+
+    /**
+     * Silent tabNumber → clientId. Returns -1 if missing.
+     * Prefer this for existence checks during load/create (no WARN/noise).
+     */
+    public int findClientIdByTabNumber(Integer tabNumber) {
+        if (tabNumber == null || tabNumber < 0 || clientIdTab.isEmpty()) {
+            return -1;
+        }
+        for (Map.Entry<Integer, Integer> entry : clientIdTab.entrySet()) {
+            if (Objects.equals(entry.getValue(), tabNumber)) {
+                return entry.getKey();
             }
         }
         return -1;
     }
 
-    public Integer getClientIdByTabNumber(Integer tabNumber){
-        if (tabNumber != null && tabNumber >= 0 && !clientIdTab.isEmpty()) {
-            for (Map.Entry<Integer, Integer> integerIntegerEntry : clientIdTab.entrySet()) {
-                if (Objects.equals(integerIntegerEntry.getValue(), tabNumber)) {
-                    return integerIntegerEntry.getKey();
-                }
-            }
+    /**
+     * clientId → tabNumber. Miss is often normal (new tab); logged at DEBUG only.
+     * For probes use {@link #findTabNumberByClientId(Integer)}.
+     */
+    public Integer getTabNumberByClientId(Integer clientId) {
+        int tab = findTabNumberByClientId(clientId);
+        if (tab == -1) {
+            log.debug("Связка client→tab не найдена (часто ок при создании): clientId={}, mapSize={}",
+                    clientId, clientIdTab.size());
         }
-        log.warn("Не найдена связка вкладка/клиент для tabNumber [" + tabNumber + "] clientIdTab.isEmpty()" + clientIdTab.isEmpty() + " clientIdTab" + clientIdTab.size());
-        return -1;
+        return tab;
     }
 
-    public boolean containClientId(Integer clientId){
-        if (clientId != null && clientId >= 0 && !clientIdTab.isEmpty()) {
-            return clientIdTab.containsKey(clientId);
+    /**
+     * tabNumber → clientId. Miss is often normal (new tab); logged at DEBUG only.
+     * For probes use {@link #findClientIdByTabNumber(Integer)}.
+     * <p>
+     * Note: callers that previously saw two WARNs on one new tab were doing
+     * getClientIdByTabNumber (miss) + addPair (miss check again). addPair now uses find*.
+     */
+    public Integer getClientIdByTabNumber(Integer tabNumber) {
+        int clientId = findClientIdByTabNumber(tabNumber);
+        if (clientId == -1) {
+            log.debug("Связка tab→client не найдена (часто ок при создании): tabNumber={}, mapSize={}",
+                    tabNumber, clientIdTab.size());
+        }
+        return clientId;
+    }
+
+    public boolean containClientId(Integer clientId) {
+        return clientId != null && clientId >= 0 && clientIdTab.containsKey(clientId);
+    }
+
+    public boolean containTabNumber(Integer tabNumber) {
+        return findClientIdByTabNumber(tabNumber) != -1;
+    }
+
+    /**
+     * Registers a new clientId ↔ tabNumber pair. Existence checks are silent (find*);
+     * one INFO line is logged only when the pair is actually created.
+     */
+    public boolean addPairClientIdTabNumber(Integer clientId, Integer tabNumber) {
+        if (clientId != null && tabNumber != null && clientId >= 0 && tabNumber >= 0) {
+            int existingTab = findTabNumberByClientId(clientId);
+            int existingClient = findClientIdByTabNumber(tabNumber);
+            if (existingTab == -1 && existingClient == -1) {
+                clientIdTab.put(clientId, tabNumber);
+                log.info("Создана связка clientId={} ↔ tabNumber={} (mapSize={})",
+                        clientId, tabNumber, clientIdTab.size());
+                return true;
+            }
+            log.warn("Связка уже есть: clientId={}→tab={}, tabNumber={}→client={} (запрос clientId={}, tabNumber={})",
+                    clientId, existingTab, tabNumber, existingClient, clientId, tabNumber);
         }
         return false;
     }
 
-
-    public boolean addPairClientIdTabNumber(Integer clientId, Integer tabNumber){
+    public boolean addOrUpdateClientIdTabNumber(Integer clientId, Integer tabNumber) {
         if (clientId != null && tabNumber != null && clientId >= 0 && tabNumber >= 0) {
-            if(getTabNumberByClientId(clientId) == -1 && getClientIdByTabNumber(tabNumber) == -1){
-                clientIdTab.put(clientId, tabNumber);
-                log.info("Done clientIdTab.put(clientId, tabNumber) ");
-                return true;
-            }else{
-                log.warn("pair clientId, tabNumber already exist ");
-            }
-        }
-        return false;
-    }
-
-    public boolean addOrUpdateClientIdTabNumber(Integer clientId, Integer tabNumber){
-        if (clientId != null && tabNumber != null && clientId >= 0 && tabNumber >= 0) {
-            if(getTabNumberByClientId(clientId) == -1 && getClientIdByTabNumber(tabNumber) == -1){
+            if (findTabNumberByClientId(clientId) == -1 && findClientIdByTabNumber(tabNumber) == -1) {
                 clientIdTab.put(clientId, tabNumber);
                 clientIdTabState.putIfAbsent(clientId, new MainLeftPanelState());
-                return true;
-            }else{
-                if(getClientIdByTabNumber(tabNumber) != -1){
-                    clientIdTab.remove(getClientIdByTabNumber(tabNumber));
-                }
-                if(getTabNumberByClientId(clientId) != -1){
-                    clientIdTab.remove(getTabNumberByClientId(clientId));
-                }
-                clientIdTab.put(clientId, tabNumber);
-                clientIdTabState.putIfAbsent(clientId, new MainLeftPanelState());
+                log.info("Создана связка clientId={} ↔ tabNumber={} (mapSize={})",
+                        clientId, tabNumber, clientIdTab.size());
                 return true;
             }
+            int ownerOfTab = findClientIdByTabNumber(tabNumber);
+            if (ownerOfTab != -1) {
+                clientIdTab.remove(ownerOfTab);
+            }
+            if (findTabNumberByClientId(clientId) != -1) {
+                clientIdTab.remove(clientId);
+            }
+            clientIdTab.put(clientId, tabNumber);
+            clientIdTabState.putIfAbsent(clientId, new MainLeftPanelState());
+            log.debug("Обновлена связка clientId={} ↔ tabNumber={}", clientId, tabNumber);
+            return true;
         }
         return false;
     }
@@ -387,6 +433,23 @@ public class MainLeftPanelStateCollection {
             throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
         }
         return stateObj.getProtocol();
+    }
+
+    public void setConnectionType(int clientId, ConnectionType connectionType) {
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        stateObj.setConnectionType(connectionType != null ? connectionType : ConnectionType.COM);
+    }
+
+    public ConnectionType getConnectionType(int clientId) {
+        MainLeftPanelState stateObj = clientIdTabState.getOrDefault(clientId, null);
+        if (stateObj == null) {
+            throw new IndexOutOfBoundsException("Для клиента " + clientId + " не найдено состояние панели");
+        }
+        ConnectionType t = stateObj.getConnectionType();
+        return t != null ? t : ConnectionType.COM;
     }
 
     public String getCommand(int clientId){

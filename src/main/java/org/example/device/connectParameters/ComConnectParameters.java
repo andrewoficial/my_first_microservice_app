@@ -2,7 +2,7 @@ package org.example.device.connectParameters;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.example.services.comPort.*;
+import org.example.services.transport.serial.*;
 
 public class ComConnectParameters {
 

@@ -1,9 +1,9 @@
 package org.example.device;
 
-import org.example.services.comPort.BaudRatesList;
-import org.example.services.comPort.DataBitsList;
-import org.example.services.comPort.ParityList;
-import org.example.services.comPort.StopBitsList;
+import org.example.services.transport.serial.BaudRatesList;
+import org.example.services.transport.serial.DataBitsList;
+import org.example.services.transport.serial.ParityList;
+import org.example.services.transport.serial.StopBitsList;
 
 /**
  * Interface that indicates a device is capable of configuring default COM port connection parameters.

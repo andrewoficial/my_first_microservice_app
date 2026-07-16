@@ -7,7 +7,7 @@ import org.example.device.DeviceCommandListClass;
 import org.example.device.SomeDevice;
 import org.example.device.connectParameters.ComConnectParameters;
 import org.example.services.AnswerValues;
-import org.example.services.comPort.*;
+import org.example.services.transport.serial.*;
 
 @Slf4j
 public class ARD_CUR_LOOP_METER implements SomeDevice {

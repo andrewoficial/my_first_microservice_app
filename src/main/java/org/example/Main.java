@@ -2,21 +2,47 @@ package org.example;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.gui.MainLeftPanelStateCollection;
-import org.example.gui.MainWindow;
+import org.example.gui.main.MainWindow;
+import org.example.gui.ServerSettingsWindow;
+import org.example.services.AnswerStorage;
+import org.example.services.ConnectionSettingsService;
+import org.example.services.PollingService;
+import org.example.services.PortLifecycleService;
+import org.example.services.TabService;
 import org.example.services.connectionPool.AnyPoolService;
 import org.example.utilites.properties.MyProperties;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.annotation.Import;
 import org.springframework.context.support.GenericApplicationContext;
 
 import javax.swing.*;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Properties;
 import java.util.stream.Stream;
 
 
-@SpringBootApplication
+/**
+ * Component scan is intentionally narrow: {@code device} (~88) and most of {@code gui} (~180)
+ * have no Spring stereotypes — scanning them only wastes startup time (ASM over .class files).
+ * The two GUI beans live under {@code gui} and are registered via {@link Import}.
+ */
+@SpringBootApplication(scanBasePackages = {
+        "org.example.services",
+        "org.example.utilites.properties",
+        "org.example.web"
+})
+@Import({
+        MainLeftPanelStateCollection.class,
+        ServerSettingsWindow.class
+})
 @Slf4j
 public class Main {
     private static ConfigurableApplicationContext context;
@@ -24,7 +50,15 @@ public class Main {
     public static void main(String[] args) {
         System.setProperty("java.awt.headless", "false"); // Устанавливаем GUI-режим
 
-        context  =  new SpringApplicationBuilder(Main.class)
+        String startupProfile = readStartupProfile();
+        log.info("Профиль запуска: {}", startupProfile);
+        log.info("Component scan: org.example.services, utilites.properties, web (+ Import: MainLeftPanelStateCollection, ServerSettingsWindow)");
+
+        // gui-only excludes (JPA/Hikari/Security/Web) are applied by GuiOnlyEnvironmentPostProcessor
+        // — Spring Boot 4 package names + early Environment hook. Do not use Boot 2/3 class names
+        // or builder.properties(String...) without "key=value" form; both silently fail.
+        context = new SpringApplicationBuilder(Main.class)
+                .profiles(startupProfile)
                 .run(args);
 
 
@@ -37,7 +71,12 @@ public class Main {
             AnyPoolService anyPoolService = context.getBean(AnyPoolService.class);
             MyProperties myProperties = context.getBean(MyProperties.class);
             MainLeftPanelStateCollection leftPanelStateCollection = context.getBean(MainLeftPanelStateCollection.class);
-            mainWindow = new MainWindow(myProperties, anyPoolService, leftPanelStateCollection);
+            ConnectionSettingsService connectionSettingsService = context.getBean(ConnectionSettingsService.class);
+            PortLifecycleService portLifecycleService = context.getBean(PortLifecycleService.class);
+            PollingService pollingService = context.getBean(PollingService.class);
+            TabService tabService = context.getBean(TabService.class);
+            AnswerStorage answerStorage = context.getBean(AnswerStorage.class);
+            mainWindow = new MainWindow(myProperties, anyPoolService, leftPanelStateCollection, connectionSettingsService, portLifecycleService, pollingService, tabService, answerStorage);
         });
 
     }
@@ -123,6 +162,26 @@ public class Main {
                     context.getBean(MainLeftPanelStateCollection.class)
             ));
         }
+    }
+
+    private static String readStartupProfile() {
+        String defaultProfile = "gui-only";
+        try {
+            Path configFile = Paths.get("config/configAccess.properties");
+            if (Files.exists(configFile)) {
+                Properties props = new Properties();
+                try (FileInputStream in = new FileInputStream(configFile.toFile())) {
+                    props.load(in);
+                }
+                String profile = props.getProperty("startupProfile", defaultProfile);
+                if (profile != null && !profile.isBlank()) {
+                    return profile.trim();
+                }
+            }
+        } catch (IOException e) {
+            log.warn("Не удалось прочитать configAccess.properties: {}", e.getMessage());
+        }
+        return defaultProfile;
     }
 
 }

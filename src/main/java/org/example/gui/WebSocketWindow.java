@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.example.device.protVega.VEGA_WAN;
+import org.example.services.AnswerStorage;
 import org.example.services.connectionPool.AnyPoolService;
 import org.example.services.connectionPool.WebSocketDataCollector;
 import org.example.services.loggers.DeviceLogger;
@@ -62,14 +63,16 @@ public class WebSocketWindow extends JDialog implements Rendeble {
     private JButton removeDeviceButton;
     private Checkbox needLogCheckbox;
     JComboBox<String> groupComboBox;
+    private final AnswerStorage answerStorage;
     StringBuilder history = new StringBuilder(); //ToDo переделать
 
-    public WebSocketWindow(MyProperties myProperties) {
+    public WebSocketWindow(MyProperties myProperties, AnswerStorage answerStorage) {
 
         setModal(false);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setContentPane(panel1);
         prop = myProperties;
+        this.answerStorage = answerStorage;
         restoreParameters();
 
         connectButton.addActionListener(new ActionListener() {
@@ -117,7 +120,7 @@ public class WebSocketWindow extends JDialog implements Rendeble {
 
         try {
             VEGA_WAN vegaWan = new VEGA_WAN();
-            webSocketDataCollector = new WebSocketDataCollector(vegaWan, prop.getVegaAddress(), 1000, true, 99, (clientId, action, data, cmd, payload) -> handleDataUpdate(clientId, action, data, cmd, payload));
+            webSocketDataCollector = new WebSocketDataCollector(vegaWan, prop.getVegaAddress(), 1000, true, 99, (clientId, action, data, cmd, payload) -> handleDataUpdate(clientId, action, data, cmd, payload), answerStorage);
             new Thread(webSocketDataCollector).start();
         } catch (ConnectException e) {
             log.warn("Ошибка создания подключение" + e.getMessage());

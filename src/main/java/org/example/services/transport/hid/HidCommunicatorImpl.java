@@ -1,4 +1,4 @@
-package org.example.gui.mgstest.transport.hid;
+package org.example.services.transport.hid;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.utilites.MyUtilities;
@@ -7,7 +7,7 @@ import java.util.Arrays;
 import static org.example.utilites.Constants.HidCommunication.*;
 
 @Slf4j
-public class SomeHidController implements HidCommunicator {
+public class HidCommunicatorImpl implements HidCommunicator {
 
     /**
      * Sends data to HID device with zero padding

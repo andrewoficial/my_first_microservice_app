@@ -5,6 +5,7 @@ import org.example.device.DeviceCommandRegistry;
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerStorage;
 import org.example.services.AnswerValues;
+import org.example.services.SpringContextHolder;
 
 import static org.example.utilites.MyUtilities.*;
 
@@ -78,7 +79,8 @@ public class ArdFeeBrdMeterCommandRegistry extends DeviceCommandRegistry {
         // Serial number → direction lookup
         double serialNumber = answerValues.getValues()[SERIAL_NUMBER_INDEX];
         String snStr = String.valueOf((long) serialNumber);
-        Integer tab = AnswerStorage.getTabByIdent(snStr);
+        AnswerStorage as = SpringContextHolder.getBean(AnswerStorage.class);
+        Integer tab = as != null ? as.getTabByIdent(snStr) : null;
         if (tab != null) {
             answerValues.setDirection(tab);
         }
