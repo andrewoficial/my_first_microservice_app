@@ -11,6 +11,9 @@ import org.example.services.PortLifecycleService;
 import org.example.services.TabService;
 import org.example.services.connectionPool.AnyPoolService;
 import org.example.utilites.properties.MyProperties;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.beans.factory.support.DefaultSingletonBeanRegistry;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -23,10 +26,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Properties;
-import java.util.stream.Stream;
 
 
 /**
@@ -108,30 +109,27 @@ public class Main {
                 .properties(Collections.singletonMap("server.port", savedPort))
                 .initializers(initializer -> {
                     if (initializer instanceof GenericApplicationContext genericContext) {
-                        // 3. Используем BeanFactoryPostProcessor для безопасной модификации
+                        // 3. BFPP: снимаем auto-definitions (@Import/@Component/@Bean/@Service),
+                        // затем регистрируем те же экземпляры (иначе два бина одного типа).
+                        // destroyBean здесь не подходит — definition остаётся, @Import создаёт второй бин.
                         genericContext.addBeanFactoryPostProcessor(beanFactory -> {
-                            // Удаляем существующие определения
-                            Stream.of(
-                                    MyProperties.class,
-                                    AnyPoolService.class,
-                                    MainLeftPanelStateCollection.class
-                            ).forEach(clazz -> {
-                                String[] beanNames = beanFactory.getBeanNamesForType(clazz);
-                                Arrays.stream(beanNames).forEach(beanFactory::destroyBean);
-                            });
+                            // By type + known names (@Import uses FQCN; @Service/@Bean use short names)
+                            removeBeanDefinitionsOfType(beanFactory, MyProperties.class);
+                            removeBeanDefinitionsOfType(beanFactory, AnyPoolService.class);
+                            removeBeanDefinitionsOfType(beanFactory, MainLeftPanelStateCollection.class);
+                            removeBeanByNames(beanFactory,
+                                    "myProperties",
+                                    "anyPoolService",
+                                    "mainLeftPanelStateCollection",
+                                    MyProperties.class.getName(),
+                                    AnyPoolService.class.getName(),
+                                    MainLeftPanelStateCollection.class.getName());
 
-                            // 4. Регистрируем сохранённые экземпляры
                             if (myProperties != null) {
-                                beanFactory.registerSingleton(
-                                        "myProperties",
-                                        myProperties
-                                );
+                                beanFactory.registerSingleton("myProperties", myProperties);
                             }
                             if (anyPoolService != null) {
-                                beanFactory.registerSingleton(
-                                        "anyPoolService",
-                                        anyPoolService
-                                );
+                                beanFactory.registerSingleton("anyPoolService", anyPoolService);
                             }
                             if (leftPanelStateCollection != null) {
                                 beanFactory.registerSingleton(
@@ -182,6 +180,39 @@ public class Main {
             log.warn("Не удалось прочитать configAccess.properties: {}", e.getMessage());
         }
         return defaultProfile;
+    }
+
+    /**
+     * Removes bean definitions (and any early singletons) of the given type so a preserved
+     * instance can be {@link ConfigurableListableBeanFactory#registerSingleton(String, Object)
+     * registerSingleton}'d without {@code NoUniqueBeanDefinitionException}.
+     * <p>
+     * Needed because {@code @Import(MainLeftPanelStateCollection.class)} registers a definition
+     * under the FQCN while restart used to register a second singleton under a short name.
+     */
+    private static void removeBeanDefinitionsOfType(ConfigurableListableBeanFactory beanFactory, Class<?> type) {
+        String[] names = beanFactory.getBeanNamesForType(type, true, false);
+        removeBeanByNames(beanFactory, names);
+    }
+
+    private static void removeBeanByNames(ConfigurableListableBeanFactory beanFactory, String... names) {
+        if (names == null) {
+            return;
+        }
+        for (String name : names) {
+            if (name == null || name.isBlank()) {
+                continue;
+            }
+            if (beanFactory instanceof BeanDefinitionRegistry registry && registry.containsBeanDefinition(name)) {
+                registry.removeBeanDefinition(name);
+                log.info("restart: removed bean definition '{}'", name);
+            }
+            if (beanFactory instanceof DefaultSingletonBeanRegistry singletonRegistry
+                    && singletonRegistry.containsSingleton(name)) {
+                singletonRegistry.destroySingleton(name);
+                log.info("restart: destroyed early singleton '{}'", name);
+            }
+        }
     }
 
 }
