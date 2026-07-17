@@ -22,6 +22,7 @@ import org.example.gui.devices.stu.mcps.emulation.McpsTestFrame;
 import org.example.gui.graph.ChartWindow;
 import org.example.gui.graph.data.AnswerLoader;
 import org.example.gui.mgstest.MultigassensWindow;
+import org.example.gui.settings.server.ServerSettingsWindow;
 import org.example.gui.system.logs.ViewLogsWindow;
 import org.example.gui.system.resources.DebugWindow;
 import org.example.services.AnswerStorage;

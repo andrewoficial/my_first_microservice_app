@@ -3,7 +3,7 @@ package org.example;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gui.MainLeftPanelStateCollection;
 import org.example.gui.main.MainWindow;
-import org.example.gui.ServerSettingsWindow;
+import org.example.gui.settings.server.ServerSettingsWindow;
 import org.example.services.AnswerStorage;
 import org.example.services.ConnectionSettingsService;
 import org.example.services.PollingService;

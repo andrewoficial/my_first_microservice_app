@@ -1,4 +1,4 @@
-package org.example.gui;
+package org.example.gui.settings.server;
 
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;

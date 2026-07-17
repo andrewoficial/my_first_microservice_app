@@ -512,6 +512,12 @@ public class MyProperties {
         settingsLoader.setString("vegaLogin", login);
     }
 
+    /**
+     * URL опционального источника обновлений заказчика (LAN / enterprise mirror).
+     * Не путать со встроенными GitHub/GitFlic: это поле для офлайн-обновлений на предприятии.
+     * Пустая строка = источник не используется. Формат пока GitHub-compatible JSON;
+     * позже — явный выбор парсера (gitLike / jsonLike / …).
+     */
     public String getUpdateSourceUrl() {
         return updateSourceUrl;
     }

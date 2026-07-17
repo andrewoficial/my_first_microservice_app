@@ -102,12 +102,7 @@ public class UpdateWindow extends JDialog implements Rendeble {
                         Release newest = cl.newerReleases.get(0);
                         if (bestDlUrl.isEmpty() && newest.hasDownload()) {
                             bestDlUrl = newest.downloadUrl;
-                            try {
-                                String[] parts = newest.downloadUrl.split("/");
-                                bestFileName = parts[parts.length - 1];
-                            } catch (Exception ex) {
-                                bestFileName = "Elephant-Monitor-" + newest.version + ".jar";
-                            }
+                            bestFileName = newest.resolveFileName();
                         }
 
                         for (Release rn : cl.newerReleases) {

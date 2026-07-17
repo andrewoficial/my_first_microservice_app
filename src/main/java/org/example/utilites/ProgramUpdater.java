@@ -15,15 +15,28 @@ import org.json.JSONObject;
 
 /**
  * Координатор обновлений программы.
- * Поддерживает несколько источников (жёстко заданные GitHub + пользовательский в настройках).
- * Все источники должны эмулировать GitHub Releases API.
+ * <p>
+ * Источники:
+ * <ol>
+ *   <li>Встроенный GitHub ({@code GITHUB_OLD} / при необходимости {@code GITHUB_NEW} — не удалять)</li>
+ *   <li>Встроенный GitFlic (зеркало релизов)</li>
+ *   <li>{@code updateSourceUrl} из конфига — опциональный источник заказчика
+ *       (локальная сеть / enterprise mirror при отсутствии интернета).
+ *       Пока ожидается GitHub-compatible JSON; в будущем — выбор парсера
+ *       (gitLike / jsonLike / …).</li>
+ * </ol>
+ * GitHub — Releases API; GitFlic — API с токеном.
  */
 @Slf4j
 public class ProgramUpdater {
 
-    // Встроенные источники. GITHUB_NEW можно заполнить позже.
+    // Встроенные источники. GITHUB_NEW можно заполнить позже — не удалять и не заменять.
     private static final String GITHUB_OLD_LIST = "https://api.github.com/repos/andrewoficial/my_first_microservice_app/releases?per_page=100";
     private static final String GITHUB_NEW_LIST = ""; // заполни /releases?per_page=100 когда будет новый реп
+
+    /** Встроенное зеркало релизов на GitFlic. */
+    private static final String GITFLIC_LIST =
+            "https://gitflic.ru/project/andrewkantser/elephant-monitor/release?sort=TIME&direction=DESC";
 
     private static final Path UPDATE_DIR = Paths.get("").toAbsolutePath();
 
@@ -36,36 +49,59 @@ public class ProgramUpdater {
     private volatile int updatePercents = 0;
 
     /**
-     * Собирает активные источники: два встроенных + один из настроек (если указан).
-     * Все URL нормализованы к списку релизов (?per_page=100).
+     * Собирает активные источники: встроенные (GitHub, GitFlic) + опциональный из конфига.
+     * {@code updateSourceUrl} — только для LAN/enterprise mirror заказчика; пустой = не используется.
+     * Дубликаты URL не добавляются.
      */
     public java.util.List<UpdateSource> getActiveSources() {
         java.util.List<UpdateSource> sources = new java.util.ArrayList<>();
+        java.util.Set<String> seen = new java.util.HashSet<>();
 
         if (!GITHUB_OLD_LIST.isBlank()) {
-            sources.add(new UpdateSource("Старый GitHub", GITHUB_OLD_LIST));
+            addSource(sources, seen, "GitHub", GITHUB_OLD_LIST);
         }
         if (!GITHUB_NEW_LIST.isBlank()) {
-            sources.add(new UpdateSource("Новый GitHub", GITHUB_NEW_LIST));
+            addSource(sources, seen, "Новый GitHub", GITHUB_NEW_LIST);
+        }
+        if (!GITFLIC_LIST.isBlank()) {
+            addSource(sources, seen, "GitFlic", GITFLIC_LIST);
         }
 
+        // Локальный / enterprise источник заказчика (не подставляем дефолт — это осознанная настройка)
         try {
-            String user = org.example.utilites.properties.MyProperties.getInstance() != null
+            String fromConfig = org.example.utilites.properties.MyProperties.getInstance() != null
                     ? org.example.utilites.properties.MyProperties.getInstance().getUpdateSourceUrl()
                     : "";
-            if (user != null && !user.isBlank()) {
-                String listUrl = toListUrl(user.trim());
-                sources.add(new UpdateSource("Пользовательский", listUrl));
+            if (fromConfig != null && !fromConfig.isBlank()) {
+                String listUrl = toListUrl(fromConfig.trim());
+                // Имя: GitFlic, если вдруг указали gitflic; иначе «Локальный» (LAN mirror)
+                String name = GitFlicReleaseClient.isGitFlicUrl(listUrl) ? "GitFlic (конфиг)" : "Локальный";
+                addSource(sources, seen, name, listUrl);
             }
         } catch (Exception ignored) {
             // MyProperties может быть ещё не готов (некоторые тесты и т.д.)
         }
+
         return sources;
     }
 
-    /** Нормализует "latest" URL или произвольный в URL списка релизов. */
+    private void addSource(java.util.List<UpdateSource> sources, java.util.Set<String> seen,
+                           String name, String url) {
+        if (url == null || url.isBlank()) return;
+        String key = url.trim().toLowerCase();
+        // для сравнения без query-шума
+        int q = key.indexOf('?');
+        if (q >= 0) key = key.substring(0, q);
+        if (!seen.add(key)) return;
+        sources.add(new UpdateSource(name, url.trim()));
+    }
+
+    /** Нормализует URL списка релизов (GitHub API или GitFlic). */
     private String toListUrl(String input) {
         if (input == null || input.isBlank()) return "";
+        if (GitFlicReleaseClient.isGitFlicUrl(input)) {
+            return GitFlicReleaseClient.toListUrl(input);
+        }
         String u = input.trim();
         if (u.contains("/releases/latest")) {
             u = u.replace("/releases/latest", "/releases");
@@ -76,6 +112,15 @@ public class ProgramUpdater {
             u += (u.contains("?") ? "&" : "?") + "per_page=100";
         }
         return u;
+    }
+
+    /** Загрузка и разбор релизов с учётом типа источника. */
+    private java.util.List<Release> loadReleases(String listUrl) throws Exception {
+        if (GitFlicReleaseClient.isGitFlicUrl(listUrl)) {
+            return GitFlicReleaseClient.fetchReleases(listUrl);
+        }
+        JSONArray arr = fetchReleases(listUrl);
+        return ReleaseParser.parseReleases(arr);
     }
 
     /** Лёгкий fetch одного релиза (для простых случаев). */
@@ -121,8 +166,7 @@ public class ProgramUpdater {
         java.util.List<UpdateSourceResult> out = new java.util.ArrayList<>();
         for (UpdateSource src : getActiveSources()) {
             try {
-                JSONArray arr = fetchReleases(src.listUrl);
-                java.util.List<Release> all = ReleaseParser.parseReleases(arr);
+                java.util.List<Release> all = loadReleases(src.listUrl);
                 Release latest = all.isEmpty() ? null : all.get(0);
                 if (latest == null) {
                     out.add(new UpdateSourceResult(src.name, "0.0.0", "", "", null));
@@ -145,8 +189,7 @@ public class ProgramUpdater {
 
         for (UpdateSource src : getActiveSources()) {
             try {
-                JSONArray arr = fetchReleases(src.listUrl);
-                java.util.List<Release> parsed = ReleaseParser.parseReleases(arr);
+                java.util.List<Release> parsed = loadReleases(src.listUrl);
 
                 java.util.List<Release> newer = new java.util.ArrayList<>();
                 for (Release r : parsed) {
@@ -244,10 +287,10 @@ public class ProgramUpdater {
         // Берём первый валидный источник как primary
         for (UpdateSource src : getActiveSources()) {
             try {
-                JSONArray arr = fetchReleases(src.listUrl);
-                java.util.List<Release> parsed = ReleaseParser.parseReleases(arr);
+                java.util.List<Release> parsed = loadReleases(src.listUrl);
                 if (!parsed.isEmpty() && parsed.get(0).hasDownload()) {
-                    performDownload(parsed.get(0).downloadUrl, null);
+                    Release r = parsed.get(0);
+                    performDownload(r.downloadUrl, r.resolveFileName());
                     return;
                 }
             } catch (Exception ignored) {}
@@ -274,10 +317,15 @@ public class ProgramUpdater {
         }
 
         String fileName = suggestedFileName;
-        if (fileName == null || fileName.isBlank()) {
+        if (fileName == null || fileName.isBlank() || "download".equalsIgnoreCase(fileName)) {
             try {
                 fileName = downloadUrl.substring(downloadUrl.lastIndexOf('/') + 1);
+                int q = fileName.indexOf('?');
+                if (q >= 0) fileName = fileName.substring(0, q);
             } catch (Exception e) {
+                fileName = "Elephant-Monitor-update.jar";
+            }
+            if (fileName.isBlank() || "download".equalsIgnoreCase(fileName)) {
                 fileName = "Elephant-Monitor-update.jar";
             }
         }
@@ -290,8 +338,33 @@ public class ProgramUpdater {
         this.busy = true;
         updatePercents = 0;
 
-        try (InputStream is = new URL(downloadUrl).openStream()) {
-            long total = getContentLength(downloadUrl);
+        HttpURLConnection downloadCon = (HttpURLConnection) new URL(downloadUrl).openConnection();
+        downloadCon.setRequestMethod("GET");
+        downloadCon.setConnectTimeout(10000);
+        downloadCon.setReadTimeout(120000);
+        downloadCon.setInstanceFollowRedirects(true);
+        downloadCon.setRequestProperty("User-Agent", "ElephantMonitor-Updater/1.0");
+        if (GitFlicReleaseClient.isGitFlicUrl(downloadUrl)) {
+            GitFlicReleaseClient.applyAuth(downloadCon);
+        }
+        // GitFlic отдаёт Content-Disposition; при имени "download" попробуем взять оттуда
+        String cd = downloadCon.getHeaderField("Content-Disposition");
+        if (cd != null && ("download".equalsIgnoreCase(fileName) || "Elephant-Monitor-update.jar".equals(fileName))) {
+            String fromCd = extractFileNameFromContentDisposition(cd);
+            if (fromCd != null && !fromCd.isBlank()) {
+                fileName = fromCd;
+                target = targetDir.resolve(fileName);
+            }
+        }
+        if (downloadCon.getResponseCode() / 100 != 2) {
+            int code = downloadCon.getResponseCode();
+            downloadCon.disconnect();
+            throw new IOException("HTTP " + code + " при скачивании " + downloadUrl);
+        }
+
+        try (InputStream is = downloadCon.getInputStream()) {
+            long total = downloadCon.getContentLengthLong();
+            if (total <= 0) total = getContentLength(downloadUrl);
             long done = 0;
             byte[] buf = new byte[8192];
             int read;
@@ -317,6 +390,7 @@ public class ProgramUpdater {
             log.warn("Ошибка загрузки: " + e.getMessage());
             throw e;
         } finally {
+            downloadCon.disconnect();
             busy = false;
         }
     }
@@ -325,6 +399,9 @@ public class ProgramUpdater {
         try {
             HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
             c.setRequestMethod("HEAD");
+            if (GitFlicReleaseClient.isGitFlicUrl(url)) {
+                GitFlicReleaseClient.applyAuth(c);
+            }
             long len = c.getContentLengthLong();
             c.disconnect();
             return len > 0 ? len : 0;
@@ -338,8 +415,7 @@ public class ProgramUpdater {
     public String getLatestVersion() {
         try {
             for (UpdateSource src : getActiveSources()) {
-                JSONArray arr = fetchReleases(src.listUrl);
-                java.util.List<Release> parsed = ReleaseParser.parseReleases(arr);
+                java.util.List<Release> parsed = loadReleases(src.listUrl);
                 if (!parsed.isEmpty()) {
                     lastNotes = parsed.get(0).notes;
                     return parsed.get(0).version;
@@ -353,6 +429,30 @@ public class ProgramUpdater {
 
     public String getInfo() {
         return lastNotes;
+    }
+
+    private static String extractFileNameFromContentDisposition(String cd) {
+        if (cd == null) return null;
+        // filename*=UTF-8''Elephant-Monitor-1.8.49.jar  или filename="..."
+        int star = cd.toLowerCase().indexOf("filename*=");
+        if (star >= 0) {
+            String part = cd.substring(star + "filename*=".length()).trim();
+            int semi = part.indexOf(';');
+            if (semi >= 0) part = part.substring(0, semi).trim();
+            int tick = part.lastIndexOf("''");
+            if (tick >= 0) part = part.substring(tick + 2);
+            part = part.replace("\"", "").trim();
+            if (!part.isEmpty()) return part;
+        }
+        int fn = cd.toLowerCase().indexOf("filename=");
+        if (fn >= 0) {
+            String part = cd.substring(fn + "filename=".length()).trim();
+            int semi = part.indexOf(';');
+            if (semi >= 0) part = part.substring(0, semi).trim();
+            part = part.replace("\"", "").trim();
+            if (!part.isEmpty()) return part;
+        }
+        return null;
     }
 }
 
