@@ -1,4 +1,4 @@
-package org.example.device.protArdFeeBrdMeter;
+package org.example.device.protArdMipexEmu;
 
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
@@ -12,10 +12,14 @@ import org.example.device.connectParameters.ComConnectParameters;
 import org.example.services.AnswerValues;
 import org.example.services.transport.serial.*;
 
+/**
+ * Arduino board — Mipex II / multi-mode sensor emulator.
+ * Protocol reference: {@code mip_emu.md}. Link params: 57600 8N1, CR.
+ */
 @Slf4j
-public class ARD_FEE_BRD_METER implements SomeDevice, ProtocolComPort, TemplatedAscii {
+public class ARD_MIPEX_EMU implements SomeDevice, ProtocolComPort, TemplatedAscii {
     @Getter
-    private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора
+    private final ComConnectParameters comParameters = new ComConnectParameters();
     private final SerialPort comPort;
 
     @Getter
@@ -28,9 +32,9 @@ public class ARD_FEE_BRD_METER implements SomeDevice, ProtocolComPort, Templated
     private final StopBitsList defaultStopBit = StopBitsList.S1;
 
     private final DeviceCommandListClass commands;
-    private final ArdFeeBrdMeterCommandRegistry commandRegistry;
+    private final ArdMipexEmuCommandRegistry commandRegistry;
 
-    private volatile byte [] lastAnswerBytes = new byte[1];
+    private volatile byte[] lastAnswerBytes = new byte[1];
     private StringBuilder lastAnswer = new StringBuilder();
     private AnswerValues answerValues = null;
     private int received = 0;
@@ -38,19 +42,19 @@ public class ARD_FEE_BRD_METER implements SomeDevice, ProtocolComPort, Templated
     private String cmdToSend;
     private int expectedBytes = 0;
 
-    private String devIdent = "ARD_FEE_BRD_METER";
+    private String devIdent = "ARD_MIPEX_EMU";
 
-    public ARD_FEE_BRD_METER(){
-        log.info("Создан объект протокола ARD_FEE_BRD_METER эмуляция");
+    public ARD_MIPEX_EMU() {
+        log.info("Создан объект протокола ARD_MIPEX_EMU эмуляция");
         this.comPort = null;
-        this.commandRegistry = new ArdFeeBrdMeterCommandRegistry();
+        this.commandRegistry = new ArdMipexEmuCommandRegistry();
         this.commands = commandRegistry.getCommandList();
     }
 
-    public ARD_FEE_BRD_METER(SerialPort port){
-        log.info("Создан объект протокола ARD_FEE_BRD_METER");
+    public ARD_MIPEX_EMU(SerialPort port) {
+        log.info("Создан объект протокола ARD_MIPEX_EMU");
         this.comPort = port;
-        this.commandRegistry = new ArdFeeBrdMeterCommandRegistry();
+        this.commandRegistry = new ArdMipexEmuCommandRegistry();
         this.commands = commandRegistry.getCommandList();
         comParameters.setDataBits(DataBitsList.B8);
         comParameters.setParity(ParityList.P_NO);
@@ -62,7 +66,6 @@ public class ARD_FEE_BRD_METER implements SomeDevice, ProtocolComPort, Templated
         this.enable();
     }
 
-
     @Override
     public DeviceCommandListClass getCommandListClass() {
         return this.commands;
@@ -70,10 +73,10 @@ public class ARD_FEE_BRD_METER implements SomeDevice, ProtocolComPort, Templated
 
     @Override
     public void setCmdToSend(String str) {
-        if(str == null || str.isEmpty()){
+        if (str == null || str.isEmpty()) {
             expectedBytes = 500;
             cmdToSend = null;
-        }else{
+        } else {
             cmdToSend = str;
             SingleCommand resolved = resolveCommand(str);
             expectedBytes = resolved != null ? resolved.getExpectedBytes() : 500;
@@ -81,7 +84,7 @@ public class ARD_FEE_BRD_METER implements SomeDevice, ProtocolComPort, Templated
     }
 
     @Override
-    public int getExpectedBytes(){
+    public int getExpectedBytes() {
         return expectedBytes;
     }
 
@@ -99,12 +102,13 @@ public class ARD_FEE_BRD_METER implements SomeDevice, ProtocolComPort, Templated
     public int getReceivedCounter() {
         return received;
     }
+
     @Override
     public void setReceivedCounter(int cnt) {
         this.received = cnt;
     }
 
-    public void setReceived(String answer){
+    public void setReceived(String answer) {
         lastAnswerBytes = answer.getBytes();
         this.received = lastAnswerBytes.length;
     }
@@ -138,43 +142,39 @@ public class ARD_FEE_BRD_METER implements SomeDevice, ProtocolComPort, Templated
         return true;
     }
 
-
-
-
     @Override
     public void parseData() {
-
         if (lastAnswerBytes != null && lastAnswerBytes.length > 0) {
             lastAnswer.setLength(0);
             SingleCommand command = resolveCommand(cmdToSend);
             if (command != null) {
                 answerValues = command.getResult(lastAnswerBytes);
-                if(answerValues != null){
+                if (answerValues != null) {
                     for (int i = 0; i < answerValues.getValues().length; i++) {
                         lastAnswer.append(String.valueOf(answerValues.getValues()[i]).replace(".", ","));
                         lastAnswer.append(" ");
                         lastAnswer.append(answerValues.getUnits()[i]);
                         lastAnswer.append("  ");
                     }
-                }else{
+                } else {
                     for (byte lastAnswerByte : lastAnswerBytes) {
                         lastAnswer.append((char) lastAnswerByte);
                     }
                     log.warn("Failed to parse answer for command '{}'", cmdToSend);
                 }
-            }else {
+            } else {
                 for (byte lastAnswerByte : lastAnswerBytes) {
                     lastAnswer.append((char) lastAnswerByte);
                 }
                 log.warn("Unknown command '{}'", cmdToSend);
             }
-        }else{
+        } else {
             log.debug("Empty received");
         }
     }
 
     /**
-     * Resolves command by exact name, then by first token (e.g. {@code SLAS 0010} → {@code SLAS}).
+     * Resolves command by exact name, then by first token (e.g. {@code FMOD 0002} → {@code FMOD}).
      */
     private SingleCommand resolveCommand(String name) {
         if (name == null || name.isEmpty()) {
@@ -188,6 +188,14 @@ public class ARD_FEE_BRD_METER implements SomeDevice, ProtocolComPort, Templated
         if (sp > 0) {
             return commands.getCommand(name.substring(0, sp));
         }
+        // S085xxxxx — serial change without space
+        if (name.regionMatches(true, 0, "S085", 0, 4) && name.length() > 4) {
+            return commands.getCommand("S085");
+        }
+        // !xxYY — address change
+        if (name.startsWith("!") && name.length() >= 5) {
+            return commands.getCommand("!");
+        }
         return null;
     }
 
@@ -196,28 +204,26 @@ public class ARD_FEE_BRD_METER implements SomeDevice, ProtocolComPort, Templated
         return resolveCommand(cmdToSend) != null;
     }
 
-    public String getAnswer(){
-        if(hasAnswer()) {
+    public String getAnswer() {
+        if (hasAnswer()) {
             received = 0;
             lastAnswerBytes = null;
             return lastAnswer.toString();
-        }else {
+        } else {
             return null;
         }
     }
 
-    public boolean hasAnswer(){
+    public boolean hasAnswer() {
         return lastAnswerBytes != null && lastAnswerBytes.length > 0;
     }
 
     @Override
-    public boolean hasValue(){
+    public boolean hasValue() {
         return answerValues != null;
     }
 
-    public AnswerValues getValues(){
+    public AnswerValues getValues() {
         return this.answerValues;
     }
-
-
 }

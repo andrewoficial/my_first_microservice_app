@@ -7,6 +7,7 @@ import org.example.device.mgu.usbadcten.MskMguUsbAdc10;
 import org.example.device.protArdBadVlt.ARD_BAD_VOLTMETER;
 import org.example.device.protArdCurrLoopMeter.ARD_CUR_LOOP_METER;
 import org.example.device.protArdFeeBrdMeter.ARD_FEE_BRD_METER;
+import org.example.device.protArdMipexEmu.ARD_MIPEX_EMU;
 import org.example.device.protArdTerm.ARD_TERM;
 import org.example.device.protBelead.BeLead;
 import org.example.device.protCubic.Cubic;
@@ -91,6 +92,7 @@ public class MyUtilities {
             case IGM12MODBUS -> device = new Igm12Modbus(comPort);
             case ARD_BAD_VOLTMETER -> device = new ARD_BAD_VOLTMETER(comPort);
             case ARD_FEE_BRD_METER -> device = new ARD_FEE_BRD_METER(comPort);
+            case ARD_MIPEX_EMU -> device = new ARD_MIPEX_EMU(comPort);
             case ARD_CUR_LOOP_METER -> device = new ARD_CUR_LOOP_METER(comPort);
             case ARD_TERM -> device = new ARD_TERM(comPort);
             case SPB_STU_MCPS -> device = new SPbSTuMcps(comPort);
@@ -128,6 +130,7 @@ public class MyUtilities {
             case IGM12MODBUS -> device = new Igm12Modbus();
             case ARD_BAD_VOLTMETER -> device = new ARD_BAD_VOLTMETER();
             case ARD_FEE_BRD_METER -> device = new ARD_FEE_BRD_METER();
+            case ARD_MIPEX_EMU -> device = new ARD_MIPEX_EMU();
             case ARD_CUR_LOOP_METER -> device = new ARD_CUR_LOOP_METER();
             case ARD_TERM -> device = new ARD_TERM();
             case SPB_STU_MCPS -> device = new SPbSTuMcps();

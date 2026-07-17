@@ -10,6 +10,9 @@ import ch.qos.logback.classic.Level;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gui.accu10fd.Acu10fdWindow;
 import org.example.gui.curve.CurveHandlerWindow;
+import org.example.gui.devices.arduino.emulator.mipex.MipexEmuMain;
+import org.example.gui.devices.arduino.feeboard.control.FeeBoardMain;
+import org.example.gui.devices.arduino.feeboard.emulation.FeeBoardTestFrame;
 import org.example.gui.devices.edvards.d39730880.control.d39730880Main;
 import org.example.gui.devices.edvards.d39730880.emulation.EdwardsTicTestFrame;
 import org.example.gui.devices.qidian.qdl80a.control.Qdl80aMain;
@@ -343,6 +346,9 @@ public class JmenuFile {
         JMenuItem mgsTest = new JMenuItem("MGSTest");
         JMenuItem spbStuMcps = new JMenuItem("SPB_STU_MCPS");
         JMenuItem spbStuMcpsTest = new JMenuItem("SPB_STU_MCPS Test");
+        JMenuItem feeBoard = new JMenuItem("ARD_FEE_BRD_METER");
+        JMenuItem feeBoardTest = new JMenuItem("ARD_FEE_BRD_METER Test");
+        JMenuItem mipexEmu = new JMenuItem("ARD_MIPEX_EMU");
 
 
         // добавим все в меню
@@ -358,6 +364,9 @@ public class JmenuFile {
         utilitiesMenu.add(mgsTest);
         utilitiesMenu.add(spbStuMcps);
         utilitiesMenu.add(spbStuMcpsTest);
+        utilitiesMenu.add(feeBoard);
+        utilitiesMenu.add(feeBoardTest);
+        utilitiesMenu.add(mipexEmu);
 
 
         grabber.addActionListener(new ActionListener()
@@ -550,6 +559,32 @@ public class JmenuFile {
                 testFrame.setVisible(true);
             }
         });
+        feeBoard.addActionListener(e -> {
+            System.out.println("ARD_FEE_BRD_METER Control Window");
+            FeeBoardMain panel = new FeeBoardMain();
+            JFrame frame = new JFrame("ARD_FEE_BRD_METER — Управление");
+            frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+            frame.setContentPane(panel.getMainPanel());
+            frame.pack();
+            frame.setSize(980, 700);
+            frame.setLocationRelativeTo(null);
+            frame.setVisible(true);
+        });
+        feeBoardTest.addActionListener(e -> {
+            System.out.println("ARD_FEE_BRD_METER Test Window");
+            new FeeBoardTestFrame().setVisible(true);
+        });
+        mipexEmu.addActionListener(e -> {
+            System.out.println("ARD_MIPEX_EMU Control Window");
+            MipexEmuMain panel = new MipexEmuMain();
+            JFrame frame = new JFrame("ARD_MIPEX_EMU — Управление");
+            frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+            frame.setContentPane(panel.getMainPanel());
+            frame.pack();
+            frame.setSize(980, 700);
+            frame.setLocationRelativeTo(null);
+            frame.setVisible(true);
+        });
 
         return utilitiesMenu;
     }
@@ -599,9 +634,30 @@ public class JmenuFile {
         d397Menu.add(edInfo);
         edwardsMenu.add(d397Menu);
 
+        // Arduino → FeeBoard / MipexEmu
+        JMenu arduinoMenu = new JMenu("Arduino");
+        JMenu feeMenu = new JMenu("FeeBoard (CCM)");
+        JMenu mipexMenu = new JMenu("Mipex Emu");
+
+        JMenuItem feeControl = new JMenuItem("Панель управления");
+        JMenuItem feeEmulation = new JMenuItem("Панель эмуляции");
+        JMenuItem feeInfo = new JMenuItem("Справочная информация");
+
+        JMenuItem mipexControl = new JMenuItem("Панель управления");
+        JMenuItem mipexInfo = new JMenuItem("Справочная информация");
+
+        feeMenu.add(feeControl);
+        feeMenu.add(feeEmulation);
+        feeMenu.add(feeInfo);
+        mipexMenu.add(mipexControl);
+        mipexMenu.add(mipexInfo);
+        arduinoMenu.add(feeMenu);
+        arduinoMenu.add(mipexMenu);
+
         controlPanelsMenu.add(stuMenu);
         controlPanelsMenu.add(qdMenu);
         controlPanelsMenu.add(edwardsMenu);
+        controlPanelsMenu.add(arduinoMenu);
 
         stuControl.addActionListener(e -> {
             System.out.println("STU MCPS Control Panel");
@@ -677,6 +733,59 @@ public class JmenuFile {
             System.out.println("Edwards TIC Info");
             JOptionPane.showMessageDialog(null,
                     "Раздел находится в разработке",
+                    "Справочная информация",
+                    JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        feeControl.addActionListener(e -> {
+            System.out.println("Arduino FeeBoard Control Panel");
+            FeeBoardMain panel = new FeeBoardMain();
+            JFrame frame = new JFrame("Arduino:FeeBoard — Панель управления");
+            frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+            frame.setContentPane(panel.getMainPanel());
+            frame.pack();
+            frame.setSize(980, 700);
+            frame.setLocationRelativeTo(null);
+            frame.setVisible(true);
+        });
+
+        feeEmulation.addActionListener(e -> {
+            System.out.println("Arduino FeeBoard Emulation Panel");
+            new FeeBoardTestFrame().setVisible(true);
+        });
+
+        feeInfo.addActionListener(e -> {
+            JOptionPane.showMessageDialog(null,
+                    "CCM Fee Board / CurMeter (ARD_FEE_BRD_METER).\n" +
+                            "Протокол: ccm_fee.md\n" +
+                            "Команды: F, MMESU, LOGO, LOG, CONC?, FPWR/FPWR?,\n" +
+                            "SENSON/SENSOFF, GCOEF, REBOOT, SREV?, SRAL?, %**,\n" +
+                            "SLAS/SDAS, SPOLY0/1, SVOLT0, STRGLV, SV2AMP, SCABD, URTMOD.",
+                    "Справочная информация",
+                    JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        mipexControl.addActionListener(e -> {
+            System.out.println("Arduino MipexEmu Control Panel");
+            MipexEmuMain panel = new MipexEmuMain();
+            JFrame frame = new JFrame("Arduino:MipexEmu — Панель управления");
+            frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+            frame.setContentPane(panel.getMainPanel());
+            frame.pack();
+            frame.setSize(980, 700);
+            frame.setLocationRelativeTo(null);
+            frame.setVisible(true);
+        });
+
+        mipexInfo.addActionListener(e -> {
+            JOptionPane.showMessageDialog(null,
+                    "Arduino Mipex / multi-mode emulator (ARD_MIPEX_EMU).\n" +
+                            "Протокол: mip_emu.md · 57600 8N1 CR\n" +
+                            "Режимы FMOD: 0 legacy, 1 V-meter, 2 Mipex II (осн.),\n" +
+                            "3 Mipex-14, 4–6 платы сопряжения (в разр.).\n" +
+                            "Команды: F, F?, LOG, CONC?, CONST?, ID, TERM?/TERM,\n" +
+                            "FMOD, CMOD, GMOD, TMOD, SAPR, SDAC, SMCV, GMCV, KALB,\n" +
+                            "SSTAT, SREV?, SRAL?, %**, S085, !, MMES, UART/мост/отладка.",
                     "Справочная информация",
                     JOptionPane.INFORMATION_MESSAGE);
         });

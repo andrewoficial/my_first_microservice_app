@@ -1,0 +1,360 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="org.example.gui.devices.arduino.feeboard.control.FeeBoardMain">
+  <grid id="27dc6" binding="mainPanel" layout-manager="GridLayoutManager" row-count="4" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="8" vgap="8">
+    <margin top="6" left="6" bottom="6" right="6"/>
+    <constraints>
+      <xy x="20" y="20" width="920" height="640"/>
+    </constraints>
+    <properties/>
+    <border type="none"/>
+    <children>
+      <grid id="conn1" layout-manager="GridLayoutManager" row-count="10" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="4">
+        <margin top="4" left="4" bottom="4" right="4"/>
+        <constraints>
+          <grid row="0" column="0" row-span="3" col-span="1" vsize-policy="3" hsize-policy="0" anchor="9" fill="2" indent="0" use-parent-layout="false">
+            <minimum-size width="240" height="-1"/>
+            <preferred-size width="240" height="-1"/>
+            <maximum-size width="260" height="-1"/>
+          </grid>
+        </constraints>
+        <properties/>
+        <border type="etched" title="COM"/>
+        <children>
+          <component id="l1" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="COM порт:"/>
+            </properties>
+          </component>
+          <component id="pc" class="javax.swing.JComboBox" binding="portComboSelect">
+            <constraints>
+              <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                <minimum-size width="220" height="-1"/>
+                <preferred-size width="220" height="-1"/>
+                <maximum-size width="220" height="-1"/>
+              </grid>
+            </constraints>
+            <properties/>
+          </component>
+          <component id="l2" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="Скорость:"/>
+            </properties>
+          </component>
+          <component id="ps" class="javax.swing.JComboBox" binding="portComboSpeed">
+            <constraints>
+              <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                <minimum-size width="220" height="-1"/>
+                <preferred-size width="220" height="-1"/>
+                <maximum-size width="220" height="-1"/>
+              </grid>
+            </constraints>
+            <properties/>
+          </component>
+          <component id="ep" class="javax.swing.JCheckBox" binding="evenParityCb">
+            <constraints>
+              <grid row="5" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <selected value="false"/>
+              <text value="Even parity (иначе 8N1)"/>
+            </properties>
+          </component>
+          <component id="rb" class="javax.swing.JButton" binding="refreshBtn">
+            <constraints>
+              <grid row="6" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false">
+                <minimum-size width="220" height="-1"/>
+                <preferred-size width="220" height="-1"/>
+                <maximum-size width="220" height="-1"/>
+              </grid>
+            </constraints>
+            <properties>
+              <text value="Обновить порты"/>
+            </properties>
+          </component>
+          <component id="ob" class="javax.swing.JButton" binding="openPortBtn">
+            <constraints>
+              <grid row="7" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false">
+                <minimum-size width="220" height="-1"/>
+                <preferred-size width="220" height="-1"/>
+                <maximum-size width="220" height="-1"/>
+              </grid>
+            </constraints>
+            <properties>
+              <text value="Открыть порт"/>
+            </properties>
+          </component>
+          <component id="cb" class="javax.swing.JButton" binding="closePortBtn">
+            <constraints>
+              <grid row="8" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false">
+                <minimum-size width="220" height="-1"/>
+                <preferred-size width="220" height="-1"/>
+                <maximum-size width="240" height="-1"/>
+              </grid>
+            </constraints>
+            <properties>
+              <text value="Закрыть порт"/>
+            </properties>
+          </component>
+          <grid id="sr" layout-manager="FlowLayout" hgap="6" vgap="0" flow-align="0">
+            <constraints>
+              <grid row="9" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties/>
+            <border type="none"/>
+            <children>
+              <grid id="lamp" binding="comLampContainer" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                <margin top="0" left="0" bottom="0" right="0"/>
+                <constraints/>
+                <properties/>
+                <border type="none"/>
+                <children/>
+              </grid>
+              <component id="psl" class="javax.swing.JLabel" binding="portStatusLabel">
+                <constraints/>
+                <properties>
+                  <text value="Порт закрыт"/>
+                </properties>
+              </component>
+            </children>
+          </grid>
+          <hspacer id="7fc28">
+            <constraints>
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+            </constraints>
+          </hspacer>
+        </children>
+      </grid>
+      <scrollpane id="sc">
+        <constraints>
+          <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false">
+            <preferred-size width="640" height="420"/>
+          </grid>
+        </constraints>
+        <properties/>
+        <border type="etched" title="Команды (ответ справа)"/>
+        <children>
+          <grid id="cp" binding="commandsPlaceholder" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+            <margin top="4" left="4" bottom="4" right="4"/>
+            <constraints/>
+            <properties/>
+            <border type="none"/>
+            <children/>
+          </grid>
+        </children>
+      </scrollpane>
+      <scrollpane id="ls">
+        <constraints>
+          <grid row="2" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false">
+            <preferred-size width="-1" height="120"/>
+          </grid>
+        </constraints>
+        <properties/>
+        <border type="etched" title="Лог"/>
+        <children>
+          <component id="la" class="javax.swing.JTextArea" binding="logArea">
+            <constraints/>
+            <properties>
+              <editable value="false"/>
+            </properties>
+          </component>
+        </children>
+      </scrollpane>
+      <component id="sb" class="javax.swing.JLabel" binding="statusBar">
+        <constraints>
+          <grid row="3" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
+        </constraints>
+        <properties>
+          <text value="Готово"/>
+        </properties>
+      </component>
+      <grid id="5f242" binding="devInfo" layout-manager="GridLayoutManager" row-count="2" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+        <margin top="0" left="0" bottom="0" right="0"/>
+        <constraints>
+          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <grid id="1f383" binding="fwInfo" layout-manager="GridLayoutManager" row-count="2" column-count="4" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+            <margin top="0" left="0" bottom="0" right="0"/>
+            <constraints>
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties/>
+            <border type="none"/>
+            <children>
+              <component id="16bcb" class="javax.swing.JLabel" binding="serialNumLbl">
+                <constraints>
+                  <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties>
+                  <text value="Серийный номер"/>
+                </properties>
+              </component>
+              <component id="22d50" class="javax.swing.JLabel" binding="serialNumVal">
+                <constraints>
+                  <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties>
+                  <text value="- - -"/>
+                </properties>
+              </component>
+              <component id="91398" class="javax.swing.JLabel" binding="fwVersionLbl">
+                <constraints>
+                  <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties>
+                  <text value="Версия прошивки"/>
+                </properties>
+              </component>
+              <component id="59806" class="javax.swing.JLabel" binding="fwVersionVal">
+                <constraints>
+                  <grid row="0" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties>
+                  <text value="- - -"/>
+                </properties>
+              </component>
+              <component id="6cd5" class="javax.swing.JLabel" binding="nAddrrLbl">
+                <constraints>
+                  <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties>
+                  <text value="Сетевой адрес"/>
+                </properties>
+              </component>
+              <component id="cc604" class="javax.swing.JLabel" binding="nAddrrVal">
+                <constraints>
+                  <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties>
+                  <text value="- - -"/>
+                </properties>
+              </component>
+              <component id="5f6e0" class="javax.swing.JLabel" binding="urtSpeedLbl">
+                <constraints>
+                  <grid row="1" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties>
+                  <text value="Скорость UART на 10-ти пиновом выходе"/>
+                </properties>
+              </component>
+              <component id="e6434" class="javax.swing.JLabel" binding="urtSpeedVal">
+                <constraints>
+                  <grid row="1" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties>
+                  <text value="- - -"/>
+                </properties>
+              </component>
+            </children>
+          </grid>
+          <grid id="593" binding="hwInfo" layout-manager="GridLayoutManager" row-count="2" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+            <margin top="0" left="0" bottom="0" right="0"/>
+            <constraints>
+              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties/>
+            <border type="none"/>
+            <children>
+              <component id="2c2ea" class="javax.swing.JLabel" binding="outStateLableLbl">
+                <constraints>
+                  <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties>
+                  <text value="Состояние выхода"/>
+                </properties>
+              </component>
+              <grid id="d0304" layout-manager="FlowLayout" hgap="6" vgap="0" flow-align="0">
+                <constraints>
+                  <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties/>
+                <border type="none"/>
+                <children>
+                  <grid id="591cf" binding="outStateLamp" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                    <margin top="0" left="0" bottom="0" right="0"/>
+                    <constraints/>
+                    <properties/>
+                    <border type="none"/>
+                    <children/>
+                  </grid>
+                  <component id="e2c03" class="javax.swing.JLabel" binding="outStateLableVal">
+                    <constraints/>
+                    <properties>
+                      <text value="Выход отключён"/>
+                    </properties>
+                  </component>
+                </children>
+              </grid>
+              <grid id="85b57" layout-manager="GridLayoutManager" row-count="2" column-count="4" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                <margin top="0" left="0" bottom="0" right="0"/>
+                <constraints>
+                  <grid row="1" column="0" row-span="1" col-span="2" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties/>
+                <border type="none"/>
+                <children>
+                  <component id="d7530" class="javax.swing.JLabel" binding="outPoverVoltLbl">
+                    <constraints>
+                      <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Питание, В"/>
+                    </properties>
+                  </component>
+                  <component id="ab20" class="javax.swing.JLabel" binding="outPoverVoltVal">
+                    <constraints>
+                      <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="- - -"/>
+                    </properties>
+                  </component>
+                  <component id="1d730" class="javax.swing.JLabel" binding="termLbl">
+                    <constraints>
+                      <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Температура"/>
+                    </properties>
+                  </component>
+                  <component id="db5fa" class="javax.swing.JLabel" binding="termVal">
+                    <constraints>
+                      <grid row="0" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="- - -"/>
+                    </properties>
+                  </component>
+                  <component id="53578" class="javax.swing.JLabel" binding="consurptionMaLbl">
+                    <constraints>
+                      <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="Потребление, мА"/>
+                    </properties>
+                  </component>
+                  <component id="8e52a" class="javax.swing.JLabel" binding="consurptionMaVal">
+                    <constraints>
+                      <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value="- - -"/>
+                    </properties>
+                  </component>
+                </children>
+              </grid>
+            </children>
+          </grid>
+        </children>
+      </grid>
+    </children>
+  </grid>
+</form>
