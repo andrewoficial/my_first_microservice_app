@@ -1,0 +1,4 @@
+# Spring Boot 4 loads EnvironmentPostProcessor from spring.factories
+# (key: org.springframework.boot.EnvironmentPostProcessor)
+org.springframework.boot.EnvironmentPostProcessor=\
+org.example.config.GuiOnlyEnvironmentPostProcessor

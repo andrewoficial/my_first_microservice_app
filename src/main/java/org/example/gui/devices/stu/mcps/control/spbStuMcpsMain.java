@@ -189,6 +189,19 @@ public class spbStuMcpsMain {
         Preferences.userRoot().node(PREFS_NODE).put(LAST_PORT, portName);
     }
 
+    private int getSelectedBaudRate() {
+        Object selected = portComboSpeed.getSelectedItem();
+        if (selected == null) {
+            return 9600;
+        }
+        try {
+            return Integer.parseInt(selected.toString().trim());
+        } catch (NumberFormatException ex) {
+            logger.warn("Некорректная скорость порта: " + selected + ", использую 9600");
+            return 9600;
+        }
+    }
+
     private void openSelectedPort() {
         String selected = (String) portComboSelect.getSelectedItem();
         if (selected == null || selected.contains("Нет")) {
@@ -196,9 +209,10 @@ public class spbStuMcpsMain {
             return;
         }
         String portName = selected.split(" — ")[0].trim();
+        int baudRate = getSelectedBaudRate();
         comLamp.setLampColor(Color.YELLOW);
         connectionLabel.setText("Открытие порта...");
-        boolean ok = service.openPort(portName);
+        boolean ok = service.openPort(portName, baudRate);
         if (ok) {
             saveLastPort(portName);
             service.resetThrottleFlag();

@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
- * Автономный быстрый сервис взаимодействия с COM-портом по протоколу SPB_STU_MCPS (ASCII, 9600 8N1).
+ * Автономный быстрый сервис взаимодействия с COM-портом по протоколу SPB_STU_MCPS (ASCII, 8N1).
  * 
  * Ключевые особенности (по требованиям):
  * - Собственный слушатель порта (не shared с основным приложением)
@@ -28,7 +28,7 @@ import java.util.function.Consumer;
  */
 public final class McpsCommunicationService {
 
-    private static final int BAUD_RATE = 9600;
+    private static final int DEFAULT_BAUD_RATE = 9600;
     private static final int DATA_BITS = 8;
     private static final int STOP_BITS = SerialPort.ONE_STOP_BIT;
     private static final int PARITY = SerialPort.NO_PARITY;
@@ -100,12 +100,18 @@ public final class McpsCommunicationService {
     }
 
     public boolean openPort(String portDescriptor) {
+        return openPort(portDescriptor, DEFAULT_BAUD_RATE);
+    }
+
+    public boolean openPort(String portDescriptor, int baudRate) {
         if (connected) {
             closePort();
         }
 
+        int effectiveBaud = baudRate > 0 ? baudRate : DEFAULT_BAUD_RATE;
+
         serialPort = SerialPort.getCommPort(portDescriptor);
-        serialPort.setBaudRate(BAUD_RATE);
+        serialPort.setBaudRate(effectiveBaud);
         serialPort.setNumDataBits(DATA_BITS);
         serialPort.setNumStopBits(STOP_BITS);
         serialPort.setParity(PARITY);
@@ -140,7 +146,7 @@ public final class McpsCommunicationService {
         startSenderThread();
 
         connected = true;
-        logger.info("Порт открыт: " + portDescriptor + " @ " + BAUD_RATE + " 8N1");
+        logger.info("Порт открыт: " + portDescriptor + " @ " + effectiveBaud + " 8N1");
         if (connectionStatusListener != null) {
             connectionStatusListener.accept("CONNECTED:" + portDescriptor);
         }
