@@ -23,6 +23,7 @@ import org.example.gui.graph.ChartWindow;
 import org.example.gui.graph.data.AnswerLoader;
 import org.example.gui.mgstest.MultigassensWindow;
 import org.example.gui.settings.server.ServerSettingsWindow;
+import org.example.gui.settings.updates.UpdateSettingsWindow;
 import org.example.gui.system.logs.ViewLogsWindow;
 import org.example.gui.system.resources.DebugWindow;
 import org.example.services.AnswerStorage;
@@ -148,9 +149,21 @@ public class JmenuFile {
         // создадим выпадающее меню
         JMenu viewMenu = new JMenu("Справка");
         // меню-флажки
+        JMenuItem sysAbout  = new JMenuItem("О программе");
         JMenuItem sysUpdate  = new JMenuItem("Проверка обновлений");
         // добавим все в меню
+        viewMenu.add(sysAbout);
         viewMenu.add(sysUpdate);
+
+        sysAbout.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                System.out.println("About Window");
+                About about = new About();
+                about.setVisible(true);
+            }
+        });
         sysUpdate.addActionListener(new ActionListener()
         {
             @Override
@@ -181,6 +194,7 @@ public class JmenuFile {
         // меню-флажки
         JMenuItem logging  = new JMenuItem("Ведение лога");
         JMenuItem server  = new JMenuItem("Сервер");
+        JMenuItem updates  = new JMenuItem("Обновления");
         JMenuItem debugging = new JMenuItem("Отладка");
         // меню-переключатели уровня логирования
         JRadioButtonMenuItem heavyModeItem = new JRadioButtonMenuItem("Работа в нагруженном режиме");
@@ -194,6 +208,7 @@ public class JmenuFile {
         // добавим все в меню
         viewMenu.add(logging);
         viewMenu.add(server);
+        viewMenu.add(updates);
         viewMenu.add(debugging);
         // разделитель можно создать и явно
         viewMenu.add( new JSeparator());
@@ -243,6 +258,16 @@ public class JmenuFile {
                 srvWindows.setTitle("Server settings");
                 srvWindows.pack();
                 srvWindows.setVisible(true);
+            }
+        });
+        updates.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                System.out.println("Update Settings Window");
+                UpdateSettingsWindow win = new UpdateSettingsWindow();
+                win.setTitle("Настройки обновлений");
+                win.setVisible(true);
             }
         });
         return viewMenu;

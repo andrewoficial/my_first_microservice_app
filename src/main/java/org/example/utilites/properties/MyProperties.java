@@ -108,6 +108,13 @@ public class MyProperties {
 
     private String updateSourceUrl = "";
 
+    private String gitflicToken = "";
+    private String githubToken = "";
+    private String giteaToken = "";
+    private String gitflicRepo = "";
+    private String githubRepo = "";
+    private String giteaRepo = "";
+
     private String [] clientAssociationMarkers = new String[2];//Получается в результате атомизации полученных сообщений (например ответ содержит информацию о двух независимых параметрах)
     private Integer [] clientAssociationID = new Integer[2];//Он же Гоша, он же Гоги, он же Жора, он же TabDev, tabN, номер вкладки
     private Integer [] tabNumber = new Integer[2];//Массив ( в той же последоватльности что и все массивы MainLeftPane) номеров вкладок
@@ -261,6 +268,12 @@ public class MyProperties {
         vegaPassword = settingsLoader.getString("vegaPassword", "123");
         vegaAddress = settingsLoader.getString("vegaAddress", "ws://127.0.0.1:8002");
         updateSourceUrl = settingsLoader.getString("updateSourceUrl", "");
+        gitflicToken = settingsLoader.getString("gitflicToken", "1d691a01-16a4-45df-b9c3-b9f24c6a8bfb");
+        githubToken = settingsLoader.getString("githubToken", "");
+        giteaToken = settingsLoader.getString("giteaToken", "");
+        gitflicRepo = settingsLoader.getString("gitflicRepo", "https://gitflic.ru/project/andrewkantser/elephant-monitor/release?sort=TIME&direction=DESC");
+        githubRepo = settingsLoader.getString("githubRepo", "https://api.github.com/repos/andrewoficial/my_first_microservice_app/releases?per_page=100");
+        giteaRepo = settingsLoader.getString("giteaRepo", "");
         ports = settingsLoader.getStringArray("ports", "", tabCounter);
         clientAssociationMarkers = settingsLoader.getStringArray("clientAssociationMarkers", "", tabCounter);
         clientAssociationID = settingsLoader.getIntegerArray("clientAssociationID", 0, tabCounter);
@@ -529,6 +542,24 @@ public class MyProperties {
         this.updateSourceUrl = value;
         settingsLoader.setString("updateSourceUrl", value);
     }
+
+    public String getGitflicToken() { return gitflicToken; }
+    public void setGitflicToken(String value) { gitflicToken = value; settingsLoader.setString("gitflicToken", value); }
+
+    public String getGithubToken() { return githubToken; }
+    public void setGithubToken(String value) { githubToken = value; settingsLoader.setString("githubToken", value); }
+
+    public String getGiteaToken() { return giteaToken; }
+    public void setGiteaToken(String value) { giteaToken = value; settingsLoader.setString("giteaToken", value); }
+
+    public String getGitflicRepo() { return gitflicRepo; }
+    public void setGitflicRepo(String value) { gitflicRepo = value; settingsLoader.setString("gitflicRepo", value); }
+
+    public String getGithubRepo() { return githubRepo; }
+    public void setGithubRepo(String value) { githubRepo = value; settingsLoader.setString("githubRepo", value); }
+
+    public String getGiteaRepo() { return giteaRepo; }
+    public void setGiteaRepo(String value) { giteaRepo = value; settingsLoader.setString("giteaRepo", value); }
 
     public void setPortAcu10fd(int port){
         this.portAcu10fd = port;
