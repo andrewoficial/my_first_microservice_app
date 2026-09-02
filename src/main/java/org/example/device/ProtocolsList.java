@@ -37,7 +37,8 @@ public enum ProtocolsList {
     DPS150("DPS150"),
     QDL80A("QDL80A"),
     EDWARDS_D397_00_000("EDWARDS_D397_00_000"),
-    SIMPLE_HEX("SIMPLE_HEX");
+    SIMPLE_HEX("SIMPLE_HEX"),
+    ESP_KANTSER_BLE_EMU("ESP_KANTSER_BLE_EMU");
 
 
     private final String value;

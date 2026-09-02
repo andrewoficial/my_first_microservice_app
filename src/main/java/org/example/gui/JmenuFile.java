@@ -13,6 +13,9 @@ import org.example.gui.curve.CurveHandlerWindow;
 import org.example.gui.devices.arduino.emulator.mipex.MipexEmuMain;
 import org.example.gui.devices.arduino.feeboard.control.FeeBoardMain;
 import org.example.gui.devices.arduino.feeboard.emulation.FeeBoardTestFrame;
+import org.example.gui.devices.binder.camera.control.BinderControlPanel;
+import org.example.gui.devices.binder.camera.emulation.BinderEmulatorFrame;
+import org.example.gui.devices.esp32.kantser.emu.ble.KantserBleMain;
 import org.example.gui.devices.edvards.d39730880.control.d39730880Main;
 import org.example.gui.devices.edvards.d39730880.emulation.EdwardsTicTestFrame;
 import org.example.gui.devices.qidian.qdl80a.control.Qdl80aMain;
@@ -680,10 +683,36 @@ public class JmenuFile {
         arduinoMenu.add(feeMenu);
         arduinoMenu.add(mipexMenu);
 
+        // ESP32 → Kantser BLE Emu
+        JMenu esp32Menu = new JMenu("ESP32");
+        JMenu kantserBleMenu = new JMenu("Kantser BLE Emu");
+
+        JMenuItem kantserControl = new JMenuItem("Панель управления");
+        JMenuItem kantserInfo = new JMenuItem("Справочная информация");
+
+        kantserBleMenu.add(kantserControl);
+        kantserBleMenu.add(kantserInfo);
+        esp32Menu.add(kantserBleMenu);
+
+        // Binder → Camera (TCP) климатическая камера
+        JMenu binderMenu = new JMenu("Binder");
+        JMenu binderCameraMenu = new JMenu("Camera (TCP)");
+
+        JMenuItem binderControl = new JMenuItem("Панель управления");
+        JMenuItem binderEmulation = new JMenuItem("Панель эмуляции");
+        JMenuItem binderInfo = new JMenuItem("Справочная информация");
+
+        binderCameraMenu.add(binderControl);
+        binderCameraMenu.add(binderEmulation);
+        binderCameraMenu.add(binderInfo);
+        binderMenu.add(binderCameraMenu);
+
         controlPanelsMenu.add(stuMenu);
         controlPanelsMenu.add(qdMenu);
         controlPanelsMenu.add(edwardsMenu);
         controlPanelsMenu.add(arduinoMenu);
+        controlPanelsMenu.add(esp32Menu);
+        controlPanelsMenu.add(binderMenu);
 
         stuControl.addActionListener(e -> {
             System.out.println("STU MCPS Control Panel");
@@ -812,6 +841,58 @@ public class JmenuFile {
                             "Команды: F, F?, LOG, CONC?, CONST?, ID, TERM?/TERM,\n" +
                             "FMOD, CMOD, GMOD, TMOD, SAPR, SDAC, SMCV, GMCV, KALB,\n" +
                             "SSTAT, SREV?, SRAL?, %**, S085, !, MMES, UART/мост/отладка.",
+                    "Справочная информация",
+                    JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        binderControl.addActionListener(e -> {
+            System.out.println("Binder Camera (TCP) Control Panel");
+            BinderControlPanel binderPanel = new BinderControlPanel();
+            JFrame frame = new JFrame("Binder:Camera (TCP) — Панель управления");
+            frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+            frame.setContentPane(binderPanel.getMainPanel());
+            frame.pack();
+            frame.setSize(1000, 680);
+            frame.setLocationRelativeTo(null);
+            frame.setVisible(true);
+        });
+
+        binderEmulation.addActionListener(e -> {
+            System.out.println("Binder Camera (TCP) Emulation Panel");
+            new BinderEmulatorFrame().setVisible(true);
+        });
+
+        binderInfo.addActionListener(e -> {
+            JOptionPane.showMessageDialog(null,
+                    "Климатическая камера Binder (TCP, порт 10001).\n" +
+                            "Протокол: binder.md · Modbus-фрейм + CRC-16/Modbus.\n" +
+                            "Команды: SetT (0x10, рег. 0x1581, float °C),\n" +
+                            "GetT (0x03, рег. 0x11A9, float °C),\n" +
+                            "SetHC (0x06, рег. 0x158B) — влажность (t>-6 вкл, t<-12 выкл).",
+                    "Справочная информация",
+                    JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        kantserControl.addActionListener(e -> {
+            System.out.println("ESP32 Kantser BLE Emu Control Panel");
+            KantserBleMain panel = new KantserBleMain();
+            JFrame frame = new JFrame("ESP32:KantserBLE — Панель управления");
+            frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+            frame.setContentPane(panel.getMainPanel());
+            frame.pack();
+            frame.setSize(980, 720);
+            frame.setLocationRelativeTo(null);
+            frame.setVisible(true);
+        });
+
+        kantserInfo.addActionListener(e -> {
+            JOptionPane.showMessageDialog(null,
+                    "ESP32 Kantser BLE simulator (ESP_KANTSER_BLE_EMU).\n" +
+                            "Протокол: 115200 8N1 CR\n" +
+                            "Команды: HELP, GDUI?, SREV?, BLST?, ADST?,\n" +
+                            "SCH1..SCH4 (концентрации), STER (смещение темп.),\n" +
+                            "ADVE/ADVD (реклама), REBT, LRBC, LSBA, LLBA,\n" +
+                            "CMMD/SMAC/GMAC (MAC мастера и устройства).",
                     "Справочная информация",
                     JOptionPane.INFORMATION_MESSAGE);
         });

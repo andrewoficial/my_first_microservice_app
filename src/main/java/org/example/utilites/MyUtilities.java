@@ -17,6 +17,7 @@ import org.example.device.protDynament.Dynament;
 import org.example.device.protEctTc290.ECT_TC290;
 import org.example.device.protEdwardsD397.EDWARDS_D397_00_000;
 import org.example.device.protErstevakMtp4d.ERSTEVAK_MTP4D;
+import org.example.device.protEspKantserBleEmu.ESP_KANTSER_BLE_EMU;
 import org.example.device.protFnirsiDps150.FNIRSI_DPS150;
 import org.example.device.protGpsTest.GPS_Test;
 import org.example.device.protIgm10.ascii.Igm10Ascii;
@@ -113,6 +114,7 @@ public class MyUtilities {
             case DPS150 -> device = new FNIRSI_DPS150(comPort);
             case QDL80A -> device = new Qdl80aDevice(comPort);
             case SIMPLE_HEX -> device = new SimpleHexDevice(comPort);
+            case ESP_KANTSER_BLE_EMU -> device = new ESP_KANTSER_BLE_EMU(comPort);
             default -> device = new DEMO_PROTOCOL(comPort);
         }
         return device;
@@ -151,6 +153,7 @@ public class MyUtilities {
             case DPS150 -> device = new FNIRSI_DPS150();
             case QDL80A -> device = new Qdl80aDevice();
             case SIMPLE_HEX -> device = new SimpleHexDevice();
+            case ESP_KANTSER_BLE_EMU -> device = new ESP_KANTSER_BLE_EMU();
             default -> device = new DEMO_PROTOCOL();
         }
         return device;
