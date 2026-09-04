@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandListClass;
 import org.example.device.SomeDevice;
+import org.example.device.command.SingleCommand;
 import org.example.device.connectParameters.ComConnectParameters;
 import org.example.services.AnswerValues;
 import org.example.services.transport.serial.*;
@@ -62,10 +63,30 @@ public class OWON_SPE3051 implements SomeDevice {
             expectedBytes = 500;
             cmdToSend = null;
         }else{
-            //Получает количесвто одидаемых байт
-            expectedBytes = commands.getExpectedBytes(str); //ToDo распространить на сотальные девайсы
+            //Получает количество ожидаемых байт
+            expectedBytes = resolveCommand(str) != null
+                    ? resolveCommand(str).getExpectedBytes()
+                    : commands.getExpectedBytes(str);
             cmdToSend = str;
         }
+    }
+
+    /**
+     * Разрешает команду по первому токену (например {@code VOLT 5.00} → {@code VOLT}),
+     * чтобы установка через {@code VOLT <value>} находилась в реестре команд.
+     */
+    private SingleCommand resolveCommand(String name) {
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
+        String trimmed = name.trim();
+        int sp = trimmed.indexOf(' ');
+        String key = sp > 0 ? trimmed.substring(0, sp) : trimmed;
+        SingleCommand cmd = commands.getCommand(key);
+        if (cmd != null) {
+            return cmd;
+        }
+        return commands.getCommand(trimmed);
     }
 
 
@@ -86,7 +107,7 @@ public class OWON_SPE3051 implements SomeDevice {
 
     @Override
     public boolean isKnownCommand() {
-        return  commands.isKnownCommand(cmdToSend);
+        return resolveCommand(cmdToSend) != null;
     }
 
     @Override
@@ -138,8 +159,8 @@ public class OWON_SPE3051 implements SomeDevice {
         //System.out.println("OWON_SPE3051 run parse");
         if(lastAnswerBytes != null && lastAnswerBytes.length > 0) {
             lastAnswer.setLength(0); //Очистка строкового представления ответа
-            if (commands.isKnownCommand(cmdToSend)) { //Проверка наличия команды в реестре команд
-                answerValues = commands.getCommand(cmdToSend).getResult(lastAnswerBytes); //Получение значений в ответе
+            if (resolveCommand(cmdToSend) != null) { //Проверка наличия команды в реестре команд
+                answerValues = resolveCommand(cmdToSend).getResult(lastAnswerBytes); //Получение значений в ответе
                 if(answerValues != null){
                     for (int i = 0; i < answerValues.getValues().length; i++) {
                         lastAnswer.append(answerValues.getValues()[i]);

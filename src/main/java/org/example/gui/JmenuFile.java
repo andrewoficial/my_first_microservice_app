@@ -15,6 +15,12 @@ import org.example.gui.devices.arduino.feeboard.control.FeeBoardMain;
 import org.example.gui.devices.arduino.feeboard.emulation.FeeBoardTestFrame;
 import org.example.gui.devices.binder.camera.control.BinderControlPanel;
 import org.example.gui.devices.binder.camera.emulation.BinderEmulatorFrame;
+import org.example.gui.devices.bkm4.control.Bkm4Main;
+import org.example.gui.devices.bkm4.emulation.Bkm4EmulatorFrame;
+import org.example.gui.devices.boto.control.Boto800Main;
+import org.example.gui.devices.boto.control.Boto1000Main;
+import org.example.gui.devices.boto.emulation.Boto800EmulatorFrame;
+import org.example.gui.devices.boto.emulation.Boto1000EmulatorFrame;
 import org.example.gui.devices.esp32.kantser.emu.ble.KantserBleMain;
 import org.example.gui.devices.edvards.d39730880.control.d39730880Main;
 import org.example.gui.devices.edvards.d39730880.emulation.EdwardsTicTestFrame;
@@ -22,6 +28,8 @@ import org.example.gui.devices.qidian.qdl80a.control.Qdl80aMain;
 import org.example.gui.devices.qidian.qdl80a.emulation.Qdl80aTestFrame;
 import org.example.gui.devices.stu.mcps.control.spbStuMcpsMain;
 import org.example.gui.devices.stu.mcps.emulation.McpsTestFrame;
+import org.example.gui.devices.testa.control.TestaControlPanel;
+import org.example.gui.devices.testa.emulation.TestaEmulatorFrame;
 import org.example.gui.graph.ChartWindow;
 import org.example.gui.graph.data.AnswerLoader;
 import org.example.gui.mgstest.MultigassensWindow;
@@ -707,12 +715,45 @@ public class JmenuFile {
         binderCameraMenu.add(binderInfo);
         binderMenu.add(binderCameraMenu);
 
+        // БКМ-4 → блок коммутации (RS-232C)
+        JMenu bkm4Menu = new JMenu("БКМ-4");
+        JMenuItem bkm4Control = new JMenuItem("Панель управления");
+        JMenuItem bkm4Emulation = new JMenuItem("Панель эмуляции");
+        JMenuItem bkm4Info = new JMenuItem("Справочная информация");
+        bkm4Menu.add(bkm4Control);
+        bkm4Menu.add(bkm4Emulation);
+        bkm4Menu.add(bkm4Info);
+
         controlPanelsMenu.add(stuMenu);
         controlPanelsMenu.add(qdMenu);
         controlPanelsMenu.add(edwardsMenu);
         controlPanelsMenu.add(arduinoMenu);
         controlPanelsMenu.add(esp32Menu);
         controlPanelsMenu.add(binderMenu);
+        controlPanelsMenu.add(bkm4Menu);
+
+        // Testa → климатическая камера (UDP)
+        JMenu testaMenu = new JMenu("Testa");
+        JMenuItem testaControl = new JMenuItem("Панель управления");
+        JMenuItem testaEmulation = new JMenuItem("Панель эмуляции");
+        testaMenu.add(testaControl);
+        testaMenu.add(testaEmulation);
+        controlPanelsMenu.add(testaMenu);
+
+        JMenu botoMenu = new JMenu("Термокамеры BOTO");
+        JMenu boto800Menu = new JMenu("BOTO 800");
+        JMenuItem boto800Control = new JMenuItem("Панель управления");
+        JMenuItem boto800Emulation = new JMenuItem("Панель эмуляции");
+        boto800Menu.add(boto800Control);
+        boto800Menu.add(boto800Emulation);
+        JMenu boto1000Menu = new JMenu("BOTO 1000");
+        JMenuItem boto1000Control = new JMenuItem("Панель управления");
+        JMenuItem boto1000Emulation = new JMenuItem("Панель эмуляции");
+        boto1000Menu.add(boto1000Control);
+        boto1000Menu.add(boto1000Emulation);
+        botoMenu.add(boto800Menu);
+        botoMenu.add(boto1000Menu);
+        controlPanelsMenu.add(botoMenu);
 
         stuControl.addActionListener(e -> {
             System.out.println("STU MCPS Control Panel");
@@ -871,6 +912,72 @@ public class JmenuFile {
                             "SetHC (0x06, рег. 0x158B) — влажность (t>-6 вкл, t<-12 выкл).",
                     "Справочная информация",
                     JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        testaControl.addActionListener(e -> {
+            System.out.println("Testa Control Panel");
+            TestaControlPanel panel = new TestaControlPanel();
+            JFrame frame = new JFrame("Testa — Панель управления (UDP)");
+            frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+            frame.setContentPane(panel.getMainPanel());
+            frame.pack();
+            frame.setSize(900, 620);
+            frame.setLocationRelativeTo(null);
+            frame.setVisible(true);
+        });
+
+        testaEmulation.addActionListener(e -> {
+            System.out.println("Testa Emulation Panel");
+            new TestaEmulatorFrame().setVisible(true);
+        });
+
+        bkm4Control.addActionListener(e -> {
+            System.out.println("BKM-4 Control Panel");
+            Bkm4Main bkm4Panel = new Bkm4Main();
+            JFrame frame = new JFrame("БКМ-4 — Панель управления");
+            frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+            frame.setContentPane(bkm4Panel.getMainPanel());
+            frame.pack();
+            frame.setSize(960, 620);
+            frame.setLocationRelativeTo(null);
+            frame.setVisible(true);
+        });
+
+        bkm4Emulation.addActionListener(e -> {
+            System.out.println("BKM-4 Emulation Panel");
+            new Bkm4EmulatorFrame().setVisible(true);
+        });
+
+        bkm4Info.addActionListener(e -> {
+            JOptionPane.showMessageDialog(null,
+                    "Блок коммутации БКМ-4 (RS-232C, 9600 8N1, ASCII/CR).\n" +
+                            "Протокол: bkm4.md\n" +
+                            "Команды: &A?/&A0(ручн.)/&A1(внешн.) — режим,\n" +
+                            "&V?/&V0..&V4 — газовый клапан,\n" +
+                            "&S?/&Sxxxx (0..3000) — уставка расхода,\n" +
+                            "&F? — фактический расход,\n" +
+                            "&G?/&G0(выкл)/&G1(вкл) — генерация.",
+                    "Справочная информация",
+                    JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        boto800Control.addActionListener(e -> {
+            System.out.println("BOTO 800 Control Panel");
+            Boto800Main panel = new Boto800Main();
+            panel.setVisible(true);
+        });
+        boto800Emulation.addActionListener(e -> {
+            System.out.println("BOTO 800 Emulation Panel");
+            new Boto800EmulatorFrame().setVisible(true);
+        });
+        boto1000Control.addActionListener(e -> {
+            System.out.println("BOTO 1000 Control Panel");
+            Boto1000Main panel = new Boto1000Main();
+            panel.setVisible(true);
+        });
+        boto1000Emulation.addActionListener(e -> {
+            System.out.println("BOTO 1000 Emulation Panel");
+            new Boto1000EmulatorFrame().setVisible(true);
         });
 
         kantserControl.addActionListener(e -> {

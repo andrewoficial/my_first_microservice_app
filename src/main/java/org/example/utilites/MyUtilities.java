@@ -9,6 +9,9 @@ import org.example.device.protArdCurrLoopMeter.ARD_CUR_LOOP_METER;
 import org.example.device.protArdFeeBrdMeter.ARD_FEE_BRD_METER;
 import org.example.device.protArdMipexEmu.ARD_MIPEX_EMU;
 import org.example.device.protArdTerm.ARD_TERM;
+import org.example.device.protBkm4.BKM4_DEVICE;
+import org.example.device.protBoto.BOTO800_DEVICE;
+import org.example.device.protBoto.BOTO1000_DEVICE;
 import org.example.device.protBelead.BeLead;
 import org.example.device.protCubic.Cubic;
 import org.example.device.protDemo.DEMO_PROTOCOL;
@@ -115,6 +118,9 @@ public class MyUtilities {
             case QDL80A -> device = new Qdl80aDevice(comPort);
             case SIMPLE_HEX -> device = new SimpleHexDevice(comPort);
             case ESP_KANTSER_BLE_EMU -> device = new ESP_KANTSER_BLE_EMU(comPort);
+            case BKM4_DEVICE -> device = new BKM4_DEVICE(comPort);
+            case BOTO800_DEVICE -> device = new BOTO800_DEVICE(comPort);
+            case BOTO1000_DEVICE -> device = new BOTO1000_DEVICE(comPort);
             default -> device = new DEMO_PROTOCOL(comPort);
         }
         return device;
@@ -154,6 +160,9 @@ public class MyUtilities {
             case QDL80A -> device = new Qdl80aDevice();
             case SIMPLE_HEX -> device = new SimpleHexDevice();
             case ESP_KANTSER_BLE_EMU -> device = new ESP_KANTSER_BLE_EMU();
+            case BKM4_DEVICE -> device = new BKM4_DEVICE();
+            case BOTO800_DEVICE -> device = new BOTO800_DEVICE();
+            case BOTO1000_DEVICE -> device = new BOTO1000_DEVICE();
             default -> device = new DEMO_PROTOCOL();
         }
         return device;

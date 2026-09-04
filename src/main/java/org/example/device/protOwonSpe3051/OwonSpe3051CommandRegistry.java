@@ -3,8 +3,14 @@ package org.example.device.protOwonSpe3051;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
+import org.example.device.command.ArgumentDescriptor;
+import org.example.device.command.CommandType;
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
+import java.util.Map;
 
 @Slf4j
 public class OwonSpe3051CommandRegistry extends DeviceCommandRegistry {
@@ -13,6 +19,7 @@ public class OwonSpe3051CommandRegistry extends DeviceCommandRegistry {
         commandList.addCommand(createMeasCurrCmd());
         commandList.addCommand(createMeasVoltCmd());
         commandList.addCommand(createGetVoltCmd());
+        commandList.addCommand(createSetVoltCmd());
     }
 
     private SingleCommand createMeasCurrCmd() {
@@ -40,6 +47,67 @@ public class OwonSpe3051CommandRegistry extends DeviceCommandRegistry {
                 this::parseGetVoltCmd,
                 5000
         );
+    }
+
+    /**
+     * Команда установки напряжения: {@code VOLT <значение><CR>} (0–24 В).
+     * Например {@code VOLT 5.00}. Формат совпадает с {@code OwonVoltLinearRule}
+     * и {@code OwonVoltSinusRule}, чтобы установка была единообразной.
+     */
+    private SingleCommand createSetVoltCmd() {
+        SingleCommand cmd = new SingleCommand(
+                "VOLT",
+                "VOLT <value> - установка заданного напряжения (0–24 В).",
+                "VOLT",
+                "VOLT ".getBytes(StandardCharsets.US_ASCII),
+                args -> {
+                    Object v = args.get("value");
+                    double volt;
+                    if (v instanceof Number n) {
+                        volt = n.doubleValue();
+                    } else if (v != null) {
+                        volt = Double.parseDouble(String.valueOf(v).replace(',', '.'));
+                    } else {
+                        volt = 0;
+                    }
+                    volt = Math.max(0, Math.min(24, volt));
+                    return String.format(Locale.US, "VOLT %.2f", volt).getBytes(StandardCharsets.US_ASCII);
+                },
+                this::parseVoltAnswer,
+                8,
+                CommandType.ASCII
+        );
+        cmd.addArgument(new ArgumentDescriptor(
+                "value",
+                Double.class,
+                0.0,
+                o -> o instanceof Number n && n.doubleValue() >= 0 && n.doubleValue() <= 24
+        ));
+        return cmd;
+    }
+
+    /**
+     * Парсер ответа на установку напряжения: прибор возвращает установленное значение,
+     * либо корректный числовой ответ. Если в ответе нет числа — не знаем (вернём null).
+     */
+    private AnswerValues parseVoltAnswer(byte[] response) {
+        if (response == null || response.length == 0) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (byte b : response) {
+            sb.append((char) b);
+        }
+        String text = sb.toString().trim();
+        try {
+            double v = Double.parseDouble(text.replace(',', '.'));
+            AnswerValues answerValues = new AnswerValues(1);
+            answerValues.addValue(v, "V");
+            return answerValues;
+        } catch (NumberFormatException e) {
+            log.warn("OWON VOLT: не удалось разобрать ответ '{}'", text);
+            return null;
+        }
     }
 
 
