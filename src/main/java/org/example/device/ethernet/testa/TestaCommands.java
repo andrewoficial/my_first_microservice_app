@@ -81,6 +81,16 @@ public final class TestaCommands {
      * Заголовок {@code 11 22 00 00}; actual/setpoint — знаковые short (round(°C*100)) LE.
      */
     public static byte[] buildStatusDatagram(double actualDeg, double setpointDeg) {
+        return buildStatusDatagram(actualDeg, setpointDeg, null);
+    }
+
+    /**
+     * То же, что {@link #buildStatusDatagram(double, double)}, но позволяет заполнить
+     * «сырые» байты 8..39 кадра (не документированные поля) произвольными значениями,
+     * чтобы можно было наблюдать, как сторонняя (штатная) программа интерпретирует эти
+     * смещения. {@code extraBytes} кладётся начиная с байта 8 (обрезается до 32 байт).
+     */
+    public static byte[] buildStatusDatagram(double actualDeg, double setpointDeg, byte[] extraBytes) {
         byte[] f = new byte[GET_DATAGRAM_LEN];
         f[0] = 0x11;
         f[1] = 0x22;
@@ -90,6 +100,10 @@ public final class TestaCommands {
         f[5] = (byte) ((a >>> 8) & 0xFF);
         f[6] = (byte) (s & 0xFF);
         f[7] = (byte) ((s >>> 8) & 0xFF);
+        if (extraBytes != null) {
+            int n = Math.min(extraBytes.length, GET_DATAGRAM_LEN - 8);
+            System.arraycopy(extraBytes, 0, f, 8, n);
+        }
         return f;
     }
 

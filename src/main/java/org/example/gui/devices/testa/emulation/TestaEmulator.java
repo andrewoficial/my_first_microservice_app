@@ -13,6 +13,11 @@ public class TestaEmulator {
     private volatile double minDeg = -40.0;
     private volatile double maxDeg = 120.0;
 
+    private volatile byte[] rawStatusBytes = new byte[0];
+
+    private volatile boolean manualFrameEnabled = false;
+    private volatile byte[] manualFrame = new byte[40];
+
     /** Тик симуляции: двигает фактическую температуру к уставке. */
     public synchronized void advance(double dtSec) {
         if (dtSec <= 0) {
@@ -38,6 +43,32 @@ public class TestaEmulator {
     public void setRampRateDegPerMin(double v) { if (v > 0) this.rampRateDegPerMin = v; }
     public double getRampRateDegPerMin() { return rampRateDegPerMin; }
     public void setRange(double min, double max) { this.minDeg = min; this.maxDeg = max; }
+
+    /** Произвольные «сырые» байты 8..39 статусной датаграммы (для отладки протокола). */
+    public void setRawStatusBytes(byte[] raw) {
+        this.rawStatusBytes = (raw == null) ? new byte[0] : raw.clone();
+    }
+
+    public byte[] getRawStatusBytes() {
+        return rawStatusBytes.clone();
+    }
+
+    /** Включить «ручной кадр»: статус уходит байт-в-байт из {@code manualFrame}, без автоперезаписи. */
+    public void setManualFrameEnabled(boolean on) {
+        this.manualFrameEnabled = on;
+    }
+
+    public boolean isManualFrameEnabled() {
+        return manualFrameEnabled;
+    }
+
+    public void setManualFrame(byte[] frame) {
+        this.manualFrame = (frame == null) ? new byte[40] : frame.clone();
+    }
+
+    public byte[] getManualFrame() {
+        return manualFrame.clone();
+    }
 
     private double clamp(double v) {
         return Math.max(minDeg, Math.min(maxDeg, v));

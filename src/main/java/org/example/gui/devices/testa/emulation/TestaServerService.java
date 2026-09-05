@@ -169,7 +169,13 @@ public class TestaServerService {
             return;
         }
         try {
-            byte[] data = TestaCommands.buildStatusDatagram(emulator.getActual(), emulator.getSetpoint());
+            byte[] data;
+            if (emulator.isManualFrameEnabled()) {
+                data = emulator.getManualFrame();
+            } else {
+                data = TestaCommands.buildStatusDatagram(
+                        emulator.getActual(), emulator.getSetpoint(), emulator.getRawStatusBytes());
+            }
             DatagramPacket pkt = new DatagramPacket(data, data.length, addr, REPLY_PORT);
             s.send(pkt);
             fireLog("TX (UDP) → " + addr + ":" + REPLY_PORT + ": " + TestaCommands.toHex(data));
