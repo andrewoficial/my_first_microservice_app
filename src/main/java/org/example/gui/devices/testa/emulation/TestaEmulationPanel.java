@@ -3,6 +3,7 @@ package org.example.gui.devices.testa.emulation;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import org.example.device.ethernet.testa.TestaCommands;
+import org.example.gui.utilites.GuiUtilities;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -189,6 +190,8 @@ public class TestaEmulationPanel extends JPanel {
 
         simTimer = new javax.swing.Timer(100, e -> advanceSim());
         simTimer.start();
+
+        GuiUtilities.darkenInputs(this);
     }
 
     private void start() {

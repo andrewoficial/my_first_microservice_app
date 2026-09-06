@@ -24,6 +24,12 @@ public final class TestaCommands {
     private TestaCommands() {
     }
 
+    // ─── Опкоды кнопочных команд (23 45 34 21) ─────────────────────────────
+    public static final int OP_STOP = 0x64;
+    public static final int OP_LIGHT = 0x66;
+    public static final int OP_PING = 0x67;
+    public static final int OP_STATE = 0x6A;
+
     // ─── Сборка кадра установки температуры (SetT, 32 байта) ───────────────
 
     /**
@@ -42,6 +48,50 @@ public final class TestaCommands {
         f[14] = (byte) ((bits >>> 16) & 0xFF);
         f[15] = (byte) ((bits >>> 24) & 0xFF);
         return f;
+    }
+
+    /**
+     * 12-байтная кнопочная команда {@code 23 45 34 21 | op | (мусор 5..7) | param uint32 LE}.
+     */
+    public static byte[] buildButtonCommand(int opcode, int param) {
+        byte[] f = new byte[12];
+        f[0] = 0x23;
+        f[1] = 0x45;
+        f[2] = 0x34;
+        f[3] = 0x21;
+        f[4] = (byte) opcode;
+        f[8] = (byte) (param & 0xFF);
+        f[9] = (byte) ((param >>> 8) & 0xFF);
+        f[10] = (byte) ((param >>> 16) & 0xFF);
+        f[11] = (byte) ((param >>> 24) & 0xFF);
+        return f;
+    }
+
+    /**
+     * 32-байтный кадр «запуск статического поддержания» (02 33 88 66).
+     * Влажность в байтах 28..31 (float LE), скорость в 16..19 (0 = максимум), байт 5 = влажность активна.
+     */
+    public static byte[] buildStartFrame(double tempDeg, double rampDegPerMin,
+                                         double humiditySet, boolean humidityEnabled) {
+        byte[] f = new byte[SET_FRAME_LEN];
+        f[0] = 0x02;
+        f[1] = 0x33;
+        f[2] = (byte) 0x88;
+        f[3] = 0x66;
+        f[5] = (byte) (humidityEnabled ? 1 : 0);
+        putFloatLE(f, 12, tempDeg);
+        putFloatLE(f, 16, rampDegPerMin > 0 ? rampDegPerMin : 0.0);
+        f[20] = 0x33;
+        putFloatLE(f, 28, humiditySet);
+        return f;
+    }
+
+    private static void putFloatLE(byte[] f, int off, double v) {
+        int bits = Float.floatToRawIntBits((float) v);
+        f[off] = (byte) (bits & 0xFF);
+        f[off + 1] = (byte) ((bits >>> 8) & 0xFF);
+        f[off + 2] = (byte) ((bits >>> 16) & 0xFF);
+        f[off + 3] = (byte) ((bits >>> 24) & 0xFF);
     }
 
     // ─── Проверка/разбор датаграммы статуса (GetT, 40 байт) ────────────────
@@ -72,6 +122,55 @@ public final class TestaCommands {
     public static double parseSetpoint(byte[] data) {
         short w = (short) ((data[6] & 0xFF) | ((data[7] & 0xFF) << 8));
         return w / 100.0;
+    }
+
+    private static short shortLE(byte[] d, int off) {
+        return (short) ((d[off] & 0xFF) | ((d[off + 1] & 0xFF) << 8));
+    }
+
+    private static double shortLE100(byte[] d, int off) {
+        return shortLE(d, off) / 100.0;
+    }
+
+    /** Управление температурой, % (байты 8..9). */
+    public static double parseTempControl(byte[] data) {
+        return shortLE100(data, 8);
+    }
+
+    /** Влажность текущая, %RH (12..13). */
+    public static double parseHumidityActual(byte[] data) {
+        return shortLE100(data, 12);
+    }
+
+    /** Влажность заданная, %RH (14..15). */
+    public static double parseHumiditySetpoint(byte[] data) {
+        return shortLE100(data, 14);
+    }
+
+    /** Управление влажностью, % (16..17). */
+    public static double parseHumidityControl(byte[] data) {
+        return shortLE100(data, 16);
+    }
+
+    /** Температура парогенератора, °C (26..27). */
+    public static double parseSteamGenerator(byte[] data) {
+        return shortLE100(data, 26);
+    }
+
+    /** DWORD флагов (байты 20..23). */
+    public static long parseFlags(byte[] data) {
+        return (data[20] & 0xFFL) | ((data[21] & 0xFFL) << 8)
+                | ((data[22] & 0xFFL) << 16) | ((data[23] & 0xFFL) << 24);
+    }
+
+    /** Бит подсветки камеры (байт 21, бит 7). */
+    public static boolean parseLight(byte[] data) {
+        return (data[21] & 0x80) != 0;
+    }
+
+    /** Байт аварий (22). */
+    public static int parseAlarms(byte[] data) {
+        return data[22] & 0xFF;
     }
 
     // ─── Сборка датаграммы статуса (для эмулятора) ─────────────────────────

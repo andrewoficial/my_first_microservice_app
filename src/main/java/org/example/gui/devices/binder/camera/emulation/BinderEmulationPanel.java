@@ -1,5 +1,7 @@
 package org.example.gui.devices.binder.camera.emulation;
 
+import org.example.gui.utilites.GuiUtilities;
+
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
@@ -65,6 +67,8 @@ public class BinderEmulationPanel extends JPanel {
         simTimer.start();
         refreshScreens();
         syncHumidityFromEmulator();
+
+        GuiUtilities.darkenInputs(this);
     }
 
     private void bindDynamicsSpinners() {

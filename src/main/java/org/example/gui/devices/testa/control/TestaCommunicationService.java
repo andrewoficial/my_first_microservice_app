@@ -29,6 +29,11 @@ public class TestaCommunicationService {
 
     private final CopyOnWriteArrayList<Consumer<Double>> tempListeners = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<Consumer<Double>> setpointListeners = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<Consumer<Double>> humidityActualListeners = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<Consumer<Double>> humiditySetpointListeners = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<Consumer<Boolean>> lightListeners = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<Consumer<Integer>> alarmsListeners = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<Consumer<Long>> relaysListeners = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<Consumer<String>> logListeners = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<Consumer<String>> statusListeners = new CopyOnWriteArrayList<>();
 
@@ -38,12 +43,12 @@ public class TestaCommunicationService {
 
     private final ScheduledExecutorService executor =
             Executors.newSingleThreadScheduledExecutor(r -> {
-                Thread t = new Thread(r, "TestaClient");
+                Thread t = new Thread(r, "TestaClientCmd");
                 t.setDaemon(true);
                 return t;
             });
 
-    private volatile boolean polling = false;
+    private volatile Thread receiveThread;
 
     public synchronized boolean connect(String host) {
         return connect(host, DEFAULT_REMOTE_PORT);
@@ -57,6 +62,7 @@ public class TestaCommunicationService {
             this.socket = s;
             this.remoteAddr = InetAddress.getByName(host);
             this.remotePort = port;
+            startReceiveThread();
             fireStatus("Готово: приём на UDP :" + LOCAL_RECEIVE_PORT + ", камера " + host + ":" + port);
             fireLog("UDP слушаем " + LOCAL_RECEIVE_PORT + ", шлём на " + host + ":" + port);
             return true;
@@ -65,6 +71,41 @@ public class TestaCommunicationService {
             close();
             fireStatus("Ошибка: " + e.getMessage());
             return false;
+        }
+    }
+
+    /** Фоновый поток непрерывно читает статус и обрабатывает каждый пакет сразу (без задержки очереди). */
+    private void startReceiveThread() {
+        Thread t = new Thread(this::receiveLoop, "TestaClientRecv");
+        t.setDaemon(true);
+        receiveThread = t;
+        t.start();
+    }
+
+    private void receiveLoop() {
+        byte[] buf = new byte[64];
+        while (isConnected()) {
+            DatagramSocket s = socket;
+            if (s == null || s.isClosed()) {
+                break;
+            }
+            try {
+                DatagramPacket pkt = new DatagramPacket(buf, buf.length);
+                s.receive(pkt);
+                if (pkt.getLength() == 0) {
+                    continue;
+                }
+                byte[] data = new byte[pkt.getLength()];
+                System.arraycopy(pkt.getData(), pkt.getOffset(), data, 0, pkt.getLength());
+                handleStatus(data);
+            } catch (SocketTimeoutException ignored) {
+                // нет данных в этом окне — нормально
+            } catch (Exception e) {
+                if (isConnected()) {
+                    log.warn("Testa recv error", e);
+                }
+                break;
+            }
         }
     }
 
@@ -79,6 +120,10 @@ public class TestaCommunicationService {
         }
         socket = null;
         remoteAddr = null;
+        if (receiveThread != null) {
+            receiveThread.interrupt();
+            receiveThread = null;
+        }
     }
 
     public boolean isConnected() {
@@ -99,6 +144,41 @@ public class TestaCommunicationService {
         });
     }
 
+    /** Запуск статического поддержания (кадр 02 33 88 66 с темп/скорость/влажность). */
+    public void startTest(double temp, double rampDegPerMin, double humiditySet, boolean humidityEnabled) {
+        executor.execute(() -> {
+            if (!isConnected()) {
+                fireLog("Запуск отменён: нет соединения");
+                return;
+            }
+            byte[] frame = TestaCommands.buildStartFrame(temp, rampDegPerMin, humiditySet, humidityEnabled);
+            send(frame);
+            fireLog("TX [Start] " + TestaCommands.toHex(frame));
+        });
+    }
+
+    public void stopTest() {
+        sendButton(TestaCommands.OP_STOP, 1, "Stop");
+    }
+
+    public void setLight(boolean on) {
+        sendButton(TestaCommands.OP_LIGHT, on ? 1 : 0, on ? "Light ON" : "Light OFF");
+    }
+
+    /** Кнопочная команда 23 45 34 21. */
+    private void sendButton(int opcode, int param, String name) {
+        executor.execute(() -> {
+            if (!isConnected()) {
+                fireLog(name + " отменён: нет соединения");
+                return;
+            }
+            byte[] frame = TestaCommands.buildButtonCommand(opcode, param);
+            send(frame);
+            fireLog("TX [" + name + " op=0x" + String.format("%02X", opcode) + "] "
+                    + TestaCommands.toHex(frame));
+        });
+    }
+
     private void send(byte[] data) {
         try {
             DatagramPacket pkt = new DatagramPacket(data, data.length, remoteAddr, remotePort);
@@ -109,54 +189,50 @@ public class TestaCommunicationService {
         }
     }
 
-    public synchronized void setPollingEnabled(boolean enable) {
-        if (enable == polling) {
-            return;
-        }
-        polling = enable;
-        if (enable) {
-            executor.scheduleWithFixedDelay(this::pollOnce, 0, POLL_MS, TimeUnit.MILLISECONDS);
-        }
+    /** Совместимость: приём теперь всегда активен в фоновом потоке, настройка не нужна. */
+    public void setPollingEnabled(boolean enable) {
+        // no-op: статус читается непрерывно в receiveLoop
     }
 
-    private void pollOnce() {
-        if (!isConnected()) {
+    private void handleStatus(byte[] data) {
+        if (!TestaCommands.isTemperatureDatagram(data)) {
             return;
         }
-        try {
-            byte[] buf = new byte[64];
-            DatagramPacket pkt = new DatagramPacket(buf, buf.length);
-            socket.receive(pkt);
-            if (pkt.getLength() == 0) {
-                return;
-            }
-            byte[] data = new byte[pkt.getLength()];
-            System.arraycopy(pkt.getData(), pkt.getOffset(), data, 0, pkt.getLength());
-            if (TestaCommands.isTemperatureDatagram(data)) {
-                double actual = TestaCommands.parseActual(data);
-                double set = TestaCommands.parseSetpoint(data);
-                fireLog("RX [GetT] " + TestaCommands.toHex(data)
-                        + "  (t=" + String.format(java.util.Locale.US, "%.2f", actual)
-                        + ", sp=" + String.format(java.util.Locale.US, "%.2f", set) + ")");
-                notifyTemp(actual);
-                notifySetpoint(set);
-            }
-        } catch (SocketTimeoutException ignored) {
-            // нет данных в этом окне — нормально
-        } catch (Exception e) {
-            log.warn("Testa recv error", e);
-        }
+        double actual = TestaCommands.parseActual(data);
+        double set = TestaCommands.parseSetpoint(data);
+        double humCur = TestaCommands.parseHumidityActual(data);
+        double humSet = TestaCommands.parseHumiditySetpoint(data);
+        boolean light = TestaCommands.parseLight(data);
+        int alarms = TestaCommands.parseAlarms(data);
+        long relays = TestaCommands.parseFlags(data);
+        fireLog("RX [GetT] " + TestaCommands.toHex(data)
+                + "  (t=" + String.format(java.util.Locale.US, "%.2f", actual)
+                + ", sp=" + String.format(java.util.Locale.US, "%.2f", set)
+                + ", RH=" + String.format(java.util.Locale.US, "%.1f", humCur)
+                + "/" + String.format(java.util.Locale.US, "%.1f", humSet)
+                + "%, light=" + light + ", alarms=0x" + String.format("%02X", alarms) + ")");
+        notifyTemp(actual);
+        notifySetpoint(set);
+        notifyHumidityActual(humCur);
+        notifyHumiditySetpoint(humSet);
+        notifyLight(light);
+        notifyAlarms(alarms);
+        notifyRelays(relays);
     }
 
     // ─── слушатели ────────────────────────────────────────────────────────
 
     public void addTemperatureListener(Consumer<Double> l) { tempListeners.add(l); }
     public void addSetpointListener(Consumer<Double> l) { setpointListeners.add(l); }
+    public void addHumidityActualListener(Consumer<Double> l) { humidityActualListeners.add(l); }
+    public void addHumiditySetpointListener(Consumer<Double> l) { humiditySetpointListeners.add(l); }
+    public void addLightListener(Consumer<Boolean> l) { lightListeners.add(l); }
+    public void addAlarmsListener(Consumer<Integer> l) { alarmsListeners.add(l); }
+    public void addRelaysListener(Consumer<Long> l) { relaysListeners.add(l); }
     public void addLogListener(Consumer<String> l) { logListeners.add(l); }
     public void addStatusListener(Consumer<String> l) { statusListeners.add(l); }
 
     public void shutdown() {
-        polling = false;
         executor.shutdownNow();
         close();
     }
@@ -172,6 +248,51 @@ public class TestaCommunicationService {
 
     private void notifySetpoint(double v) {
         for (Consumer<Double> l : setpointListeners) {
+            try {
+                l.accept(v);
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private void notifyHumidityActual(double v) {
+        for (Consumer<Double> l : humidityActualListeners) {
+            try {
+                l.accept(v);
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private void notifyHumiditySetpoint(double v) {
+        for (Consumer<Double> l : humiditySetpointListeners) {
+            try {
+                l.accept(v);
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private void notifyLight(boolean v) {
+        for (Consumer<Boolean> l : lightListeners) {
+            try {
+                l.accept(v);
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private void notifyAlarms(int v) {
+        for (Consumer<Integer> l : alarmsListeners) {
+            try {
+                l.accept(v);
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private void notifyRelays(long v) {
+        for (Consumer<Long> l : relaysListeners) {
             try {
                 l.accept(v);
             } catch (Exception ignored) {

@@ -1,6 +1,7 @@
 package org.example.gui.devices.boto.emulation;
 
 import com.fazecast.jSerialComm.SerialPort;
+import org.example.gui.utilites.GuiUtilities;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -108,6 +109,8 @@ public class BotoEmulationPanel extends JPanel {
         simTimer = new javax.swing.Timer(100, e -> advanceSim());
         simTimer.start();
         refreshPorts();
+
+        GuiUtilities.darkenInputs(this);
     }
 
     private void advanceSim() {

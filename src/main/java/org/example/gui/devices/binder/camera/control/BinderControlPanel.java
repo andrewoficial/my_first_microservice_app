@@ -1,5 +1,7 @@
 package org.example.gui.devices.binder.camera.control;
 
+import org.example.gui.utilites.GuiUtilities;
+
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
@@ -54,6 +56,8 @@ public class BinderControlPanel {
         service.addHumidityListener(on -> SwingUtilities.invokeLater(() -> setHumidityLamp(on)));
         service.addStatusListener(s -> SwingUtilities.invokeLater(() -> statusLabel.setText(s)));
         service.addLogListener(line -> SwingUtilities.invokeLater(() -> addLog(line)));
+
+        GuiUtilities.darkenInputs(mainPanel);
     }
 
     public JPanel getMainPanel() {

@@ -3,6 +3,7 @@ package org.example.gui.devices.boto.control;
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.extern.slf4j.Slf4j;
 import org.example.device.protBoto.BotoModbusUtil;
+import org.example.gui.utilites.GuiUtilities;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -69,6 +70,8 @@ public class BotoControlPanel extends JPanel {
         setSetpointBtn.addActionListener(e -> writeSetpoint());
         toggleBtn.addActionListener(e -> toggleMod());
         queryTempBtn.addActionListener(e -> queryTemp());
+
+        GuiUtilities.darkenInputs(this);
     }
 
     // ─── Modbus helpers ─────────────────────────────────────────────

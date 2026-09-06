@@ -1,6 +1,7 @@
 package org.example.gui.devices.bkm4.control;
 
 import com.fazecast.jSerialComm.SerialPort;
+import org.example.gui.utilites.GuiUtilities;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -52,6 +53,8 @@ public class Bkm4Main {
                 flowScreen.setText(String.format(Locale.US, "%.1f мл/мин", v))));
 
         refreshPorts();
+
+        GuiUtilities.darkenInputs(mainPanel);
     }
 
     public JPanel getMainPanel() {
