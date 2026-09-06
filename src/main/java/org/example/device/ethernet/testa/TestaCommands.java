@@ -91,6 +91,15 @@ public final class TestaCommands {
      * смещения. {@code extraBytes} кладётся начиная с байта 8 (обрезается до 32 байт).
      */
     public static byte[] buildStatusDatagram(double actualDeg, double setpointDeg, byte[] extraBytes) {
+        return buildStatusDatagram(actualDeg, setpointDeg, Double.NaN, Double.NaN, extraBytes);
+    }
+
+    /**
+     * Собирает статус и, если влажность задана (не NaN), кладёт текущую влажность (12..13) и
+     * заданную (14..15) — чтобы влажность жила/менялась динамически, а не из «сырого» буфера.
+     */
+    public static byte[] buildStatusDatagram(double actualDeg, double setpointDeg,
+                                             double humCurDeg, double humSetDeg, byte[] extraBytes) {
         byte[] f = new byte[GET_DATAGRAM_LEN];
         f[0] = 0x11;
         f[1] = 0x22;
@@ -103,6 +112,14 @@ public final class TestaCommands {
         if (extraBytes != null) {
             int n = Math.min(extraBytes.length, GET_DATAGRAM_LEN - 8);
             System.arraycopy(extraBytes, 0, f, 8, n);
+        }
+        if (!Double.isNaN(humCurDeg)) {
+            short hc = (short) Math.round(humCurDeg * 100);
+            short hs = Double.isNaN(humSetDeg) ? hc : (short) Math.round(humSetDeg * 100);
+            f[12] = (byte) (hc & 0xFF);
+            f[13] = (byte) ((hc >>> 8) & 0xFF);
+            f[14] = (byte) (hs & 0xFF);
+            f[15] = (byte) ((hs >>> 8) & 0xFF);
         }
         return f;
     }

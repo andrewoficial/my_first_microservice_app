@@ -33,13 +33,15 @@ public class TestaEmulationPanel extends JPanel {
     private final JButton applyRawBtn = new JButton("Применить");
     private final JLabel rawError = new JLabel(" ");
     private final JLabel tempScreen = screenLabel();
+    private final JLabel modeScreen = infoLabel();
+    private final JLabel setpointScreen = infoLabel();
+    private final JLabel humScreen = infoLabel();
 
     private static final int[] KNOWN_OFFSETS = {
-            8, 12, 14, 16, 26, 28, 32, 34, 36, 38
+            8, 14, 16, 26, 28, 32, 34, 36, 38
     };
     private static final String[] KNOWN_LABELS = {
             "Управление температурой, %",
-            "Влажность текущая, %RH",
             "Влажность заданная, %RH",
             "Управление влажностью, %",
             "Темп. парогенератора, °C",
@@ -50,7 +52,7 @@ public class TestaEmulationPanel extends JPanel {
             "Датчик 23 целевое, атм"
     };
     private static final double[] KNOWN_DEFAULTS = {
-            0.0, 77.0, 77.0, 77.0, 77.0, 77.0, 0.0, 77.0, 77.0, 0.0
+            0.0, 77.0, 77.0, 77.0, 77.0, 0.0, 77.0, 77.0, 0.0
     };
 
     private static final String[] RELAY404_BITS = {
@@ -122,6 +124,7 @@ public class TestaEmulationPanel extends JPanel {
     }
 
     private final JCheckBox manualCheck = new JCheckBox("Ручной кадр: слать весь кадр (0..39) как есть, без перезаписи");
+    private final JSpinner stateWord = new JSpinner(new SpinnerNumberModel(0, -32768, 65535, 1));
     private final JComboBox<Integer> debugOff = new JComboBox<>(intArrayToBox(UNKNOWN_OFFSETS));
     private final JCheckBox debugAll = new JCheckBox("показывать все адреса (вкл. известные)");
     private final JCheckBox[] debugBits = new JCheckBox[8];
@@ -210,6 +213,10 @@ public class TestaEmulationPanel extends JPanel {
         lastNanos = now;
         emulator.advance(Math.min(dt, 0.5));
         tempScreen.setText(String.format(Locale.US, "%.2f °C", emulator.getActual()));
+        modeScreen.setText("Режим: " + (emulator.isRunning() ? "Работа" : "Остановлен"));
+        setpointScreen.setText(String.format(Locale.US, "Уставка: %.2f °C", emulator.getSetpoint()));
+        humScreen.setText(String.format(Locale.US, "Влажность: %.1f%% / уставка %.1f%%",
+                emulator.getHumidityCurrent(), emulator.getHumiditySet()));
     }
 
     private JPanel buildLeft() {
@@ -239,6 +246,9 @@ public class TestaEmulationPanel extends JPanel {
 
         p.add(Box.createVerticalStrut(12));
         p.add(buildKnownFields());
+
+        p.add(Box.createVerticalStrut(4));
+        p.add(buildStateWord());
 
         p.add(Box.createVerticalStrut(12));
         p.add(buildRelays());
@@ -347,6 +357,26 @@ public class TestaEmulationPanel extends JPanel {
         return g;
     }
 
+    /** Сырое слово байт 24..25 (не /100) — неизвестный канал, для ручных опытов. */
+    private JPanel buildStateWord() {
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 1));
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+        row.add(new JLabel("Слово состояния (сырое int16, байты 24-25):"));
+        stateWord.setPreferredSize(new Dimension(80, stateWord.getPreferredSize().height));
+        stateWord.addChangeListener(e -> applyStateWord());
+        row.add(stateWord);
+        row.setToolTipText("Штатка это поле не читает (режим у неё локальный). Пробный канал.");
+        return row;
+    }
+
+    /** Пишет слово 24..25 сырым int16 LE (без /100). */
+    private void applyStateWord() {
+        int v = ((Number) stateWord.getValue()).intValue() & 0xFFFF;
+        workRaw[16] = (byte) (v & 0xFF);
+        workRaw[17] = (byte) ((v >>> 8) & 0xFF);
+        pushWorkRaw();
+    }
+
     /** Именованные битовые выходы (реле) в байтах 20 и 21 статусного кадра. */
     private JPanel buildRelays() {
         JPanel g = new JPanel();
@@ -424,6 +454,9 @@ public class TestaEmulationPanel extends JPanel {
             int start = KNOWN_OFFSETS[i] - 8;
             workRaw[start] = (byte) (sv & 0xFF);
             workRaw[start + 1] = (byte) ((sv >>> 8) & 0xFF);
+            if (KNOWN_OFFSETS[i] == 14) {
+                emulator.setHumiditySetpoint(v);
+            }
         }
         pushWorkRaw();
     }
@@ -736,16 +769,27 @@ public class TestaEmulationPanel extends JPanel {
 
     private JPanel buildCenter() {
         JPanel center = new JPanel(new BorderLayout(8, 8));
-        JPanel screens = new JPanel(new GridLayout(1, 1, 12, 0));
-        screens.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+        JPanel top = new JPanel(new BorderLayout(4, 4));
+        top.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+
         JPanel box = new JPanel(new BorderLayout());
         box.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.DARK_GRAY), "ТЕКУЩАЯ ТЕМПЕРАТУРА"),
                 BorderFactory.createEmptyBorder(8, 8, 8, 8)));
         tempScreen.setHorizontalAlignment(SwingConstants.CENTER);
         box.add(tempScreen, BorderLayout.CENTER);
-        screens.add(box);
-        center.add(screens, BorderLayout.NORTH);
+        top.add(box, BorderLayout.NORTH);
+
+        JPanel info = new JPanel(new GridLayout(0, 1, 4, 2));
+        info.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.DARK_GRAY), "ПАРАМЕТРЫ"),
+                BorderFactory.createEmptyBorder(6, 8, 6, 8)));
+        info.add(modeScreen);
+        info.add(setpointScreen);
+        info.add(humScreen);
+        top.add(info, BorderLayout.CENTER);
+
+        center.add(top, BorderLayout.NORTH);
 
         logArea.setEditable(false);
         logArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
@@ -775,6 +819,13 @@ public class TestaEmulationPanel extends JPanel {
         JLabel l = new JLabel("-- °C", SwingConstants.CENTER);
         l.setFont(new Font(Font.MONOSPACED, Font.BOLD, 34));
         l.setForeground(GREEN);
+        return l;
+    }
+
+    private static JLabel infoLabel() {
+        JLabel l = new JLabel(" ");
+        l.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 15));
+        l.setHorizontalAlignment(SwingConstants.LEFT);
         return l;
     }
 

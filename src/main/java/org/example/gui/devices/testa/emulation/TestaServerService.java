@@ -121,8 +121,32 @@ public class TestaServerService {
                 if (isSetTemperatureDatagram(data)) {
                     float t = parseSetTemp(data);
                     emulator.setSetpoint(t);
-                    fireLog("   SetT → уставка " + String.format(java.util.Locale.US, "%.2f", t) + " °C");
+                    emulator.setRunning(true);
+                    float rh = parseFloat(data, 28);
+                    if (Float.isFinite(rh) && rh >= 0 && rh <= 100) {
+                        emulator.setHumiditySetpoint(rh);
+                    }
+                    fireLog("   SetT → уставка " + String.format(java.util.Locale.US, "%.2f", t)
+                            + " °C, RH " + String.format(java.util.Locale.US, "%.1f", rh) + "%");
+                    sendAck((byte) 0x02);
                     sendStatusTo(clientAddr);
+                } else if (isButtonCommand(data)) {
+                    int op = data[4] & 0xFF;
+                    fireLog("   Команда(кнопка) op=0x" + String.format("%02X", op)
+                            + " param=" + parseButtonParam(data));
+                    sendAck((byte) 0x01);
+                    if (op == 0x64) {
+                        emulator.setRunning(false);
+                        fireLog("   Стоп → состояние «остановлен»");
+                    } else if (op == 0x66) {
+                        boolean on = parseButtonParam(data) != 0;
+                        emulator.setLight(on);
+                        fireLog("   Подсветка → " + (on ? "вкл" : "выкл"));
+                    }
+                } else if (isProgramDatagram(data)) {
+                    emulator.setRunning(true);
+                    fireLog("   Программа (заголовок 77 55 33 88), длина " + data.length + " (игнор)");
+                    sendAck((byte) 0x02);
                 } else {
                     fireLog("   Неизвестная датаграмма (игнор)");
                 }
@@ -174,7 +198,9 @@ public class TestaServerService {
                 data = emulator.getManualFrame();
             } else {
                 data = TestaCommands.buildStatusDatagram(
-                        emulator.getActual(), emulator.getSetpoint(), emulator.getRawStatusBytes());
+                        emulator.getActual(), emulator.getSetpoint(),
+                        emulator.getHumidityCurrent(), emulator.getHumiditySet(),
+                        emulator.getRawStatusBytes());
             }
             DatagramPacket pkt = new DatagramPacket(data, data.length, addr, REPLY_PORT);
             s.send(pkt);
@@ -184,16 +210,61 @@ public class TestaServerService {
         }
     }
 
+    /**
+     * Отправляет подтверждение команды (72 34 CC) на :1200 клиента. CC = код действия в очереди
+     * штатки: 2 — SetT/программа, 1 — кнопка. Без ACK штатка повторяет команду (~600 мс, 6 попыток).
+     */
+    private void sendAck(byte code) {
+        DatagramSocket s = socket;
+        if (s == null || s.isClosed() || clientAddr == null) {
+            return;
+        }
+        try {
+            byte[] data = {0x72, 0x34, code};
+            DatagramPacket pkt = new DatagramPacket(data, data.length, clientAddr, REPLY_PORT);
+            s.send(pkt);
+            fireLog("TX ACK → " + clientAddr + ":" + REPLY_PORT + ": " + TestaCommands.toHex(data));
+        } catch (Exception e) {
+            log.warn("Testa emu send ack error", e);
+        }
+    }
+
     private static boolean isSetTemperatureDatagram(byte[] d) {
         return d != null && d.length == 32
                 && (d[0] & 0xFF) == 0x02 && (d[1] & 0xFF) == 0x33
                 && (d[2] & 0xFF) == 0x88 && (d[3] & 0xFF) == 0x66;
     }
 
-    private static float parseSetTemp(byte[] d) {
-        int bits = (d[12] & 0xFF) | ((d[13] & 0xFF) << 8)
-                | ((d[14] & 0xFF) << 16) | ((d[15] & 0xFF) << 24);
+    /** Кадр «программа» (второй режим уставки), заголовок 77 55 33 88. */
+    private static boolean isProgramDatagram(byte[] d) {
+        return d != null && d.length >= 32
+                && (d[0] & 0xFF) == 0x77 && (d[1] & 0xFF) == 0x55
+                && (d[2] & 0xFF) == 0x33 && (d[3] & 0xFF) == 0x88;
+    }
+
+    /** Кнопочный кадр 23 45 34 21 (12 байт): opcode в [4], param uint32 LE в [8..11]. */
+    private static boolean isButtonCommand(byte[] d) {
+        return d != null && d.length >= 12
+                && (d[0] & 0xFF) == 0x23 && (d[1] & 0xFF) == 0x45
+                && (d[2] & 0xFF) == 0x34 && (d[3] & 0xFF) == 0x21;
+    }
+
+    private static long parseButtonParam(byte[] d) {
+        long p = 0;
+        for (int i = 8; i < 12; i++) {
+            p |= (long) (d[i] & 0xFF) << (8 * (i - 8));
+        }
+        return p;
+    }
+
+    private static float parseFloat(byte[] d, int off) {
+        int bits = (d[off] & 0xFF) | ((d[off + 1] & 0xFF) << 8)
+                | ((d[off + 2] & 0xFF) << 16) | ((d[off + 3] & 0xFF) << 24);
         return Float.intBitsToFloat(bits);
+    }
+
+    private static float parseSetTemp(byte[] d) {
+        return parseFloat(d, 12);
     }
 
     private void fireLog(String line) {
