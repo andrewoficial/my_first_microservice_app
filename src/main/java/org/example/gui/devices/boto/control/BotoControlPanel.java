@@ -8,9 +8,7 @@ import org.example.gui.utilites.GuiUtilities;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
-import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Панель управления термокамерой BOTO (Modbus RTU, 9600 8N1).
@@ -33,14 +31,13 @@ public class BotoControlPanel extends JPanel {
     private final JLabel statusLabel = new JLabel("Отключено");
 
     private final JLabel tempScreen = screenLabel();
+    private final JLabel setpointScreen = screenLabel();
     private final JSpinner setpointSpinner = new JSpinner(new SpinnerNumberModel(25.0, 0.0, 400.0, 0.5));
     private final JCheckBox onCheckBox = new JCheckBox("ВКЛ", false);
     private final JButton setSetpointBtn = new JButton("Записать уставку");
     private final JButton toggleBtn = new JButton("ВКЛ / ВЫКЛ");
     private final JButton queryTempBtn = new JButton("Запросить температуру");
     private final JTextArea logArea = new JTextArea();
-
-    private final List<Double> tempValues = new CopyOnWriteArrayList<>();
 
     public BotoControlPanel(String deviceName, int tempReg, int setTempReg, int modReg, int tempScale) {
         this.deviceName = deviceName;
@@ -98,8 +95,7 @@ public class BotoControlPanel extends JPanel {
                     double temp = raw / (double) tempScale;
                     tempScreen.setText(String.format(Locale.US, "%.2f °C", temp));
                     tempScreen.setForeground(new Color(0, 140, 0));
-                    tempValues.add(temp);
-                    if (tempValues.size() > 600) tempValues.remove(0);
+                    chartData.addMeasured(temp);
                     return;
                 }
             }
@@ -112,7 +108,11 @@ public class BotoControlPanel extends JPanel {
                 appendLog("Вкл/выкл → " + (val == 1 ? "ВКЛ" : "ВЫКЛ"));
             } else if (regAddr == setTempReg) {
                 int val = ((frame[4] & 0xFF) << 8) | (frame[5] & 0xFF);
-                appendLog("Уставка записана: " + String.format(Locale.US, "%.2f", val / (double) tempScale) + " °C");
+                double set = val / (double) tempScale;
+                setpointScreen.setText(String.format(Locale.US, "%.2f °C", set));
+                setpointScreen.setForeground(new Color(0, 140, 0));
+                chartData.addTarget(set);
+                appendLog("Уставка записана: " + String.format(Locale.US, "%.2f", set) + " °C");
             }
         }
     }
@@ -222,22 +222,31 @@ public class BotoControlPanel extends JPanel {
         JPanel center = new JPanel(new BorderLayout(8, 8));
         center.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
-        JPanel box = new JPanel(new BorderLayout());
-        box.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.DARK_GRAY), "ТЕКУЩАЯ ТЕМПЕРАТУРА"),
-                BorderFactory.createEmptyBorder(8, 8, 8, 8)));
+        JPanel screens = new JPanel(new GridLayout(1, 2, 12, 0));
         tempScreen.setHorizontalAlignment(SwingConstants.CENTER);
-        box.add(tempScreen, BorderLayout.CENTER);
-        center.add(box, BorderLayout.NORTH);
+        setpointScreen.setHorizontalAlignment(SwingConstants.CENTER);
+        screens.add(panelBox("ТЕКУЩАЯ ТЕМПЕРАТУРА", tempScreen));
+        screens.add(panelBox("УСТАВКА", setpointScreen));
+        center.add(screens, BorderLayout.NORTH);
+        center.add(new ControlChart(chartData), BorderLayout.CENTER);
 
         logArea.setEditable(false);
-        logArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        logArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 11));
         JScrollPane logScroll = new JScrollPane(logArea);
-        logScroll.setBorder(BorderFactory.createTitledBorder("Лог Modbus RTU (hex TX/RX)"));
-        logScroll.setPreferredSize(new Dimension(400, 150));
+        logScroll.setBorder(BorderFactory.createTitledBorder("Лог обмена данными (hex TX/RX)"));
+        logScroll.setPreferredSize(new Dimension(400, 110));
         center.add(logScroll, BorderLayout.SOUTH);
 
         return center;
+    }
+
+    private static JPanel panelBox(String title, JLabel value) {
+        JPanel box = new JPanel(new BorderLayout());
+        box.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.DARK_GRAY), title),
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)));
+        box.add(value, BorderLayout.CENTER);
+        return box;
     }
 
     private static JLabel screenLabel() {
@@ -245,6 +254,46 @@ public class BotoControlPanel extends JPanel {
         l.setFont(new Font(Font.MONOSPACED, Font.BOLD, 34));
         l.setForeground(new Color(160, 160, 160));
         return l;
+    }
+
+    // ─── график ───────────────────────────────────────────────────────────
+
+    private final LiveChart chartData = new LiveChart();
+
+    private static final class ControlChart extends JPanel {
+        ControlChart(LiveChart data) {
+            super(new BorderLayout());
+            org.jfree.data.xy.XYSeriesCollection ds = new org.jfree.data.xy.XYSeriesCollection();
+            ds.addSeries(data.targetSeries);
+            ds.addSeries(data.measSeries);
+            org.jfree.chart.JFreeChart chart = org.jfree.chart.ChartFactory.createXYLineChart(
+                    "Опрос камеры", "время, с", "°C", ds,
+                    org.jfree.chart.plot.PlotOrientation.VERTICAL, true, true, false);
+            add(new org.jfree.chart.ChartPanel(chart), BorderLayout.CENTER);
+        }
+    }
+
+    private static final class LiveChart {
+        private double t = 0;
+        final org.jfree.data.xy.XYSeries targetSeries = new org.jfree.data.xy.XYSeries("Задано");
+        final org.jfree.data.xy.XYSeries measSeries = new org.jfree.data.xy.XYSeries("Текущая");
+
+        synchronized void addTarget(double v) {
+            t += 0.1;
+            add(targetSeries, v);
+        }
+
+        synchronized void addMeasured(double v) {
+            t += 0.1;
+            add(measSeries, v);
+        }
+
+        private void add(org.jfree.data.xy.XYSeries s, double v) {
+            s.add(t, v);
+            while (t > 600 && s.getItemCount() > 0 && t - s.getX(0).doubleValue() > 600) {
+                s.remove(0);
+            }
+        }
     }
 
     private static JLabel label(String t) {

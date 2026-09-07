@@ -18,9 +18,7 @@ import org.example.gui.devices.binder.camera.emulation.BinderEmulatorFrame;
 import org.example.gui.devices.bkm4.control.Bkm4Main;
 import org.example.gui.devices.bkm4.emulation.Bkm4EmulatorFrame;
 import org.example.gui.devices.boto.control.Boto800Main;
-import org.example.gui.devices.boto.control.Boto1000Main;
 import org.example.gui.devices.boto.emulation.Boto800EmulatorFrame;
-import org.example.gui.devices.boto.emulation.Boto1000EmulatorFrame;
 import org.example.gui.devices.esp32.kantser.emu.ble.KantserBleMain;
 import org.example.gui.devices.edvards.d39730880.control.d39730880Main;
 import org.example.gui.devices.edvards.d39730880.emulation.EdwardsTicTestFrame;
@@ -30,6 +28,8 @@ import org.example.gui.devices.stu.mcps.control.spbStuMcpsMain;
 import org.example.gui.devices.stu.mcps.emulation.McpsTestFrame;
 import org.example.gui.devices.testa.control.TestaControlPanel;
 import org.example.gui.devices.testa.emulation.TestaEmulatorFrame;
+import org.example.gui.devices.tt5166.control.TT5166Main;
+import org.example.gui.devices.tt5166.emulation.TT5166EmulatorFrame;
 import org.example.gui.graph.ChartWindow;
 import org.example.gui.graph.data.AnswerLoader;
 import org.example.gui.mgstest.MultigassensWindow;
@@ -746,14 +746,18 @@ public class JmenuFile {
         JMenuItem boto800Emulation = new JMenuItem("Панель эмуляции");
         boto800Menu.add(boto800Control);
         boto800Menu.add(boto800Emulation);
-        JMenu boto1000Menu = new JMenu("BOTO 1000");
-        JMenuItem boto1000Control = new JMenuItem("Панель управления");
-        JMenuItem boto1000Emulation = new JMenuItem("Панель эмуляции");
-        boto1000Menu.add(boto1000Control);
-        boto1000Menu.add(boto1000Emulation);
         botoMenu.add(boto800Menu);
-        botoMenu.add(boto1000Menu);
         controlPanelsMenu.add(botoMenu);
+
+        // TT5166 → климатическая камера (Modbus RTU, 38400 8E1)
+        JMenu tt5166Menu = new JMenu("TT5166");
+        JMenuItem tt5166Control = new JMenuItem("Панель управления");
+        JMenuItem tt5166Emulation = new JMenuItem("Панель эмуляции");
+        JMenuItem tt5166Info = new JMenuItem("Справочная информация");
+        tt5166Menu.add(tt5166Control);
+        tt5166Menu.add(tt5166Emulation);
+        tt5166Menu.add(tt5166Info);
+        controlPanelsMenu.add(tt5166Menu);
 
         stuControl.addActionListener(e -> {
             System.out.println("STU MCPS Control Panel");
@@ -970,14 +974,27 @@ public class JmenuFile {
             System.out.println("BOTO 800 Emulation Panel");
             new Boto800EmulatorFrame().setVisible(true);
         });
-        boto1000Control.addActionListener(e -> {
-            System.out.println("BOTO 1000 Control Panel");
-            Boto1000Main panel = new Boto1000Main();
+
+        tt5166Control.addActionListener(e -> {
+            System.out.println("TT5166 Control Panel");
+            TT5166Main panel = new TT5166Main();
             panel.setVisible(true);
         });
-        boto1000Emulation.addActionListener(e -> {
-            System.out.println("BOTO 1000 Emulation Panel");
-            new Boto1000EmulatorFrame().setVisible(true);
+        tt5166Emulation.addActionListener(e -> {
+            System.out.println("TT5166 Emulation Panel");
+            new TT5166EmulatorFrame().setVisible(true);
+        });
+        tt5166Info.addActionListener(e -> {
+            JOptionPane.showMessageDialog(null,
+                    "Климатическая камера TT5166 (Modbus RTU, 38400 8E1).\n" +
+                            "getData (0x03, рег. 0x0000, 6: темп PV/SV, выход, влага PV/SV, выход),\n" +
+                            "getFault (0x03, рег. 0x001B) — код ошибки,\n" +
+                            "start/stop (0x05, катушки 0x0000/0x0001),\n" +
+                            "setConstTemp (0x06, рег. 0x0026, °C×10),\n" +
+                            "setConstHum (0x06, рег. 0x0027, %×10),\n" +
+                            "getState (0x03, рег. 0x0018), getProgramTime (0x03, рег. 0x0006).",
+                    "Справочная информация",
+                    JOptionPane.INFORMATION_MESSAGE);
         });
 
         kantserControl.addActionListener(e -> {

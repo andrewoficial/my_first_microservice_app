@@ -1,4 +1,4 @@
-package org.example.gui.devices.boto.emulation;
+package org.example.gui.devices.tt5166.emulation;
 
 import com.fazecast.jSerialComm.SerialPort;
 import org.example.gui.utilites.GuiUtilities;
@@ -11,43 +11,43 @@ import java.util.Locale;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Панель эмулятора термокамеры BOTO (Modbus RTU, 9600 8N1).
- * Параметризуется через конструктор: регистры и масштаб.
+ * Панель эмулятора климатической камеры TT5166 (Modbus RTU, 38400 8E1).
  */
-public class BotoEmulationPanel extends JPanel {
+public class TT5166EmulationPanel extends JPanel {
 
-    private final BotoEmulator emulator = new BotoEmulator();
-    private final BotoModbusResponder responder;
-    private final BotoModbusSerialService service;
+    private final TT5166Emulator emulator = new TT5166Emulator();
+    private final TT5166ModbusResponder responder = new TT5166ModbusResponder(emulator, 1);
+    private final TT5166ModbusSerialService service = new TT5166ModbusSerialService(responder);
 
     private final JComboBox<String> portCombo = new JComboBox<>();
     private final JButton refreshBtn = new JButton("Обновить");
     private final JButton openBtn = new JButton("Открыть");
     private final JButton closeBtn = new JButton("Закрыть");
 
-    private final JSpinner setpointSpinner;
-    private final JSpinner rampSpinner;
-    private final JCheckBox onCheckBox;
+    private final JCheckBox onCheckBox = new JCheckBox("ВКЛ", false);
+    private final JSpinner setpointSpinner = new JSpinner(new SpinnerNumberModel(25.0, -100.0, 200.0, 0.5));
+    private final JSpinner humSetpointSpinner = new JSpinner(new SpinnerNumberModel(50.0, 0.0, 100.0, 1.0));
+    private final JSpinner rampSpinner = new JSpinner(new SpinnerNumberModel(2.0, 0.1, 50.0, 0.1));
+    private final JSpinner tempGradSpinner = new JSpinner(new SpinnerNumberModel(1.0, 0.0, 50.0, 0.1));
+    private final JSpinner humGradSpinner = new JSpinner(new SpinnerNumberModel(1.0, 0.0, 50.0, 0.1));
+    private final JCheckBox programModeCheck = new JCheckBox("Режим программы", false);
+    private final JSpinner faultSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 0xFFFF, 1));
+    private final JSpinner progHoursSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 9999, 1));
+    private final JSpinner progMinsSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 59, 1));
+    private final JSpinner ch2Spinner = new JSpinner(new SpinnerNumberModel(20.0, -100.0, 200.0, 0.5));
+    private final JSpinner ch3Spinner = new JSpinner(new SpinnerNumberModel(20.0, -100.0, 200.0, 0.5));
+    private final JSpinner ch4Spinner = new JSpinner(new SpinnerNumberModel(20.0, -100.0, 200.0, 0.5));
+
     private final JCheckBox mappingCheckBox = new JCheckBox("Маппинг адресов", false);
-    private final JSpinner addRegSpinner = new JSpinner(new SpinnerNumberModel(19, 0, 65535, 1));
+    private final JSpinner addRegSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 65535, 1));
     private final JSpinner addValSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 65535, 1));
     private final JButton addRegBtn = new JButton("Добавить");
     private final JComboBox<Integer> regCombo = new JComboBox<>();
     private final JTextField selValField = new JTextField(8);
     private final JButton delRegBtn = new JButton("Удалить");
 
-    private final JSpinner tempMaxSpinner = new JSpinner(new SpinnerNumberModel(90.0, 0.0, 400.0, 1.0));
-    private final JSpinner humiMaxSpinner = new JSpinner(new SpinnerNumberModel(98.0, 0.0, 100.0, 1.0));
-    private final JSpinner timeSetSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 2359, 1));
-    private final JSpinner tempRateSpinner = new JSpinner(new SpinnerNumberModel(0.5, 0.0, 10.0, 0.1));
-    private final JSpinner humiRateSpinner = new JSpinner(new SpinnerNumberModel(0.5, 0.0, 10.0, 0.1));
-    private final JLabel runTimeLabel = new JLabel("00:00:00");
-    private final JButton resetRunBtn = new JButton("Сбросить RUN time");
-    private final JLabel sysClockLabel = new JLabel();
-    private final JLabel resClockLabel = new JLabel();
-
-    private final JLabel tempScreen;
-    private final JLabel humBig;
+    private final JLabel tempScreen = screenLabel();
+    private final JLabel humBig = screenLabel();
     private final JLabel timeLabel = infoLabel();
     private final JLabel modeLabel = infoLabel();
     private final JLabel setpointInfo = infoLabel();
@@ -61,28 +61,15 @@ public class BotoEmulationPanel extends JPanel {
 
     private final List<String> logLines = new CopyOnWriteArrayList<>();
     private static final int MAX_LOG = 400;
-    private final String deviceName;
-    private final int tempScale;
 
-    public BotoEmulationPanel(String deviceName, int tempReg, int setTempReg, int modReg, int tempScale) {
-        this.deviceName = deviceName;
-        this.tempScale = tempScale;
-
-        this.responder = new BotoModbusResponder(emulator, 1, tempReg, setTempReg, modReg, tempScale);
-        this.service = new BotoModbusSerialService(responder);
-
-        this.setpointSpinner = new JSpinner(new SpinnerNumberModel(25.0, 0.0, 400.0, 0.5));
-        this.rampSpinner = new JSpinner(new SpinnerNumberModel(2.0, 0.1, 50.0, 0.1));
-        this.onCheckBox = new JCheckBox("ВКЛ", false);
-        this.tempScreen = screenLabel();
-        this.humBig = screenLabel();
+    public TT5166EmulationPanel() {
         humBig.setForeground(new Color(60, 150, 255));
         humBig.setText("-- %");
 
         setLayout(new BorderLayout(8, 8));
         setBorder(BorderFactory.createTitledBorder(
                 BorderFactory.createEtchedBorder(),
-                "Эмулятор " + deviceName + " (Modbus RTU, 9600 8N1)",
+                "Эмулятор TT5166 (Modbus RTU, 38400 8E1)",
                 TitledBorder.LEFT, TitledBorder.TOP));
 
         add(createLeftPanel(), BorderLayout.WEST);
@@ -93,29 +80,26 @@ public class BotoEmulationPanel extends JPanel {
         closeBtn.addActionListener(e -> closePort());
         closeBtn.setEnabled(false);
 
-        setpointSpinner.addChangeListener(e -> emulator.setSetpointC(((Number) setpointSpinner.getValue()).doubleValue()));
-        rampSpinner.addChangeListener(e -> emulator.setRampRateCPerSec(((Number) rampSpinner.getValue()).doubleValue()));
         onCheckBox.addActionListener(e -> emulator.setOn(onCheckBox.isSelected()));
-        mappingCheckBox.addActionListener(e -> responder.setAddressMapping(mappingCheckBox.isSelected()));
+        setpointSpinner.addChangeListener(e -> emulator.setSetpointC(((Number) setpointSpinner.getValue()).doubleValue()));
+        humSetpointSpinner.addChangeListener(e -> emulator.setHumiditySetpoint(((Number) humSetpointSpinner.getValue()).doubleValue()));
+        rampSpinner.addChangeListener(e -> emulator.setRampRateCPerSec(((Number) rampSpinner.getValue()).doubleValue()));
+        tempGradSpinner.addChangeListener(e -> emulator.setTempGradientCPer10Min(((Number) tempGradSpinner.getValue()).doubleValue()));
+        humGradSpinner.addChangeListener(e -> emulator.setHumGradientPctPer10Min(((Number) humGradSpinner.getValue()).doubleValue()));
+        programModeCheck.addActionListener(e -> emulator.setProgramMode(programModeCheck.isSelected()));
+        faultSpinner.addChangeListener(e -> emulator.setFaultCode(((Number) faultSpinner.getValue()).intValue()));
+        progHoursSpinner.addChangeListener(e -> applyProgramTime());
+        progMinsSpinner.addChangeListener(e -> applyProgramTime());
+        ch2Spinner.addChangeListener(e -> emulator.setChannelTempC(2, ((Number) ch2Spinner.getValue()).doubleValue()));
+        ch3Spinner.addChangeListener(e -> emulator.setChannelTempC(3, ((Number) ch3Spinner.getValue()).doubleValue()));
+        ch4Spinner.addChangeListener(e -> emulator.setChannelTempC(4, ((Number) ch4Spinner.getValue()).doubleValue()));
 
+        mappingCheckBox.addActionListener(e -> responder.setAddressMapping(mappingCheckBox.isSelected()));
         selValField.setEditable(false);
         selValField.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
         addRegBtn.addActionListener(e -> addManualRegister());
         delRegBtn.addActionListener(e -> removeSelectedRegister());
         regCombo.addActionListener(e -> showSelectedValue());
-
-        tempMaxSpinner.addChangeListener(e -> emulator.setTempMaxLimitC(((Number) tempMaxSpinner.getValue()).doubleValue()));
-        humiMaxSpinner.addChangeListener(e -> emulator.setHumiMaxLimitPct(((Number) humiMaxSpinner.getValue()).doubleValue()));
-        timeSetSpinner.addChangeListener(e -> emulator.setTimeSetRaw(((Number) timeSetSpinner.getValue()).intValue()));
-        tempRateSpinner.addChangeListener(e -> emulator.setTempRatePerMin(((Number) tempRateSpinner.getValue()).doubleValue()));
-        humiRateSpinner.addChangeListener(e -> emulator.setHumiRatePerMin(((Number) humiRateSpinner.getValue()).doubleValue()));
-        resetRunBtn.addActionListener(e -> { emulator.resetRunTime(); updateRunTime(); });
-
-        emulator.setTempMaxLimitC(((Number) tempMaxSpinner.getValue()).doubleValue());
-        emulator.setHumiMaxLimitPct(((Number) humiMaxSpinner.getValue()).doubleValue());
-        emulator.setTimeSetRaw(((Number) timeSetSpinner.getValue()).intValue());
-        emulator.setTempRatePerMin(((Number) tempRateSpinner.getValue()).doubleValue());
-        emulator.setHumiRatePerMin(((Number) humiRateSpinner.getValue()).doubleValue());
 
         service.addLogListener(line -> SwingUtilities.invokeLater(() -> appendLog(line)));
 
@@ -124,6 +108,11 @@ public class BotoEmulationPanel extends JPanel {
         refreshPorts();
 
         GuiUtilities.darkenInputs(this);
+    }
+
+    private void applyProgramTime() {
+        emulator.setProgramTime(((Number) progHoursSpinner.getValue()).intValue(),
+                ((Number) progMinsSpinner.getValue()).intValue());
     }
 
     private void advanceSim() {
@@ -136,24 +125,11 @@ public class BotoEmulationPanel extends JPanel {
         tempScreen.setForeground(emulator.isOn() ? new Color(0, 140, 0) : new Color(160, 160, 160));
         humBig.setText(String.format(Locale.US, "%.1f %%", emulator.getCurrentHumidity()));
         timeLabel.setText("Время: " + java.time.LocalTime.now().withNano(0).toString());
-        modeLabel.setText("Режим: " + (emulator.isOn() ? "Работа" : "Остановлен"));
+        modeLabel.setText("Режим: " + (emulator.isOn() ? "Работа" : "Остановлен")
+                + " · " + (emulator.isProgramMode() ? "программа" : "фикс."));
         setpointInfo.setText(String.format(Locale.US, "Уставка: %.1f °C", emulator.getSetpointC()));
         humInfo.setText(String.format(Locale.US, "Влажность: %.1f%% / уставка %.1f%%",
                 emulator.getCurrentHumidity(), emulator.getHumiditySetpoint()));
-        updateRunTime();
-        updateClocks();
-    }
-
-    private void updateRunTime() {
-        runTimeLabel.setText(String.format("%02d:%02d:%02d",
-                emulator.getRunHours(), emulator.getRunMinutes(), emulator.getRunSeconds()));
-    }
-
-    private void updateClocks() {
-        int[] s = emulator.getSysTime();
-        sysClockLabel.setText(String.format("%04d-%02d-%02d %02d:%02d:%02d", s[0], s[1], s[2], s[3], s[4], s[5]));
-        int[] r = emulator.getReserveTime();
-        resClockLabel.setText(String.format("%04d-%02d-%02d %02d:%02d:%02d", r[0], r[1], r[2], r[3], r[4], r[5]));
     }
 
     private void openPort() {
@@ -170,7 +146,7 @@ public class BotoEmulationPanel extends JPanel {
                     if (get()) {
                         openBtn.setEnabled(false);
                         closeBtn.setEnabled(true);
-                        statusLabel.setText("Открыт " + portName + " @ 9600 8N1");
+                        statusLabel.setText("Открыт " + portName + " @ 38400 8E1");
                     } else {
                         statusLabel.setText("Ошибка открытия порта");
                     }
@@ -215,60 +191,51 @@ public class BotoEmulationPanel extends JPanel {
         p.add(onCheckBox);
         p.add(Box.createVerticalStrut(6));
 
-        p.add(label("Уставка, °C"));
+        p.add(label("Уставка, °C (рег 0x0026)"));
         p.add(fullWidth(setpointSpinner));
         p.add(Box.createVerticalStrut(4));
-
+        p.add(label("Уставка влаги, % (рег 0x0027)"));
+        p.add(fullWidth(humSetpointSpinner));
+        p.add(Box.createVerticalStrut(4));
         p.add(label("Скорость выхода, °C/сек"));
         p.add(fullWidth(rampSpinner));
 
         p.add(Box.createVerticalStrut(10));
-        p.add(sectionLabel("RUN time (рег 32/33/34)"));
-        runTimeLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        runTimeLabel.setFont(new Font(Font.MONOSPACED, Font.BOLD, 18));
-        p.add(runTimeLabel);
+        p.add(sectionLabel("Настройки (регистры)"));
+        p.add(label("Градиент темп., °C/10мин (0x0064)"));
+        p.add(fullWidth(tempGradSpinner));
         p.add(Box.createVerticalStrut(4));
-        resetRunBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
-        p.add(resetRunBtn);
+        p.add(label("Градиент влаги, %/10мин (0x0065)"));
+        p.add(fullWidth(humGradSpinner));
+        p.add(Box.createVerticalStrut(4));
+        programModeCheck.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(programModeCheck);
+        p.add(Box.createVerticalStrut(4));
+        p.add(label("Код ошибки (рег 0x001B)"));
+        p.add(fullWidth(faultSpinner));
 
         p.add(Box.createVerticalStrut(10));
-        p.add(sectionLabel("Часы"));
-        JPanel clockRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
-        JButton sysNowBtn = new JButton("Sys=сейчас");
-        JButton resNowBtn = new JButton("Res=сейчас");
-        sysNowBtn.addActionListener(e -> emulator.setSysTimeNow());
-        resNowBtn.addActionListener(e -> emulator.setReserveTimeNow());
-        clockRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        clockRow.add(sysNowBtn);
-        clockRow.add(resNowBtn);
-        p.add(clockRow);
-        p.add(Box.createVerticalStrut(2));
-        sysClockLabel.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-        sysClockLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        p.add(label("SYSTEM TIME (рег 92-97)"));
-        p.add(sysClockLabel);
-        p.add(Box.createVerticalStrut(2));
-        resClockLabel.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-        resClockLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        p.add(label("RESERVE TIME (рег 151-156)"));
-        p.add(resClockLabel);
+        p.add(sectionLabel("Время программы (0x0006/0x0008)"));
+        JPanel progRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        progRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        progRow.add(new JLabel("ч"));
+        progHoursSpinner.setPreferredSize(new Dimension(70, progHoursSpinner.getPreferredSize().height));
+        progRow.add(progHoursSpinner);
+        progRow.add(new JLabel("м"));
+        progMinsSpinner.setPreferredSize(new Dimension(70, progMinsSpinner.getPreferredSize().height));
+        progRow.add(progMinsSpinner);
+        p.add(progRow);
 
         p.add(Box.createVerticalStrut(10));
-        p.add(sectionLabel("Найденные регистры"));
-        p.add(label("Предел темп. уставки °C (рег 39)"));
-        p.add(fullWidth(tempMaxSpinner));
-        p.add(Box.createVerticalStrut(4));
-        p.add(label("Предел влаги уставки % (рег 41)"));
-        p.add(fullWidth(humiMaxSpinner));
-        p.add(Box.createVerticalStrut(4));
-        p.add(label("TIME SET H.M, raw (рег 101)"));
-        p.add(fullWidth(timeSetSpinner));
-        p.add(Box.createVerticalStrut(4));
-        p.add(label("C/M темп, °C/мин (рег 102)"));
-        p.add(fullWidth(tempRateSpinner));
-        p.add(Box.createVerticalStrut(4));
-        p.add(label("%/M влага, %/мин (рег 103)"));
-        p.add(fullWidth(humiRateSpinner));
+        p.add(sectionLabel("Доп. каналы (°C, 0x0024-0x0026)"));
+        p.add(label("Канал 2"));
+        p.add(fullWidth(ch2Spinner));
+        p.add(Box.createVerticalStrut(2));
+        p.add(label("Канал 3"));
+        p.add(fullWidth(ch3Spinner));
+        p.add(Box.createVerticalStrut(2));
+        p.add(label("Канал 4"));
+        p.add(fullWidth(ch4Spinner));
 
         p.add(Box.createVerticalStrut(10));
         p.add(createManualEditor());
@@ -320,19 +287,6 @@ public class BotoEmulationPanel extends JPanel {
         return center;
     }
 
-    private static JPanel panelBox(String title, JLabel value) {
-        JPanel box = new JPanel(new BorderLayout());
-        box.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.DARK_GRAY), title),
-                BorderFactory.createEmptyBorder(8, 8, 8, 8)));
-        box.add(value, BorderLayout.CENTER);
-        return box;
-    }
-
-    /**
-     * Панель добавления «доп. регистров»: адрес+значение, список добавленных (выпадашка),
-     * просмотр выбранного и удаление. Похожа на редактор байт Testa, но хранит регистры.
-     */
     private JPanel createManualEditor() {
         JPanel wrap = new JPanel();
         wrap.setLayout(new BoxLayout(wrap, BoxLayout.Y_AXIS));
@@ -378,7 +332,7 @@ public class BotoEmulationPanel extends JPanel {
         }
         regCombo.setSelectedItem(addr);
         showSelectedValue();
-        appendLog("Доп. регистр " + addr + " = " + value);
+        appendLog("Доп. регистр 0x" + String.format("%04X", addr) + " = " + value);
     }
 
     private boolean containsItem(int addr) {
@@ -399,7 +353,7 @@ public class BotoEmulationPanel extends JPanel {
         responder.removeManualRegister(addr);
         regCombo.removeItem(addr);
         showSelectedValue();
-        appendLog("Доп. регистр " + addr + " удалён");
+        appendLog("Доп. регистр 0x" + String.format("%04X", addr) + " удалён");
     }
 
     private void showSelectedValue() {
@@ -411,6 +365,15 @@ public class BotoEmulationPanel extends JPanel {
         int addr = (Integer) sel;
         Integer v = responder.manualRegisters().get(addr);
         selValField.setText(v == null ? "" : String.valueOf(v));
+    }
+
+    private static JPanel panelBox(String title, JLabel value) {
+        JPanel box = new JPanel(new BorderLayout());
+        box.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.DARK_GRAY), title),
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)));
+        box.add(value, BorderLayout.CENTER);
+        return box;
     }
 
     private static JLabel screenLabel() {

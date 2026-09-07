@@ -3,7 +3,6 @@ package org.example.gui.devices.binder.camera.control;
 import org.example.gui.utilites.GuiUtilities;
 
 import javax.swing.*;
-import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.util.List;
 import java.util.Locale;
@@ -37,8 +36,8 @@ public class BinderControlPanel {
     private JSpinner targetSpinner;
     private JButton setBtn;
 
+    private final JLabel currentScreen = screenLabel();
     private final JLabel setpointScreen = screenLabel();
-    private final JLabel measuredScreen = screenLabel();
     private JLabel humidityLamp;
 
     private final JTextArea logArea = new JTextArea();
@@ -50,7 +49,7 @@ public class BinderControlPanel {
     public BinderControlPanel() {
         buildUi();
         service.addTemperatureListener(t -> SwingUtilities.invokeLater(() -> {
-            measuredScreen.setText(String.format(Locale.US, "%.2f °C", t));
+            currentScreen.setText(String.format(Locale.US, "%.2f °C", t));
             chartData.addMeasured(t);
         }));
         service.addHumidityListener(on -> SwingUtilities.invokeLater(() -> setHumidityLamp(on)));
@@ -68,14 +67,39 @@ public class BinderControlPanel {
         mainPanel = new JPanel(new BorderLayout(8, 8));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
 
-        JPanel north = new JPanel();
-        north.setLayout(new BoxLayout(north, BoxLayout.Y_AXIS));
-        north.setBorder(BorderFactory.createTitledBorder(
-                BorderFactory.createEtchedBorder(), "Соединение и уставка",
-                TitledBorder.LEFT, TitledBorder.TOP));
+        JScrollPane leftScroll = new JScrollPane(createLeftPanel());
+        leftScroll.setBorder(BorderFactory.createEmptyBorder());
+        leftScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        leftScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        mainPanel.add(leftScroll, BorderLayout.WEST);
 
-        // строка подключения
-        hostField = new JTextField("127.0.0.1", 10);
+        // центр: экраны + график + скромный лог
+        JPanel center = new JPanel(new BorderLayout(8, 8));
+        JPanel screens = new JPanel(new GridLayout(1, 2, 12, 0));
+        screens.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+        currentScreen.setHorizontalAlignment(SwingConstants.CENTER);
+        setpointScreen.setHorizontalAlignment(SwingConstants.CENTER);
+        screens.add(panelBox("ТЕКУЩАЯ ТЕМПЕРАТУРА", currentScreen));
+        screens.add(panelBox("УСТАВКА", setpointScreen));
+        center.add(screens, BorderLayout.NORTH);
+        center.add(new ControlChart(chartData), BorderLayout.CENTER);
+
+        logArea.setEditable(false);
+        logArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 11));
+        JScrollPane logScroll = new JScrollPane(logArea);
+        logScroll.setBorder(BorderFactory.createTitledBorder("Лог обмена данными (hex TX/RX)"));
+        logScroll.setPreferredSize(new Dimension(400, 110));
+        center.add(logScroll, BorderLayout.SOUTH);
+
+        mainPanel.add(center, BorderLayout.CENTER);
+
+        connectBtn.addActionListener(e -> connect());
+        disconnectBtn.addActionListener(e -> disconnect());
+        setBtn.addActionListener(e -> applySetpoint());
+    }
+
+    private JPanel createLeftPanel() {
+        hostField = new JTextField("127.0.0.1", 12);
         portSpinner = new JSpinner(new SpinnerNumberModel(10001, 1, 65535, 1));
         slaveSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 247, 1));
         connectBtn = new JButton("Подключиться");
@@ -83,56 +107,80 @@ public class BinderControlPanel {
         disconnectBtn.setEnabled(false);
         comLamp = lamp(GRAY);
         statusLabel = new JLabel("Не подключено");
-
-        JPanel connRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
-        connRow.add(new JLabel("host:"));
-        connRow.add(hostField);
-        connRow.add(new JLabel("port:"));
-        connRow.add(portSpinner);
-        connRow.add(new JLabel("slave:"));
-        connRow.add(slaveSpinner);
-        connRow.add(connectBtn);
-        connRow.add(disconnectBtn);
-        connRow.add(comLamp);
-        connRow.add(statusLabel);
-        north.add(connRow);
-
-        // строка уставки
         targetSpinner = new JSpinner(new SpinnerNumberModel(25.0, -40.0, 120.0, 0.5));
         setBtn = new JButton("Задать уставку (SetT)");
         humidityLamp = lamp(GRAY);
-        JLabel humidityLbl = new JLabel("Влажность:");
-        JPanel setRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
-        setRow.add(new JLabel("Уставка, °C:"));
-        setRow.add(targetSpinner);
-        setRow.add(setBtn);
-        setRow.add(humidityLbl);
-        setRow.add(humidityLamp);
-        north.add(setRow);
 
-        // центр: экраны + график + лог
-        JPanel center = new JPanel(new BorderLayout(8, 8));
-        JPanel screens = new JPanel(new GridLayout(1, 2, 12, 0));
-        screens.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
-        screens.add(screenBox("ЭКРАН ЗАДАНО", setpointScreen));
-        screens.add(screenBox("ЭКРАН ТЕКУЩАЯ", measuredScreen));
-        center.add(screens, BorderLayout.NORTH);
-        center.add(new ControlChart(chartData), BorderLayout.CENTER);
+        JPanel p = new JPanel();
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        p.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        p.setPreferredSize(new Dimension(320, 0));
 
-        JScrollPane logScroll = new JScrollPane(logArea);
-        logScroll.setBorder(BorderFactory.createTitledBorder("Дебаг (hex TX/RX)"));
-        logScroll.setPreferredSize(new Dimension(400, 150));
-        center.add(logScroll, BorderLayout.SOUTH);
+        p.add(sectionLabel("Соединение"));
+        p.add(label("host:"));
+        p.add(fullWidth(hostField));
+        JPanel hp = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
+        hp.setAlignmentX(Component.LEFT_ALIGNMENT);
+        hp.add(new JLabel("port:"));
+        hp.add(portSpinner);
+        hp.add(new JLabel("slave:"));
+        hp.add(slaveSpinner);
+        p.add(hp);
+        JPanel btns = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 2));
+        btns.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btns.add(connectBtn);
+        btns.add(disconnectBtn);
+        btns.add(comLamp);
+        p.add(btns);
+        statusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(statusLabel);
 
-        mainPanel.add(north, BorderLayout.NORTH);
-        mainPanel.add(center, BorderLayout.CENTER);
+        p.add(Box.createVerticalStrut(12));
+        p.add(sectionLabel("Уставка"));
+        p.add(label("Уставка, °C:"));
+        p.add(fullWidth(targetSpinner));
+        p.add(Box.createVerticalStrut(4));
+        setBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(setBtn);
 
-        connectBtn.addActionListener(e -> connect());
-        disconnectBtn.addActionListener(e -> disconnect());
-        setBtn.addActionListener(e -> applySetpoint());
+        p.add(Box.createVerticalStrut(12));
+        p.add(sectionLabel("Влажность"));
+        JPanel humRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
+        humRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        humRow.add(new JLabel("Влажность:"));
+        humRow.add(humidityLamp);
+        p.add(humRow);
 
-        logArea.setEditable(false);
-        logArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 11));
+        p.add(Box.createVerticalGlue());
+        return p;
+    }
+
+    private static JPanel panelBox(String title, JLabel value) {
+        JPanel box = new JPanel(new BorderLayout());
+        box.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.DARK_GRAY), title),
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)));
+        box.add(value, BorderLayout.CENTER);
+        return box;
+    }
+
+    private static JLabel label(String t) {
+        JLabel l = new JLabel(t);
+        l.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return l;
+    }
+
+    private static JLabel sectionLabel(String t) {
+        JLabel l = new JLabel(t);
+        l.setAlignmentX(Component.LEFT_ALIGNMENT);
+        l.setFont(l.getFont().deriveFont(Font.BOLD));
+        return l;
+    }
+
+    private static JComponent fullWidth(JComponent c) {
+        c.setAlignmentX(Component.LEFT_ALIGNMENT);
+        c.setMaximumSize(new Dimension(Integer.MAX_VALUE, c.getPreferredSize().height));
+        return c;
     }
 
     private void connect() {
@@ -218,15 +266,6 @@ public class BinderControlPanel {
         l.setFont(new Font(Font.MONOSPACED, Font.BOLD, 34));
         l.setForeground(GREEN);
         return l;
-    }
-
-    private static JPanel screenBox(String title, JLabel value) {
-        JPanel box = new JPanel(new BorderLayout());
-        box.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.DARK_GRAY), title),
-                BorderFactory.createEmptyBorder(8, 8, 8, 8)));
-        box.add(value, BorderLayout.CENTER);
-        return box;
     }
 
     // ─── график ───────────────────────────────────────────────────────────

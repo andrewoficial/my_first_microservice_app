@@ -14,7 +14,7 @@ public class TestaEmulator {
     /** Целевая температура при остановленной камере. */
     private static final double STOP_TEMP_DEG = 25.0;
     /** Медленная скорость дрейфа к 25 при остановке, °C/мин. */
-    private static final double STOP_DRIFT_RATE = 0.5;
+    private static final double STOP_DRIFT_RATE = 0.2;
 
     private volatile double setpoint = 25.0;
     private volatile double actual = 25.0;

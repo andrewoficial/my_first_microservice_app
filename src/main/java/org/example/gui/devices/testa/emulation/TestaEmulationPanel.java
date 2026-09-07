@@ -18,6 +18,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class TestaEmulationPanel extends JPanel {
 
     private static final Color GREEN = new Color(0, 160, 0);
+    private static final Color BLUE = new Color(60, 150, 255);
     private static final Color GRAY = Color.DARK_GRAY;
 
     private final TestaEmulator emulator = new TestaEmulator();
@@ -34,6 +35,9 @@ public class TestaEmulationPanel extends JPanel {
     private final JButton applyRawBtn = new JButton("Применить");
     private final JLabel rawError = new JLabel(" ");
     private final JLabel tempScreen = screenLabel();
+    private final JLabel humBig = bigLabel(BLUE);
+    private final JLabel timeLabel = infoLabel();
+    private final JCheckBox logAuto = new JCheckBox("автопрокрутка лога", true);
     private final JLabel modeScreen = infoLabel();
     private final JLabel setpointScreen = infoLabel();
     private final JLabel humScreen = infoLabel();
@@ -220,6 +224,8 @@ public class TestaEmulationPanel extends JPanel {
         setpointScreen.setText(String.format(Locale.US, "Уставка: %.2f °C", emulator.getSetpoint()));
         humScreen.setText(String.format(Locale.US, "Влажность: %.1f%% / уставка %.1f%%",
                 emulator.getHumidityCurrent(), emulator.getHumiditySet()));
+        humBig.setText(String.format(Locale.US, "%.1f %%", emulator.getHumidityCurrent()));
+        timeLabel.setText("Время: " + java.time.LocalTime.now().withNano(0).toString());
     }
 
     private JPanel buildLeft() {
@@ -775,18 +781,18 @@ public class TestaEmulationPanel extends JPanel {
         JPanel top = new JPanel(new BorderLayout(4, 4));
         top.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
 
-        JPanel box = new JPanel(new BorderLayout());
-        box.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.DARK_GRAY), "ТЕКУЩАЯ ТЕМПЕРАТУРА"),
-                BorderFactory.createEmptyBorder(8, 8, 8, 8)));
+        JPanel screens = new JPanel(new GridLayout(1, 2, 12, 0));
         tempScreen.setHorizontalAlignment(SwingConstants.CENTER);
-        box.add(tempScreen, BorderLayout.CENTER);
-        top.add(box, BorderLayout.NORTH);
+        humBig.setHorizontalAlignment(SwingConstants.CENTER);
+        screens.add(panelBox("ТЕКУЩАЯ ТЕМПЕРАТУРА", tempScreen));
+        screens.add(panelBox("ТЕКУЩАЯ ВЛАЖНОСТЬ", humBig));
+        top.add(screens, BorderLayout.NORTH);
 
         JPanel info = new JPanel(new GridLayout(0, 1, 4, 2));
         info.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.DARK_GRAY), "ПАРАМЕТРЫ"),
                 BorderFactory.createEmptyBorder(6, 8, 6, 8)));
+        info.add(timeLabel);
         info.add(modeScreen);
         info.add(setpointScreen);
         info.add(humScreen);
@@ -797,10 +803,26 @@ public class TestaEmulationPanel extends JPanel {
         logArea.setEditable(false);
         logArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
         JScrollPane logScroll = new JScrollPane(logArea);
-        logScroll.setBorder(BorderFactory.createTitledBorder("Лог UDP (TX/RX)"));
+        logScroll.setBorder(BorderFactory.createTitledBorder("Лог обмена данными (hex TX/RX)"));
         logScroll.setPreferredSize(new Dimension(400, 180));
-        center.add(logScroll, BorderLayout.CENTER);
+
+        JPanel logAutoRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 2));
+        logAutoRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        logAutoRow.add(logAuto);
+        JPanel logWrap = new JPanel(new BorderLayout());
+        logWrap.add(logAutoRow, BorderLayout.NORTH);
+        logWrap.add(logScroll, BorderLayout.CENTER);
+        center.add(logWrap, BorderLayout.CENTER);
         return center;
+    }
+
+    private static JPanel panelBox(String title, JLabel value) {
+        JPanel box = new JPanel(new BorderLayout());
+        box.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.DARK_GRAY), title),
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)));
+        box.add(value, BorderLayout.CENTER);
+        return box;
     }
 
     private void addLog(String line) {
@@ -809,7 +831,9 @@ public class TestaEmulationPanel extends JPanel {
             logLines.remove(0);
         }
         logArea.setText(String.join("\n", logLines));
-        logArea.setCaretPosition(logArea.getDocument().getLength());
+        if (logAuto.isSelected()) {
+            logArea.setCaretPosition(logArea.getDocument().getLength());
+        }
     }
 
     public void shutdown() {
@@ -819,9 +843,13 @@ public class TestaEmulationPanel extends JPanel {
     }
 
     private static JLabel screenLabel() {
-        JLabel l = new JLabel("-- °C", SwingConstants.CENTER);
+        return bigLabel(GREEN);
+    }
+
+    private static JLabel bigLabel(Color color) {
+        JLabel l = new JLabel("--", SwingConstants.CENTER);
         l.setFont(new Font(Font.MONOSPACED, Font.BOLD, 34));
-        l.setForeground(GREEN);
+        l.setForeground(color);
         return l;
     }
 

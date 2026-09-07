@@ -32,10 +32,15 @@ public class BinderEmulationPanel extends JPanel {
     private final JSpinner fluctPeriodSpinner = new JSpinner(new SpinnerNumberModel(20.0, 1.0, 300.0, 1.0));
     private final JCheckBox humidityCb = new JCheckBox("Управление влажностью", false);
 
-    private final JLabel setpointScreen = screenLabel();
     private final JLabel measuredScreen = screenLabel();
+    private final JLabel humScreen = bigLabel(new Color(60, 150, 255));
+    private final JLabel timeLabel = infoLabel();
+    private final JLabel modeLabel = infoLabel();
+    private final JLabel setpointInfo = infoLabel();
+    private final JLabel humInfo = infoLabel();
     private final JLabel statusLabel = new JLabel("Эмулятор остановлен");
     private final JTextArea logArea = new JTextArea();
+    private final JCheckBox logAuto = new JCheckBox("автопрокрутка лога", true);
 
     private final javax.swing.Timer simTimer;
     private long lastTickNanos = System.nanoTime();
@@ -89,11 +94,14 @@ public class BinderEmulationPanel extends JPanel {
     private void refreshScreens() {
         double set = emulator.getSetpoint();
         double meas = emulator.getMeasuredTemperature();
-        setpointScreen.setText(String.format(Locale.US, "%.2f °C", set));
         measuredScreen.setText(String.format(Locale.US, "%.2f °C", meas));
         measuredScreen.setForeground(set < meas - 0.3 ? new Color(200, 90, 0)
                 : set > meas + 0.3 ? new Color(0, 90, 180) : new Color(0, 140, 0));
-        chartData.addPoint(set, meas);
+        humScreen.setText(emulator.isHumidityControlOn() ? "ВКЛ" : "ВЫКЛ");
+        timeLabel.setText("Время: " + java.time.LocalTime.now().withNano(0).toString());
+        modeLabel.setText("Режим: Работа");
+        setpointInfo.setText(String.format(Locale.US, "Уставка: %.2f °C", set));
+        humInfo.setText("Влажн. управление: " + (emulator.isHumidityControlOn() ? "вкл" : "выкл"));
         syncHumidityFromEmulator();
     }
 
@@ -132,12 +140,11 @@ public class BinderEmulationPanel extends JPanel {
 
     // ─── UI построение ────────────────────────────────────────────────────
 
-    private JPanel createLeftPanel() {
+    private JScrollPane createLeftPanel() {
         JPanel p = new JPanel();
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
         p.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
         p.setPreferredSize(new Dimension(300, 0));
-
         p.add(label("TCP порт (камера-сервер)"));
         p.add(portSpinner);
         p.add(Box.createVerticalStrut(4));
@@ -156,7 +163,18 @@ public class BinderEmulationPanel extends JPanel {
         statusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(statusLabel);
 
-        p.add(Box.createVerticalStrut(16));
+        p.add(Box.createVerticalStrut(12));
+        p.add(sectionLabel("Уставка"));
+        p.add(label("Уставка, °C"));
+        p.add(setpointSpinner);
+        p.add(Box.createVerticalStrut(4));
+        applyBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(applyBtn);
+        p.add(Box.createVerticalStrut(4));
+        humidityCb.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(humidityCb);
+
+        p.add(Box.createVerticalStrut(12));
         p.add(sectionLabel("Выход на режим"));
         p.add(label("Скорость выхода, °C/мин"));
         p.add(rampSpinner);
@@ -170,16 +188,6 @@ public class BinderEmulationPanel extends JPanel {
         p.add(label("Скорость флуктуации (период), с"));
         p.add(fluctPeriodSpinner);
 
-        p.add(Box.createVerticalStrut(16));
-        p.add(sectionLabel("Уставка (вручную)"));
-        p.add(setpointSpinner);
-        p.add(Box.createVerticalStrut(4));
-        applyBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
-        p.add(applyBtn);
-        p.add(Box.createVerticalStrut(10));
-        humidityCb.setAlignmentX(Component.LEFT_ALIGNMENT);
-        p.add(humidityCb);
-
         p.add(Box.createVerticalGlue());
         for (Component c : p.getComponents()) {
             if (c instanceof JComponent jc && !(c instanceof JPanel)) {
@@ -187,7 +195,12 @@ public class BinderEmulationPanel extends JPanel {
                 jc.setMaximumSize(new Dimension(Integer.MAX_VALUE, jc.getPreferredSize().height));
             }
         }
-        return p;
+        JScrollPane scroller = new JScrollPane(p);
+        scroller.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scroller.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scroller.setBorder(null);
+        scroller.setPreferredSize(new Dimension(320, 0));
+        return scroller;
     }
 
     private JPanel createCenterPanel() {
@@ -195,25 +208,45 @@ public class BinderEmulationPanel extends JPanel {
 
         JPanel screens = new JPanel(new GridLayout(1, 2, 12, 0));
         screens.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
-        screens.add(screenBox("ЭКРАН ЗАДАНО", setpointScreen));
-        screens.add(screenBox("ЭКРАН ТЕКУЩАЯ", measuredScreen));
+        measuredScreen.setHorizontalAlignment(SwingConstants.CENTER);
+        screens.add(panelBox("ТЕКУЩАЯ ТЕМПЕРАТУРА", measuredScreen));
+        screens.add(panelBox("ТЕКУЩАЯ ВЛАЖНОСТЬ", humScreen));
 
-        center.add(screens, BorderLayout.NORTH);
-        center.add(new ChartPanel2(chartData), BorderLayout.CENTER);
+        JPanel info = new JPanel(new GridLayout(0, 1, 4, 2));
+        info.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.DARK_GRAY), "ПАРАМЕТРЫ"),
+                BorderFactory.createEmptyBorder(6, 8, 6, 8)));
+        info.add(timeLabel);
+        info.add(modeLabel);
+        info.add(setpointInfo);
+        info.add(humInfo);
 
+        JPanel top = new JPanel(new BorderLayout(4, 4));
+        top.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+        top.add(screens, BorderLayout.NORTH);
+        top.add(info, BorderLayout.CENTER);
+        center.add(top, BorderLayout.NORTH);
+
+        logArea.setEditable(false);
+        logArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 11));
         JScrollPane logScroll = new JScrollPane(logArea);
-        logScroll.setBorder(BorderFactory.createTitledBorder("Дебаг (hex RX/TX)"));
+        logScroll.setBorder(BorderFactory.createTitledBorder("Лог обмена данными (hex RX/TX)"));
         logScroll.setPreferredSize(new Dimension(400, 160));
-        center.add(logScroll, BorderLayout.SOUTH);
+
+        JPanel logAutoRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 2));
+        logAutoRow.add(logAuto);
+        JPanel logWrap = new JPanel(new BorderLayout());
+        logWrap.add(logAutoRow, BorderLayout.NORTH);
+        logWrap.add(logScroll, BorderLayout.CENTER);
+        center.add(logWrap, BorderLayout.CENTER);
         return center;
     }
 
-    private static JPanel screenBox(String title, JLabel value) {
+    private static JPanel panelBox(String title, JLabel value) {
         JPanel box = new JPanel(new BorderLayout());
         box.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.DARK_GRAY), title),
                 BorderFactory.createEmptyBorder(8, 8, 8, 8)));
-        value.setHorizontalAlignment(SwingConstants.CENTER);
         box.add(value, BorderLayout.CENTER);
         return box;
     }
@@ -222,6 +255,20 @@ public class BinderEmulationPanel extends JPanel {
         JLabel l = new JLabel("-- °C", SwingConstants.CENTER);
         l.setFont(new Font(Font.MONOSPACED, Font.BOLD, 34));
         l.setForeground(new Color(0, 140, 0));
+        return l;
+    }
+
+    private static JLabel bigLabel(Color color) {
+        JLabel l = new JLabel("--", SwingConstants.CENTER);
+        l.setFont(new Font(Font.MONOSPACED, Font.BOLD, 34));
+        l.setForeground(color);
+        return l;
+    }
+
+    private static JLabel infoLabel() {
+        JLabel l = new JLabel(" ");
+        l.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 15));
+        l.setHorizontalAlignment(SwingConstants.LEFT);
         return l;
     }
 
@@ -246,7 +293,9 @@ public class BinderEmulationPanel extends JPanel {
                 logLines.remove(0);
             }
             logArea.setText(String.join("\n", logLines));
-            logArea.setCaretPosition(logArea.getDocument().getLength());
+            if (logAuto.isSelected()) {
+                logArea.setCaretPosition(logArea.getDocument().getLength());
+            }
         });
     }
 
@@ -257,48 +306,5 @@ public class BinderEmulationPanel extends JPanel {
     public void shutdown() {
         simTimer.stop();
         server.stop();
-    }
-
-    // ─── график ───────────────────────────────────────────────────────────
-
-    private final LiveChartData chartData = new LiveChartData();
-
-    @SuppressWarnings("unchecked")
-    private static final class ChartPanel2 extends JPanel {
-        ChartPanel2(LiveChartData data) {
-            super(new BorderLayout());
-            org.jfree.data.xy.XYSeriesCollection ds = new org.jfree.data.xy.XYSeriesCollection();
-            ds.addSeries(data.setSeries);
-            ds.addSeries(data.measSeries);
-            org.jfree.chart.JFreeChart chart = org.jfree.chart.ChartFactory.createXYLineChart(
-                    "Выход на режим", "время, с", "°C", ds,
-                    org.jfree.chart.plot.PlotOrientation.VERTICAL, true, true, false);
-            add(new org.jfree.chart.ChartPanel(chart), BorderLayout.CENTER);
-        }
-    }
-
-    private static final class LiveChartData {
-        private double t = 0;
-        final org.jfree.data.xy.XYSeries setSeries =
-                new org.jfree.data.xy.XYSeries("Задано");
-        final org.jfree.data.xy.XYSeries measSeries =
-                new org.jfree.data.xy.XYSeries("Текущая");
-
-        void addPoint(double set, double meas) {
-            t += 0.1;
-            setSeries.add(t, set);
-            measSeries.add(t, meas);
-            if (t > 600) {
-                trim(setSeries, t);
-                trim(measSeries, t);
-            }
-        }
-
-        void trim(org.jfree.data.xy.XYSeries s, double now) {
-            while (s.getItemCount() > 0
-                    && now - s.getX(0).doubleValue() > 600) {
-                s.remove(0);
-            }
-        }
     }
 }

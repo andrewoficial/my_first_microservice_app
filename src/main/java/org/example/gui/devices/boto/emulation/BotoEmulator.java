@@ -8,6 +8,11 @@ package org.example.gui.devices.boto.emulation;
  */
 public class BotoEmulator {
 
+    private static final double ROOM_TEMP_C = 20.0;         // комната при выключении
+    private static final double ROOM_HUM_PCT = 40.0;
+    private static final double OFF_DRIFT_C_PER_SEC = 0.2 / 60.0; // медленно, как у Testa
+    private static final double OFF_HUM_PER_SEC = 0.2 / 60.0;
+
     private volatile double currentTempC = 20.0;
     private volatile double setpointC = 25.0;
     private volatile boolean on = false;
@@ -64,10 +69,9 @@ public class BotoEmulator {
             currentHumidity = clamp(rampTowards(currentHumidity, humiditySetpoint,
                     humidityRampPerSec, d), 0, 100);
         } else {
-            // выключено: температура остывает, влажность дрейфует к комнатной
-            currentTempC = Math.max(0, currentTempC - rampRateCPerSec * d);
-            currentHumidity = clamp(rampTowards(currentHumidity, 40.0,
-                    humidityRampPerSec * 0.5, d), 0, 100);
+            // выключено: медленный дрейф к «комнате» (медленнее, чем у Testa)
+            currentTempC = clamp(rampTowards(currentTempC, ROOM_TEMP_C, OFF_DRIFT_C_PER_SEC, d), 0, 400);
+            currentHumidity = clamp(rampTowards(currentHumidity, ROOM_HUM_PCT, OFF_HUM_PER_SEC, d), 0, 100);
         }
     }
 

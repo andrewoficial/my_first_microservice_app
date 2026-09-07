@@ -22,6 +22,7 @@ public class TT5166CommandRegistry extends DeviceCommandRegistry {
     }
 
     private void initFaultMessages() {
+        faultMessages.put(0, "Ошибок нет");
         faultMessages.put(1, "CM1 compressor overcurrent trip.");
         faultMessages.put(2, "CM1 compressor overpressure protection tripping.");
         faultMessages.put(3, "CM1 compressor oil pressure anomaly.");
@@ -483,7 +484,7 @@ public class TT5166CommandRegistry extends DeviceCommandRegistry {
 
     public AnswerValues parseAckResponse(byte[] response) {
         AnswerValues answerValues = new AnswerValues(1);
-        if (response.length < 8) {
+        if (response.length < 5) {
             log.warn("TT5166: Response too short for ACK");
             answerValues.addValue(-1.0, "Ошибка: Слишком короткий ответ");
             return answerValues;
@@ -493,7 +494,7 @@ public class TT5166CommandRegistry extends DeviceCommandRegistry {
             answerValues.addValue(-1.0, "Ошибка: Некорректный адрес");
             return answerValues;
         }
-        byte func = response[1];
+        int func = Byte.toUnsignedInt(response[1]);
         if (func == 0x05 || func == 0x06) {
             if (!validateChecksum(response)) {
                 log.warn("TT5166: CRC error in ACK response");
@@ -502,15 +503,15 @@ public class TT5166CommandRegistry extends DeviceCommandRegistry {
             }
             answerValues.addValue(1.0, "Успех");
         } else if (func == 0x85 || func == 0x86) {
-            byte errorCode = response[2];
+            int errorCode = Byte.toUnsignedInt(response[2]);
             answerValues.addValue(-1.0, "Ошибка: код " + errorCode);
         } else {
-            answerValues.addValue(-1.0, "Ошибка: Неожиданный тип ответа 0x" + Integer.toHexString(Byte.toUnsignedInt(func)));
+            answerValues.addValue(-1.0, "Ошибка: Неожиданный тип ответа 0x" + Integer.toHexString(func));
         }
         return answerValues;
     }
 
-    private AnswerValues parseStateResponse(byte[] response) {
+    public AnswerValues parseStateResponse(byte[] response) {
         if (response.length < 3 + 2 + 2) {
             log.warn("TT5166: Response too short for getState");
             return null;
