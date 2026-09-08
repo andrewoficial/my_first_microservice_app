@@ -3,6 +3,7 @@ package org.example.gui.devices.testa.emulation;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import org.example.device.ethernet.testa.TestaCommands;
+import org.example.gui.devices.emulation.EmulatorCommandLog;
 import org.example.gui.utilites.GuiUtilities;
 
 import java.awt.*;
@@ -23,6 +24,7 @@ public class TestaEmulationPanel extends JPanel {
 
     private final TestaEmulator emulator = new TestaEmulator();
     private final TestaServerService service = new TestaServerService(emulator);
+    private final EmulatorCommandLog commandLog = new EmulatorCommandLog("Testa");
 
     private final JSpinner portSpinner = new JSpinner(new SpinnerNumberModel(1300, 1, 65535, 1));
     private final JButton startBtn = new JButton("Запустить");
@@ -189,6 +191,7 @@ public class TestaEmulationPanel extends JPanel {
         emulator.setRampRateDegPerMin(((Number) rampSpinner.getValue()).doubleValue());
 
         service.addLogListener(line -> SwingUtilities.invokeLater(() -> addLog(line)));
+        service.setCommandLog(commandLog);
         service.addRunningListener(r -> SwingUtilities.invokeLater(() ->
                 statusLabel.setText(r ? "Эмулятор работает (UDP :" + portSpinner.getValue() + ")" : "Эмулятор остановлен")));
 
@@ -245,6 +248,10 @@ public class TestaEmulationPanel extends JPanel {
         p.add(btns);
         statusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(statusLabel);
+        p.add(Box.createVerticalStrut(4));
+        JPanel cmdRow = EmulatorCommandLog.createControls(commandLog);
+        cmdRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(cmdRow);
 
         p.add(Box.createVerticalStrut(12));
         p.add(label("Уставка, °C"));

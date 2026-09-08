@@ -1,5 +1,6 @@
 package org.example.gui.devices.binder.camera.emulation;
 
+import org.example.gui.devices.emulation.EmulatorCommandLog;
 import org.example.gui.utilites.GuiUtilities;
 
 import javax.swing.*;
@@ -17,6 +18,7 @@ public class BinderEmulationPanel extends JPanel {
 
     private final BinderEmulator emulator = new BinderEmulator();
     private final BinderServerService server = new BinderServerService(emulator);
+    private final EmulatorCommandLog commandLog = new EmulatorCommandLog("Binder");
 
     private final JSpinner portSpinner = new JSpinner(new SpinnerNumberModel(10001, 1, 65535, 1));
     private final JSpinner slaveSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 247, 1));
@@ -65,6 +67,7 @@ public class BinderEmulationPanel extends JPanel {
         bindDynamicsSpinners();
 
         server.addLogListener(this::addLog);
+        server.setCommandLog(commandLog);
         server.addConnectionListener(conn -> SwingUtilities.invokeLater(() ->
                 statusLabel.setText(conn ? "Клиент подключён" : "Ожидание клиента")));
 
@@ -162,6 +165,10 @@ public class BinderEmulationPanel extends JPanel {
         p.add(new JLabel("Статус:"));
         statusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(statusLabel);
+        p.add(Box.createVerticalStrut(4));
+        JPanel cmdRow = EmulatorCommandLog.createControls(commandLog);
+        cmdRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(cmdRow);
 
         p.add(Box.createVerticalStrut(12));
         p.add(sectionLabel("Уставка"));

@@ -2,6 +2,7 @@ package org.example.gui.devices.binder.camera.emulation;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.device.ethernet.binder.BinderCommandRegistry;
+import org.example.gui.devices.emulation.EmulatorCommandLog;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -33,9 +34,14 @@ public class BinderServerService {
     private Thread acceptThread;
     private volatile boolean running = false;
 
+    private volatile EmulatorCommandLog commandLog;
+
     public BinderServerService(BinderEmulator emulator) {
         this.emulator = emulator;
     }
+
+    /** Подключить лог команд виртуальной камеры (опционально). */
+    public void setCommandLog(EmulatorCommandLog log) { this.commandLog = log; }
 
     public void addLogListener(Consumer<String> l) {
         logListeners.add(l);
@@ -157,18 +163,22 @@ public class BinderServerService {
                     float measured = (float) emulator.getMeasuredTemperature();
                     out.write(buildGetTempReply(slave, measured));
                     out.flush();
+                    if (commandLog != null) commandLog.dataRequest(toHex(frame));
                 } else if (func == 0x10) {
                     float t = parseSetTempFloat(frame);
                     emulator.setSetpoint(t);
                     out.write(echo(frame, 6));
                     out.flush();
                     fireLog("   SetT → уставка " + String.format(java.util.Locale.US, "%.2f", t) + " °C");
+                    if (commandLog != null) commandLog.command("установка температуры: "
+                            + String.format(java.util.Locale.US, "%.2f", t) + " °C");
                 } else if (func == 0x06) {
                     boolean on = (frame[5] & 0xFF) == 0x81;
                     emulator.setHumidityControl(on);
                     out.write(echo(frame, 6));
                     out.flush();
                     fireLog("   SetHC → влажность " + (on ? "ВКЛ" : "ВЫКЛ"));
+                    if (commandLog != null) commandLog.command(on ? "включение поддержки влажности" : "отключение поддержки влажности");
                 }
             }
             fireLog("Клиент отключён: " + remote);

@@ -2,6 +2,7 @@ package org.example.gui.devices.boto.emulation;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.device.protBoto.BotoModbusUtil;
+import org.example.gui.devices.emulation.EmulatorCommandLog;
 
 /**
  * Modbus RTU-отклик термокамеры BOTO.
@@ -12,12 +13,20 @@ import org.example.device.protBoto.BotoModbusUtil;
 @Slf4j
 public class BotoModbusResponder {
 
+    // Кандидаты на адреса (адрес → значение) для B-TH-800F. Пока не подтверждены
+    // реальной камерой — при проверке адреса уточнить и поправить в обеих панелях.
+    public static final int REG_HUMI_EN = 18;       // поддержка влаги: 1 = вкл, 0 = выкл
+    public static final int REG_LIGHT = 19;         // подсветка камеры: 1 = вкл, 0 = выкл
+    public static final int REG_ERROR_FLAGS = 20;   // битовая маска ошибок (биты 0..7)
+
     private final BotoEmulator emulator;
     private final int slaveId;
     private final int tempReg;
     private final int setTempReg;
     private final int modReg;
     private final int tempScale;
+
+    private volatile EmulatorCommandLog commandLog;
 
     /**
      * Ручные значения по адресам регистров (адрес → значение). Если адрес присутствует,
@@ -44,6 +53,9 @@ public class BotoModbusResponder {
 
     public void setAddressMapping(boolean addressMapping) { this.addressMapping = addressMapping; }
     public boolean isAddressMapping() { return addressMapping; }
+
+    /** Подключить лог команд виртуальной камеры (опционально). */
+    public void setCommandLog(EmulatorCommandLog log) { this.commandLog = log; }
 
     /** Установить ручное значение регистра (перекрывает авто-чтение). */
     public void setManualRegister(int addr, int value) { manualRegisters.put(addr, value); }
@@ -96,6 +108,7 @@ public class BotoModbusResponder {
         if (quantity < 1 || quantity > 125) {
             return buildExceptionResponse(request[0], request[1], 0x03);
         }
+        if (commandLog != null) commandLog.dataRequest(BotoModbusUtil.bytesToHex(request));
 
         java.nio.ByteBuffer resp = java.nio.ByteBuffer.allocate(3 + 2 * quantity);
         resp.order(java.nio.ByteOrder.BIG_ENDIAN);
@@ -128,12 +141,12 @@ public class BotoModbusResponder {
         return BotoModbusUtil.appendCrc(resp.array());
     }
     private int readRegister(int reg) {
-        // Блок реального времени. Базовый адрес TEMP_PV = tempReg.
-        // По результатам маппинга (штатная программа) внутри блока:
-        //   +1 = TEMP_SP (уставка темп.), +3 = MV темп.,
-        //   +4 = HUMI_PV, +5 = HUMI_SP, +7 = MV влажности.
-        // Рег +2 и +6 — не десятичные поля (не проявились в маппинге как 1.2/1.6),
-        // предположительно бинарный статус/режим. Зеркалим состояние вкл/выкл.
+        // Блок реального времени (рег 10..49, как у реальной B-TH-800F).
+        // По снятому с реальной камеры эталону:
+        //   +1 = TEMP_SP, +2 = ЗЕРКАЛО TEMP_SP, +3 = MV темп.,
+        //   +4 = HUMI_PV, +5 = HUMI_SP, +6 = ЗЕРКАЛО HUMI_SP, +7 = MV влажности,
+        //   рег 20 (base+20) = 1 всегда, рег 21 (base+21) = режим (0/1),
+        //   рег 25 (base+25)=41 и рег 28..32 (base+28..base+32)=509,4614,3584,3,59392 — константы.
         int base = tempReg;
         int run = emulator.isOn() ? 1 : 0;
         Integer manual = manualRegisters.get(reg);
@@ -144,34 +157,48 @@ public class BotoModbusResponder {
             return (int) Math.round(emulator.getCurrentTempC() * tempScale);
         } else if (reg == base + 1 || reg == setTempReg) {
             return (int) Math.round(emulator.getSetpointC() * tempScale);
-        } else if (reg == base + 2 || reg == base + 6) {
-            return run;
+        } else if (reg == base + 2) {
+            return (int) Math.round(emulator.getSetpointC() * tempScale);   // зеркало TEMP_SP
         } else if (reg == base + 3) {
             return (int) Math.round(computeTempMv() * tempScale);
         } else if (reg == base + 4) {
             return (int) Math.round(emulator.getCurrentHumidity() * tempScale);
         } else if (reg == base + 5) {
             return (int) Math.round(emulator.getHumiditySetpoint() * tempScale);
+        } else if (reg == base + 6) {
+            return (int) Math.round(emulator.getHumiditySetpoint() * tempScale); // зеркало HUMI_SP
         } else if (reg == base + 7) {
             return (int) Math.round(computeHumidityMv() * tempScale);
-        } else if (reg == modReg) {
-            return run;
+        } else if (reg == base + 20) {
+            return 1;   // рег 30 реальной камеры всегда = 1
+        } else if (reg == 42 || reg == base + 32) {
+            return 0xE800;  // константы реальной камеры
+        } else if (reg == 41 || reg == base + 31) {
+            return 0x0003;
+        } else if (reg == 40 || reg == base + 30) {
+            return 0x0E00;
+        } else if (reg == 39 || reg == base + 29) {
+            return 0x1206;
+        } else if (reg == 38 || reg == base + 28) {
+            return 0x01FD;
+        } else if (reg == 35 || reg == base + 25) {
+            return 0x0029;
         } else if (reg == 32 || reg == base + 22) {
             return emulator.getRunHours();
         } else if (reg == 33 || reg == base + 23) {
             return emulator.getRunMinutes();
         } else if (reg == 34 || reg == base + 24) {
             return emulator.getRunSeconds();
-        } else if (reg == 39 || reg == base + 29) {
-            return (int) Math.round(emulator.getTempMaxLimitC() * tempScale);
-        } else if (reg == 38 || reg == base + 28) {
-            return (short) Math.round(emulator.getTempMinLimitC() * tempScale);
-        } else if (reg == 41 || reg == base + 31) {
-            return (int) Math.round(emulator.getHumiMaxLimitPct() * tempScale);
-        } else if (reg == 40 || reg == base + 30) {
-            return (int) Math.round(emulator.getHumiMinLimitPct() * tempScale);
         } else if (reg == 31 || reg == base + 21) {
             return run;
+        } else if (reg == modReg) {
+            return run;
+        } else if (reg == REG_HUMI_EN || reg == base + 8) {
+            return emulator.isHumidityEnabled() ? 1 : 0;
+        } else if (reg == REG_LIGHT || reg == base + 9) {
+            return emulator.isLightOn() ? 1 : 0;
+        } else if (reg == REG_ERROR_FLAGS || reg == base + 10) {
+            return emulator.getErrorFlags() & 0xFFFF;
         } else if (reg == 101) {
             return emulator.getTimeSetRaw();
         } else if (reg == 102) {
@@ -270,12 +297,25 @@ public class BotoModbusResponder {
         if (regAddr == setTempReg) {
             emulator.setSetpointC(value / (double) tempScale);
             log.info("BotoEmu: уставка темп → {} (raw {})", String.format("%.2f", value / (double) tempScale), value);
+            if (commandLog != null) commandLog.command("установка температуры: "
+                    + String.format("%.2f", value / (double) tempScale) + " °C");
         } else if (regAddr == setTempReg + 1) {
             emulator.setHumiditySetpoint(value / (double) tempScale);
             log.info("BotoEmu: уставка влаги → {}% (raw {})", String.format("%.1f", value / (double) tempScale), value);
+            if (commandLog != null) commandLog.command("установка влажности: "
+                    + String.format("%.1f", value / (double) tempScale) + "%");
         } else if (regAddr == modReg) {
             emulator.setOn(value == 1);
             log.info("BotoEmu: вкл/выкл → {}", value == 1 ? "ВКЛ" : "ВЫКЛ");
+            if (commandLog != null) commandLog.command(value == 1 ? "старт" : "стоп");
+        } else if (regAddr == REG_HUMI_EN) {
+            emulator.setHumidityEnabled(value == 1);
+            log.info("BotoEmu: поддержка влаги → {}", value == 1 ? "ВКЛ" : "ВЫКЛ");
+            if (commandLog != null) commandLog.command(value == 1 ? "включение поддержки влаги" : "отключение поддержки влаги");
+        } else if (regAddr == REG_LIGHT) {
+            emulator.setLightOn(value == 1);
+            log.info("BotoEmu: подсветка → {}", value == 1 ? "ВКЛ" : "ВЫКЛ");
+            if (commandLog != null) commandLog.command(value == 1 ? "подсветка вкл" : "подсветка выкл");
         } else if (regAddr == tempReg) {
             emulator.setCurrentTempC(value / (double) tempScale);
         } else if (regAddr == 39) {

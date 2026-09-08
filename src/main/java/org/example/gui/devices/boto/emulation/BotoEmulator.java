@@ -21,6 +21,9 @@ public class BotoEmulator {
     private volatile double currentHumidity = 40.0;
     private volatile double humiditySetpoint = 50.0;
     private volatile double humidityRampPerSec = 1.0;
+    private volatile boolean humidityEnabled = false;  // рег 18: реальная камера возвращает 0
+    private volatile boolean lightOn = false;          // подсветка камеры (рег 19, кандидат)
+    private volatile int errorFlags = 0;               // флаги ошибок, биты 0..7 (рег 20, кандидат)
 
     // Найденные по штатной программе регистры (см. readRegister в BotoModbusResponder).
     private volatile double tempMaxLimitC = 90.0;   // рег 39 (raw = C*10)
@@ -65,7 +68,8 @@ public class BotoEmulator {
             runTimeMs += ms;
             // температура к уставке
             currentTempC = rampTowards(currentTempC, setpointC, rampRateCPerSec, d);
-            // влажность к уставке
+            // влажность к уставке — реальная камера B-TH-800F поддерживает влагу при работе
+            // всегда (отдельного регистра отключения не найдено, запись в рег 18 игнорируется)
             currentHumidity = clamp(rampTowards(currentHumidity, humiditySetpoint,
                     humidityRampPerSec, d), 0, 100);
         } else {
@@ -89,6 +93,16 @@ public class BotoEmulator {
     public synchronized double getSetpointC() { return setpointC; }
     public synchronized double getCurrentHumidity() { return currentHumidity; }
     public synchronized double getHumiditySetpoint() { return humiditySetpoint; }
+    public synchronized boolean isHumidityEnabled() { return humidityEnabled; }
+    public synchronized void setHumidityEnabled(boolean en) { humidityEnabled = en; }
+    public synchronized boolean isLightOn() { return lightOn; }
+    public synchronized void setLightOn(boolean on) { lightOn = on; }
+    public synchronized int getErrorFlags() { return errorFlags; }
+    public synchronized void setErrorFlags(int flags) { errorFlags = flags & 0xFFFF; }
+    public synchronized boolean isErrorFlag(int bit) { return (errorFlags & (1 << bit)) != 0; }
+    public synchronized void setErrorFlag(int bit, boolean on) {
+        if (on) errorFlags |= (1 << bit); else errorFlags &= ~(1 << bit);
+    }
     public synchronized boolean isOn() { return on; }
     public synchronized double getRampRateCPerSec() { return rampRateCPerSec; }
 
@@ -96,7 +110,11 @@ public class BotoEmulator {
     public synchronized void setSetpointC(double t) { setpointC = Math.max(0, Math.min(400, t)); }
     public synchronized void setCurrentHumidity(double h) { currentHumidity = clamp(h, 0, 100); }
     public synchronized void setHumiditySetpoint(double h) { humiditySetpoint = clamp(h, 0, 100); }
-    public synchronized void setOn(boolean on) { this.on = on; }
+    public synchronized void setOn(boolean on) {
+        this.on = on;
+        // Подсветка реальной камеры работает вместе с пуском (отдельное управление не найдено).
+        this.lightOn = on;
+    }
     public synchronized void setRampRateCPerSec(double rate) { this.rampRateCPerSec = Math.max(0.1, rate); }
 
     public synchronized double getTempMaxLimitC() { return tempMaxLimitC; }

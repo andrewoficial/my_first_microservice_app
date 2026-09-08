@@ -1,6 +1,7 @@
 package org.example.gui.devices.tt5166.emulation;
 
 import com.fazecast.jSerialComm.SerialPort;
+import org.example.gui.devices.emulation.EmulatorCommandLog;
 import org.example.gui.utilites.GuiUtilities;
 
 import javax.swing.*;
@@ -18,6 +19,7 @@ public class TT5166EmulationPanel extends JPanel {
     private final TT5166Emulator emulator = new TT5166Emulator();
     private final TT5166ModbusResponder responder = new TT5166ModbusResponder(emulator, 1);
     private final TT5166ModbusSerialService service = new TT5166ModbusSerialService(responder);
+    private final EmulatorCommandLog commandLog = new EmulatorCommandLog("TT-5166");
 
     private final JComboBox<String> portCombo = new JComboBox<>();
     private final JButton refreshBtn = new JButton("Обновить");
@@ -63,6 +65,7 @@ public class TT5166EmulationPanel extends JPanel {
     private static final int MAX_LOG = 400;
 
     public TT5166EmulationPanel() {
+        responder.setCommandLog(commandLog);
         humBig.setForeground(new Color(60, 150, 255));
         humBig.setText("-- %");
 
@@ -183,6 +186,10 @@ public class TT5166EmulationPanel extends JPanel {
         p.add(Box.createVerticalStrut(2));
         statusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(statusLabel);
+        p.add(Box.createVerticalStrut(4));
+        JPanel cmdRow = EmulatorCommandLog.createControls(commandLog);
+        cmdRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(cmdRow);
 
         p.add(Box.createVerticalStrut(12));
         p.add(sectionLabel("Состояние эмулятора"));

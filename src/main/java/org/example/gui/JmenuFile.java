@@ -19,6 +19,8 @@ import org.example.gui.devices.bkm4.control.Bkm4Main;
 import org.example.gui.devices.bkm4.emulation.Bkm4EmulatorFrame;
 import org.example.gui.devices.boto.control.Boto800Main;
 import org.example.gui.devices.boto.emulation.Boto800EmulatorFrame;
+import org.example.gui.devices.boto120.control.Boto120Main;
+import org.example.gui.devices.boto120.emulation.Boto120EmulatorFrame;
 import org.example.gui.devices.esp32.kantser.emu.ble.KantserBleMain;
 import org.example.gui.devices.edvards.d39730880.control.d39730880Main;
 import org.example.gui.devices.edvards.d39730880.emulation.EdwardsTicTestFrame;
@@ -747,6 +749,14 @@ public class JmenuFile {
         boto800Menu.add(boto800Control);
         boto800Menu.add(boto800Emulation);
         botoMenu.add(boto800Menu);
+
+        JMenu boto120Menu = new JMenu("BOTO 120");
+        JMenuItem boto120Control = new JMenuItem("Панель управления (зонд)");
+        JMenuItem boto120Emulation = new JMenuItem("Панель эмуляции (заглушка)");
+        boto120Menu.add(boto120Control);
+        boto120Menu.add(boto120Emulation);
+        botoMenu.add(boto120Menu);
+
         controlPanelsMenu.add(botoMenu);
 
         // TT5166 → климатическая камера (Modbus RTU, 38400 8E1)
@@ -973,6 +983,15 @@ public class JmenuFile {
         boto800Emulation.addActionListener(e -> {
             System.out.println("BOTO 800 Emulation Panel");
             new Boto800EmulatorFrame().setVisible(true);
+        });
+
+        boto120Control.addActionListener(e -> {
+            System.out.println("BOTO 120 Control Panel (probe)");
+            new Boto120Main().setVisible(true);
+        });
+        boto120Emulation.addActionListener(e -> {
+            System.out.println("BOTO 120 Emulation Panel (stub)");
+            new Boto120EmulatorFrame().setVisible(true);
         });
 
         tt5166Control.addActionListener(e -> {

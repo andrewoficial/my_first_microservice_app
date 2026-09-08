@@ -38,6 +38,7 @@ public class BotoModbusCommunicationService {
     });
     private volatile boolean pollingEnabled = false;
     private volatile Runnable pollAction;
+    private java.util.concurrent.ScheduledFuture<?> pollFuture;
 
     public synchronized boolean open(String portName) {
         close();
@@ -81,9 +82,11 @@ public class BotoModbusCommunicationService {
         if (pollingEnabled == enable) return;
         pollingEnabled = enable;
         if (enable && pollAction != null) {
-            pollScheduler.scheduleWithFixedDelay(pollAction, 0, 1000, TimeUnit.MILLISECONDS);
-        } else {
-            pollScheduler.shutdownNow();
+            if (pollFuture != null && !pollFuture.isDone()) pollFuture.cancel(false);
+            pollFuture = pollScheduler.scheduleWithFixedDelay(pollAction, 0, 1000, TimeUnit.MILLISECONDS);
+        } else if (pollFuture != null) {
+            pollFuture.cancel(false);   // не завершаем пул — повторное открытие должно работать
+            pollFuture = null;
         }
     }
 
@@ -123,12 +126,18 @@ public class BotoModbusCommunicationService {
         byte[] data;
         synchronized (buffer) { data = buffer.toByteArray(); buffer.reset(); }
         if (data.length < 4) return;
-        int frameLen = BotoModbusUtil.expectedFrameLength(data);
-        if (frameLen <= 0 || data.length < frameLen) return;
-        byte[] frame = Arrays.copyOf(data, frameLen);
-        fireLog("→ " + BotoModbusUtil.bytesToHex(frame));
-        for (Consumer<byte[]> l : responseListeners) {
-            try { l.accept(frame); } catch (Exception ignored) {}
+        // В буфере может оказаться несколько ответов подряд (если запросы отправлены
+        // вплотную друг к другу) — разбираем все полные кадры по очереди.
+        int off = 0;
+        while (data.length - off >= 4) {
+            int frameLen = BotoModbusUtil.expectedFrameLength(Arrays.copyOfRange(data, off, data.length));
+            if (frameLen <= 0 || data.length - off < frameLen) break;
+            byte[] frame = Arrays.copyOfRange(data, off, off + frameLen);
+            fireLog("→ " + BotoModbusUtil.bytesToHex(frame));
+            for (Consumer<byte[]> l : responseListeners) {
+                try { l.accept(frame); } catch (Exception ignored) {}
+            }
+            off += frameLen;
         }
     }
 

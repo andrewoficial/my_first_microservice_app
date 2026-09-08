@@ -1,6 +1,7 @@
 package org.example.gui.devices.tt5166.emulation;
 
 import lombok.extern.slf4j.Slf4j;
+import org.example.gui.devices.emulation.EmulatorCommandLog;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -28,10 +29,15 @@ public class TT5166ModbusResponder {
 
     private volatile boolean addressMapping = false;
 
+    private volatile EmulatorCommandLog commandLog;
+
     public TT5166ModbusResponder(TT5166Emulator emulator, int slaveId) {
         this.emulator = emulator;
         this.slaveId = slaveId;
     }
+
+    /** Подключить лог команд виртуальной камеры (опционально). */
+    public void setCommandLog(EmulatorCommandLog log) { this.commandLog = log; }
 
     public void setAddressMapping(boolean addressMapping) { this.addressMapping = addressMapping; }
     public boolean isAddressMapping() { return addressMapping; }
@@ -70,6 +76,7 @@ public class TT5166ModbusResponder {
         if (quantity < 1 || quantity > 125) {
             return buildExceptionResponse(request[0], request[1], 0x03);
         }
+        if (commandLog != null) commandLog.dataRequest(TT5166ModbusUtil.bytesToHex(request));
 
         ByteBuffer resp = ByteBuffer.allocate(3 + 2 * quantity);
         resp.order(ByteOrder.BIG_ENDIAN);
@@ -91,9 +98,11 @@ public class TT5166ModbusResponder {
         if (coilAddr == 0x0000) {
             emulator.setOn(onCoil);
             log.info("TT5166Emu: старт → {}", onCoil ? "ВКЛ" : "ВЫКЛ");
+            if (commandLog != null) commandLog.command(onCoil ? "старт" : "стоп");
         } else if (coilAddr == 0x0001) {
             emulator.setOn(!onCoil);
             log.info("TT5166Emu: стоп → {}", !onCoil ? "ВЫКЛ" : "ВКЛ");
+            if (commandLog != null) commandLog.command(!onCoil ? "стоп" : "старт");
         } else {
             log.warn("TT5166Emu: запись неиспользуемой катушки {}", String.format("0x%04X", coilAddr));
         }
@@ -150,8 +159,16 @@ public class TT5166ModbusResponder {
 
     private void applyWrite(int regAddr, int value) {
         switch (regAddr) {
-            case 0x0026: emulator.setSetpointC(value / 10.0); break;
-            case 0x0027: emulator.setHumiditySetpoint(value / 10.0); break;
+            case 0x0026:
+                emulator.setSetpointC(value / 10.0);
+                if (commandLog != null) commandLog.command("установка температуры: "
+                        + String.format("%.1f", value / 10.0) + " °C");
+                break;
+            case 0x0027:
+                emulator.setHumiditySetpoint(value / 10.0);
+                if (commandLog != null) commandLog.command("установка влажности: "
+                        + String.format("%.1f", value / 10.0) + "%");
+                break;
             case 0x0064: emulator.setTempGradientCPer10Min(value / 10.0); break;
             case 0x0065: emulator.setHumGradientPctPer10Min(value / 10.0); break;
             default:

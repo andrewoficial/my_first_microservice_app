@@ -74,6 +74,23 @@ public final class BotoModbusUtil {
         return appendCrc(buf.array());
     }
 
+    /**
+     * Запрос записи нескольких регистров (функция 0x10) — так штатная панель
+     * B-TH-800F пишет указатель программы (например 8108 = 0: 01 10 1F AC 00 01 02 00 00).
+     */
+    public static byte[] buildWriteMultipleRequest(int slaveId, int startReg, int[] values) {
+        int n = values.length;
+        ByteBuffer buf = ByteBuffer.allocate(7 + 2 * n);
+        buf.order(ByteOrder.BIG_ENDIAN);
+        buf.put((byte) slaveId);
+        buf.put((byte) 0x10);
+        buf.putShort((short) startReg);
+        buf.putShort((short) n);
+        buf.put((byte) (2 * n));
+        for (int v : values) buf.putShort((short) v);
+        return appendCrc(buf.array());
+    }
+
     // ─── Парсинг ответов ──────────────────────────────────────────────────
 
     /**

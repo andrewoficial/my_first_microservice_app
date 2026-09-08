@@ -12,7 +12,7 @@ public class Boto800Main extends JFrame {
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         setSize(900, 600);
         setLocationRelativeTo(null);
-        BotoControlPanel panel = new BotoControlPanel("BOTO 800", 10, 60, 63, 10);
+        BotoControlPanel panel = new BotoControlPanel("BOTO 800", 10, 60, 63, 31, 10);
         add(panel);
         addWindowListener(new java.awt.event.WindowAdapter() {
             @Override public void windowClosing(java.awt.event.WindowEvent e) { panel.shutdown(); }

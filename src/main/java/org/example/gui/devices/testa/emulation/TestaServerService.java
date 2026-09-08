@@ -2,6 +2,7 @@ package org.example.gui.devices.testa.emulation;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.device.ethernet.testa.TestaCommands;
+import org.example.gui.devices.emulation.EmulatorCommandLog;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -31,6 +32,8 @@ public class TestaServerService {
     private final CopyOnWriteArrayList<Consumer<String>> logListeners = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<Consumer<Boolean>> runningListeners = new CopyOnWriteArrayList<>();
 
+    private volatile EmulatorCommandLog commandLog;
+
     private static final String BROADCAST_ADDR = "255.255.255.255";
 
     private volatile DatagramSocket socket;
@@ -44,6 +47,9 @@ public class TestaServerService {
     public TestaServerService(TestaEmulator emulator) {
         this.emulator = emulator;
     }
+
+    /** Подключить лог команд виртуальной камеры (опционально). */
+    public void setCommandLog(EmulatorCommandLog log) { this.commandLog = log; }
 
     public void addLogListener(Consumer<String> l) { logListeners.add(l); }
     public void addRunningListener(Consumer<Boolean> l) { runningListeners.add(l); }
@@ -118,6 +124,7 @@ public class TestaServerService {
                 System.arraycopy(pkt.getData(), pkt.getOffset(), data, 0, pkt.getLength());
                 clientAddr = pkt.getAddress();
                 fireLog("RX (UDP) ← " + pkt.getSocketAddress() + ": " + TestaCommands.toHex(data));
+                if (commandLog != null) commandLog.dataRequest("UDP " + TestaCommands.toHex(data));
                 if (isSetTemperatureDatagram(data)) {
                     float t = parseSetTemp(data);
                     emulator.setSetpoint(t);
@@ -128,6 +135,8 @@ public class TestaServerService {
                     }
                     fireLog("   SetT → уставка " + String.format(java.util.Locale.US, "%.2f", t)
                             + " °C, RH " + String.format(java.util.Locale.US, "%.1f", rh) + "%");
+                    if (commandLog != null) commandLog.command("старт, установка температуры: "
+                            + String.format(java.util.Locale.US, "%.2f", t) + " °C");
                     sendAck((byte) 0x02);
                     sendStatusTo(clientAddr);
                 } else if (isButtonCommand(data)) {
@@ -138,14 +147,17 @@ public class TestaServerService {
                     if (op == 0x64) {
                         emulator.setRunning(false);
                         fireLog("   Стоп → состояние «остановлен»");
+                        if (commandLog != null) commandLog.command("стоп");
                     } else if (op == 0x66) {
                         boolean on = parseButtonParam(data) != 0;
                         emulator.setLight(on);
                         fireLog("   Подсветка → " + (on ? "вкл" : "выкл"));
+                        if (commandLog != null) commandLog.command(on ? "подсветка вкл" : "подсветка выкл");
                     }
                 } else if (isProgramDatagram(data)) {
                     emulator.setRunning(true);
                     fireLog("   Программа (заголовок 77 55 33 88), длина " + data.length + " (игнор)");
+                    if (commandLog != null) commandLog.command("старт (программа)");
                     sendAck((byte) 0x02);
                 } else {
                     fireLog("   Неизвестная датаграмма (игнор)");

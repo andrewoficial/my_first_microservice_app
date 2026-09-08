@@ -1,6 +1,7 @@
 package org.example.gui.devices.boto.emulation;
 
 import com.fazecast.jSerialComm.SerialPort;
+import org.example.gui.devices.emulation.EmulatorCommandLog;
 import org.example.gui.utilites.GuiUtilities;
 
 import javax.swing.*;
@@ -9,6 +10,8 @@ import java.awt.*;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.prefs.Preferences;
 
 /**
  * Панель эмулятора термокамеры BOTO (Modbus RTU, 9600 8N1).
@@ -16,7 +19,28 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class BotoEmulationPanel extends JPanel {
 
+    private static final String PREFS_NODE = "org/example/gui/devices/boto/emulation";
+    private static final String LAST_PORT = "lastEmuPort";
+    private final AtomicBoolean loadingSettings = new AtomicBoolean(false);
+
+    /** Имена битов флагов ошибок (рег 20). Пока условные — уточнить по реальной камере. */
+    private static final String[] ERROR_BIT_NAMES = {
+            "Перегрев", "Недогрев/датчик", "Датчик темп.", "Датчик влаги",
+            "Мало воды", "Парогенератор", "Вентилятор", "Дверь открыта"
+    };
+
     private final BotoEmulator emulator = new BotoEmulator();
+
+    /** Чекбоксы флагов ошибок (рег 20); инициализируются сразу, т.к. используются при построении UI. */
+    private JCheckBox[] initErrorBits() {
+        JCheckBox[] boxes = new JCheckBox[ERROR_BIT_NAMES.length];
+        for (int b = 0; b < boxes.length; b++) {
+            final int bit = b;
+            boxes[b] = new JCheckBox(ERROR_BIT_NAMES[b]);
+            boxes[b].addActionListener(e -> emulator.setErrorFlag(bit, boxes[bit].isSelected()));
+        }
+        return boxes;
+    }
     private final BotoModbusResponder responder;
     private final BotoModbusSerialService service;
 
@@ -28,6 +52,10 @@ public class BotoEmulationPanel extends JPanel {
     private final JSpinner setpointSpinner;
     private final JSpinner rampSpinner;
     private final JCheckBox onCheckBox;
+    private final JCheckBox humiEnCheckBox = new JCheckBox("Поддержка влаги ВКЛ", false);
+    private final JSpinner humiSetpointSpinner = new JSpinner(new SpinnerNumberModel(50.0, 0.0, 100.0, 1.0));
+    private final JLabel lightStateLabel = new JLabel("Подсветка: выкл");
+    private final JCheckBox[] errorBits = initErrorBits();
     private final JCheckBox mappingCheckBox = new JCheckBox("Маппинг адресов", false);
     private final JSpinner addRegSpinner = new JSpinner(new SpinnerNumberModel(19, 0, 65535, 1));
     private final JSpinner addValSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 65535, 1));
@@ -52,9 +80,12 @@ public class BotoEmulationPanel extends JPanel {
     private final JLabel modeLabel = infoLabel();
     private final JLabel setpointInfo = infoLabel();
     private final JLabel humInfo = infoLabel();
+    private final JLabel lightInfo = infoLabel();
+    private final JLabel errorInfo = infoLabel();
     private final JCheckBox logAuto = new JCheckBox("автопрокрутка лога", true);
     private final JLabel statusLabel = new JLabel("Эмулятор отключён");
     private final JTextArea logArea = new JTextArea();
+    private final EmulatorCommandLog commandLog;
 
     private final javax.swing.Timer simTimer;
     private long lastTickNanos = System.nanoTime();
@@ -67,8 +98,10 @@ public class BotoEmulationPanel extends JPanel {
     public BotoEmulationPanel(String deviceName, int tempReg, int setTempReg, int modReg, int tempScale) {
         this.deviceName = deviceName;
         this.tempScale = tempScale;
+        this.commandLog = new EmulatorCommandLog(deviceName);
 
         this.responder = new BotoModbusResponder(emulator, 1, tempReg, setTempReg, modReg, tempScale);
+        this.responder.setCommandLog(commandLog);
         this.service = new BotoModbusSerialService(responder);
 
         this.setpointSpinner = new JSpinner(new SpinnerNumberModel(25.0, 0.0, 400.0, 0.5));
@@ -96,6 +129,9 @@ public class BotoEmulationPanel extends JPanel {
         setpointSpinner.addChangeListener(e -> emulator.setSetpointC(((Number) setpointSpinner.getValue()).doubleValue()));
         rampSpinner.addChangeListener(e -> emulator.setRampRateCPerSec(((Number) rampSpinner.getValue()).doubleValue()));
         onCheckBox.addActionListener(e -> emulator.setOn(onCheckBox.isSelected()));
+        humiEnCheckBox.addActionListener(e -> emulator.setHumidityEnabled(humiEnCheckBox.isSelected()));
+        humiSetpointSpinner.addChangeListener(e -> emulator.setHumiditySetpoint(((Number) humiSetpointSpinner.getValue()).doubleValue()));
+        emulator.setHumiditySetpoint(((Number) humiSetpointSpinner.getValue()).doubleValue());
         mappingCheckBox.addActionListener(e -> responder.setAddressMapping(mappingCheckBox.isSelected()));
 
         selValField.setEditable(false);
@@ -122,6 +158,8 @@ public class BotoEmulationPanel extends JPanel {
         simTimer = new javax.swing.Timer(100, e -> advanceSim());
         simTimer.start();
         refreshPorts();
+        loadLastSettings();
+        portCombo.addItemListener(e -> saveSelectedPort());
 
         GuiUtilities.darkenInputs(this);
     }
@@ -140,8 +178,27 @@ public class BotoEmulationPanel extends JPanel {
         setpointInfo.setText(String.format(Locale.US, "Уставка: %.1f °C", emulator.getSetpointC()));
         humInfo.setText(String.format(Locale.US, "Влажность: %.1f%% / уставка %.1f%%",
                 emulator.getCurrentHumidity(), emulator.getHumiditySetpoint()));
+        lightInfo.setText("Подсветка: " + (emulator.isLightOn() ? "вкл" : "выкл") + " (следует за работой)");
+        lightStateLabel.setText("Подсветка: " + (emulator.isLightOn() ? "вкл" : "выкл") + " (следует за работой)");
+        errorInfo.setText(errorFlagsText());
         updateRunTime();
         updateClocks();
+    }
+
+    private String errorFlagsText() {
+        StringBuilder sb = new StringBuilder();
+        for (int b = 0; b < ERROR_BIT_NAMES.length; b++) {
+            if (emulator.isErrorFlag(b)) {
+                if (sb.length() > 0) sb.append("; ");
+                sb.append(ERROR_BIT_NAMES[b]);
+            }
+        }
+        if (sb.length() == 0) {
+            errorInfo.setForeground(new Color(160, 160, 160));
+            return "Ошибки: нет";
+        }
+        errorInfo.setForeground(new Color(200, 40, 40));
+        return "Ошибки: " + sb;
     }
 
     private void updateRunTime() {
@@ -207,6 +264,10 @@ public class BotoEmulationPanel extends JPanel {
         p.add(Box.createVerticalStrut(2));
         statusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(statusLabel);
+        p.add(Box.createVerticalStrut(4));
+        JPanel cmdRow = EmulatorCommandLog.createControls(commandLog);
+        cmdRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(cmdRow);
 
         p.add(Box.createVerticalStrut(12));
         p.add(sectionLabel("Состояние эмулятора"));
@@ -221,6 +282,30 @@ public class BotoEmulationPanel extends JPanel {
 
         p.add(label("Скорость выхода, °C/сек"));
         p.add(fullWidth(rampSpinner));
+
+        p.add(Box.createVerticalStrut(10));
+        p.add(sectionLabel("Влага (рег 18 / уставка 61)"));
+        humiEnCheckBox.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(humiEnCheckBox);
+        p.add(Box.createVerticalStrut(2));
+        p.add(label("Уставка влажности, %"));
+        p.add(fullWidth(humiSetpointSpinner));
+
+        p.add(Box.createVerticalStrut(8));
+        p.add(sectionLabel("Подсветка (рег 19)"));
+        lightStateLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lightStateLabel.setFont(new Font(Font.DIALOG, Font.PLAIN, 12));
+        p.add(lightStateLabel);
+
+        p.add(Box.createVerticalStrut(8));
+        p.add(sectionLabel("Флаги ошибок (рег 20)"));
+        JPanel errGrid = new JPanel(new GridLayout(0, 2, 6, 2));
+        errGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+        for (JCheckBox b : errorBits) {
+            b.setAlignmentX(Component.LEFT_ALIGNMENT);
+            errGrid.add(b);
+        }
+        p.add(errGrid);
 
         p.add(Box.createVerticalStrut(10));
         p.add(sectionLabel("RUN time (рег 32/33/34)"));
@@ -299,6 +384,8 @@ public class BotoEmulationPanel extends JPanel {
         info.add(modeLabel);
         info.add(setpointInfo);
         info.add(humInfo);
+        info.add(lightInfo);
+        info.add(errorInfo);
 
         JPanel top = new JPanel(new BorderLayout(4, 4));
         top.add(screens, BorderLayout.NORTH);
@@ -461,6 +548,32 @@ public class BotoEmulationPanel extends JPanel {
             portCombo.addItem(p.getSystemPortName() + " — " + p.getDescriptivePortName());
         }
         if (portCombo.getItemCount() == 0) portCombo.addItem("Нет доступных портов");
+    }
+
+    private void loadLastSettings() {
+        loadingSettings.set(true);
+        try {
+            String lastPort = Preferences.userRoot().node(PREFS_NODE).get(LAST_PORT, "");
+            if (!lastPort.isEmpty()) {
+                for (int i = 0; i < portCombo.getItemCount(); i++) {
+                    String item = portCombo.getItemAt(i);
+                    if (item != null && item.startsWith(lastPort)) {
+                        portCombo.setSelectedIndex(i);
+                        break;
+                    }
+                }
+            }
+        } finally {
+            loadingSettings.set(false);
+        }
+    }
+
+    private void saveSelectedPort() {
+        if (loadingSettings.get()) return;
+        Object sel = portCombo.getSelectedItem();
+        if (sel == null || sel.toString().contains("Нет")) return;
+        String portName = sel.toString().split(" — ")[0].trim();
+        Preferences.userRoot().node(PREFS_NODE).put(LAST_PORT, portName);
     }
 
     public void shutdown() { simTimer.stop(); service.closePort(); }
