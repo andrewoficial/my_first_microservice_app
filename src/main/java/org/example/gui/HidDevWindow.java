@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.List;
 
 import com.intellij.uiDesigner.core.Spacer;
+import org.example.services.transport.hid.HidDeviceScanner;
 import org.hid4java.*;
 
 public class HidDevWindow extends JFrame implements Rendeble {
@@ -26,7 +27,6 @@ public class HidDevWindow extends JFrame implements Rendeble {
     private boolean MKRS_CreadleFound = false;
     private String MGS_status = " not found";
     private String MKRS_status = " not found";
-    private HidServices hidServices;
 
     JPanel statusMGSpanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
     JPanel statusMKRSpanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -50,7 +50,6 @@ public class HidDevWindow extends JFrame implements Rendeble {
     }
 
     private void initComponents() {
-        hidServices = HidManager.getHidServices();
         // Устанавливаем правильный Layout
         contentPane.setLayout(new BorderLayout());
 
@@ -89,7 +88,7 @@ public class HidDevWindow extends JFrame implements Rendeble {
         tableModel.setRowCount(0); // Очистка таблицы
 
 
-        List<HidDevice> devices = hidServices.getAttachedHidDevices();
+        List<HidDevice> devices = HidDeviceScanner.getInstance().scanAllHidDevices();
 
         String vendorFilterText = vendorFilter.getText().trim();
         String productFilterText = productFilter.getText().trim();

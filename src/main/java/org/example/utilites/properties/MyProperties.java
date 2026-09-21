@@ -170,6 +170,13 @@ public class MyProperties {
     @Getter
     private boolean dbgLogInputParsed = false;
 
+    // HID (hid4java)
+    @Getter
+    private boolean hidEnabled = true;
+
+    @Getter
+    private boolean showAllHidDevices = false;
+
     @Getter
     private MainLeftPanelStateCollection leftPanelStateCollection;
 
@@ -295,6 +302,10 @@ public class MyProperties {
         dbgLogInputASCII = settingsLoader.getBoolean("dbgLogInputASCII", false);
         dbgLogInputHEX = settingsLoader.getBoolean("dbgLogInputHEX", false);
         dbgLogInputParsed = settingsLoader.getBoolean("dbgLogInputParsed", false);
+
+        // Load HID settings
+        hidEnabled = settingsLoader.getBoolean("hid.enabled", true);
+        showAllHidDevices = settingsLoader.getBoolean("showAllHidDevices", false);
 
         //Load ACU10FD-MM
         portAcu10fd = settingsLoader.getInt("portAcu10fd", 0);
@@ -496,6 +507,16 @@ public class MyProperties {
     public void setDbgLogInputParsed(boolean state) {
         settingsLoader.setBoolean("dbgLogInputParsed", state);
         this.dbgLogInputParsed = state;
+    }
+
+    public void setHidEnabled(boolean state) {
+        settingsLoader.setBoolean("hid.enabled", state);
+        this.hidEnabled = state;
+    }
+
+    public void setShowAllHidDevices(boolean state) {
+        settingsLoader.setBoolean("showAllHidDevices", state);
+        this.showAllHidDevices = state;
     }
 
     public void setVegaAddress(String adr){

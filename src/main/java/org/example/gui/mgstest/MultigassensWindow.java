@@ -79,6 +79,10 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
 
     @Override
     public void renderData() {
+        if (isAnyDeviceBusy()) {
+            log.debug("Пропускаю скан HID: прибор занят");
+            return;
+        }
         log.info("Обновляю список приборов");
         deviceRepository.updateDeviceList();
         //listModel.removeAllElements();//Потеря ссылок, а та та
@@ -100,6 +104,15 @@ public class MultigassensWindow extends JFrame implements Rendeble, MgsExecution
     @Override
     public boolean isEnable() {
         return true;
+    }
+
+    private boolean isAnyDeviceBusy() {
+        for (HidSupportedDevice device : deviceRepository.getDeviceList()) {
+            if (asyncExecutor.isDeviceBusy(device)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 

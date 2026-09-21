@@ -4,10 +4,9 @@ package org.example.gui.mgstest.repository;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gui.mgstest.model.HidSupportedDevice;
+import org.example.services.transport.hid.HidDeviceScanner;
 import org.example.utilites.Constants;
 import org.hid4java.HidDevice;
-import org.hid4java.HidServices;
-import org.hid4java.HidManager;
 
 import java.util.*;
 
@@ -16,14 +15,12 @@ import static org.example.utilites.Constants.HidCommunication.MULTIGASSENSE_TARG
 
 @Slf4j
 public class DeviceRepository {
-    private final HidServices hidServices;
     private final DeviceRepositoryInterface stateRepository;
     @Getter
     private HashSet<HidSupportedDevice> deviceList = new HashSet<>(3);
 
 
     public DeviceRepository(DeviceRepositoryInterface stateRepository) {
-        this.hidServices = HidManager.getHidServices();
         this.stateRepository = stateRepository;
     }
 
@@ -32,8 +29,7 @@ public class DeviceRepository {
         for (HidSupportedDevice supportedDevice : deviceList) {
             supportedDevice.setAlive(false);
         }
-        List<org.hid4java.HidDevice> devices = hidServices.getAttachedHidDevices();
-        hidServices.stop();
+        List<HidDevice> devices = HidDeviceScanner.getInstance().scanAllHidDevices();
 
         for (HidDevice device : devices) {
             HidSupportedDevice supportedDeviceForAdd = new HidSupportedDevice(device, device.getPath(),  Constants.SupportedHidDeviceType.UNKNOWN);

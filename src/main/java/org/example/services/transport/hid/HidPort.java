@@ -4,8 +4,6 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.example.utilites.Constants;
 import org.hid4java.HidDevice;
-import org.hid4java.HidManager;
-import org.hid4java.HidServices;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -40,8 +38,7 @@ public class HidPort {
      * Refresh cache from OS (like {@code ComPort.updatePorts()}).
      */
     public synchronized void updateDevices() {
-        HidServices hidServices = HidManager.getHidServices();
-        List<HidDevice> attached = hidServices.getAttachedHidDevices();
+        List<HidDevice> attached = HidDeviceScanner.getInstance().scanAllHidDevices();
         List<HidDeviceEntry> next = new ArrayList<>(attached.size());
         for (HidDevice device : attached) {
             if (device == null) {

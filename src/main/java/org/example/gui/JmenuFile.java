@@ -209,6 +209,10 @@ public class JmenuFile {
         JMenuItem server  = new JMenuItem("Сервер");
         JMenuItem updates  = new JMenuItem("Обновления");
         JMenuItem debugging = new JMenuItem("Отладка");
+        JCheckBoxMenuItem showAllHid = new JCheckBoxMenuItem("Показывать все HID-устройства");
+        showAllHid.setSelected(prop != null && prop.isShowAllHidDevices());
+        showAllHid.setToolTipText("Полное перечисление HID (включая мышь/клавиатуру). "
+                + "Выключено — сканируются только известные приборы.");
         // меню-переключатели уровня логирования
         JRadioButtonMenuItem heavyModeItem = new JRadioButtonMenuItem("Работа в нагруженном режиме");
         JRadioButtonMenuItem normalModeItem = new JRadioButtonMenuItem("Работа в обычном режиме");
@@ -223,6 +227,7 @@ public class JmenuFile {
         viewMenu.add(server);
         viewMenu.add(updates);
         viewMenu.add(debugging);
+        viewMenu.add(showAllHid);
         // разделитель можно создать и явно
         viewMenu.add( new JSeparator());
         viewMenu.add(heavyModeItem);
@@ -245,6 +250,16 @@ public class JmenuFile {
             @Override
             public void actionPerformed(ActionEvent arg0) {
                 setLogLevelForAllLoggers(Level.DEBUG);
+            }
+        });
+
+        showAllHid.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                if (prop != null) {
+                    prop.setShowAllHidDevices(showAllHid.isSelected());
+                }
+                log.info("showAllHidDevices = {}", showAllHid.isSelected());
             }
         });
 
