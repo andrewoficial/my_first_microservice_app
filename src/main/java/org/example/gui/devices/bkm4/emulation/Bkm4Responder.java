@@ -1,7 +1,5 @@
 package org.example.gui.devices.bkm4.emulation;
 
-import java.util.Locale;
-
 /**
  * ASCII-отклик протокола БКМ-4 (см. {@code bkm4.md}).
  * <p>
@@ -103,7 +101,8 @@ public class Bkm4Responder {
 
     private String handleFlow(String arg) {
         if (arg.startsWith("?")) {
-            return "@F" + formatFlow(emulator.getCurrentFlowMlMin());
+            // По РЭ БКМ-4 ответ @Fxxxx — целое значение расхода в мл/мин.
+            return "@F" + (int) Math.round(Math.max(0, Math.min(3000, emulator.getCurrentFlowMlMin())));
         }
         return "@ERROR";
     }
@@ -122,9 +121,5 @@ public class Bkm4Responder {
             // fall through to ERROR
         }
         return "@ERROR";
-    }
-
-    private static String formatFlow(double value) {
-        return String.format(Locale.US, "%.1f", value);
     }
 }
