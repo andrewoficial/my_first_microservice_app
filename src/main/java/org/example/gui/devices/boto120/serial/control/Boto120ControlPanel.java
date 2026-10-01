@@ -1,7 +1,7 @@
-package org.example.gui.devices.boto120.control;
+package org.example.gui.devices.boto120.serial.control;
 
 import org.example.device.protBoto.BotoModbusUtil;
-import org.example.gui.devices.boto.control.BotoModbusCommunicationService;
+import org.example.gui.devices.boto800.serial.control.BotoModbusCommunicationService;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -9,7 +9,12 @@ import java.awt.*;
 import java.util.prefs.Preferences;
 
 /**
- * Панель управления BOTO-120 (China Modbus, Modbus RTU 9600 8N1).
+ * Панель управления термокамерой <b>B-TH-120 E</b> — протокол
+ * {@code China Modbus} (FW {@code V3.4.2}), Modbus RTU 9600 8N1, slave 1.
+ *
+ * <p><b>Не путать с BOTO-800 Modbus</b> — протоколом другой камеры B-TH-800 F
+ * ({@code 10/60/63, SCALE=10}, есть Ethernet/Modbus TCP).
+ * Разграничение: {@code boto_cameras.md}, карта: {@code boto_120_register_map.md}.
  *
  * <p>Протокол подтверждён: полевым чтением и перехватом штатной программы.
  * рег 12 — текущая температура ×100 (0x03),
@@ -20,7 +25,7 @@ import java.util.prefs.Preferences;
  */
 public class Boto120ControlPanel extends JPanel {
 
-    private static final String PREFS_NODE = "org/example/gui/devices/boto120/control";
+    private static final String PREFS_NODE = "org/example/gui/devices/boto120/serial/control";
     private static final String PREFS_KEY_PORT = "lastPort";
 
     private static final int SLAVE_ID = 1;
@@ -46,7 +51,8 @@ public class Boto120ControlPanel extends JPanel {
 
     public Boto120ControlPanel() {
         super(new BorderLayout(8, 8));
-        setBorder(new TitledBorder("BOTO-120 — China Modbus (рег 12/100/105)"));
+        setBorder(new TitledBorder("B-TH-120 E · протокол «China Modbus» (12/100/105, ×100) — "
+                + "НЕ BOTO-800 (10/60/63, ×10)"));
         buildUi();
         refreshPorts();
         String lastPort = prefs.get(PREFS_KEY_PORT, "");

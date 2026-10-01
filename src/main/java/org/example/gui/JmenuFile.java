@@ -17,10 +17,13 @@ import org.example.gui.devices.binder.camera.control.BinderControlPanel;
 import org.example.gui.devices.binder.camera.emulation.BinderEmulatorFrame;
 import org.example.gui.devices.bkm4.control.Bkm4Main;
 import org.example.gui.devices.bkm4.emulation.Bkm4EmulatorFrame;
-import org.example.gui.devices.boto.control.Boto800Main;
-import org.example.gui.devices.boto.emulation.Boto800EmulatorFrame;
-import org.example.gui.devices.boto120.control.Boto120Main;
-import org.example.gui.devices.boto120.emulation.Boto120EmulatorFrame;
+import org.example.gui.devices.boto800.serial.control.Boto800Main;
+import org.example.gui.devices.boto800.serial.emulation.Boto800EmulatorFrame;
+import org.example.gui.devices.boto120.serial.control.Boto120Main;
+import org.example.gui.devices.boto120.serial.emulation.Boto120EmulatorFrame;
+import org.example.gui.devices.boto800.tcp.emulation.Boto800TcpEmulatorFrame;
+import org.example.gui.devices.fnirsi.dps150.control.FnirsiDps150Main;
+import org.example.gui.devices.fnirsi.dps150.emulation.FnirsiDps150EmulatorFrame;
 import org.example.gui.devices.esp32.kantser.emu.ble.KantserBleMain;
 import org.example.gui.devices.edvards.d39730880.control.d39730880Main;
 import org.example.gui.devices.edvards.d39730880.emulation.EdwardsTicTestFrame;
@@ -42,6 +45,7 @@ import org.example.gui.system.resources.DebugWindow;
 import org.example.services.AnswerStorage;
 import org.example.services.connectionPool.AnyPoolService;
 import org.example.utilites.properties.MyProperties;
+import ru.kantser.gui.ShowcaseFrame;
 
 
 @Slf4j
@@ -758,21 +762,57 @@ public class JmenuFile {
         controlPanelsMenu.add(testaMenu);
 
         JMenu botoMenu = new JMenu("Термокамеры BOTO");
+
+        // BOTO 800 → Serial (RS-232C, Modbus RTU) и TCP/IP (Modbus TCP, эмулятор-сниффер)
         JMenu boto800Menu = new JMenu("BOTO 800");
+
+        JMenu boto800SerialMenu = new JMenu("Serial");
         JMenuItem boto800Control = new JMenuItem("Панель управления");
         JMenuItem boto800Emulation = new JMenuItem("Панель эмуляции");
-        boto800Menu.add(boto800Control);
-        boto800Menu.add(boto800Emulation);
+        JMenuItem boto800SerialInfo = new JMenuItem("Справочная информация");
+        boto800SerialMenu.add(boto800Control);
+        boto800SerialMenu.add(boto800Emulation);
+        boto800SerialMenu.add(boto800SerialInfo);
+
+        JMenu boto800TcpMenu = new JMenu("TCP/IP");
+        JMenuItem boto800TcpEmulation = new JMenuItem("Панель эмуляции (сниффер)");
+        JMenuItem boto800TcpInfo = new JMenuItem("Справочная информация");
+        boto800TcpMenu.add(boto800TcpEmulation);
+        boto800TcpMenu.add(boto800TcpInfo);
+
+        boto800Menu.add(boto800SerialMenu);
+        boto800Menu.add(boto800TcpMenu);
         botoMenu.add(boto800Menu);
 
+        // BOTO 120 → только Serial (RS-232C, Modbus RTU)
         JMenu boto120Menu = new JMenu("BOTO 120");
-        JMenuItem boto120Control = new JMenuItem("Панель управления (зонд)");
-        JMenuItem boto120Emulation = new JMenuItem("Панель эмуляции (заглушка)");
-        boto120Menu.add(boto120Control);
-        boto120Menu.add(boto120Emulation);
+        JMenu boto120SerialMenu = new JMenu("Serial");
+        JMenuItem boto120SerialControl = new JMenuItem("Панель управления");
+        JMenuItem boto120SerialEmulation = new JMenuItem("Панель эмуляции");
+        JMenuItem boto120SerialInfo = new JMenuItem("Справочная информация");
+        boto120SerialMenu.add(boto120SerialControl);
+        boto120SerialMenu.add(boto120SerialEmulation);
+        boto120SerialMenu.add(boto120SerialInfo);
+        boto120Menu.add(boto120SerialMenu);
         botoMenu.add(boto120Menu);
 
         controlPanelsMenu.add(botoMenu);
+
+        // FNIRSI → DPS150 (бинарный протокол, USB-serial, 115200 8N1)
+        JMenu fnirsiMenu = new JMenu("FNIRSI");
+        JMenu dps150Menu = new JMenu("DPS150");
+        JMenuItem dps150Control = new JMenuItem("Панель управления");
+        JMenuItem dps150Emulation = new JMenuItem("Панель эмуляции");
+        JMenuItem dps150Info = new JMenuItem("Справочная информация");
+        dps150Menu.add(dps150Control);
+        dps150Menu.add(dps150Emulation);
+        dps150Menu.add(dps150Info);
+        fnirsiMenu.add(dps150Menu);
+        controlPanelsMenu.add(fnirsiMenu);
+
+        // Витрина кастомных виджетов ru.kantser.gui
+        JMenuItem showcaseItem = new JMenuItem("Витрина виджетов ru.kantser.gui");
+        controlPanelsMenu.add(showcaseItem);
 
         // TT5166 → климатическая камера (Modbus RTU, 38400 8E1)
         JMenu tt5166Menu = new JMenu("TT5166");
@@ -991,22 +1031,106 @@ public class JmenuFile {
         });
 
         boto800Control.addActionListener(e -> {
-            System.out.println("BOTO 800 Control Panel");
+            System.out.println("BOTO 800 Serial — панель управления");
             Boto800Main panel = new Boto800Main();
             panel.setVisible(true);
         });
         boto800Emulation.addActionListener(e -> {
-            System.out.println("BOTO 800 Emulation Panel");
+            System.out.println("BOTO 800 Serial — панель эмуляции");
             new Boto800EmulatorFrame().setVisible(true);
         });
+        boto800SerialInfo.addActionListener(e -> JOptionPane.showMessageDialog(null,
+                "Термокамера BOTO-800 — Serial (RS-232C, Modbus RTU 9600 8N1, slave 1).\n" +
+                        "Карта: boto_800_register_map.md\n" +
+                        "Блок реального времени читается одним запросом 10..49 (40 регистров):\n" +
+                        "  10 = текущая T °C (raw/10), 11 = уставка T, 12 = зеркало режима,\n" +
+                        "  13 = MV темп. 0..100, 14 = влажность %, 15 = уставка влаги,\n" +
+                        "  16 = зеркало режима, 17 = MV влаги, 18 = вкл/выкл поддержку влаги,\n" +
+                        "  19 = подсветка, 20 = маска ошибок,\n" +
+                        "  31 = камера вкл/выкл, 32/33/34 = время работы ч/м/с,\n" +
+                        "  38/39 = нижний/верхний предел температуры, 40/41 = пределы влаги.\n" +
+                        "Записи уставок: 60 = температура (raw/10), 61 = влага, 63 = 1 работа / 0 стоп.\n" +
+                        "Важно: рег 39 и 41 должны отдавать реальные пределы, иначе штатная\n" +
+                        "программа не даст ввести уставку (считает предел = 0).",
+                "BOTO 800 · Serial — справка",
+                JOptionPane.INFORMATION_MESSAGE));
 
-        boto120Control.addActionListener(e -> {
-            System.out.println("BOTO 120 Control Panel (probe)");
+        boto800TcpEmulation.addActionListener(e -> {
+            System.out.println("BOTO 800 TCP/IP — панель эмуляции (сниффер протокола)");
+            new Boto800TcpEmulatorFrame().setVisible(true);
+        });
+        boto800TcpInfo.addActionListener(e -> JOptionPane.showMessageDialog(null,
+                "Термокамера BOTO-800 — TCP/IP (Modbus TCP, порт по умолчанию 8000).\n" +
+                        "\n" +
+                        "ПРОТОКОЛ ПОДТВЕРЖДЁН перехватом: это Modbus TCP — тот же Modbus RTU,\n" +
+                        "но с MBAP-заголовком вместо CRC:\n" +
+                        "  00 01 | 00 00 | 00 06 | 01 | 03 | 23 1C | 00 02\n" +
+                        "  TID   |  PID  |  LEN  |UID | fn |  reg  |  qty\n" +
+                        "PDU байт-в-байт как в RTU, ответ эхо-ит TID и UID.\n" +
+                        "\n" +
+                        "Эмулятор поднимает TCP-сервер и подробно журналирует весь обмен:\n" +
+                        "hex + ASCII + разбор кадра в консоль, терминал, GUI-лог и\n" +
+                        "logs/Boto800-TCP_wire_*.log.\n" +
+                        "Сервер сам различает Modbus/TCP (MBAP) и «сырой» Modbus/RTU по TCP,\n" +
+                        "считает границу кадра по CRC и эхо-ит transactionId/unitId.\n" +
+                        "На незнакомый код функции соединение НЕ рвётся — шлётся исключение\n" +
+                        "IllegalFunction (0x81), чтобы был виден весь сеанс обмена.\n" +
+                        "\n" +
+                        "Поведение штатной программы (видно в логе):\n" +
+                        "  • при подключении пишет 0 в рег 8108 (0x1FAC);\n" +
+                        "  • читает 8900 ×64 (0x22C4), 8964 ×24 (0x2304), 8988 ×2;\n" +
+                        "  • далее цикл ~220 мс: читает 10 ×40, затем 8900 ×3.\n" +
+                        "Служебные блоки отдаются нулями, иначе GUI ломается об абсурдные пределы.\n" +
+                        "Адреса, куда прибор пишет, запоминаются — это и есть карта регистров.",
+                "BOTO 800 · TCP/IP — справка",
+                JOptionPane.INFORMATION_MESSAGE));
+
+        boto120SerialControl.addActionListener(e -> {
+            System.out.println("BOTO 120 Serial — панель управления (зонд)");
             new Boto120Main().setVisible(true);
         });
-        boto120Emulation.addActionListener(e -> {
-            System.out.println("BOTO 120 Emulation Panel (stub)");
+        boto120SerialEmulation.addActionListener(e -> {
+            System.out.println("BOTO 120 Serial — панель эмуляции (заглушка)");
             new Boto120EmulatorFrame().setVisible(true);
+        });
+        boto120SerialInfo.addActionListener(e -> JOptionPane.showMessageDialog(null,
+                "Термокамера BOTO-120 — Serial (RS-232C, Modbus RTU 9600 8N1, slave 1).\n" +
+                        "Протокол подтверждён перехватом штатной программы и полевым запросом.\n" +
+                        "Регистры: 12 = PV ×100 (0.03 — чтение 0x03),\n" +
+                        "100 = уставка ×100 (запись 0x06), 105 = вкл/выкл 1/0 (запись 0x06).\n" +
+                        "Порядок штатной программы: ВКЛ (105=1) → чтение PV → уставка (100).\n" +
+                        "Неизвестные регистры читаются нулями; безопасный скан чтения — в панели управления.\n" +
+                        "\n" +
+                        "ВАЖНО: BOTO 120 и BOTO 800 — разные приборы с разными картами!\n" +
+                        "У BOTO 120 масштаб ×100 и адреса 12/100/105,\n" +
+                        "у BOTO 800 масштаб ×10 и адреса 10/60/63. Не путайте панели.",
+                "BOTO 120 · Serial — справка",
+                JOptionPane.INFORMATION_MESSAGE));
+
+        dps150Control.addActionListener(e -> {
+            System.out.println("FNIRSI DPS150 — панель управления");
+            new FnirsiDps150Main().setVisible(true);
+        });
+        dps150Emulation.addActionListener(e -> {
+            System.out.println("FNIRSI DPS150 — панель эмуляции");
+            new FnirsiDps150EmulatorFrame().setVisible(true);
+        });
+        dps150Info.addActionListener(e -> JOptionPane.showMessageDialog(null,
+                "Источник питания FNIRSI DPS150 (USB-serial, 115200 8N1).\n" +
+                        "Бинарный протокол: кадр F1 cmd type len data cs,\n" +
+                        "ответ F0 A1 type len data cs, контрольная сумма — сумма\n" +
+                        "байт от type до конца данных по модулю 256.\n" +
+                        "Чтение: getModel (DPS-150), getSwVersion, getHwVersion, getVin,\n" +
+                        "  getLimitVout (E2, макс. напряжение), getLimitCurrent (E3, макс. ток),\n" +
+                        "  getPower (C3: выход V/A/Вт), getTemp (C4), getOutput (DB), getBrightness (D6).\n" +
+                        "Запись: setVout (0..30.0 В, float LE), setIout (0..5.0 А, float LE),\n" +
+                        "  setOutput (0/1), setBrightness (0..14).",
+                "FNIRSI DPS150 — справка",
+                JOptionPane.INFORMATION_MESSAGE));
+
+        showcaseItem.addActionListener(e -> {
+            System.out.println("ru.kantser.gui — витрина виджетов");
+            new ShowcaseFrame().setVisible(true);
         });
 
         tt5166Control.addActionListener(e -> {

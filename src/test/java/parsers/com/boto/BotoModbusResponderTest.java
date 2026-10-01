@@ -1,8 +1,8 @@
 package parsers.com.boto;
 
 import org.example.device.protBoto.BotoModbusUtil;
-import org.example.gui.devices.boto.emulation.BotoEmulator;
-import org.example.gui.devices.boto.emulation.BotoModbusResponder;
+import org.example.gui.devices.boto800.serial.emulation.BotoEmulator;
+import org.example.gui.devices.boto800.serial.emulation.BotoModbusResponder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

@@ -1,4 +1,4 @@
-package org.example.gui.devices.boto.emulation;
+package org.example.gui.devices.boto800.serial.emulation;
 
 import javax.swing.*;
 

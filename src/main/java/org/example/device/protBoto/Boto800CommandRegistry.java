@@ -8,8 +8,12 @@ import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
 
 /**
- * Реестр команд термокамеры BOTO 800 (Modbus RTU, 9600 8N1).
+ * Реестр команд термокамеры <b>B-TH-800 F</b> — протокол {@code BOTO-800 Modbus}
+ * (FW {@code v4.2.4}), Modbus RTU 9600 8N1.
  * Регистры: 10 (текущая T ×10), 60 (уставка T ×10), 63 (вкл/выкл).
+ *
+ * <p>Не путать с {@code China Modbus} — протоколом B-TH-120 E ({@code 12/100/105, ×100}).
+ * Разграничение: {@code boto_cameras.md}.
  */
 @Slf4j
 public class Boto800CommandRegistry extends DeviceCommandRegistry {

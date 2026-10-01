@@ -27,6 +27,7 @@ public final class Bkm4EmulationService {
     private Thread readerThread;
     private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     private final List<Consumer<String>> responseListeners = new CopyOnWriteArrayList<>();
+    private final List<Consumer<String>> commandListeners = new CopyOnWriteArrayList<>();
 
     private static final int READ_TIMEOUT_MS = 50;
     private static final long IDLE_FLUSH_MS = 120;
@@ -86,6 +87,14 @@ public final class Bkm4EmulationService {
 
     public void removeResponseListener(Consumer<String> listener) {
         responseListeners.remove(listener);
+    }
+
+    public void addCommandListener(Consumer<String> listener) {
+        commandListeners.add(listener);
+    }
+
+    public void removeCommandListener(Consumer<String> listener) {
+        commandListeners.remove(listener);
     }
 
     private void startReader() {
@@ -175,6 +184,13 @@ public final class Bkm4EmulationService {
                 l.accept("→ " + text);
             } catch (Exception ex) {
                 log.warn("Bkm4Emu listener error: {}", ex.getMessage());
+            }
+        }
+        for (Consumer<String> l : commandListeners) {
+            try {
+                l.accept(text);
+            } catch (Exception ex) {
+                log.warn("Bkm4Emu command listener error: {}", ex.getMessage());
             }
         }
         sendResponse(responder.processCommand(text));

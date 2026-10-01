@@ -1,4 +1,4 @@
-package org.example.gui.devices.boto.emulation;
+package org.example.gui.devices.boto800.serial.emulation;
 
 import com.fazecast.jSerialComm.SerialPort;
 import org.example.gui.devices.emulation.EmulatorCommandLog;
@@ -19,7 +19,7 @@ import java.util.prefs.Preferences;
  */
 public class BotoEmulationPanel extends JPanel {
 
-    private static final String PREFS_NODE = "org/example/gui/devices/boto/emulation";
+    private static final String PREFS_NODE = "org/example/gui/devices/boto800/serial/emulation";
     private static final String LAST_PORT = "lastEmuPort";
     private final AtomicBoolean loadingSettings = new AtomicBoolean(false);
 

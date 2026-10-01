@@ -12,8 +12,14 @@ import org.example.services.AnswerValues;
 import org.example.services.transport.serial.*;
 
 /**
- * Термокамера BOTO 800 (Modbus RTU, RS-485/RS-232, 9600 8N1).
- * Протокол: {@code boto.md}. Регистры: 10 (T), 60 (уставка), 63 (вкл/выкл).
+ * Термокамера <b>B-TH-800 F</b> — протокол {@code BOTO-800 Modbus}
+ * (FW {@code v4.2.4}, программа {@code UApp_boxed.exe}), Modbus RTU, RS-485/RS-232, 9600 8N1.
+ *
+ * <p>Регистры: 10 (T ×10), 60 (уставка ×10), 63 (вкл/выкл).
+ * Карта: {@code boto_800_register_map.md}, разграничение моделей: {@code boto_cameras.md}.
+ *
+ * <p>Не путать с {@code China Modbus} — протоколом B-TH-120 E
+ * ({@code 12/100/105, ×100}, Ethernet нет).
  */
 @Slf4j
 public class BOTO800_DEVICE implements SomeDevice, ProtocolComPort {

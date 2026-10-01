@@ -31,11 +31,15 @@ public class Bkm4EmulationPanel extends JPanel {
 
     private final JLabel currentFlowScreen = screenLabel();
     private final JLabel infoLabel = new JLabel();
+    private final JLabel lastCommandLabel = new JLabel("—");
+    private final JLabel commandCountLabel = new JLabel("Принято команд: 0");
     private final JLabel statusLabel = new JLabel("Эмулятор отключён");
     private final JTextArea logArea = new JTextArea();
+    private long commandCount = 0;
 
     private final javax.swing.Timer simTimer;
     private long lastTickNanos = System.nanoTime();
+    private boolean updatingFromState = false;
 
     private final List<String> logLines = new CopyOnWriteArrayList<>();
     private static final int MAX_LOG = 400;
@@ -54,18 +58,59 @@ public class Bkm4EmulationPanel extends JPanel {
         closeBtn.addActionListener(e -> closePort());
         closeBtn.setEnabled(false);
 
-        modeCombo.addActionListener(e -> emulator.setMode(modeCombo.getSelectedIndex()));
-        valveCombo.addActionListener(e -> emulator.setValve(valveCombo.getSelectedIndex()));
-        setpointSpinner.addChangeListener(e -> emulator.setSetpointMlMin(num(setpointSpinner)));
-        generationCb.addActionListener(e -> emulator.setGeneration(generationCb.isSelected() ? 1 : 0));
+        modeCombo.addActionListener(e -> {
+            if (!updatingFromState) {
+                emulator.setMode(modeCombo.getSelectedIndex());
+            }
+        });
+        valveCombo.addActionListener(e -> {
+            if (!updatingFromState) {
+                emulator.setValve(valveCombo.getSelectedIndex());
+            }
+        });
+        setpointSpinner.addChangeListener(e -> {
+            if (!updatingFromState) {
+                emulator.setSetpointMlMin(num(setpointSpinner));
+            }
+        });
+        generationCb.addActionListener(e -> {
+            if (!updatingFromState) {
+                emulator.setGeneration(generationCb.isSelected() ? 1 : 0);
+            }
+        });
 
         service.addResponseListener(line -> SwingUtilities.invokeLater(() -> appendLog(line)));
+        service.addCommandListener(cmd -> SwingUtilities.invokeLater(() -> onCommandReceived(cmd)));
+        emulator.addStateListener(() -> SwingUtilities.invokeLater(this::syncFromState));
 
         simTimer = new javax.swing.Timer(100, e -> advanceSim());
         simTimer.start();
         refreshPorts();
+        syncFromState();
 
         GuiUtilities.darkenInputs(this);
+    }
+
+    private void onCommandReceived(String cmd) {
+        commandCount++;
+        lastCommandLabel.setText(cmd);
+        commandCountLabel.setText("Принято команд: " + commandCount);
+        syncFromState();
+    }
+
+    private void syncFromState() {
+        if (updatingFromState) {
+            return;
+        }
+        updatingFromState = true;
+        try {
+            modeCombo.setSelectedIndex(emulator.getMode());
+            valveCombo.setSelectedIndex(emulator.getValve());
+            setpointSpinner.setValue((int) Math.round(emulator.getSetpointMlMin()));
+            generationCb.setSelected(emulator.getGeneration() == 1);
+        } finally {
+            updatingFromState = false;
+        }
     }
 
     private void advanceSim() {
@@ -77,9 +122,14 @@ public class Bkm4EmulationPanel extends JPanel {
         currentFlowScreen.setText(String.format(Locale.US, "%.1f мл/мин", flow));
         currentFlowScreen.setForeground(emulator.getGeneration() == 1
                 ? new Color(0, 140, 0) : new Color(160, 160, 160));
-        infoLabel.setText("Режим: " + emulator.getMode()
+        infoLabel.setText("Режим: " + modeText(emulator.getMode())
                 + "   ·   Клапан: " + emulator.getValve()
-                + "   ·   Уставка: " + String.format(Locale.US, "%.0f", emulator.getSetpointMlMin()) + " мл/мин");
+                + "   ·   Уставка: " + String.format(Locale.US, "%.0f", emulator.getSetpointMlMin()) + " мл/мин"
+                + "   ·   Генерация: " + (emulator.getGeneration() == 1 ? "ВКЛ" : "выкл"));
+    }
+
+    private static String modeText(int mode) {
+        return mode == 1 ? "1 — внешнее" : "0 — ручное";
     }
 
     private void openPort() {
@@ -172,11 +222,7 @@ public class Bkm4EmulationPanel extends JPanel {
 
         center.add(screens, BorderLayout.NORTH);
 
-        JLabel info = infoLabel;
-        info.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
-        info.setText("Режим: " + emulator.getMode() + "   ·   Клапан: " + emulator.getValve()
-                + "   ·   Уставка: " + String.format(Locale.US, "%.0f", emulator.getSetpointMlMin()) + " мл/мин");
-        center.add(info, BorderLayout.CENTER);
+        center.add(createExchangePanel(), BorderLayout.CENTER);
 
         logArea.setEditable(false);
         logArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
@@ -185,6 +231,32 @@ public class Bkm4EmulationPanel extends JPanel {
         logScroll.setPreferredSize(new Dimension(400, 170));
         center.add(logScroll, BorderLayout.SOUTH);
         return center;
+    }
+
+    private JPanel createExchangePanel() {
+        JPanel p = new JPanel();
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        p.setBorder(BorderFactory.createTitledBorder("Текущее состояние и последняя команда"));
+
+        infoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(infoLabel);
+        p.add(Box.createVerticalStrut(10));
+
+        JLabel caption = new JLabel("Последняя принятая команда:");
+        caption.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(caption);
+
+        lastCommandLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lastCommandLabel.setFont(new Font(Font.MONOSPACED, Font.BOLD, 20));
+        lastCommandLabel.setForeground(new Color(0, 140, 0));
+        p.add(lastCommandLabel);
+        p.add(Box.createVerticalStrut(8));
+
+        commandCountLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        commandCountLabel.setFont(commandCountLabel.getFont().deriveFont(Font.BOLD));
+        p.add(commandCountLabel);
+
+        return p;
     }
 
     private static JPanel screenBox(String title, JLabel value) {

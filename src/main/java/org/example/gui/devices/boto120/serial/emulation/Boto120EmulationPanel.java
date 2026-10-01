@@ -1,4 +1,4 @@
-package org.example.gui.devices.boto120.emulation;
+package org.example.gui.devices.boto120.serial.emulation;
 
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.extern.slf4j.Slf4j;
@@ -15,15 +15,21 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.prefs.Preferences;
 
 /**
- * Мини-эмулятор BOTO-120 (China Modbus, Modbus RTU 9600 8N1).
- * Подтверждённые регистры: 12 = текущая температура ×100 (PV дрейфует к уставке),
+ * Мини-эмулятор термокамеры <b>B-TH-120 E</b> — протокол {@code China Modbus}
+ * (FW {@code V3.4.2}), Modbus RTU 9600 8N1, slave 1.
+ *
+ * <p><b>Не путать с BOTO-800 Modbus</b> — протоколом другой камеры B-TH-800 F
+ * ({@code 10/60/63, SCALE=10}, есть Ethernet/Modbus TCP).
+ * Разграничение: {@code boto_cameras.md}, карта: {@code boto_120_register_map.md}.
+ *
+ * <p>Подтверждённые регистры: 12 = текущая температура ×100 (PV дрейфует к уставке),
  * 100 = уставка ×100, 105 = вкл/выкл (1/0). Остальные адреса читаются нулями.
  * Все запросы логируются.
  */
 @Slf4j
 public class Boto120EmulationPanel extends JPanel {
 
-    private static final String PREFS_NODE = "org/example/gui/devices/boto120/emulation";
+    private static final String PREFS_NODE = "org/example/gui/devices/boto120/serial/emulation";
     private static final String PREFS_KEY_PORT = "lastEmuPort";
 
     private static final int BAUD = 9600;
@@ -49,7 +55,8 @@ public class Boto120EmulationPanel extends JPanel {
 
     public Boto120EmulationPanel() {
         super(new BorderLayout(8, 8));
-        setBorder(new TitledBorder("BOTO-120 — мини-эмулятор (China Modbus: 12/100/105)"));
+        setBorder(new TitledBorder("B-TH-120 E · «China Modbus» (12/100/105, ×100) — "
+                + "НЕ BOTO-800 (10/60/63, ×10)"));
         buildUi();
         refreshPorts();
         String last = prefs.get(PREFS_KEY_PORT, "");

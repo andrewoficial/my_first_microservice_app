@@ -1,4 +1,4 @@
-package org.example.gui.devices.boto.emulation;
+package org.example.gui.devices.boto800.serial.emulation;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.device.protBoto.BotoModbusUtil;

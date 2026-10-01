@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -28,11 +29,8 @@ public class Bkm4CommunicationService {
     private Thread readerThread;
     private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
-    private final ScheduledExecutorService pollScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
-        Thread t = new Thread(r, "Bkm4Client-Poll");
-        t.setDaemon(true);
-        return t;
-    });
+    private ScheduledExecutorService pollScheduler;
+    private ScheduledFuture<?> pollTask;
     private volatile boolean pollingEnabled = false;
 
     private final List<Consumer<Double>> flowListeners = new CopyOnWriteArrayList<>();
@@ -117,9 +115,18 @@ public class Bkm4CommunicationService {
         }
         pollingEnabled = enable;
         if (enable) {
-            pollScheduler.scheduleWithFixedDelay(this::pollOnce, 0, DEFAULT_POLL_MS, TimeUnit.MILLISECONDS);
-        } else {
-            pollScheduler.shutdownNow();
+            if (pollScheduler == null || pollScheduler.isShutdown()) {
+                pollScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+                    Thread t = new Thread(r, "Bkm4Client-Poll");
+                    t.setDaemon(true);
+                    return t;
+                });
+            }
+            pollTask = pollScheduler.scheduleWithFixedDelay(
+                    this::pollOnce, 0, DEFAULT_POLL_MS, TimeUnit.MILLISECONDS);
+        } else if (pollTask != null) {
+            pollTask.cancel(false);
+            pollTask = null;
         }
     }
 
@@ -248,8 +255,10 @@ public class Bkm4CommunicationService {
      */
     public void shutdown() {
         running = false;
-        pollScheduler.shutdownNow();
         setPollingEnabled(false);
+        if (pollScheduler != null) {
+            pollScheduler.shutdownNow();
+        }
         close();
     }
 }

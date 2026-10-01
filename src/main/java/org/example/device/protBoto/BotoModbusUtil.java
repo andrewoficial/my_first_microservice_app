@@ -7,6 +7,10 @@ import java.util.Arrays;
 /**
  * Общие утилиты Modbus RTU для термокамер BOTO.
  * Построение запросов, парсинг ответов, CRC-16/Modbus.
+ *
+ * <p>Формирование кадра одинаково для обеих камер, различаются только карта регистров
+ * и масштаб — см. {@link BotoProtocol}. Разграничение моделей: {@code boto_cameras.md}.
+ * Для Modbus TCP (только B-TH-800 F) обёртка MBAP не входит в этот класс.
  */
 public final class BotoModbusUtil {
 

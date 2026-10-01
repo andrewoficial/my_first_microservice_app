@@ -1,4 +1,4 @@
-package org.example.gui.devices.boto.control;
+package org.example.gui.devices.boto800.serial.control;
 
 import com.fazecast.jSerialComm.SerialPort;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +21,7 @@ import java.util.prefs.Preferences;
 @Slf4j
 public class BotoControlPanel extends JPanel {
 
-    private static final String PREFS_NODE = "org/example/gui/devices/boto/control";
+    private static final String PREFS_NODE = "org/example/gui/devices/boto800/serial/control";
     private static final String LAST_PORT = "lastPort";
     private final AtomicBoolean loadingSettings = new AtomicBoolean(false);
 

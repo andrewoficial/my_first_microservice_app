@@ -2,7 +2,7 @@ package org.example.device.protBkm4;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandRegistry;
-import org.example.device.command.ArgumentDescriptor;
+import org.example.device.command.CommandType;
 import org.example.device.command.SingleCommand;
 import org.example.services.AnswerValues;
 
@@ -22,53 +22,28 @@ public class Bkm4CommandRegistry extends DeviceCommandRegistry {
     @Override
     protected void initCommands() {
         // Режим работы: &A? / &A0 / &A1 → @A0 / @A1
-        commandList.addCommand(createOneDigitCommand("A", "&A? / &A0 (ручн.) / &A1 (внешн.) — режим работы", "Режим", 5));
+        commandList.addCommand(createOneDigitCommand("A", "&A? / &A0 (ручн.) / &A1 (внешн.) — режим работы", "Режим", 0, 1, 5));
         // Клапаны: &V? / &V0..&V4 → @V0..@V4
-        commandList.addCommand(createOneDigitCommand("V", "&V? / &V0 (все выкл) / &V1..&V4 — газовый клапан", "Клапан", 5));
+        commandList.addCommand(createOneDigitCommand("V", "&V? / &V0 (все выкл) / &V1..&V4 — газовый клапан", "Клапан", 0, 4, 5));
         // Расход (уставка): &S? / &Sxxxx (0..3000) → @Sxxxx
         commandList.addCommand(createFlowCommand("S", "&S? / &Sxxxx (0..3000) — уставка расхода", "мл/мин", 8));
         // Фактический расход: &F? → @Fxxxx
         commandList.addCommand(createFlowCommand("F", "&F? — текущий (фактический) расход", "мл/мин", 8));
         // Генерация потока: &G? / &G0 / &G1 → @G0 / @G1
-        commandList.addCommand(createOneDigitCommand("G", "&G? / &G0 (выкл) / &G1 (вкл) — генерация потока", "Генерация", 5));
+        commandList.addCommand(createOneDigitCommand("G", "&G? / &G0 (выкл) / &G1 (вкл) — генерация потока", "Генерация", 0, 1, 5));
     }
 
     /**
-     * Команда с одним параметром-цифрой (0..9): режим A, клапан V, генерация G.
-     * Принимает запрос {@code &X?} и установку {@code &Xn}.
+     * Команда с одним параметром-цифрой: режим A (0..1), клапан V (0..4),
+     * генерация G (0..1). Принимает запрос {@code &X?} и установку {@code &Xn}.
      */
     private SingleCommand createOneDigitCommand(String letter, String description,
-                                                String unit, int expectedBytes) {
+                                                String unit, int min, int max, int expectedBytes) {
         String base = "&" + letter;
         return new SingleCommand(
                 letter,
                 description,
-                base,
-                (base + "?").getBytes(StandardCharsets.US_ASCII),      // request query
-                args -> {
-                    Object v = args.get("value");
-                    if (v == null) {
-                        return (base + "?").getBytes(StandardCharsets.US_ASCII);
-                    }
-                    int n = ((Number) v).intValue();
-                    return (base + Math.max(0, Math.min(9, n))).getBytes(StandardCharsets.US_ASCII);
-                },
-                bytes -> parseNumericAnswer(bytes, unit),
-                expectedBytes,
-                org.example.device.command.CommandType.ASCII);
-    }
-
-    /**
-     * Команда расхода (0..3000 мл/мин): уставка S и факт F.
-     * Принимает запрос {@code &X?} и установку {@code &Xn}.
-     */
-    private SingleCommand createFlowCommand(String letter, String description,
-                                            String unit, int expectedBytes) {
-        String base = "&" + letter;
-        return new SingleCommand(
                 letter,
-                description,
-                base,
                 (base + "?").getBytes(StandardCharsets.US_ASCII),
                 args -> {
                     Object v = args.get("value");
@@ -76,11 +51,37 @@ public class Bkm4CommandRegistry extends DeviceCommandRegistry {
                         return (base + "?").getBytes(StandardCharsets.US_ASCII);
                     }
                     int n = ((Number) v).intValue();
-                    return (base + Math.max(0, Math.min(3000, n))).getBytes(StandardCharsets.US_ASCII);
+                    return (base + Math.max(min, Math.min(max, n))).getBytes(StandardCharsets.US_ASCII);
                 },
                 bytes -> parseNumericAnswer(bytes, unit),
                 expectedBytes,
-                org.example.device.command.CommandType.ASCII);
+                CommandType.ASCII);
+    }
+
+    /**
+     * Команда расхода (0..3000 мл/мин): уставка S и факт F.
+     * Принимает запрос {@code &X?} и установку {@code &Xxxxx} (4 разряда).
+     */
+    private SingleCommand createFlowCommand(String letter, String description,
+                                            String unit, int expectedBytes) {
+        String base = "&" + letter;
+        return new SingleCommand(
+                letter,
+                description,
+                letter,
+                (base + "?").getBytes(StandardCharsets.US_ASCII),
+                args -> {
+                    Object v = args.get("value");
+                    if (v == null) {
+                        return (base + "?").getBytes(StandardCharsets.US_ASCII);
+                    }
+                    int n = ((Number) v).intValue();
+                    n = Math.max(0, Math.min(3000, n));
+                    return (base + String.format(Locale.US, "%04d", n)).getBytes(StandardCharsets.US_ASCII);
+                },
+                bytes -> parseNumericAnswer(bytes, unit),
+                expectedBytes,
+                CommandType.ASCII);
     }
 
     /**

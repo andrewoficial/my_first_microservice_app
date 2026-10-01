@@ -7,6 +7,22 @@ Elephant Monitor - это приложение, которое на данный
 возможностью индивидуальной настройки приборов, возможности отображения данных в браузере. 
 
 
+## Протоколы термокамер BOTO
+
+> ⚠️ Две разные камеры — не путать! Подробности: [`boto_cameras.md`](boto_cameras.md).
+
+| | **B-TH-120 E** | **B-TH-800 F** |
+|---|---|---|
+| Протокол | **`China Modbus`** | **`BOTO-800 Modbus`** (UApp / U-680) |
+| Прошивка | `V3.4.2` | `v4.2.4` |
+| Масштаб | ×100 | ×10 |
+| PV / SV / вкл-выкл | 12 / 100 / 105 | 10 / 60 / 63 |
+| Транспорт | Modbus RTU 9600 8N1 | Modbus RTU 9600 8N1 + **Modbus TCP:8000** |
+| Карта | [`boto_120_register_map.md`](boto_120_register_map.md) | [`boto_800_register_map.md`](boto_800_register_map.md) |
+
+В коде эти названия продублированы enum-ом
+[`BotoProtocol`](src/main/java/org/example/device/protBoto/BotoProtocol.java).
+
 ## Технологии
 
 В данном приложении были использованы следующие технологии и инструменты:

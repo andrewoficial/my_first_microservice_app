@@ -1,4 +1,4 @@
-package org.example.gui.devices.boto.control;
+package org.example.gui.devices.boto800.serial.control;
 
 import javax.swing.*;
 

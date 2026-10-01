@@ -1,5 +1,7 @@
 package org.example.gui.devices.bkm4.emulation;
 
+import java.util.Locale;
+
 /**
  * ASCII-отклик протокола БКМ-4 (см. {@code bkm4.md}).
  * <p>
@@ -85,26 +87,28 @@ public class Bkm4Responder {
 
     private String handleSetpoint(String arg) {
         if (arg.startsWith("?")) {
-            return "@S" + Math.round(emulator.getSetpointMlMin());
+            return "@S" + formatFourDigits(emulator.getSetpointMlMin());
         }
-        try {
+        if (!arg.isEmpty() && arg.length() <= 4 && arg.chars().allMatch(Character::isDigit)) {
             int v = Integer.parseInt(arg);
-            if (v >= 0 && v <= 3000) {
+            if (v >= 0 && v <= Bkm4Emulator.MAX_SETPOINT) {
                 emulator.setSetpointMlMin(v);
-                return "@S" + Math.round(emulator.getSetpointMlMin());
+                return "@S" + formatFourDigits(emulator.getSetpointMlMin());
             }
-        } catch (NumberFormatException ignored) {
-            // fall through to ERROR
         }
         return "@ERROR";
     }
 
     private String handleFlow(String arg) {
         if (arg.startsWith("?")) {
-            // По РЭ БКМ-4 ответ @Fxxxx — целое значение расхода в мл/мин.
-            return "@F" + (int) Math.round(Math.max(0, Math.min(3000, emulator.getCurrentFlowMlMin())));
+            return "@F" + formatFourDigits(emulator.getCurrentFlowMlMin());
         }
         return "@ERROR";
+    }
+
+    private static String formatFourDigits(double value) {
+        int v = (int) Math.round(Math.max(0, Math.min(Bkm4Emulator.MAX_SETPOINT, value)));
+        return String.format(Locale.US, "%04d", v);
     }
 
     private String handleGeneration(String arg) {
