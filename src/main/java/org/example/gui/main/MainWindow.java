@@ -833,7 +833,7 @@ public class MainWindow extends JFrame implements Rendeble {
                         + " (hex " + MyUtilities.bytesToHexString(cmdForSend) + ")");
                 jtfTextToSend.setText(fieldText);
                 leftPanState.setRawCommand(currentActiveClientId.get(), cmdForSend);
-                log.info("Saved  " + MyUtilities.bytesToHexString(jtfTextToSend.getText().getBytes()));
+                log.info("Saved RAW command: " + MyUtilities.bytesToHexString(cmdForSend));
             });
 
             commandPanel.add(sendButton);

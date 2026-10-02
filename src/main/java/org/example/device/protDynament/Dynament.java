@@ -4,6 +4,7 @@ import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandListClass;
+import org.example.device.NonAscii;
 import org.example.device.ProtocolComPort;
 import org.example.device.SomeDevice;
 import org.example.device.command.SingleCommand;
@@ -19,7 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 
 @Slf4j
-public class Dynament implements SomeDevice, ProtocolComPort {
+public class Dynament implements SomeDevice, ProtocolComPort, NonAscii {
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора
     private final SerialPort comPort;
@@ -44,6 +45,7 @@ public class Dynament implements SomeDevice, ProtocolComPort {
     private int expectedBytes = 0;
 
     private String devIdent = "DYNAMENT";
+    private byte[] rawCmd = null;
 
     private static final int[] BAUDRATES = {38400, 50, 75, 110, 150, 300, 600, 1200, 2400, 4800, 9600, 19200, 57600, 115200};
 
@@ -234,19 +236,26 @@ public class Dynament implements SomeDevice, ProtocolComPort {
     public void parseData() {
         if (lastAnswerBytes != null && lastAnswerBytes.length > 0) {
             lastAnswer.setLength(0);
-            log.info("Отправленная команда: " + MyUtilities.bytesToHexString(cmdToSend.getBytes()));
+            if (rawCmd == null) {
+                log.warn("RAW command is null");
+            } else {
+                log.info("Отправленная команда RAW: " + MyUtilities.bytesToHexString(rawCmd));
+            }
             log.info("Полученный ответ: " + MyUtilities.bytesToHexString(lastAnswerBytes));
-            String cmdName = cmdToSend != null ? cmdToSend.split(" ")[0] : "";
             boolean isKnown = false;
             HashMap <String, SingleCommand> commandsList = commands.getCommandPool();
             SingleCommand foundetCommand = null;
 
-            for (SingleCommand value : commandsList.values()) {
-                if(Arrays.equals(value.getBaseBody(), cmdToSend.getBytes())){
-                    log.info("Found command pattern for command [" + value.getMapKey() + "]");
-                    isKnown = true;
-                    foundetCommand = value;
-                    break;
+            // Идентифицируем команду по реально отправленным байтам (rawCmd), а не по строке cmdToSend.
+            // Для setZero/setConc rawCmd = WR + DAT, а baseBody = только WR, поэтому это префиксное сравнение.
+            if (rawCmd != null) {
+                for (SingleCommand value : commandsList.values()) {
+                    if (MyUtilities.compare(value.getBaseBody(), rawCmd, 0, false)) {
+                        log.info("Found command pattern for command [" + value.getMapKey() + "]");
+                        isKnown = true;
+                        foundetCommand = value;
+                        break;
+                    }
                 }
             }
             if (isKnown) {
@@ -294,5 +303,10 @@ public class Dynament implements SomeDevice, ProtocolComPort {
     }
     public AnswerValues getValues() {
         return this.answerValues;
+    }
+
+    @Override
+    public void setRawCommand(byte[] cmd) {
+        this.rawCmd = cmd;
     }
 }
