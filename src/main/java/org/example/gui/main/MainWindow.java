@@ -652,7 +652,7 @@ public class MainWindow extends JFrame implements Rendeble {
             log.info("Для выбранного устройства стандартное значение StopBit: " + castedDevice.getDefaultStopBit());
             num = StopBitsList.getLikeArrayOrderByValue(castedDevice.getDefaultStopBit());
             log.info("Для выбранного устройства стандартное значение StopBit: (номер в списке)" + num);
-            jcbParity.setSelectedIndex(num);
+            jcbStopBit.setSelectedIndex(num);
         } else {
             log.info("Для выбранного устройства типовая скорость не задана ");
         }
