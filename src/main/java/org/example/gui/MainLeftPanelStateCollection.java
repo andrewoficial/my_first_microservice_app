@@ -2,9 +2,7 @@ package org.example.gui;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.example.device.ProtocolsList;
 import org.example.services.connection.ConnectionType;
-import org.example.utilites.MyUtilities;
 import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.Map;
@@ -293,44 +291,6 @@ public class MainLeftPanelStateCollection {
             command = "";
         }
         stateObj.setCommand(command);
-
-        // IGM12MODBUS — бинарный протокол. В текстовом поле GUI лежит hex-представление
-        // команды только для справки, а в прибор должны уходить именно эти байты.
-        // Поэтому держим rawCommand синхронным с тем, что видит пользователь.
-        if (isIgm12Modbus(stateObj.getProtocol())) {
-            byte[] raw = tryParseHex(command);
-            if (raw != null) {
-                stateObj.setRawCommand(raw);
-            }
-        }
-    }
-
-    private static boolean isIgm12Modbus(int protocolIndex) {
-        try {
-            return ProtocolsList.getLikeArrayEnum(protocolIndex) == ProtocolsList.IGM12MODBUS;
-        } catch (RuntimeException e) {
-            return false;
-        }
-    }
-
-    private static byte[] tryParseHex(String text) {
-        if (text == null) {
-            return null;
-        }
-        String trimmed = text.trim();
-        if (trimmed.isEmpty()) {
-            return null;
-        }
-        for (String part : trimmed.split("\\s+")) {
-            if (!part.matches("[0-9A-Fa-f]{1,2}")) {
-                return null;
-            }
-        }
-        try {
-            return MyUtilities.hexStringToBytes(trimmed);
-        } catch (NumberFormatException e) {
-            return null;
-        }
     }
 
     public void setPrefixToSend(int clientId, String prefix) {

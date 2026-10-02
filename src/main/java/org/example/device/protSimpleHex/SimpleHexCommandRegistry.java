@@ -11,10 +11,6 @@ import org.example.utilites.MyUtilities;
 @Slf4j
 public class SimpleHexCommandRegistry extends DeviceCommandRegistry {
 
-    public SimpleHexCommandRegistry() {
-        initCommands();
-    }
-
     @Override
     protected void initCommands() {
         commandList.addCommand(createSendHexCommand());

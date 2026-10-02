@@ -22,10 +22,6 @@ public class Qdl80aCommandRegistry extends DeviceCommandRegistry {
     // Полином CRC-16/Modbus
     private static final int CRC_POLYNOMIAL = 0xA001;
 
-    public Qdl80aCommandRegistry() {
-        initCommands();
-    }
-
     @Override
     protected void initCommands() {
         commandList.addCommand(createReadMeasurementCommand());

@@ -139,6 +139,11 @@ public class MainWindow extends JFrame implements Rendeble {
     private JTextField jtfTextToSend;
     private JTextField jtfPrefToSend;
 
+    // Кэш устройства текущего протокола — нужен, чтобы понимать, бинарный ли протокол,
+    // без пересоздания объекта на каждое событие ввода.
+    private int cachedProtocolIndex = -1;
+    private SomeDevice cachedProtocolDevice = null;
+
     private JLabel jlbComPorts;
     private JLabel jlbComDataBits;
     private JLabel jlbComParity;
@@ -922,6 +927,61 @@ public class MainWindow extends JFrame implements Rendeble {
         if (isValidTab()) {
             updateClassFromGui();
             readAndUpdateInputPrefAndCommandValues();
+            updateRawCommandFromField();
+        }
+    }
+
+    /**
+     * Для бинарных (не-ASCII) протоколов в текстовом поле GUI лежит hex-представление команды
+     * (только для справки). Наполняем rawCommand из него, чтобы отправка работала и после
+     * перезапуска без повторного нажатия «задать». Для ASCII-протоколов rawCommand не используется.
+     */
+    private void updateRawCommandFromField() {
+        SomeDevice device = getCurrentProtocolDevice();
+        if (device == null || device.isASCII()) {
+            return;
+        }
+        int clientId = currentActiveClientId.get();
+        if (clientId < 0 || !leftPanState.containClientId(clientId)) {
+            return;
+        }
+        byte[] raw = tryParseHex(jtfTextToSend.getText());
+        if (raw != null) {
+            leftPanState.setRawCommand(clientId, raw);
+        }
+    }
+
+    private SomeDevice getCurrentProtocolDevice() {
+        int protocolIndex = jcbProtocol.getSelectedIndex();
+        if (protocolIndex != cachedProtocolIndex) {
+            cachedProtocolIndex = protocolIndex;
+            try {
+                cachedProtocolDevice = createDeviceByProtocol(ProtocolsList.getLikeArrayEnum(protocolIndex));
+            } catch (RuntimeException e) {
+                log.warn("Не удалось определить устройство протокола по индексу " + protocolIndex + ": " + e.getMessage());
+                cachedProtocolDevice = null;
+            }
+        }
+        return cachedProtocolDevice;
+    }
+
+    private static byte[] tryParseHex(String text) {
+        if (text == null) {
+            return null;
+        }
+        String trimmed = text.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        for (String part : trimmed.split("\\s+")) {
+            if (!part.matches("[0-9A-Fa-f]{1,2}")) {
+                return null;
+            }
+        }
+        try {
+            return MyUtilities.hexStringToBytes(trimmed);
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 
