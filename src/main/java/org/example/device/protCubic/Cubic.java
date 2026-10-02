@@ -4,6 +4,7 @@ import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandListClass;
+import org.example.device.NonAscii;
 import org.example.device.ProtocolComPort;
 import org.example.device.SomeDevice;
 import org.example.device.command.SingleCommand;
@@ -17,7 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 
 @Slf4j
-public class Cubic implements SomeDevice, ProtocolComPort {
+public class Cubic implements SomeDevice, ProtocolComPort, NonAscii {
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters();
     private final SerialPort comPort;
@@ -188,26 +189,29 @@ public class Cubic implements SomeDevice, ProtocolComPort {
     public void parseData() {
         if (lastAnswerBytes != null && lastAnswerBytes.length > 0) {
             lastAnswer.setLength(0);
-            String cmdName = cmdToSend != null ? cmdToSend.split(" ")[0] : "";
             boolean isKnown = false;
-            log.info("Отправленная команда: " + MyUtilities.bytesToHexString(cmdToSend.getBytes()));
+            if (rawCmd == null || rawCmd.length < 3) {
+                log.warn("CUBIC: RAW command is null or too short — сопоставление невозможно");
+                lastAnswer.append(MyUtilities.bytesToHexString(lastAnswerBytes));
+                return;
+            }
+            log.info("Отправленная команда RAW: " + MyUtilities.bytesToHexString(rawCmd));
             log.info("Полученный ответ: " + MyUtilities.bytesToHexString(lastAnswerBytes));
 
             HashMap <String, SingleCommand> commandsList = commands.getCommandPool();
             SingleCommand foundetCommand = null;
 
-            byte[]  sentPart = new byte[3];
-            System.arraycopy(cmdToSend.getBytes(), 0, sentPart, 0, 3);
+            // Сопоставляем первые 3 байта (IP, LB, CMD) реально отправленного кадра.
+            byte[] sentPart = new byte[3];
+            System.arraycopy(rawCmd, 0, sentPart, 0, 3);
 
-            byte[]  commandPart = new byte[3];
-            System.arraycopy(cmdToSend.getBytes(), 0, sentPart, 0, 3);
-            //log.info("Определяю команду... ");
+            byte[] commandPart = new byte[3];
             for (SingleCommand value : commandsList.values()) {
-                //log.info("Готовлюсь к просмотру тела команды (имя): " + value.getGuiName());
-                //log.info("Готовлюсь к просмотру тела команды (значение): " +  MyUtilities.bytesToHexString(value.getBaseBody()));
+                if (value.getBaseBody() == null || value.getBaseBody().length < 3) {
+                    continue;
+                }
                 System.arraycopy(value.getBaseBody(), 0, commandPart, 0, 3);
-                //log.info("Сравниваю commandPart: " +  MyUtilities.bytesToHexString(commandPart)  + " sentPart: " + MyUtilities.bytesToHexString(sentPart));
-                if(Arrays.equals(commandPart, sentPart)){
+                if (Arrays.equals(commandPart, sentPart)) {
                     log.info("Found command pattern for command [" + value.getMapKey() + "]");
                     isKnown = true;
                     foundetCommand = value;
@@ -266,7 +270,7 @@ public class Cubic implements SomeDevice, ProtocolComPort {
         return this.answerValues;
     }
 
-    //@Override
+    @Override
     public void setRawCommand(byte[] cmd) {
         this.rawCmd = cmd;
     }

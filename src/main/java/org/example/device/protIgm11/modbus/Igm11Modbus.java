@@ -4,6 +4,7 @@ import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandListClass;
+import org.example.device.NonAscii;
 import org.example.device.ProtocolComPort;
 import org.example.device.SomeDevice;
 import org.example.device.command.SingleCommand;
@@ -16,7 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 
 @Slf4j
-public class Igm11Modbus implements SomeDevice, ProtocolComPort {
+public class Igm11Modbus implements SomeDevice, ProtocolComPort, NonAscii {
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters();
     private final SerialPort comPort;
@@ -271,6 +272,7 @@ public class Igm11Modbus implements SomeDevice, ProtocolComPort {
         return this.answerValues;
     }
 
+    @Override
     public void setRawCommand(byte[] cmd) {
         this.rawCmd = cmd;
     }

@@ -277,19 +277,25 @@ public class Qdl80aDevice implements SomeDevice, NonAscii, ProtocolComPort {
         }
 
         lastAnswer.setLength(0);
-        String cmdName = cmdToSend != null ? cmdToSend.split(" ")[0] : "";
-        log.info("Отправленная команда: " + MyUtilities.bytesToHexString(rawCmd));
+        if (rawCmd == null || rawCmd.length < 4) {
+            log.warn("QDL80A: RAW command is null or too short — сопоставление невозможно");
+            lastAnswer.append(MyUtilities.bytesToHexString(lastAnswerBytes));
+            return;
+        }
+        log.info("Отправленная команда RAW: " + MyUtilities.bytesToHexString(rawCmd));
         log.info("Полученный ответ: " + MyUtilities.bytesToHexString(lastAnswerBytes));
 
-        // Поиск команды по префиксу (адрес + функция)
-        byte[] sentPrefix = new byte[2];
-        System.arraycopy(rawCmd, 0, sentPrefix, 0, 2);
+        // Modbus RTU: однозначно идентифицируем команду по первым 4 байтам
+        // [slave, function, regAddrHi, regAddrLo] — уникально для каждой команды QDL80A.
+        byte[] sentPrefix = Arrays.copyOf(rawCmd, 4);
         SingleCommand foundCommand = null;
 
         for (SingleCommand cmd : commands.getCommandPool().values()) {
-            byte[] cmdPrefix = new byte[2];
-            System.arraycopy(cmd.getBaseBody(), 0, cmdPrefix, 0, 2);
-            if (Arrays.equals(sentPrefix, cmdPrefix)) {
+            byte[] body = cmd.getBaseBody();
+            if (body == null || body.length < 4) {
+                continue;
+            }
+            if (Arrays.equals(sentPrefix, Arrays.copyOf(body, 4))) {
                 foundCommand = cmd;
                 break;
             }

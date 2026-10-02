@@ -122,7 +122,9 @@ public class CubicCommandRegistry extends DeviceCommandRegistry {
     }
 
     private SingleCommand createSetConcCommand() {
-        byte[] baseBody = buildCommand(0x03, new byte[]{0x00, 0x00, 0x00}); // 00 DF1=0 DF2=0
+        // DF у setConc — 2 байта (df1, df2), поэтому LB в собранном кадре = 3.
+        // baseBody должен иметь тот же LB, иначе сравнение первых 3 байт (IP, LB, CMD) не совпадёт.
+        byte[] baseBody = buildCommand(0x03, new byte[]{0x00, 0x00});
         SingleCommand command = new SingleCommand(
                 "setConc",
                 "setConc [value] - Set concentration calibration",

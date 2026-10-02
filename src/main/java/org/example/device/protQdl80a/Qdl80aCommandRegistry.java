@@ -236,18 +236,22 @@ public class Qdl80aCommandRegistry extends DeviceCommandRegistry {
     }
 
     private SingleCommand createWriteAddressCommand() {
-        byte[] baseBody = new byte[0];
+        byte[] baseBody = buildWriteSingleRegisterRequest((byte)0x01, (short)0x0000, (short)1);
         SingleCommand cmd = new SingleCommand(
                 "writeAddress",
                 "writeAddress [1-247] - запись нового адреса",
                 "writeAddress",
                 baseBody,
-                args -> baseBody,
+                args -> {
+                    int address = ((Number) args.getOrDefault("address", 1)).intValue();
+                    return buildWriteSingleRegisterRequest((byte)0x01, (short)0x0000, (short)address);
+                },
                 this::parseWriteResponse,
                 8,
                 CommandType.BINARY
         );
-        cmd.addArgument(new ArgumentDescriptor("address", Integer.class, 1, val -> (Integer)val >= 1 && (Integer)val <= 247));
+        cmd.addArgument(new ArgumentDescriptor("address", Integer.class, 1,
+                val -> val instanceof Number && ((Number) val).intValue() >= 1 && ((Number) val).intValue() <= 247));
         return cmd;
     }
 
@@ -266,18 +270,22 @@ public class Qdl80aCommandRegistry extends DeviceCommandRegistry {
     }
 
     private SingleCommand createWriteBaudRateCommand() {
-        byte[] baseBody = new byte[0];
+        byte[] baseBody = buildWriteSingleRegisterRequest((byte)0x01, (short)0x0001, (short)3);
         SingleCommand cmd = new SingleCommand(
                 "writeBaudRate",
                 "writeBaudRate [0-5] - запись кода скорости (0=1200,1=2400,2=4800,3=9600,4=19200,5=38400)",
                 "writeBaudRate",
                 baseBody,
-                args -> baseBody,
+                args -> {
+                    int baudCode = ((Number) args.getOrDefault("baudCode", 3)).intValue();
+                    return buildWriteSingleRegisterRequest((byte)0x01, (short)0x0001, (short)baudCode);
+                },
                 this::parseWriteResponse,
                 8,
                 CommandType.BINARY
         );
-        cmd.addArgument(new ArgumentDescriptor("baudCode", Integer.class, 3, val -> (Integer)val >= 0 && (Integer)val <= 5));
+        cmd.addArgument(new ArgumentDescriptor("baudCode", Integer.class, 3,
+                val -> val instanceof Number && ((Number) val).intValue() >= 0 && ((Number) val).intValue() <= 5));
         return cmd;
     }
 
@@ -296,18 +304,22 @@ public class Qdl80aCommandRegistry extends DeviceCommandRegistry {
     }
 
     private SingleCommand createWriteUnitCommand() {
-        byte[] baseBody = new byte[0];
+        byte[] baseBody = buildWriteSingleRegisterRequest((byte)0x01, (short)0x0002, (short)20);
         SingleCommand cmd = new SingleCommand(
                 "writeUnit",
                 "writeUnit [код] - запись кода единиц измерения (20=°C)",
                 "writeUnit",
                 baseBody,
-                args -> baseBody,
+                args -> {
+                    int unitCode = ((Number) args.getOrDefault("unitCode", 20)).intValue();
+                    return buildWriteSingleRegisterRequest((byte)0x01, (short)0x0002, (short)unitCode);
+                },
                 this::parseWriteResponse,
                 8,
                 CommandType.BINARY
         );
-        cmd.addArgument(new ArgumentDescriptor("unitCode", Integer.class, 20, null));
+        cmd.addArgument(new ArgumentDescriptor("unitCode", Integer.class, 20,
+                val -> val instanceof Number));
         return cmd;
     }
 
@@ -326,18 +338,22 @@ public class Qdl80aCommandRegistry extends DeviceCommandRegistry {
     }
 
     private SingleCommand createWriteZeroOffsetCommand() {
-        byte[] baseBody = new byte[0];
+        byte[] baseBody = buildWriteSingleRegisterRequest((byte)0x01, (short)0x000C, (short)0);
         SingleCommand cmd = new SingleCommand(
                 "writeZeroOffset",
                 "writeZeroOffset [-32768..32767] - запись смещения нуля (H:C)",
                 "writeZeroOffset",
                 baseBody,
-                args -> baseBody,
+                args -> {
+                    int offset = ((Number) args.getOrDefault("offset", 0)).intValue();
+                    return buildWriteSingleRegisterRequest((byte)0x01, (short)0x000C, (short)offset);
+                },
                 this::parseWriteResponse,
                 8,
                 CommandType.BINARY
         );
-        cmd.addArgument(new ArgumentDescriptor("offset", Integer.class, 0, val -> (Integer)val >= -32768 && (Integer)val <= 32767));
+        cmd.addArgument(new ArgumentDescriptor("offset", Integer.class, 0,
+                val -> val instanceof Number && ((Number) val).intValue() >= -32768 && ((Number) val).intValue() <= 32767));
         return cmd;
     }
 
