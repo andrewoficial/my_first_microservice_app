@@ -60,7 +60,7 @@ public class Igm11ModbusCommandRegistry extends DeviceCommandRegistry {
                 "getConc",
                 "getConc - Get gas concentration",
                 "getConc",
-                baseBody,
+                Arrays.copyOfRange(baseBody, 1, baseBody.length - 2),
                 args -> buildReadHolding(6, 1),
                 this::parseMeasurementResponse,
                 7, // Addr 03 ByteCount(2) Data(2) CRC(2)
@@ -75,7 +75,7 @@ public class Igm11ModbusCommandRegistry extends DeviceCommandRegistry {
                 "getVersion",
                 "getVersion - Get software version",
                 "getVersion",
-                baseBody,
+                Arrays.copyOfRange(baseBody, 1, baseBody.length - 2),
                 args -> buildReadHolding(16, 1),
                 this::parseVersionResponse,
                 7,
@@ -90,7 +90,7 @@ public class Igm11ModbusCommandRegistry extends DeviceCommandRegistry {
                 "getSerial",
                 "getSerial - Get serial number",
                 "getSerial",
-                baseBody,
+                Arrays.copyOfRange(baseBody, 1, baseBody.length - 2),
                 args -> buildReadHolding(1, 2),
                 this::parseSerialResponse,
                 9, // Addr 03 04 Data(4) CRC(2)
@@ -105,7 +105,7 @@ public class Igm11ModbusCommandRegistry extends DeviceCommandRegistry {
                 "getGasProperty",
                 "getGasProperty - Get gas measurement property",
                 "getGasProperty",
-                baseBody,
+                Arrays.copyOfRange(baseBody, 1, baseBody.length - 2),
                 args -> buildReadHolding(3, 1), // For simplicity, get gas type; range separate if needed
                 this::parseGasPropertyResponse,
                 7,
@@ -120,7 +120,7 @@ public class Igm11ModbusCommandRegistry extends DeviceCommandRegistry {
                 "setZero",
                 "setZero - Set zero calibration",
                 "setZero",
-                baseBody,
+                Arrays.copyOfRange(baseBody, 1, baseBody.length - 2),
                 args -> buildWriteSingle(6, 0xAAAA),
                 this::parseWriteResponse,
                 8, // Addr 06 Reg(2) Val(2) CRC(2)
@@ -135,7 +135,7 @@ public class Igm11ModbusCommandRegistry extends DeviceCommandRegistry {
                 "setConc",
                 "setConc [value] - Set concentration calibration",
                 "setConc",
-                baseBody,
+                new byte[]{(byte) 0x06, (byte) 0x00, (byte) 0x06},
                 args -> {
                     Float value = (Float) args.getOrDefault("value", 0.0f);
                     int intValue = Math.round(value * 10); // Assume *10 for %НКПР
@@ -160,7 +160,7 @@ public class Igm11ModbusCommandRegistry extends DeviceCommandRegistry {
                 "resetFactory",
                 "resetFactory - Reset to factory calibration",
                 "resetFactory",
-                baseBody,
+                Arrays.copyOfRange(baseBody, 1, baseBody.length - 2),
                 args -> buildWriteSingle(6, 0xBBBB),
                 this::parseWriteResponse,
                 8,

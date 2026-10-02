@@ -61,7 +61,7 @@ public class Igm10ModbusCommandRegistry extends DeviceCommandRegistry {
                 "getConc",
                 "getConc - Get gas concentration",
                 "001",//For sorting in map
-                Arrays.copyOfRange(baseBody, 0, baseBody.length - 2),
+                Arrays.copyOfRange(baseBody, 1, baseBody.length - 2),
                 args -> buildReadHolding(6, 1),
                 this::parseMeasurementResponse,
                 7, // Addr 03 ByteCount(2) Data(2) CRC(2)
@@ -76,7 +76,7 @@ public class Igm10ModbusCommandRegistry extends DeviceCommandRegistry {
                 "getVersion",
                 "getVersion - Get software version",
                 "002",
-                Arrays.copyOfRange(baseBody, 0, baseBody.length - 2),
+                Arrays.copyOfRange(baseBody, 1, baseBody.length - 2),
                 args -> buildReadHolding(16, 1),
                 this::parseVersionResponse,
                 7,
@@ -91,7 +91,7 @@ public class Igm10ModbusCommandRegistry extends DeviceCommandRegistry {
                 "getSerial",
                 "getSerial - Get serial number",
                 "003",//номер регистра
-                Arrays.copyOfRange(baseBody, 0, baseBody.length - 2),
+                Arrays.copyOfRange(baseBody, 1, baseBody.length - 2),
                 args -> buildReadHolding(1, 2),
                 this::parseSerialResponse,
                 9, // Addr 03 04 Data(4) CRC(2)
@@ -106,7 +106,7 @@ public class Igm10ModbusCommandRegistry extends DeviceCommandRegistry {
                 "getGasProperty",
                 "getGasProperty - Get gas measurement property",
                 "004",
-                Arrays.copyOfRange(baseBody, 0, baseBody.length - 2),
+                Arrays.copyOfRange(baseBody, 1, baseBody.length - 2),
                 args -> buildReadHolding(3, 1), // For simplicity, get gas type; range separate if needed
                 this::parseGasPropertyResponse,
                 7,
@@ -121,7 +121,7 @@ public class Igm10ModbusCommandRegistry extends DeviceCommandRegistry {
                 "setZero",
                 "setZero - Set zero calibration",
                 "005",
-                Arrays.copyOfRange(baseBody, 0, baseBody.length - 2),
+                Arrays.copyOfRange(baseBody, 1, baseBody.length - 2),
                 args -> buildWriteSingle(6, 0xAAAA),
                 this::parseWriteResponse,
                 8, // Addr 06 Reg(2) Val(2) CRC(2)
@@ -136,7 +136,7 @@ public class Igm10ModbusCommandRegistry extends DeviceCommandRegistry {
                 "resetFactory",
                 "resetFactory - Reset to factory calibration",
                 "006",
-                Arrays.copyOfRange(baseBody, 0, baseBody.length - 2),
+                Arrays.copyOfRange(baseBody, 1, baseBody.length - 2),
                 args -> buildWriteSingle(6, 0xBBBB),
                 this::parseWriteResponse,
                 8,
@@ -147,7 +147,8 @@ public class Igm10ModbusCommandRegistry extends DeviceCommandRegistry {
 
     private SingleCommand createSetConcCommand() {
         byte[] baseBody = buildWriteSingle(6, 0);
-        byte[] correctBody = {(byte)0x00, (byte)0x06, (byte)0x00, (byte)0x06};
+        // body без адреса slave, как и у остальных команд: функция 0x06 + регистр 0x0006
+        byte[] correctBody = {(byte)0x06, (byte)0x00, (byte)0x06};
         SingleCommand command = new SingleCommand(
                 "setConc",
                 "setConc [value] - Set concentration calibration",

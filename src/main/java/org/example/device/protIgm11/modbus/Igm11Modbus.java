@@ -197,21 +197,27 @@ public class Igm11Modbus implements SomeDevice, ProtocolComPort {
     public void parseData() {
         if (lastAnswerBytes != null && lastAnswerBytes.length > 0) {
             lastAnswer.setLength(0);
-            String cmdName = cmdToSend != null ? cmdToSend.split(" ")[0] : "";
             boolean isKnown = false;
-            log.info("Отправленная команда: " + MyUtilities.bytesToHexString(cmdToSend.getBytes()));
+            if (rawCmd == null) {
+                log.warn("RAW command is null");
+            } else {
+                log.info("Отправленная команда RAW: " + MyUtilities.bytesToHexString(rawCmd));
+            }
             log.info("Полученный ответ: " + MyUtilities.bytesToHexString(lastAnswerBytes));
 
             HashMap<String, SingleCommand> commandsList = commands.getCommandPool();
             SingleCommand foundCommand = null;
 
-            // Similar to Cubic, but for Modbus, compare based on cmdName
-            for (SingleCommand value : commandsList.values()) {
-                if (value.getMapKey().equals(cmdName)) {
-                    log.info("Found command for [" + value.getMapKey() + "]");
-                    isKnown = true;
-                    foundCommand = value;
-                    break;
+            // Сопоставляем по реально отправленным байтам (rawCmd):
+            // baseBody — без адреса slave, поэтому сравнение начинается с offset 1.
+            if (rawCmd != null) {
+                for (SingleCommand value : commandsList.values()) {
+                    if (MyUtilities.compare(value.getBaseBody(), rawCmd, 1, false)) {
+                        log.info("Found command for [" + value.getGuiName() + "]");
+                        isKnown = true;
+                        foundCommand = value;
+                        break;
+                    }
                 }
             }
 
