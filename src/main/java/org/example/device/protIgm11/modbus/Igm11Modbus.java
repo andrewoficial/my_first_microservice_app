@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandListClass;
 import org.example.device.NonAscii;
 import org.example.device.ProtocolComPort;
+import org.example.device.SlaveAddressable;
 import org.example.device.SomeDevice;
 import org.example.device.command.SingleCommand;
 import org.example.device.connectParameters.ComConnectParameters;
@@ -17,7 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 
 @Slf4j
-public class Igm11Modbus implements SomeDevice, ProtocolComPort, NonAscii {
+public class Igm11Modbus implements SomeDevice, ProtocolComPort, NonAscii, SlaveAddressable {
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters();
     private final SerialPort comPort;
@@ -67,8 +68,11 @@ public class Igm11Modbus implements SomeDevice, ProtocolComPort, NonAscii {
         this.enable();
     }
 
+    @Override
     public void setSlaveAddress(int address) {
         this.slaveAddress = address;
+        // Билдеры команд живут в реестре, поэтому адрес надо проставить и туда.
+        commandRegistry.setSlaveAddress(address);
     }
 
     public int getSlaveAddress() {
@@ -275,5 +279,12 @@ public class Igm11Modbus implements SomeDevice, ProtocolComPort, NonAscii {
     @Override
     public void setRawCommand(byte[] cmd) {
         this.rawCmd = cmd;
+        // Адрес slave берём из реально отправленного кадра: парсеры (parse*Response)
+        // проверяют response[0] == slaveAddress, поэтому реестр должен знать адрес.
+        if (cmd != null && cmd.length > 0) {
+            int addr = cmd[0] & 0xFF;
+            this.slaveAddress = addr;
+            commandRegistry.setSlaveAddress(addr);
+        }
     }
 }

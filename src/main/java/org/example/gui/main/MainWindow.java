@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.Main;
 import org.example.device.ProtocolComPort;
 import org.example.device.ProtocolsList;
+import org.example.device.SlaveAddressable;
 import org.example.device.SomeDevice;
 import org.example.device.TemplatedAscii;
 import org.example.device.command.ArgumentDescriptor;
@@ -19,6 +20,7 @@ import org.example.gui.*;
 import org.example.gui.components.*;
 import org.example.gui.main.left.hidParamForm;
 import org.example.gui.main.left.wsParamForm;
+import org.example.gui.devices.igm.modbus.IgmModbusSearchDialog;
 import org.example.gui.mainWindowUtilites.FolderPictureForLog;
 import org.example.gui.mainWindowUtilites.GuiStateManager;
 import org.example.gui.mainWindowUtilites.CommandFieldFormatter;
@@ -87,7 +89,9 @@ public class MainWindow extends JFrame implements Rendeble {
     private final AtomicInteger currentActiveTab = new AtomicInteger(); //Текущая активная (выбранная) вкладка
     private final AtomicInteger currentActiveClientId = new AtomicInteger();
     private boolean initialCalls = true;
-    /** Skip writing connection type back to state while applying model → GUI. */
+    /**
+     * Skip writing connection type back to state while applying model → GUI.
+     */
     private boolean suppressConnectionTypeEvents = false;
     private String lastFolderState = null; // Кешированное состояние папки для избежания лишних repaint
 
@@ -143,6 +147,8 @@ public class MainWindow extends JFrame implements Rendeble {
     // без пересоздания объекта на каждое событие ввода.
     private int cachedProtocolIndex = -1;
     private SomeDevice cachedProtocolDevice = null;
+    // Устройство, которым построена текущая панель команд (его реестр строит байты).
+    private SomeDevice currentPanelDevice = null;
 
     private JLabel jlbComPorts;
     private JLabel jlbComDataBits;
@@ -349,7 +355,9 @@ public class MainWindow extends JFrame implements Rendeble {
         }
     }
 
-    /** Prefill from Vega/WS settings used by {@link org.example.gui.WebSocketWindow}. */
+    /**
+     * Prefill from Vega/WS settings used by {@link WebSocketWindow}.
+     */
     private void applyWsFormDefaultsFromProperties() {
         if (wsParamForm == null || prop == null) {
             return;
@@ -398,7 +406,9 @@ public class MainWindow extends JFrame implements Rendeble {
         wsParamForm.getPortField().setText(port);
     }
 
-    /** Full URL for collectors / WebSocketDataCollector (same style as Vega address). */
+    /**
+     * Full URL for collectors / WebSocketDataCollector (same style as Vega address).
+     */
     public String buildWsUrlFromForm() {
         if (wsParamForm == null) {
             return prop != null ? prop.getVegaAddress() : "ws://127.0.0.1:8002";
@@ -691,6 +701,7 @@ public class MainWindow extends JFrame implements Rendeble {
         ListenerUtils.addActionListener(jbRemoveDev, this::removeTab);
         ListenerUtils.addActionListener(jbComUpdateList, this::updateComPortList);
         ListenerUtils.addActionListener(jbSetTypicalParametrs, this::setTypicalParameters);
+        ListenerUtils.addActionListener(jbComSearch, this::startComSearch);
 
         // CheckBoxes
         ListenerUtils.addActionListener(jCbNeedPool, this::updateTextAndSendFromCheckBox);
@@ -726,6 +737,46 @@ public class MainWindow extends JFrame implements Rendeble {
         updateFolderPicture();
     }
 
+    /**
+     * Поиск сетевых адресов IGM (Modbus RTU) на текущем порту и скорости.
+     * Найденный адрес подставляется в поле «Адрес».
+     */
+    private void startComSearch() {
+        if (!(currentPanelDevice instanceof SlaveAddressable) || !(currentPanelDevice instanceof ProtocolComPort)) {
+            addCustomMessage("Поиск сетевых адресов доступен только для устройств с адресом");
+            return;
+        }
+        Object portItem = jcbComPorts.getSelectedItem();
+        if (!(portItem instanceof String) || ((String) portItem).isEmpty()) {
+            addCustomMessage("Не выбран COM-порт для поиска");
+            return;
+        }
+
+        // Берём типовые параметры протокола (для IGM это 19200 8E1), а не текущее состояние комбо,
+        // чтобы поиск не зависел от того, нажимали ли «типовые параметры».
+        ProtocolComPort p = (ProtocolComPort) currentPanelDevice;
+        int baud = p.getDefaultBaudRate().getValue();
+        int dataBits = p.getDefaultDataBit().getValue();
+        int stopBits = p.getDefaultStopBit().getValue();
+        int parity = p.getDefaultParity().getValue();
+        String portName = ((String) portItem).split(" ")[0];
+
+        addCustomMessage("Запуск поиска адресов: " + portName + ", " + baud + " бод");
+        IgmModbusSearchDialog dialog = new IgmModbusSearchDialog(this, portName, baud, dataBits, stopBits, parity);
+        dialog.startSearch();
+        dialog.setVisible(true);
+
+        List<IgmModbusSearchDialog.FoundDevice> found = dialog.getFoundDevices();
+        if (found.isEmpty()) {
+            addCustomMessage("Устройства не найдены");
+            return;
+        }
+        IgmModbusSearchDialog.FoundDevice first = found.get(0);
+        jtfPrefToSend.setText(String.valueOf(first.address));
+        applySlaveAddressFromPrefix();
+        addCustomMessage("Найдено устройств: " + found.size() + ". Адрес: " + first.address);
+    }
+
     private void updateDevName() {
         connectionSettingsService.setDeviceName(currentActiveClientId.get(), jtfDevName.getText());
         if (jtfDevName.getText() != null && jtfDevName.getText().length() <= DEVICE_NAME_LIMIT && jtfDevName.getText().length() > 1) {
@@ -755,8 +806,10 @@ public class MainWindow extends JFrame implements Rendeble {
         jpSendInput.setLayout(new BorderLayout());
 
         if (ProtocolsList.getLikeArrayEnum(jcbProtocol.getSelectedIndex()) != null) {
-            jbComSearch.setEnabled(ProtocolsList.getLikeArrayEnum(jcbProtocol.getSelectedIndex()) == ProtocolsList.ERSTEVAK_MTP4D);
-            SomeDevice device = createDeviceByProtocol(ProtocolsList.getLikeArrayEnum(jcbProtocol.getSelectedIndex()));
+            ProtocolsList protocol = ProtocolsList.getLikeArrayEnum(jcbProtocol.getSelectedIndex());
+            SomeDevice device = createDeviceByProtocol(protocol);
+            currentPanelDevice = device;
+            jbComSearch.setEnabled(protocol == ProtocolsList.ERSTEVAK_MTP4D || device instanceof SlaveAddressable);
 
             if (device instanceof TemplatedAscii) {
                 showTemplatedAsciiPanel(device);
@@ -765,6 +818,17 @@ public class MainWindow extends JFrame implements Rendeble {
             } else {
                 showAsciiPanel();
             }
+
+            // Устройства с сетевым адресом: поле префикса используется как адрес (1-247).
+            if (device instanceof SlaveAddressable) {
+                jtfPrefToSend.setEnabled(true);
+                jtfPrefToSend.setToolTipText("Сетевой адрес устройства (1-247)");
+                applySlaveAddressFromPrefix();
+            } else {
+                jtfPrefToSend.setToolTipText(null);
+            }
+        } else {
+            currentPanelDevice = null;
         }
     }
 
@@ -927,8 +991,39 @@ public class MainWindow extends JFrame implements Rendeble {
         if (isValidTab()) {
             updateClassFromGui();
             readAndUpdateInputPrefAndCommandValues();
+            applySlaveAddressFromPrefix();
             updateRawCommandFromField();
         }
+    }
+
+    /**
+     * Для устройств с {@link SlaveAddressable} поле префикса трактуется как сетевой адрес (1-247).
+     * Адрес применяется к реестру панель-девайса, поэтому следующая построенная команда
+     * уйдёт с нужным slave-адресом.
+     */
+    private void applySlaveAddressFromPrefix() {
+        if (!(currentPanelDevice instanceof SlaveAddressable)) {
+            return;
+        }
+        ((SlaveAddressable) currentPanelDevice).setSlaveAddress(parseSlaveAddress(jtfPrefToSend.getText()));
+    }
+
+    private static int parseSlaveAddress(String text) {
+        if (text == null) {
+            return 1;
+        }
+        String trimmed = text.trim();
+        if (trimmed.isEmpty()) {
+            return 1;
+        }
+        try {
+            int address = Integer.parseInt(trimmed);
+            if (address >= 1 && address <= 247) {
+                return address;
+            }
+        } catch (NumberFormatException ignored) {
+        }
+        return 1;
     }
 
     /**
@@ -1280,24 +1375,30 @@ public class MainWindow extends JFrame implements Rendeble {
         jpNonAsciCommandListPanel.setLayout(new BorderLayout(0, 0));
         jpSendInput.add(jpNonAsciCommandListPanel, BorderLayout.WEST);
         jpAsciiInput = new JPanel();
-        jpAsciiInput.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpAsciiInput.setMinimumSize(new Dimension(450, 45));
+        jpAsciiInput.setLayout(new GridLayoutManager(2, 3, new Insets(0, 0, 0, 0), -1, -1));
+        jpAsciiInput.setMinimumSize(new Dimension(450, 65));
         jpAsciiInput.setOpaque(true);
-        jpAsciiInput.setPreferredSize(new Dimension(450, 45));
+        jpAsciiInput.setPreferredSize(new Dimension(450, 65));
         jpSendInput.add(jpAsciiInput, BorderLayout.CENTER);
         jtfPrefToSend = new JTextField();
         jtfPrefToSend.setPreferredSize(new Dimension(60, 40));
         jtfPrefToSend.setText("");
-        jpAsciiInput.add(jtfPrefToSend, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(10, 35), new Dimension(40, 35), new Dimension(80, 35), 0, false));
+        jpAsciiInput.add(jtfPrefToSend, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(10, 35), new Dimension(40, 35), new Dimension(80, 35), 0, false));
         jbTerminalSend = new JButton();
         jbTerminalSend.setMargin(new Insets(5, 5, 5, 5));
         jbTerminalSend.setText("Отправить");
-        jpAsciiInput.add(jbTerminalSend, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jpAsciiInput.add(jbTerminalSend, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jtfTextToSend = new JTextField();
         jtfTextToSend.setMargin(new Insets(2, 9, 2, 6));
         jtfTextToSend.setPreferredSize(new Dimension(100, 40));
         jtfTextToSend.setText("M^");
-        jpAsciiInput.add(jtfTextToSend, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(25, 35), new Dimension(900, 35), new Dimension(-1, 35), 0, false));
+        jpAsciiInput.add(jtfTextToSend, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(25, 35), new Dimension(900, 35), new Dimension(-1, 35), 0, false));
+        final JLabel label1 = new JLabel();
+        label1.setText("Адрес");
+        jpAsciiInput.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label2 = new JLabel();
+        label2.setText("Команда");
+        jpAsciiInput.add(label2, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jpTerminalLogPanel = new JPanel();
         jpTerminalLogPanel.setLayout(new BorderLayout(0, 0));
         jpTerminalHistory.add(jpTerminalLogPanel, BorderLayout.CENTER);
@@ -1388,9 +1489,9 @@ public class MainWindow extends JFrame implements Rendeble {
         jCbNeedPool = new JCheckBox();
         jCbNeedPool.setText("Опрос  ");
         jpNeedPool.add(jCbNeedPool, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label1 = new JLabel();
-        label1.setText("мс");
-        jpNeedPool.add(label1, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label3 = new JLabel();
+        label3.setText("мс");
+        jpNeedPool.add(label3, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jtfPoolDelay = new JTextField();
         jtfPoolDelay.setText("1000");
         jpNeedPool.add(jtfPoolDelay, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));

@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandListClass;
 import org.example.device.NonAscii;
 import org.example.device.ProtocolComPort;
+import org.example.device.SlaveAddressable;
 import org.example.device.SomeDevice;
 import org.example.device.command.SingleCommand;
 import org.example.device.connectParameters.ComConnectParameters;
@@ -13,12 +14,11 @@ import org.example.services.AnswerValues;
 import org.example.services.transport.serial.*;
 import org.example.utilites.MyUtilities;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
 @Slf4j
-public class Igm10Modbus implements SomeDevice, ProtocolComPort, NonAscii {
+public class Igm10Modbus implements SomeDevice, ProtocolComPort, NonAscii, SlaveAddressable {
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters();
     private final SerialPort comPort;
@@ -68,8 +68,11 @@ public class Igm10Modbus implements SomeDevice, ProtocolComPort, NonAscii {
         this.enable();
     }
 
+    @Override
     public void setSlaveAddress(int address) {
         this.slaveAddress = address;
+        // Билдеры команд живут в реестре, поэтому адрес надо проставить и туда.
+        commandRegistry.setSlaveAddress(address);
     }
 
     public int getSlaveAddress() {
@@ -200,7 +203,6 @@ public class Igm10Modbus implements SomeDevice, ProtocolComPort, NonAscii {
         if (lastAnswerBytes != null && lastAnswerBytes.length > 0) {
             lastAnswer.setLength(0);
             boolean isKnown = false;
-            log.info("Отправленная команда STW: " + MyUtilities.bytesToHexString(cmdToSend.getBytes()));
             if(rawCmd == null){
                 log.warn("RAW command is null");
             }else{
@@ -210,18 +212,15 @@ public class Igm10Modbus implements SomeDevice, ProtocolComPort, NonAscii {
 
             HashMap<String, SingleCommand> commandsList = commands.getCommandPool();
             SingleCommand foundCommand = null;
-            //01 03 00 06 00 01 64 0B
-            //3 элемент массива это регистр
-            byte[] subArray = Arrays.copyOfRange(cmdToSend.getBytes(), 0, 6);
-            String cmdPattern = MyUtilities.bytesToHexString(subArray);
-            log.warn("Bytes:" + cmdPattern);
-            for (SingleCommand value : commandsList.values()) {
-                log.info("Просматривваю " + MyUtilities.bytesToHexString(value.getBaseBody()) + " " + value.getGuiName());
-                if (MyUtilities.compare(value.getBaseBody(), rawCmd, 1, false)){
-                    log.info("Found command for [" + value.getGuiName() + "]");
-                    isKnown = true;
-                    foundCommand = value;
-                    break;
+            if (rawCmd != null) {
+                for (SingleCommand value : commandsList.values()) {
+                    log.info("Просматривваю " + MyUtilities.bytesToHexString(value.getBaseBody()) + " " + value.getGuiName());
+                    if (MyUtilities.compare(value.getBaseBody(), rawCmd, 1, false)){
+                        log.info("Found command for [" + value.getGuiName() + "]");
+                        isKnown = true;
+                        foundCommand = value;
+                        break;
+                    }
                 }
             }
 
@@ -276,7 +275,15 @@ public class Igm10Modbus implements SomeDevice, ProtocolComPort, NonAscii {
         return this.answerValues;
     }
 
+    @Override
     public void setRawCommand(byte[] cmd) {
         this.rawCmd = cmd;
+        // Адрес slave берём из реально отправленного кадра: парсеры (parse*Response)
+        // проверяют response[0] == slaveAddress, поэтому реестр должен знать адрес.
+        if (cmd != null && cmd.length > 0) {
+            int addr = cmd[0] & 0xFF;
+            this.slaveAddress = addr;
+            commandRegistry.setSlaveAddress(addr);
+        }
     }
 }
