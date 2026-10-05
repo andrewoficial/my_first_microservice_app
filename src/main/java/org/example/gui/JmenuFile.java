@@ -43,6 +43,7 @@ import org.example.gui.settings.updates.UpdateSettingsWindow;
 import org.example.gui.system.logs.ViewLogsWindow;
 import org.example.gui.system.resources.DebugWindow;
 import org.example.services.AnswerStorage;
+import org.example.services.UpdateCheckService;
 import org.example.services.connectionPool.AnyPoolService;
 import org.example.utilites.properties.MyProperties;
 import ru.kantser.gui.ShowcaseFrame;
@@ -54,12 +55,19 @@ public class JmenuFile {
     private final AnyPoolService anyPoolService;
     private final AnswerLoader answerLoader = new AnswerLoader();
     private final AnswerStorage answerStorage;
+    private final UpdateCheckService updateCheckService;
 
     public JmenuFile (MyProperties extProp, AnyPoolService anyPoolService, AnswerStorage answerStorage){
+        this(extProp, anyPoolService, answerStorage, null);
+    }
+
+    public JmenuFile (MyProperties extProp, AnyPoolService anyPoolService, AnswerStorage answerStorage,
+                      UpdateCheckService updateCheckService){
         super();
         this.prop = extProp;
         this.anyPoolService = anyPoolService;
         this.answerStorage = answerStorage;
+        this.updateCheckService = updateCheckService;
         if(anyPoolService == null){
             log.warn("В конструктор JmenuFile передан null anyPoolService");
         }
@@ -197,7 +205,43 @@ public class JmenuFile {
 
             }
         });
+        installUpdateIndicator(viewMenu, sysUpdate);
         return viewMenu;
+    }
+
+    /**
+     * Тихий индикатор обновления: периодически опрашивает {@link UpdateCheckService}
+     * и, если проверка завершилась успешно и есть новая версия, дописывает жёлтую точку
+     * в конце текста пункта «Проверка обновлений» и у самого меню «Справка» (хлебные крошки).
+     * При неудачной проверке интерфейс не меняется.
+     */
+    private void installUpdateIndicator(JMenu parentMenu, JMenuItem updateItem) {
+        if (updateCheckService == null) {
+            return;
+        }
+        final String baseItemText = updateItem.getText();
+        final String baseMenuText = parentMenu.getText();
+        final String dotColor = "#E6A700";
+        final javax.swing.Timer timer = new javax.swing.Timer(1500, null);
+        timer.addActionListener(e -> {
+            if (updateCheckService.isPending()) {
+                return;
+            }
+            boolean show = updateCheckService.hasUpdate();
+            updateItem.setText(withUpdateDot(baseItemText, dotColor, show));
+            parentMenu.setText(withUpdateDot(baseMenuText, dotColor, show));
+            timer.stop();
+        });
+        timer.setInitialDelay(0);
+        timer.start();
+    }
+
+    /** Возвращает текст с жёлтой точкой в конце (справа от слова) либо исходный текст. */
+    private static String withUpdateDot(String text, String color, boolean show) {
+        if (!show || text == null) {
+            return text;
+        }
+        return "<html>" + text + " <font color='" + color + "'>\u25CF</font></html>";
     }
 
 

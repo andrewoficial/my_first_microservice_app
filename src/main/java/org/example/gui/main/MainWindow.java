@@ -30,6 +30,7 @@ import org.example.services.ConnectionSettingsService;
 import org.example.services.PollingService;
 import org.example.services.PortLifecycleService;
 import org.example.services.TabService;
+import org.example.services.UpdateCheckService;
 import org.example.services.connection.ConnectionType;
 import org.example.services.connectionPool.AnyPoolService;
 import org.example.services.transport.hid.HidDeviceEntry;
@@ -78,6 +79,7 @@ public class MainWindow extends JFrame implements Rendeble {
     private PollingService pollingService; //Сервис управления опросом
     private TabService tabService; //Сервис управления вкладками
     private final AnswerStorage answerStorage;
+    private final UpdateCheckService updateCheckService; //Тихий сервис проверки обновлений
     private final GuiStateManager guiStateManager;
     private final TabManager tabManager;
 
@@ -190,9 +192,12 @@ public class MainWindow extends JFrame implements Rendeble {
 
     private void createMenu() {
         assert prop != null;
+        if (updateCheckService != null) {
+            updateCheckService.start();
+        }
         //log.info("prop driver " + prop.getDrv());
         JMenuBar menuBar = new JMenuBar();
-        JmenuFile menu = new JmenuFile(prop, anyPoolService, answerStorage);
+        JmenuFile menu = new JmenuFile(prop, anyPoolService, answerStorage, updateCheckService);
         menuBar.add(menu.createFileMenu());
         menuBar.add(menu.createSettingsMenu());
         menuBar.add(menu.createViewMenu(uiThPool));
@@ -516,7 +521,7 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
 
-    public MainWindow(MyProperties myProperties, AnyPoolService anyPoolService, MainLeftPanelStateCollection leftPanelStateCollection, ConnectionSettingsService connectionSettingsService, PortLifecycleService portLifecycleService, PollingService pollingService, TabService tabService, AnswerStorage answerStorage) {
+    public MainWindow(MyProperties myProperties, AnyPoolService anyPoolService, MainLeftPanelStateCollection leftPanelStateCollection, ConnectionSettingsService connectionSettingsService, PortLifecycleService portLifecycleService, PollingService pollingService, TabService tabService, AnswerStorage answerStorage, UpdateCheckService updateCheckService) {
         if (leftPanelStateCollection == null) {
             log.warn("В конструктор MainWindow передан null leftPanelStateCollection");
         }
@@ -535,6 +540,7 @@ public class MainWindow extends JFrame implements Rendeble {
         this.pollingService = pollingService;
         this.tabService = tabService;
         this.answerStorage = answerStorage;
+        this.updateCheckService = updateCheckService;
         applyWsFormDefaultsFromProperties();
 
         createMenu();

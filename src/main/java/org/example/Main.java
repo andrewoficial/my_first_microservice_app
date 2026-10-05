@@ -9,6 +9,7 @@ import org.example.services.ConnectionSettingsService;
 import org.example.services.PollingService;
 import org.example.services.PortLifecycleService;
 import org.example.services.TabService;
+import org.example.services.UpdateCheckService;
 import org.example.services.connectionPool.AnyPoolService;
 import org.example.utilites.properties.MyProperties;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -77,7 +78,8 @@ public class Main {
             PollingService pollingService = context.getBean(PollingService.class);
             TabService tabService = context.getBean(TabService.class);
             AnswerStorage answerStorage = context.getBean(AnswerStorage.class);
-            mainWindow = new MainWindow(myProperties, anyPoolService, leftPanelStateCollection, connectionSettingsService, portLifecycleService, pollingService, tabService, answerStorage);
+            UpdateCheckService updateCheckService = context.getBean(UpdateCheckService.class);
+            mainWindow = new MainWindow(myProperties, anyPoolService, leftPanelStateCollection, connectionSettingsService, portLifecycleService, pollingService, tabService, answerStorage, updateCheckService);
         });
 
     }
