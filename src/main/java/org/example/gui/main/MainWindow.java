@@ -1489,19 +1489,19 @@ public class MainWindow extends JFrame implements Rendeble {
      */
     private void $$$setupUI$$$() {
         jpMainPanel = new JPanel();
-        jpMainPanel.setLayout(new GridLayoutManager(1, 1, new Insets(2, 2, 2, 2), -1, -1));
+        jpMainPanel.setLayout(new FormLayout("fill:d:grow", "center:d:grow"));
         Font jpMainPanelFont = UIManager.getFont("Tree.font");
         if (jpMainPanelFont != null) jpMainPanel.setFont(jpMainPanelFont);
         jpMainPanel.setMaximumSize(new Dimension(-1, -1));
-        jpMainPanel.setMinimumSize(new Dimension(530, 530));
+        jpMainPanel.setMinimumSize(new Dimension(530, 200));
         jpMainPanel.setPreferredSize(new Dimension(800, 650));
         final JPanel panel1 = new JPanel();
         panel1.setLayout(new FormLayout("fill:d:grow,left:4dlu:noGrow,fill:d:grow", "center:d:grow,top:4dlu:noGrow,center:max(d;4px):noGrow,top:4dlu:noGrow,center:max(d;4px):noGrow,top:4dlu:noGrow,center:max(d;4px):noGrow,top:4dlu:noGrow,center:max(d;4px):noGrow"));
-        jpMainPanel.add(panel1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(450, 400), new Dimension(800, 600), null, 0, false));
+        CellConstraints cc = new CellConstraints();
+        jpMainPanel.add(panel1, cc.xy(1, 1, CellConstraints.FILL, CellConstraints.FILL));
         jpTerminalHistory = new JPanel();
         jpTerminalHistory.setLayout(new BorderLayout(-1, -1));
-        jpTerminalHistory.setPreferredSize(new Dimension(8000, 65));
-        CellConstraints cc = new CellConstraints();
+        jpTerminalHistory.setPreferredSize(new Dimension(8000, 75));
         panel1.add(jpTerminalHistory, cc.xywh(3, 1, 1, 5, CellConstraints.FILL, CellConstraints.FILL));
         jpSendInput = new JPanel();
         jpSendInput.setLayout(new BorderLayout(0, 0));
@@ -1539,19 +1539,21 @@ public class MainWindow extends JFrame implements Rendeble {
         jpAsciiInput.add(label2, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jpTerminalLogPanel = new JPanel();
         jpTerminalLogPanel.setLayout(new BorderLayout(0, 0));
+        jpTerminalLogPanel.setMinimumSize(new Dimension(450, 50));
         jpTerminalHistory.add(jpTerminalLogPanel, BorderLayout.CENTER);
         jtpDevicesTerminal = new JTabbedPane();
         jpTerminalLogPanel.add(jtpDevicesTerminal, BorderLayout.CENTER);
         jpConnectionSettingsScrollContainer = new JScrollPane();
         jpConnectionSettingsScrollContainer.setMaximumSize(new Dimension(300, 650));
-        jpConnectionSettingsScrollContainer.setMinimumSize(new Dimension(300, 5));
+        jpConnectionSettingsScrollContainer.setMinimumSize(new Dimension(300, 200));
+        jpConnectionSettingsScrollContainer.setOpaque(false);
         jpConnectionSettingsScrollContainer.setPreferredSize(new Dimension(300, 650));
         panel1.add(jpConnectionSettingsScrollContainer, cc.xy(1, 1, CellConstraints.LEFT, CellConstraints.TOP));
         jpConnectionSettingsScrollContainer.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(), null, TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         jpConnectionSettings = new JPanel();
         jpConnectionSettings.setLayout(new BorderLayout(0, 0));
         jpConnectionSettings.setMaximumSize(new Dimension(280, 600));
-        jpConnectionSettings.setMinimumSize(new Dimension(280, 100));
+        jpConnectionSettings.setMinimumSize(new Dimension(280, 600));
         jpConnectionSettings.setPreferredSize(new Dimension(280, 600));
         jpConnectionSettingsScrollContainer.setViewportView(jpConnectionSettings);
         jpConnectionSetup = new JPanel();

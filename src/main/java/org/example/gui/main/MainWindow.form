@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="org.example.gui.main.MainWindow">
-  <grid id="cbd77" binding="jpMainPanel" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-    <margin top="2" left="2" bottom="2" right="2"/>
+  <grid id="cbd77" binding="jpMainPanel" layout-manager="FormLayout">
+    <rowspec value="center:d:grow"/>
+    <colspec value="fill:d:grow"/>
     <constraints>
       <xy x="48" y="54" width="885" height="807"/>
     </constraints>
     <properties>
       <font swing-font="Tree.font"/>
       <maximumSize width="-1" height="-1"/>
-      <minimumSize width="530" height="530"/>
+      <minimumSize width="530" height="200"/>
       <preferredSize width="800" height="650"/>
     </properties>
     <border type="none"/>
@@ -28,9 +29,10 @@
         <colspec value="fill:d:grow"/>
         <constraints>
           <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="6" hsize-policy="6" anchor="0" fill="3" indent="0" use-parent-layout="false">
-            <minimum-size width="450" height="400"/>
-            <preferred-size width="800" height="600"/>
+            <minimum-size width="550" height="200"/>
+            <preferred-size width="800" height="500"/>
           </grid>
+          <forms defaultalign-horz="false" defaultalign-vert="false"/>
         </constraints>
         <properties/>
         <border type="none"/>
@@ -43,7 +45,7 @@
               <forms defaultalign-horz="false" defaultalign-vert="false"/>
             </constraints>
             <properties>
-              <preferredSize width="8000" height="65"/>
+              <preferredSize width="8000" height="75"/>
             </properties>
             <border type="none"/>
             <children>
@@ -135,7 +137,9 @@
               </grid>
               <grid id="ed849" binding="jpTerminalLogPanel" layout-manager="BorderLayout" hgap="0" vgap="0">
                 <constraints border-constraint="Center"/>
-                <properties/>
+                <properties>
+                  <minimumSize width="450" height="50"/>
+                </properties>
                 <border type="none"/>
                 <children>
                   <tabbedpane id="b93bc" binding="jtpDevicesTerminal">
@@ -155,7 +159,8 @@
             </constraints>
             <properties>
               <maximumSize width="300" height="650"/>
-              <minimumSize width="300" height="5"/>
+              <minimumSize width="300" height="200"/>
+              <opaque value="false"/>
               <preferredSize width="300" height="650"/>
             </properties>
             <border type="empty"/>
@@ -164,7 +169,7 @@
                 <constraints/>
                 <properties>
                   <maximumSize width="280" height="600"/>
-                  <minimumSize width="280" height="100"/>
+                  <minimumSize width="280" height="600"/>
                   <preferredSize width="280" height="600"/>
                 </properties>
                 <border type="none"/>
