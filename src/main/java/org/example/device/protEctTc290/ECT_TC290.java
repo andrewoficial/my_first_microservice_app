@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandListClass;
 import org.example.device.ProtocolComPort;
+import org.example.device.SlaveAddressable;
 import org.example.device.SomeDevice;
 import org.example.device.TemplatedAscii;
 import org.example.device.connectParameters.ComConnectParameters;
@@ -13,7 +14,7 @@ import org.example.services.AnswerValues;
 import org.example.services.transport.serial.*;
 
 @Slf4j
-public class ECT_TC290 implements SomeDevice, ProtocolComPort, TemplatedAscii {
+public class ECT_TC290 implements SomeDevice, ProtocolComPort, TemplatedAscii, SlaveAddressable {
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора
     private final SerialPort comPort;
@@ -36,6 +37,7 @@ public class ECT_TC290 implements SomeDevice, ProtocolComPort, TemplatedAscii {
 
     private String cmdToSend;
     private int expectedBytes = 0;
+    private int slaveAddress = 1; // Сетевой адрес (адресный префикс вида "@01")
 
     private String devIdent = "ECT_TC290";
 
@@ -72,10 +74,41 @@ public class ECT_TC290 implements SomeDevice, ProtocolComPort, TemplatedAscii {
             expectedBytes = 500;
             cmdToSend = null;
         }else{
+            //Адресный префикс — "@" + 1..2 цифры. Нормализуем к виду "@NN",
+            //чтобы "1CRDG? 1" или "@1CRDG? 1" превратились в "@01CRDG? 1".
+            String normalized = normalizeAddressPrefix(str);
             //Получает количесвто одидаемых байт
-            expectedBytes = commands.getExpectedBytes(str); //ToDo распространить на сотальные девайсы
-            cmdToSend = str;
+            expectedBytes = commands.getExpectedBytes(normalized); //ToDo распространить на сотальные девайсы
+            cmdToSend = normalized;
         }
+    }
+
+    @Override
+    public void setSlaveAddress(int address) {
+        this.slaveAddress = address;
+    }
+
+    public int getSlaveAddress() {
+        return this.slaveAddress;
+    }
+
+    /**
+     * Приводит ведущий адрес к виду {@code @NN}: {@code 1CRDG? 1 -> @01CRDG? 1},
+     * {@code @5CRDG? 1 -> @05CRDG? 1}. Команда без адреса возвращается как есть.
+     */
+    private static String normalizeAddressPrefix(String command) {
+        boolean hasAt = command.charAt(0) == '@';
+        int start = hasAt ? 1 : 0;
+        int digits = 0;
+        while (start + digits < command.length() && Character.isDigit(command.charAt(start + digits))) {
+            digits++;
+        }
+        if (digits == 0) {
+            return command;
+        }
+        int address = Integer.parseInt(command.substring(start, start + digits));
+        String rest = command.substring(start + digits);
+        return String.format("@%02d%s", address, rest);
     }
 
 

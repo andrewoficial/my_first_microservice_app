@@ -6,6 +6,7 @@ import org.example.gui.main.MainWindow;
 import org.example.gui.settings.server.ServerSettingsWindow;
 import org.example.services.AnswerStorage;
 import org.example.services.ConnectionSettingsService;
+import org.example.services.LauncherUpdateCheckService;
 import org.example.services.PollingService;
 import org.example.services.PortLifecycleService;
 import org.example.services.TabService;
@@ -79,7 +80,8 @@ public class Main {
             TabService tabService = context.getBean(TabService.class);
             AnswerStorage answerStorage = context.getBean(AnswerStorage.class);
             UpdateCheckService updateCheckService = context.getBean(UpdateCheckService.class);
-            mainWindow = new MainWindow(myProperties, anyPoolService, leftPanelStateCollection, connectionSettingsService, portLifecycleService, pollingService, tabService, answerStorage, updateCheckService);
+            LauncherUpdateCheckService launcherUpdateCheckService = context.getBean(LauncherUpdateCheckService.class);
+            mainWindow = new MainWindow(myProperties, anyPoolService, leftPanelStateCollection, connectionSettingsService, portLifecycleService, pollingService, tabService, answerStorage, updateCheckService, launcherUpdateCheckService);
         });
 
     }

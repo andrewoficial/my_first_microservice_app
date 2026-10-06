@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.Main;
 import org.example.device.ProtocolComPort;
 import org.example.device.ProtocolsList;
+import org.example.device.protErstevakMtp4d.ERSTEVAK_MTP4D;
+import org.example.device.protEctTc290.ECT_TC290;
 import org.example.device.SlaveAddressable;
 import org.example.device.SomeDevice;
 import org.example.device.TemplatedAscii;
@@ -21,12 +23,15 @@ import org.example.gui.components.*;
 import org.example.gui.main.left.hidParamForm;
 import org.example.gui.main.left.wsParamForm;
 import org.example.gui.devices.igm.modbus.IgmModbusSearchDialog;
+import org.example.gui.devices.erstevak.ErstevakSearchDialog;
+import org.example.gui.devices.ecttc290.EctTc290SearchDialog;
 import org.example.gui.mainWindowUtilites.FolderPictureForLog;
 import org.example.gui.mainWindowUtilites.GuiStateManager;
 import org.example.gui.mainWindowUtilites.CommandFieldFormatter;
 import org.example.gui.mainWindowUtilites.TabManager;
 import org.example.services.AnswerStorage;
 import org.example.services.ConnectionSettingsService;
+import org.example.services.LauncherUpdateCheckService;
 import org.example.services.PollingService;
 import org.example.services.PortLifecycleService;
 import org.example.services.TabService;
@@ -80,6 +85,7 @@ public class MainWindow extends JFrame implements Rendeble {
     private TabService tabService; //Сервис управления вкладками
     private final AnswerStorage answerStorage;
     private final UpdateCheckService updateCheckService; //Тихий сервис проверки обновлений
+    private final LauncherUpdateCheckService launcherUpdateCheckService; //Тихий сервис проверки обновлений лаунчера
     private final GuiStateManager guiStateManager;
     private final TabManager tabManager;
 
@@ -195,9 +201,12 @@ public class MainWindow extends JFrame implements Rendeble {
         if (updateCheckService != null) {
             updateCheckService.start();
         }
+        if (launcherUpdateCheckService != null) {
+            launcherUpdateCheckService.start();
+        }
         //log.info("prop driver " + prop.getDrv());
         JMenuBar menuBar = new JMenuBar();
-        JmenuFile menu = new JmenuFile(prop, anyPoolService, answerStorage, updateCheckService);
+        JmenuFile menu = new JmenuFile(prop, anyPoolService, answerStorage, updateCheckService, launcherUpdateCheckService);
         menuBar.add(menu.createFileMenu());
         menuBar.add(menu.createSettingsMenu());
         menuBar.add(menu.createViewMenu(uiThPool));
@@ -521,7 +530,7 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
 
-    public MainWindow(MyProperties myProperties, AnyPoolService anyPoolService, MainLeftPanelStateCollection leftPanelStateCollection, ConnectionSettingsService connectionSettingsService, PortLifecycleService portLifecycleService, PollingService pollingService, TabService tabService, AnswerStorage answerStorage, UpdateCheckService updateCheckService) {
+    public MainWindow(MyProperties myProperties, AnyPoolService anyPoolService, MainLeftPanelStateCollection leftPanelStateCollection, ConnectionSettingsService connectionSettingsService, PortLifecycleService portLifecycleService, PollingService pollingService, TabService tabService, AnswerStorage answerStorage, UpdateCheckService updateCheckService, LauncherUpdateCheckService launcherUpdateCheckService) {
         if (leftPanelStateCollection == null) {
             log.warn("В конструктор MainWindow передан null leftPanelStateCollection");
         }
@@ -541,6 +550,7 @@ public class MainWindow extends JFrame implements Rendeble {
         this.tabService = tabService;
         this.answerStorage = answerStorage;
         this.updateCheckService = updateCheckService;
+        this.launcherUpdateCheckService = launcherUpdateCheckService;
         applyWsFormDefaultsFromProperties();
 
         createMenu();
@@ -744,11 +754,18 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
     /**
-     * Поиск сетевых адресов IGM (Modbus RTU) на текущем порту и скорости.
-     * Найденный адрес подставляется в поле «Адрес».
+     * Поиск сетевых адресов приборов на текущем порту.
+     * Для IGM (Modbus RTU), Erstevak MTP4D (ASCII, {@code NNN}) и ECT_TC290 (ASCII, {@code @NN})
+     * используется свой диалог. Найденный адрес подставляется в поле «Адрес».
      */
     private void startComSearch() {
-        if (!(currentPanelDevice instanceof SlaveAddressable) || !(currentPanelDevice instanceof ProtocolComPort)) {
+        if (!(currentPanelDevice instanceof ProtocolComPort)) {
+            addCustomMessage("Поиск сетевых адресов доступен только для устройств с адресом");
+            return;
+        }
+        boolean erstevak = currentPanelDevice instanceof ERSTEVAK_MTP4D;
+        boolean ect = currentPanelDevice instanceof ECT_TC290;
+        if (!erstevak && !ect && !(currentPanelDevice instanceof SlaveAddressable)) {
             addCustomMessage("Поиск сетевых адресов доступен только для устройств с адресом");
             return;
         }
@@ -758,14 +775,50 @@ public class MainWindow extends JFrame implements Rendeble {
             return;
         }
 
-        // Берём типовые параметры протокола (для IGM это 19200 8E1), а не текущее состояние комбо,
-        // чтобы поиск не зависел от того, нажимали ли «типовые параметры».
+        // Берём типовые параметры протокола (для IGM это 19200 8E1, для Erstevak 9600 8E1),
+        // а не текущее состояние комбо, чтобы поиск не зависел от того, нажимали ли «типовые параметры».
         ProtocolComPort p = (ProtocolComPort) currentPanelDevice;
         int baud = p.getDefaultBaudRate().getValue();
         int dataBits = p.getDefaultDataBit().getValue();
         int stopBits = p.getDefaultStopBit().getValue();
         int parity = p.getDefaultParity().getValue();
         String portName = ((String) portItem).split(" ")[0];
+
+        if (erstevak) {
+            addCustomMessage("Запуск поиска адресов Erstevak: " + portName + ", " + baud + " бод");
+            ErstevakSearchDialog dialog = new ErstevakSearchDialog(this, portName, baud, dataBits, stopBits, parity);
+            dialog.startSearch();
+            dialog.setVisible(true);
+
+            List<ErstevakSearchDialog.FoundDevice> found = dialog.getFoundDevices();
+            if (found.isEmpty()) {
+                addCustomMessage("Устройства не найдены");
+                return;
+            }
+            ErstevakSearchDialog.FoundDevice first = found.get(0);
+            jtfPrefToSend.setText(first.formattedAddress());
+            applySlaveAddressFromPrefix();
+            addCustomMessage("Найдено устройств: " + found.size() + ". Адрес: " + first.formattedAddress());
+            return;
+        }
+
+        if (ect) {
+            addCustomMessage("Запуск поиска адресов ECT_TC290: " + portName + ", " + baud + " бод");
+            EctTc290SearchDialog dialog = new EctTc290SearchDialog(this, portName, baud, dataBits, stopBits, parity);
+            dialog.startSearch();
+            dialog.setVisible(true);
+
+            List<EctTc290SearchDialog.FoundDevice> found = dialog.getFoundDevices();
+            if (found.isEmpty()) {
+                addCustomMessage("Устройства не найдены");
+                return;
+            }
+            EctTc290SearchDialog.FoundDevice first = found.get(0);
+            jtfPrefToSend.setText(first.formattedAddress());
+            applySlaveAddressFromPrefix();
+            addCustomMessage("Найдено устройств: " + found.size() + ". Адрес: " + first.formattedAddress());
+            return;
+        }
 
         addCustomMessage("Запуск поиска адресов: " + portName + ", " + baud + " бод");
         IgmModbusSearchDialog dialog = new IgmModbusSearchDialog(this, portName, baud, dataBits, stopBits, parity);

@@ -43,6 +43,7 @@ import org.example.gui.settings.updates.UpdateSettingsWindow;
 import org.example.gui.system.logs.ViewLogsWindow;
 import org.example.gui.system.resources.DebugWindow;
 import org.example.services.AnswerStorage;
+import org.example.services.LauncherUpdateCheckService;
 import org.example.services.UpdateCheckService;
 import org.example.services.connectionPool.AnyPoolService;
 import org.example.utilites.properties.MyProperties;
@@ -56,18 +57,26 @@ public class JmenuFile {
     private final AnswerLoader answerLoader = new AnswerLoader();
     private final AnswerStorage answerStorage;
     private final UpdateCheckService updateCheckService;
+    private final LauncherUpdateCheckService launcherUpdateCheckService;
 
     public JmenuFile (MyProperties extProp, AnyPoolService anyPoolService, AnswerStorage answerStorage){
-        this(extProp, anyPoolService, answerStorage, null);
+        this(extProp, anyPoolService, answerStorage, null, null);
     }
 
     public JmenuFile (MyProperties extProp, AnyPoolService anyPoolService, AnswerStorage answerStorage,
                       UpdateCheckService updateCheckService){
+        this(extProp, anyPoolService, answerStorage, updateCheckService, null);
+    }
+
+    public JmenuFile (MyProperties extProp, AnyPoolService anyPoolService, AnswerStorage answerStorage,
+                      UpdateCheckService updateCheckService,
+                      LauncherUpdateCheckService launcherUpdateCheckService){
         super();
         this.prop = extProp;
         this.anyPoolService = anyPoolService;
         this.answerStorage = answerStorage;
         this.updateCheckService = updateCheckService;
+        this.launcherUpdateCheckService = launcherUpdateCheckService;
         if(anyPoolService == null){
             log.warn("В конструктор JmenuFile передан null anyPoolService");
         }
@@ -175,10 +184,12 @@ public class JmenuFile {
         JMenu viewMenu = new JMenu("Справка");
         // меню-флажки
         JMenuItem sysAbout  = new JMenuItem("О программе");
-        JMenuItem sysUpdate  = new JMenuItem("Проверка обновлений");
+        JMenuItem sysUpdate  = new JMenuItem("Проверка обновлений программы");
+        JMenuItem sysLauncherUpdate  = new JMenuItem("Проверка обновлений лаунчера");
         // добавим все в меню
         viewMenu.add(sysAbout);
         viewMenu.add(sysUpdate);
+        viewMenu.add(sysLauncherUpdate);
 
         sysAbout.addActionListener(new ActionListener()
         {
@@ -205,31 +216,54 @@ public class JmenuFile {
 
             }
         });
-        installUpdateIndicator(viewMenu, sysUpdate);
+        sysLauncherUpdate.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                System.out.println("Update Launcher Window");
+                UpdateLauncherWindow launcherWindow = new UpdateLauncherWindow();
+                launcherWindow.setName("Update Launcher Window");
+                launcherWindow.setTitle("Обновление лаунчера");
+                launcherWindow.pack();
+                launcherWindow.setModal(false);
+                launcherWindow.setVisible(true);
+                thPool.submit(new RenderThread(launcherWindow));
+            }
+        });
+        installUpdateIndicators(viewMenu, sysUpdate, updateCheckService,
+                sysLauncherUpdate, launcherUpdateCheckService);
         return viewMenu;
     }
 
     /**
-     * Тихий индикатор обновления: периодически опрашивает {@link UpdateCheckService}
-     * и, если проверка завершилась успешно и есть новая версия, дописывает жёлтую точку
-     * в конце текста пункта «Проверка обновлений» и у самого меню «Справка» (хлебные крошки).
-     * При неудачной проверке интерфейс не меняется.
+     * Тихий индикатор обновлений: периодически опрашивает оба сервиса
+     * ({@link UpdateCheckService} и {@link LauncherUpdateCheckService}) и, если проверка
+     * завершилась успешно и есть новая версия, дописывает жёлтую точку в конце текста
+     * соответствующего пункта. У меню «Справка» точка появляется, если обновление есть
+     * хотя бы для одного из них (хлебные крошки). При неудачной проверке интерфейс не меняется.
      */
-    private void installUpdateIndicator(JMenu parentMenu, JMenuItem updateItem) {
-        if (updateCheckService == null) {
+    private void installUpdateIndicators(JMenu parentMenu,
+                                         JMenuItem programItem, UpdateCheckService programService,
+                                         JMenuItem launcherItem, LauncherUpdateCheckService launcherService) {
+        if (programService == null && launcherService == null) {
             return;
         }
-        final String baseItemText = updateItem.getText();
-        final String baseMenuText = parentMenu.getText();
+        final String baseProgram = programItem.getText();
+        final String baseLauncher = launcherItem.getText();
+        final String baseMenu = parentMenu.getText();
         final String dotColor = "#E6A700";
         final javax.swing.Timer timer = new javax.swing.Timer(1500, null);
         timer.addActionListener(e -> {
-            if (updateCheckService.isPending()) {
+            boolean programPending = programService != null && programService.isPending();
+            boolean launcherPending = launcherService != null && launcherService.isPending();
+            if (programPending || launcherPending) {
                 return;
             }
-            boolean show = updateCheckService.hasUpdate();
-            updateItem.setText(withUpdateDot(baseItemText, dotColor, show));
-            parentMenu.setText(withUpdateDot(baseMenuText, dotColor, show));
+            boolean programShow = programService != null && programService.hasUpdate();
+            boolean launcherShow = launcherService != null && launcherService.hasUpdate();
+            programItem.setText(withUpdateDot(baseProgram, dotColor, programShow));
+            launcherItem.setText(withUpdateDot(baseLauncher, dotColor, launcherShow));
+            parentMenu.setText(withUpdateDot(baseMenu, dotColor, programShow || launcherShow));
             timer.stop();
         });
         timer.setInitialDelay(0);

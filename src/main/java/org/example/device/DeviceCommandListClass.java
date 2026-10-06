@@ -30,11 +30,39 @@ public class DeviceCommandListClass {
 
 
     public SingleCommand getCommand(String originalName) {
-        String normalized = originalName;
+        if (originalName == null) {
+            return null;
+        }
+        SingleCommand command = commandPool.get(normalize(originalName));
+        if (command != null) {
+            return command;
+        }
+        // Многодроповые ASCII-приборы шлют "<адрес><команда>", а команды в реестре хранятся
+        // без адреса. Если по полному имени не нашли — пробуем отбросить ведущий адрес:
+        // "001M^" (3 цифры, напр. Erstevak/Thyracont) или "@01CRDG? 1" ('@' + цифры, напр. ECT_TC290).
+        String trimmed = originalName.trim();
+        if (trimmed.matches("\\d{3}.+")) {
+            command = commandPool.get(normalize(trimmed.substring(3)));
+        }
+        if (command == null && trimmed.matches("@\\d{1,3}.+")) {
+            int i = 1;
+            while (i < trimmed.length() && Character.isDigit(trimmed.charAt(i))) {
+                i++;
+            }
+            command = commandPool.get(normalize(trimmed.substring(i)));
+        }
+        return command;
+    }
+
+    private String normalize(String commandName) {
+        String normalized = commandName;
         for (DeviceCommandNameNormalizer normalizer : normalizers) {
+            if (normalized == null) {
+                return null;
+            }
             normalized = normalizer.normalize(normalized);
         }
-        return commandPool.get(normalized);
+        return normalized;
     }
 
     public void addCommand(SingleCommand command){

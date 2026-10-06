@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.example.device.ProtocolComPort;
 import org.example.device.DeviceCommandListClass;
+import org.example.device.SlaveAddressable;
 import org.example.device.SomeDevice;
 import org.example.device.TemplatedAscii;
 import org.example.device.connectParameters.ComConnectParameters;
@@ -13,7 +14,7 @@ import org.example.services.AnswerValues;
 import org.example.services.transport.serial.*;
 
 @Slf4j
-public class ERSTEVAK_MTP4D implements SomeDevice, ProtocolComPort, TemplatedAscii {
+public class ERSTEVAK_MTP4D implements SomeDevice, ProtocolComPort, TemplatedAscii, SlaveAddressable {
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора
     private final SerialPort comPort;
@@ -38,6 +39,7 @@ public class ERSTEVAK_MTP4D implements SomeDevice, ProtocolComPort, TemplatedAsc
 
     private String cmdToSend;
     private int expectedBytes = 0;
+    private int slaveAddress = 1; // Сетевой адрес для адресного префикса (формат 3 цифры)
 
     private String devIdent = "ERSTEVAK_MTP4D";
 
@@ -74,10 +76,41 @@ public class ERSTEVAK_MTP4D implements SomeDevice, ProtocolComPort, TemplatedAsc
             expectedBytes = 500;
             cmdToSend = null;
         }else{
+            //Адрес сетевого прибора — первые 3 цифры. Дополняем ведущими нулями,
+            //чтобы "5M^" превратилось в "005M^".
+            String normalized = normalizeAddressPrefix(str);
             //Получает количесвто одидаемых байт
-            expectedBytes = commands.getExpectedBytes(str); //ToDo распространить на сотальные девайсы
-            cmdToSend = str;
+            expectedBytes = commands.getExpectedBytes(normalized); //ToDo распространить на сотальные девайсы
+            cmdToSend = normalized;
         }
+    }
+
+    @Override
+    public void setSlaveAddress(int address) {
+        this.slaveAddress = address;
+    }
+
+    public int getSlaveAddress() {
+        return this.slaveAddress;
+    }
+
+    /**
+     * Дополняет ведущий числовой адрес до 3 цифр: {@code 5M^ -> 005M^}, {@code 001M^ -> 001M^}.
+     * Если команда идёт без адреса ({@code M^}) — возвращает как есть.
+     */
+    private static String normalizeAddressPrefix(String command) {
+        int digits = 0;
+        while (digits < command.length() && Character.isDigit(command.charAt(digits))) {
+            digits++;
+        }
+        if (digits == 0 || digits >= 3) {
+            return command;
+        }
+        StringBuilder sb = new StringBuilder(3 + command.length());
+        for (int i = digits; i < 3; i++) {
+            sb.append('0');
+        }
+        return sb.append(command).toString();
     }
 
 
