@@ -20,12 +20,12 @@ public class ConvertTest {
         assertTrue(device.hasValue());
         assertEquals(1000.2,device.getValues().getValues()[0]);
         String devAnswer = device.getAnswer();
-        String exceptedValue = "1000.2  unit  ";
+        String exceptedValue = "1000.2  mbar  ";
         if(! exceptedValue.equals(devAnswer)){
             System.out.println(devAnswer);
             System.out.println(exceptedValue);
         }
-        assertTrue(exceptedValue.equals(devAnswer));
+        assertEquals(exceptedValue, devAnswer);
 
 
         device.setReceived("001M495820Z\r");
@@ -34,7 +34,7 @@ public class ConvertTest {
         assertTrue(device.hasValue());
         assertEquals(4.9582,device.getValues().getValues()[0]);
         devAnswer = device.getAnswer();
-        exceptedValue = "4.9582  unit  ";
+        exceptedValue = "4.9582  mbar  ";
         if(! exceptedValue.equals(devAnswer)){
             System.out.println(devAnswer);
             System.out.println(exceptedValue);
@@ -47,7 +47,7 @@ public class ConvertTest {
         assertTrue(device.hasValue());
         assertEquals(4.9582,device.getValues().getValues()[0]);
         devAnswer = device.getAnswer();
-        exceptedValue = "4.9582  unit  ";
+        exceptedValue = "4.9582  mbar  ";
         if(! exceptedValue.equals(devAnswer)){
             System.out.println(devAnswer);
             System.out.println(exceptedValue);
@@ -61,7 +61,7 @@ public class ConvertTest {
         assertTrue(device.hasValue());
         assertEquals(4.9582,device.getValues().getValues()[0]);
         devAnswer = device.getAnswer();
-        exceptedValue = "4.9582  unit  ";
+        exceptedValue = "4.9582  mbar  ";
         if(! exceptedValue.equals(devAnswer)){
             System.out.println(devAnswer);
             System.out.println(exceptedValue);
