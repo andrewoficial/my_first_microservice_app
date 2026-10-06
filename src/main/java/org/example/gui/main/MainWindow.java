@@ -902,7 +902,7 @@ public class MainWindow extends JFrame implements Rendeble {
 
         jpNonAsciCommandListPanel.setMinimumSize(new Dimension(0, 0));
         jpNonAsciCommandListPanel.setPreferredSize(new Dimension(0, 100));
-        setSendInputPreferredHeight(200);
+        setSendInputPreferredHeight(140);
         commandListVisible = true;
 
         jpSendInput.revalidate();
@@ -1423,7 +1423,7 @@ public class MainWindow extends JFrame implements Rendeble {
         Font jpMainPanelFont = UIManager.getFont("Tree.font");
         if (jpMainPanelFont != null) jpMainPanel.setFont(jpMainPanelFont);
         jpMainPanel.setMaximumSize(new Dimension(-1, -1));
-        jpMainPanel.setMinimumSize(new Dimension(530, 200));
+        jpMainPanel.setMinimumSize(new Dimension(530, 120));
         jpMainPanel.setPreferredSize(new Dimension(800, 650));
         final JPanel panel1 = new JPanel();
         panel1.setLayout(new FormLayout("fill:d:grow,left:4dlu:noGrow,fill:d:grow", "center:d:grow,top:4dlu:noGrow,center:max(d;4px):noGrow,top:4dlu:noGrow,center:max(d;4px):noGrow,top:4dlu:noGrow,center:max(d;4px):noGrow,top:4dlu:noGrow,center:max(d;4px):noGrow"));
@@ -1440,7 +1440,9 @@ public class MainWindow extends JFrame implements Rendeble {
         jpTerminalHistory.add(jpSendInput, cc.xy(1, 1, CellConstraints.FILL, CellConstraints.FILL));
         jpNonAsciCommandListPanel = new JPanel();
         jpNonAsciCommandListPanel.setLayout(new FormLayout("fill:d:grow", "center:d:grow"));
-        jpNonAsciCommandListPanel.setMinimumSize(new Dimension(0, 200));
+        jpNonAsciCommandListPanel.setMaximumSize(new Dimension(700, 200));
+        jpNonAsciCommandListPanel.setMinimumSize(new Dimension(0, 100));
+        jpNonAsciCommandListPanel.setPreferredSize(new Dimension(0, 200));
         jpSendInput.add(jpNonAsciCommandListPanel, BorderLayout.WEST);
         jpAsciiInput = new JPanel();
         jpAsciiInput.setLayout(new GridLayoutManager(2, 3, new Insets(0, 0, 0, 0), -1, -1));
@@ -1470,12 +1472,13 @@ public class MainWindow extends JFrame implements Rendeble {
         jpTerminalLogPanel = new JPanel();
         jpTerminalLogPanel.setLayout(new BorderLayout(0, 0));
         jpTerminalLogPanel.setMinimumSize(new Dimension(450, 50));
+        jpTerminalLogPanel.setPreferredSize(new Dimension(450, 100));
         jpTerminalHistory.add(jpTerminalLogPanel, cc.xy(1, 2, CellConstraints.FILL, CellConstraints.FILL));
         jtpDevicesTerminal = new JTabbedPane();
         jpTerminalLogPanel.add(jtpDevicesTerminal, BorderLayout.CENTER);
         jpConnectionSettingsScrollContainer = new JScrollPane();
         jpConnectionSettingsScrollContainer.setMaximumSize(new Dimension(300, 650));
-        jpConnectionSettingsScrollContainer.setMinimumSize(new Dimension(300, 200));
+        jpConnectionSettingsScrollContainer.setMinimumSize(new Dimension(300, 100));
         jpConnectionSettingsScrollContainer.setOpaque(false);
         jpConnectionSettingsScrollContainer.setPreferredSize(new Dimension(300, 650));
         panel1.add(jpConnectionSettingsScrollContainer, cc.xy(1, 1, CellConstraints.LEFT, CellConstraints.TOP));

@@ -1,5 +1,6 @@
 package org.example;
 
+import com.formdev.flatlaf.FlatLightLaf;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gui.MainLeftPanelStateCollection;
 import org.example.gui.main.MainWindow;
@@ -66,11 +67,11 @@ public class Main {
                 .run(args);
 
 
-//        try {
-//            UIManager.setLookAndFeel(new FlatLightLaf());
-//        } catch (UnsupportedLookAndFeelException e) {
-//            log.info("Error while set FlatLightLaf");
-//        }
+        try {
+            UIManager.setLookAndFeel(new FlatLightLaf());
+        } catch (UnsupportedLookAndFeelException e) {
+            log.info("Error while set FlatLightLaf");
+        }
         SwingUtilities.invokeLater(() -> {
             AnyPoolService anyPoolService = context.getBean(AnyPoolService.class);
             MyProperties myProperties = context.getBean(MyProperties.class);
@@ -90,7 +91,7 @@ public class Main {
     public static void restart(String newProfile) {
         String savedPort = (mainWindow != null && context != null && context.isActive())
                 ? context.getBean(MyProperties.class).getPrt() : "8080";
-        System.out.println("Сохранённый порт: " + savedPort);
+
         // 1. Сохраняем бины ДО закрытия старого контекста
         final MyProperties myProperties;
         final AnyPoolService anyPoolService;
@@ -172,9 +173,6 @@ public class Main {
         if (myProperties != null) {
             MyProperties.restoreInstance(myProperties);
         }
-
-        System.out.println("Spring видит профили после run: "
-                + String.join(", ", context.getEnvironment().getActiveProfiles()));
 
         // 6. Обновляем сервисы в UI
         if (mainWindow != null) {

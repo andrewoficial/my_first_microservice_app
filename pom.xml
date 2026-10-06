@@ -27,7 +27,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <ignite.version>2.13.0</ignite.version>
-        <flatlaf.version>3.4</flatlaf.version>
+        <flatlaf.version>3.7</flatlaf.version>
     </properties>
 
     <scm>
