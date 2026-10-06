@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.IntConsumer;
 
 import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 
@@ -37,6 +38,7 @@ import static org.example.utilites.MyUtilities.createDeviceByProtocol;
 public class ComDataCollector implements Runnable{
 
     private final AnyPoolService parentService;//Родительский класс для получения единого для всех потомков объекта синхронизаци логирования.
+    private volatile IntConsumer logFileStartedListener;
     private final AnswerStorage answerStorage;
     private final MyProperties myProperties = MyProperties.getInstance(); //Объект с параметрами для того, что бы определять тип логирования
     @Getter
@@ -580,6 +582,7 @@ public class ComDataCollector implements Runnable{
                 }
                 clientsMap.get(clientId).logger = new DeviceLogger(name, myProperties);
                 deviceLogger = clientsMap.get(clientId).logger;
+                notifyLogFileStarted(clientId);
             }
 
             if(myProperties != null && myProperties.getNeedSyncSavingAnswer()){
@@ -665,6 +668,9 @@ public class ComDataCollector implements Runnable{
             deviceLogger = new DeviceLogger(clientId,myProperties);
         }
         clientsMap.put(clientId, new ClientData(clientId, needLog, needPoolFlag, prf, cmd, deviceLogger, poolDelay));
+        if (deviceLogger != null) {
+            notifyLogFileStarted(clientId);
+        }
     }
 
     public void removeDeviceFromComDataCollector(int clientId){ //Когда вкладка закрывается
@@ -733,6 +739,22 @@ public class ComDataCollector implements Runnable{
             }
         }
         return true;
+    }
+
+    public void setLogFileStartedListener(IntConsumer listener) {
+        this.logFileStartedListener = listener;
+    }
+
+    private void notifyLogFileStarted(int clientId) {
+        IntConsumer listener = logFileStartedListener;
+        if (listener == null) {
+            return;
+        }
+        try {
+            listener.accept(clientId);
+        } catch (RuntimeException e) {
+            log.warn("Колбэк старта файла лога клиента " + clientId + ": " + e.getMessage());
+        }
     }
 
     public DeviceLogger getLogger(int clientId){

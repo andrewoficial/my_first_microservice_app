@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.net.ConnectException;
 import java.util.ArrayList;
+import java.util.function.IntConsumer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.IntStream;
@@ -37,6 +38,7 @@ public class AnyPoolService {
     @Getter
     private final AnswerSaverSync answerSaverLogger;
     private final AnswerStorage answerStorage;
+    private volatile IntConsumer logFileStartedListener;
 
     @Autowired
     public AnyPoolService(ComPort comPort, MyProperties properties1, AnswerSaverSync answerSaverLogger, AnswerStorage answerStorage) {
@@ -44,6 +46,13 @@ public class AnyPoolService {
         this.properties = properties1;
         this.answerSaverLogger = answerSaverLogger;
         this.answerStorage = answerStorage;
+    }
+
+    public void setLogFileStartedListener(IntConsumer listener) {
+        this.logFileStartedListener = listener;
+        for (ComDataCollector collector : comDataCollectors) {
+            collector.setLogFileStartedListener(listener);
+        }
     }
 
     public String createOrUpdateComDataCollector(MainLeftPanelStateCollection state, int clientId, int selectedComPort, int selectedProtocol, boolean pool, boolean isBtn, int poolDelay) throws ConnectException {
@@ -108,6 +117,7 @@ public class AnyPoolService {
         ProtocolsList protocol = ProtocolsList.getLikeArrayEnum(protocolIndex);
         try {
             ComDataCollector toAdd = new ComDataCollector(state, protocol, state.getPrefix(clientId), state.getCommand(clientId), avaComPorts.activePort, poolDelay, false, clientId, this, answerStorage);
+            toAdd.setLogFileStartedListener(logFileStartedListener);
             this.addComDataCollector(toAdd);
             setupNewCollector(clientId, pool, isBtn, state);
         }catch (ConnectException exp){

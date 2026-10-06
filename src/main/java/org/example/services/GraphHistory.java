@@ -58,4 +58,26 @@ final class GraphHistory {
             consumer.accept(point);
         }
     }
+
+    /**
+     * Точки новее {@code sinceExclusive}. Если их больше {@code limit}, остаются самые новые.
+     */
+    java.util.List<GraphSample> pointsAfter(long sinceExclusive, int limit) {
+        java.util.List<GraphSample> found = new java.util.ArrayList<>();
+        forEachPoint(point -> {
+            if (point.getEpochMilli() <= sinceExclusive) {
+                return;
+            }
+            double[] values = new double[point.getFieldCount()];
+            for (int i = 0; i < values.length; i++) {
+                Double value = point.getValue(i);
+                values[i] = value == null ? Double.NaN : value;
+            }
+            found.add(new GraphSample(point.getEpochMilli(), values));
+        });
+        if (limit > 0 && found.size() > limit) {
+            return java.util.List.copyOf(found.subList(found.size() - limit, found.size()));
+        }
+        return found;
+    }
 }

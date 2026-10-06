@@ -772,6 +772,8 @@ public class MyProperties {
             propertyBuilders.get("connectionType").append(ct.name()).append(", ");
         }
 
+        // TODO: разделитель вкладок — ", ". Если он встретится внутри prefix или command,
+        // getStringArray разрежет значение не по вкладкам. Для команд Edwards такого нет.
         // Удаляем лишние запятые и пробелы, экранируем специальные символы
         propertyBuilders.forEach((key, sb) -> {
             if (sb.length() > 2) {

@@ -5,6 +5,7 @@ import org.example.gui.MainLeftPanelStateCollection;
 import org.example.gui.main.MainWindow;
 import org.example.gui.settings.server.ServerSettingsWindow;
 import org.example.services.AnswerStorage;
+import org.example.services.GraphDataRepository;
 import org.example.services.ConnectionSettingsService;
 import org.example.services.LauncherUpdateCheckService;
 import org.example.services.PollingService;
@@ -94,17 +95,24 @@ public class Main {
         final MyProperties myProperties;
         final AnyPoolService anyPoolService;
         final MainLeftPanelStateCollection leftPanelStateCollection;
+        // Иначе новый контекст получает пустые хранилища, а опрос продолжает писать в старые.
+        final AnswerStorage answerStorage;
+        final GraphDataRepository graphDataRepository;
 
         if (context != null) {
             myProperties = context.getBean(MyProperties.class);
             anyPoolService = context.getBean(AnyPoolService.class);
             leftPanelStateCollection = context.getBean(MainLeftPanelStateCollection.class);
+            answerStorage = context.getBean(AnswerStorage.class);
+            graphDataRepository = context.getBean(GraphDataRepository.class);
             context.close();
             System.out.println("Закрыл контекст Spring");
         } else {
             myProperties = null;
             anyPoolService = null;
             leftPanelStateCollection = null;
+            answerStorage = null;
+            graphDataRepository = null;
         }
 
         // 2. Создаём новый контекст с предварительной настройкой
@@ -121,13 +129,19 @@ public class Main {
                             removeBeanDefinitionsOfType(beanFactory, MyProperties.class);
                             removeBeanDefinitionsOfType(beanFactory, AnyPoolService.class);
                             removeBeanDefinitionsOfType(beanFactory, MainLeftPanelStateCollection.class);
+                            removeBeanDefinitionsOfType(beanFactory, AnswerStorage.class);
+                            removeBeanDefinitionsOfType(beanFactory, GraphDataRepository.class);
                             removeBeanByNames(beanFactory,
                                     "myProperties",
                                     "anyPoolService",
                                     "mainLeftPanelStateCollection",
+                                    "answerStorage",
+                                    "graphDataRepository",
                                     MyProperties.class.getName(),
                                     AnyPoolService.class.getName(),
-                                    MainLeftPanelStateCollection.class.getName());
+                                    MainLeftPanelStateCollection.class.getName(),
+                                    AnswerStorage.class.getName(),
+                                    GraphDataRepository.class.getName());
 
                             if (myProperties != null) {
                                 beanFactory.registerSingleton("myProperties", myProperties);
@@ -140,6 +154,12 @@ public class Main {
                                         "mainLeftPanelStateCollection",
                                         leftPanelStateCollection
                                 );
+                            }
+                            if (graphDataRepository != null) {
+                                beanFactory.registerSingleton("graphDataRepository", graphDataRepository);
+                            }
+                            if (answerStorage != null) {
+                                beanFactory.registerSingleton("answerStorage", answerStorage);
                             }
                         });
                     }

@@ -26,6 +26,7 @@ import org.example.gui.devices.igm.modbus.IgmModbusSearchDialog;
 import org.example.gui.devices.erstevak.ErstevakSearchDialog;
 import org.example.gui.devices.ecttc290.EctTc290SearchDialog;
 import org.example.gui.mainWindowUtilites.FolderPictureForLog;
+import org.example.gui.mainWindowUtilites.TerminalLogTrimmer;
 import org.example.gui.mainWindowUtilites.GuiStateManager;
 import org.example.gui.mainWindowUtilites.CommandFieldFormatter;
 import org.example.gui.mainWindowUtilites.TabManager;
@@ -54,6 +55,8 @@ import org.example.utilites.properties.MyProperties;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
+import javax.swing.Timer;
+import javax.swing.border.TitledBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.text.*;
@@ -157,6 +160,11 @@ public class MainWindow extends JFrame implements Rendeble {
     private SomeDevice cachedProtocolDevice = null;
     // Устройство, которым построена текущая панель команд (его реестр строит байты).
     private SomeDevice currentPanelDevice = null;
+    /**
+     * Готовый список команд на индекс протокола. Повторное переключение вкладки его не собирает.
+     */
+    private final Map<Integer, JScrollPane> commandListCache = new HashMap<>();
+    private boolean commandListVisible;
 
     private JLabel jlbComPorts;
     private JLabel jlbComDataBits;
@@ -178,6 +186,8 @@ public class MainWindow extends JFrame implements Rendeble {
     private JLabel devName;
     private JPanel clientName;
     private JPanel clientSettings;
+    private JButton cleanTerminalBtn;
+    private JScrollPane jpConnectionSettingsScrollContainer;
 
 
     private void initUI() {
@@ -543,6 +553,9 @@ public class MainWindow extends JFrame implements Rendeble {
         }
 
         this.anyPoolService = anyPoolService;
+        if (anyPoolService != null) {
+            anyPoolService.setLogFileStartedListener(this::onLogFileStarted);
+        }
         this.prop = myProperties;
         this.connectionSettingsService = connectionSettingsService;
         this.portLifecycleService = portLifecycleService;
@@ -644,6 +657,9 @@ public class MainWindow extends JFrame implements Rendeble {
         uiThPool.submit(new RenderThread(this));
         initialCalls = false;
         updateGuiFromClass();
+        // Индекс протокола уже выставлен при заполнении списка, повторный setSelectedIndex
+        // событие не шлёт. Панель команд без этого вызова на старте не собирается.
+        updateProtocol();
     }
 
 
@@ -718,10 +734,25 @@ public class MainWindow extends JFrame implements Rendeble {
         ListenerUtils.addActionListener(jbComUpdateList, this::updateComPortList);
         ListenerUtils.addActionListener(jbSetTypicalParametrs, this::setTypicalParameters);
         ListenerUtils.addActionListener(jbComSearch, this::startComSearch);
+        ListenerUtils.addActionListener(cleanTerminalBtn, this::clearTerminal);
 
         // CheckBoxes
         ListenerUtils.addActionListener(jCbNeedPool, this::updateTextAndSendFromCheckBox);
         ListenerUtils.addActionListener(jCbNeedLog, this::updateLogCheckBox);
+    }
+
+    private void clearTerminal() {
+        Integer clientId = currentActiveClientId.get();
+        JTextPane pane = logDataTransferJtextPanelsMap.get(clientId);
+        if (pane == null) {
+            return;
+        }
+        Document doc = pane.getDocument();
+        try {
+            doc.remove(0, doc.getLength());
+        } catch (BadLocationException ex) {
+            log.warn("Не удалось очистить терминал клиента {}: {}", clientId, ex.getMessage());
+        }
     }
 
     private void removeTab() {
@@ -866,7 +897,11 @@ public class MainWindow extends JFrame implements Rendeble {
 
         if (ProtocolsList.getLikeArrayEnum(jcbProtocol.getSelectedIndex()) != null) {
             ProtocolsList protocol = ProtocolsList.getLikeArrayEnum(jcbProtocol.getSelectedIndex());
-            SomeDevice device = createDeviceByProtocol(protocol);
+            SomeDevice device = getCurrentProtocolDevice();
+            if (device == null) {
+                currentPanelDevice = null;
+                return;
+            }
             currentPanelDevice = device;
             jbComSearch.setEnabled(protocol == ProtocolsList.ERSTEVAK_MTP4D || device instanceof SlaveAddressable);
 
@@ -892,12 +927,37 @@ public class MainWindow extends JFrame implements Rendeble {
     }
 
     private void showExtendetAsciiPanel(SomeDevice device) {
-        // Убираем все компоненты с sendInpuntJpane
-        jpSendInput.removeAll();
+        int protocolIndex = jcbProtocol.getSelectedIndex();
+        if (commandListVisible && commandListCache.containsKey(protocolIndex)
+                && jpNonAsciCommandListPanel.getParent() == jpSendInput) {
+            return;
+        }
 
-        // Настраиваем nonAsciCommandListPanel
+        jpSendInput.removeAll();
         jpNonAsciCommandListPanel.setLayout(new BorderLayout());
 
+        JScrollPane scrollPane = commandListCache.get(protocolIndex);
+        if (scrollPane == null) {
+            scrollPane = buildCommandList(device);
+            commandListCache.put(protocolIndex, scrollPane);
+        }
+
+        jpNonAsciCommandListPanel.removeAll();
+        jpNonAsciCommandListPanel.add(scrollPane, BorderLayout.CENTER);
+
+        jpSendInput.add(jpNonAsciCommandListPanel, BorderLayout.CENTER);
+        jpSendInput.add(jpAsciiInput, BorderLayout.SOUTH);
+
+        jpNonAsciCommandListPanel.setMinimumSize(new Dimension(0, 0));
+        jpNonAsciCommandListPanel.setPreferredSize(new Dimension(jpSendInput.getWidth(), 100));
+        setSendInputPreferredHeight(200);
+        commandListVisible = true;
+
+        jpSendInput.revalidate();
+        jpSendInput.repaint();
+    }
+
+    private JScrollPane buildCommandList(SomeDevice device) {
         HashMap<String, SingleCommand> commandList = device.getCommandListClass().getCommandPool();
 
         // Основная панель с вертикальным расположением
@@ -905,8 +965,6 @@ public class MainWindow extends JFrame implements Rendeble {
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
 
         for (Map.Entry<String, SingleCommand> entry : commandList.entrySet()) {
-            log.info("Создаю панель для " + entry.getKey());
-
             // Панель для отдельной команды
             JPanel commandPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
             commandPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
@@ -918,8 +976,6 @@ public class MainWindow extends JFrame implements Rendeble {
             Map<String, JTextField> argsInput = new ConcurrentHashMap<>();
             Map<String, Object> argsValue = new ConcurrentHashMap<>();
             for (ArgumentDescriptor arg : arguments) {
-
-                log.info("  Для " + entry.getKey() + " добавил поле ввода для " + arg.getName());
 
                 JPanel argPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
                 JLabel argLabel = new JLabel(arg.getName());
@@ -974,20 +1030,7 @@ public class MainWindow extends JFrame implements Rendeble {
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
         scrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI());
         scrollPane.setPreferredSize(new Dimension(jpSendInput.getWidth(), 100));
-
-        jpNonAsciCommandListPanel.removeAll();
-        jpNonAsciCommandListPanel.add(scrollPane, BorderLayout.CENTER);
-
-        // Добавляем nonAsciCommandListPanel и asciiInput в sendInpuntJpane
-        jpSendInput.add(jpNonAsciCommandListPanel, BorderLayout.CENTER);
-        jpSendInput.add(jpAsciiInput, BorderLayout.SOUTH);
-
-        // Устанавливаем размеры
-        jpNonAsciCommandListPanel.setPreferredSize(new Dimension(jpSendInput.getWidth(), 100));
-        jpAsciiInput.setPreferredSize(new Dimension(jpSendInput.getWidth(), 50));
-
-        jpSendInput.revalidate();
-        jpSendInput.repaint();
+        return scrollPane;
     }
 
     private void showTemplatedAsciiPanel(SomeDevice device) {
@@ -1004,20 +1047,36 @@ public class MainWindow extends JFrame implements Rendeble {
         showExtendetAsciiPanel(device);
     }
 
+    private void setSendInputPreferredHeight(int height) {
+        int width = jpSendInput.getPreferredSize().width;
+        if (width <= 0) {
+            width = 450;
+        }
+        jpSendInput.setPreferredSize(new Dimension(width, height));
+        Container parent = jpSendInput.getParent();
+        if (parent != null) {
+            parent.revalidate();
+        }
+    }
+
     private void showAsciiPanel() {
         jtfTextToSend.setEnabled(true);
         jtfPrefToSend.setEnabled(true);
+        if (!commandListVisible && jpAsciiInput.getParent() == jpSendInput) {
+            return;
+        }
 
         // Убираем все компоненты с sendInpuntJpane
         jpSendInput.removeAll();
 
         // Добавляем только asciiInput
         jpSendInput.add(jpAsciiInput, BorderLayout.CENTER);
-        jpAsciiInput.setPreferredSize(new Dimension(jpSendInput.getWidth(), 50));
 
         // Очищаем и скрываем nonAsciCommandListPanel
         jpNonAsciCommandListPanel.removeAll();
         jpNonAsciCommandListPanel.setPreferredSize(new Dimension(0, 0));
+        commandListVisible = false;
+        setSendInputPreferredHeight(jpAsciiInput.getPreferredSize().height);
 
         jpSendInput.revalidate();
         jpSendInput.repaint();
@@ -1275,23 +1334,23 @@ public class MainWindow extends JFrame implements Rendeble {
         logDataTransferJtextPanelsMap.get(currentActiveClientId.get()).setCaretPosition(doc.getLength());
     }
 
-    public void updateFolderPictureLater() {
-        Runnable setTextRun = new Runnable() {//Вроде отдельный поток и проблем быть не должно
-            public void run() {
-                try {
-                    Thread.sleep(1500);//Ожидание изменения статуса логера
-                    updateFolderPictureMethod();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+    /**
+     * Колбэк потока опроса: файл лога этого clientId уже создан.
+     * Иконка меняется только если эта вкладка сейчас на экране.
+     */
+    private void onLogFileStarted(int clientId) {
+        SwingUtilities.invokeLater(() -> {
+            if (clientId != currentActiveClientId.get()) {
+                return;
             }
-        };
-        SwingUtilities.invokeLater(setTextRun);
+            lastFolderState = null;
+            updateFolderPictureMethod();
+        });
     }
 
     public void updateFolderPicture() {
         if (!initialCalls) {
-            updateFolderPictureLater();
+            updateFolderPictureMethod();
         }
     }
 
@@ -1365,10 +1424,7 @@ public class MainWindow extends JFrame implements Rendeble {
             lastReceivedPositionFromStorageMap.put(clientId, an.getPosition());
 
 
-            // Очистка и добавление новых данных
-            if (doc.getLength() + an.getAnswerPart().length() > maxLength) {
-                doc.remove(0, doc.getLength());
-            }
+            trimOldestLogRecords(doc, an.getAnswerPart().length(), maxLength);
             doc.insertString(doc.getLength(), an.getAnswerPart(), null);
 
             // Автоскролл к новому содержимому
@@ -1376,6 +1432,25 @@ public class MainWindow extends JFrame implements Rendeble {
 
         } catch (BadLocationException ex) {
             log.warn("Произошло исключение при рендере окна: " + ex.getMessage());
+        }
+    }
+
+    private void trimOldestLogRecords(Document doc, int incomingLength, int maxLength) throws BadLocationException {
+        if (doc.getLength() + incomingLength <= maxLength) {
+            return;
+        }
+        String current = doc.getText(0, doc.getLength());
+        String kept = TerminalLogTrimmer.fit(
+                current,
+                incomingLength,
+                maxLength,
+                TerminalLogTrimmer.OLDEST_RECORDS_TO_DROP);
+        if (kept.length() == current.length()) {
+            return;
+        }
+        doc.remove(0, doc.getLength());
+        if (!kept.isEmpty()) {
+            doc.insertString(0, kept, null);
         }
     }
 
@@ -1414,39 +1489,43 @@ public class MainWindow extends JFrame implements Rendeble {
      */
     private void $$$setupUI$$$() {
         jpMainPanel = new JPanel();
-        jpMainPanel.setLayout(new GridLayoutManager(1, 1, new Insets(10, 10, 10, 10), -1, -1));
+        jpMainPanel.setLayout(new GridLayoutManager(1, 1, new Insets(2, 2, 2, 2), -1, -1));
         Font jpMainPanelFont = UIManager.getFont("Tree.font");
         if (jpMainPanelFont != null) jpMainPanel.setFont(jpMainPanelFont);
-        jpMainPanel.setMaximumSize(new Dimension(1200, 1200));
+        jpMainPanel.setMaximumSize(new Dimension(-1, -1));
         jpMainPanel.setMinimumSize(new Dimension(530, 530));
-        jpMainPanel.setPreferredSize(new Dimension(900, 700));
+        jpMainPanel.setPreferredSize(new Dimension(800, 650));
         final JPanel panel1 = new JPanel();
-        panel1.setLayout(new FormLayout("fill:max(d;4px):noGrow,left:4dlu:noGrow,fill:d:grow", "center:d:grow,top:4dlu:noGrow,center:max(d;4px):noGrow,top:4dlu:noGrow,center:max(d;4px):noGrow,top:4dlu:noGrow,center:max(d;4px):noGrow,top:4dlu:noGrow,center:max(d;4px):noGrow"));
-        jpMainPanel.add(panel1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(450, 400), new Dimension(700, 600), null, 0, false));
+        panel1.setLayout(new FormLayout("fill:d:grow,left:4dlu:noGrow,fill:d:grow", "center:d:grow,top:4dlu:noGrow,center:max(d;4px):noGrow,top:4dlu:noGrow,center:max(d;4px):noGrow,top:4dlu:noGrow,center:max(d;4px):noGrow,top:4dlu:noGrow,center:max(d;4px):noGrow"));
+        jpMainPanel.add(panel1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(450, 400), new Dimension(800, 600), null, 0, false));
         jpTerminalHistory = new JPanel();
-        jpTerminalHistory.setLayout(new BorderLayout(0, 0));
+        jpTerminalHistory.setLayout(new BorderLayout(-1, -1));
+        jpTerminalHistory.setPreferredSize(new Dimension(8000, 65));
         CellConstraints cc = new CellConstraints();
         panel1.add(jpTerminalHistory, cc.xywh(3, 1, 1, 5, CellConstraints.FILL, CellConstraints.FILL));
         jpSendInput = new JPanel();
         jpSendInput.setLayout(new BorderLayout(0, 0));
+        jpSendInput.setMinimumSize(new Dimension(450, 70));
+        jpSendInput.setPreferredSize(new Dimension(450, 70));
         jpTerminalHistory.add(jpSendInput, BorderLayout.NORTH);
         jpNonAsciCommandListPanel = new JPanel();
         jpNonAsciCommandListPanel.setLayout(new BorderLayout(0, 0));
+        jpNonAsciCommandListPanel.setMinimumSize(new Dimension(0, 200));
         jpSendInput.add(jpNonAsciCommandListPanel, BorderLayout.WEST);
         jpAsciiInput = new JPanel();
         jpAsciiInput.setLayout(new GridLayoutManager(2, 3, new Insets(0, 0, 0, 0), -1, -1));
-        jpAsciiInput.setMinimumSize(new Dimension(450, 65));
+        jpAsciiInput.setMinimumSize(new Dimension(450, 75));
         jpAsciiInput.setOpaque(true);
-        jpAsciiInput.setPreferredSize(new Dimension(450, 65));
+        jpAsciiInput.setPreferredSize(new Dimension(450, 75));
         jpSendInput.add(jpAsciiInput, BorderLayout.CENTER);
         jtfPrefToSend = new JTextField();
         jtfPrefToSend.setPreferredSize(new Dimension(60, 40));
         jtfPrefToSend.setText("");
         jpAsciiInput.add(jtfPrefToSend, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, new Dimension(10, 35), new Dimension(40, 35), new Dimension(80, 35), 0, false));
         jbTerminalSend = new JButton();
-        jbTerminalSend.setMargin(new Insets(5, 5, 5, 5));
+        jbTerminalSend.setMargin(new Insets(0, 0, 0, 0));
         jbTerminalSend.setText("Отправить");
-        jpAsciiInput.add(jbTerminalSend, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jpAsciiInput.add(jbTerminalSend, new GridConstraints(1, 2, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, 1, GridConstraints.SIZEPOLICY_FIXED, new Dimension(-1, 35), new Dimension(-1, 35), new Dimension(-1, 35), 0, false));
         jtfTextToSend = new JTextField();
         jtfTextToSend.setMargin(new Insets(2, 9, 2, 6));
         jtfTextToSend.setPreferredSize(new Dimension(100, 40));
@@ -1463,15 +1542,24 @@ public class MainWindow extends JFrame implements Rendeble {
         jpTerminalHistory.add(jpTerminalLogPanel, BorderLayout.CENTER);
         jtpDevicesTerminal = new JTabbedPane();
         jpTerminalLogPanel.add(jtpDevicesTerminal, BorderLayout.CENTER);
+        jpConnectionSettingsScrollContainer = new JScrollPane();
+        jpConnectionSettingsScrollContainer.setMaximumSize(new Dimension(300, 650));
+        jpConnectionSettingsScrollContainer.setMinimumSize(new Dimension(300, 5));
+        jpConnectionSettingsScrollContainer.setPreferredSize(new Dimension(300, 650));
+        panel1.add(jpConnectionSettingsScrollContainer, cc.xy(1, 1, CellConstraints.LEFT, CellConstraints.TOP));
+        jpConnectionSettingsScrollContainer.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEmptyBorder(), null, TitledBorder.DEFAULT_JUSTIFICATION, TitledBorder.DEFAULT_POSITION, null, null));
         jpConnectionSettings = new JPanel();
         jpConnectionSettings.setLayout(new BorderLayout(0, 0));
-        jpConnectionSettings.setMaximumSize(new Dimension(275, 2147483647));
-        jpConnectionSettings.setMinimumSize(new Dimension(275, 594));
-        jpConnectionSettings.setPreferredSize(new Dimension(275, 627));
-        panel1.add(jpConnectionSettings, cc.xy(1, 1, CellConstraints.CENTER, CellConstraints.TOP));
+        jpConnectionSettings.setMaximumSize(new Dimension(280, 600));
+        jpConnectionSettings.setMinimumSize(new Dimension(280, 100));
+        jpConnectionSettings.setPreferredSize(new Dimension(280, 600));
+        jpConnectionSettingsScrollContainer.setViewportView(jpConnectionSettings);
         jpConnectionSetup = new JPanel();
-        jpConnectionSetup.setLayout(new GridLayoutManager(13, 1, new Insets(0, 0, 0, 0), -1, -1));
+        jpConnectionSetup.setLayout(new GridLayoutManager(14, 1, new Insets(0, 0, 0, 0), 0, 0));
         jpConnectionSetup.setEnabled(true);
+        jpConnectionSetup.setMaximumSize(new Dimension(280, 500));
+        jpConnectionSetup.setMinimumSize(new Dimension(280, 400));
+        jpConnectionSetup.setPreferredSize(new Dimension(280, 450));
         jpConnectionSettings.add(jpConnectionSetup, BorderLayout.CENTER);
         jpDataBits = new JPanel();
         jpDataBits.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
@@ -1570,14 +1658,14 @@ public class MainWindow extends JFrame implements Rendeble {
         jpAddRemove.add(jbRemoveDev, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(100, 25), new Dimension(119, 25), new Dimension(200, 200), 0, false));
         final JPanel panel2 = new JPanel();
         panel2.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        jpConnectionSetup.add(panel2, new GridConstraints(8, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, new Dimension(-1, 100), new Dimension(-1, 100), new Dimension(-1, 100), 0, false));
+        jpConnectionSetup.add(panel2, new GridConstraints(8, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, 1, 1, null, null, null, 0, false));
         jbComUpdateList = new JButton();
         jbComUpdateList.setHideActionText(false);
         jbComUpdateList.setText("Обновить список портов");
         panel2.add(jbComUpdateList, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(260, 25), new Dimension(400, 200), 0, false));
         final JPanel panel3 = new JPanel();
         panel3.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        jpConnectionSetup.add(panel3, new GridConstraints(10, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        jpConnectionSetup.add(panel3, new GridConstraints(10, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, 1, 1, null, null, null, 0, false));
         jbComSearch = new JButton();
         jbComSearch.setAlignmentY(0.0f);
         jbComSearch.setAutoscrolls(false);
@@ -1614,26 +1702,31 @@ public class MainWindow extends JFrame implements Rendeble {
         panel5.add(jpFolderIconPanel, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         final JPanel panel6 = new JPanel();
         panel6.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
-        jpConnectionSetup.add(panel6, new GridConstraints(7, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, 1, 1, null, null, null, 0, false));
+        jpConnectionSetup.add(panel6, new GridConstraints(7, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, 1, 1, null, null, null, 0, false));
         jbSetTypicalParametrs = new JButton();
         jbSetTypicalParametrs.setHorizontalTextPosition(0);
         jbSetTypicalParametrs.setText("Задать стандартные параметры");
         jbSetTypicalParametrs.setToolTipText("Задает параметры скорости для выбранного протокола");
-        panel6.add(jbSetTypicalParametrs, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, 1, 1, null, null, null, 0, false));
+        panel6.add(jbSetTypicalParametrs, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(260, 25), new Dimension(400, 200), 0, false));
+        cleanTerminalBtn = new JButton();
+        cleanTerminalBtn.setText("Очистить терминал");
+        jpConnectionSetup.add(cleanTerminalBtn, new GridConstraints(13, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(260, 25), new Dimension(400, 200), 0, false));
         clientSettings = new JPanel();
         clientSettings.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
+        clientSettings.setMinimumSize(new Dimension(280, 80));
+        clientSettings.setPreferredSize(new Dimension(280, 80));
         jpConnectionSettings.add(clientSettings, BorderLayout.NORTH);
         jpConnectionType = new JPanel();
         jpConnectionType.setLayout(new GridLayoutManager(1, 3, new Insets(0, 0, 0, 0), -1, -1));
         jpConnectionType.setEnabled(true);
-        clientSettings.add(jpConnectionType, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        clientSettings.add(jpConnectionType, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         jlbConnectionType = new JLabel();
         jlbConnectionType.setText("Тип соединения");
         jpConnectionType.add(jlbConnectionType, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jcbConnectionType = new JComboBox();
         final DefaultComboBoxModel defaultComboBoxModel4 = new DefaultComboBoxModel();
         jcbConnectionType.setModel(defaultComboBoxModel4);
-        jpConnectionType.add(jcbConnectionType, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(120, -1), new Dimension(120, -1), new Dimension(120, -1), 0, false));
+        jpConnectionType.add(jcbConnectionType, new GridConstraints(0, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, new Dimension(160, -1), new Dimension(160, -1), new Dimension(160, -1), 0, false));
         final Spacer spacer7 = new Spacer();
         jpConnectionType.add(spacer7, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         clientName = new JPanel();

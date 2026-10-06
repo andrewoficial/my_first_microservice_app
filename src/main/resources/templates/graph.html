@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Графики</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+    <div th:replace="fragments/header :: header"></div>
+    <style>
+        .tab-buttons { display: flex; margin: 20px; }
+        .tab-button {
+            padding: 10px 20px;
+            background-color: #f1f1f1;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        .tab-button.active { background-color: #0277bd; color: white; }
+        .graph-panel {
+            margin: 20px;
+            padding: 12px;
+            border: 1px solid #7ac1e7;
+            background-color: #fafafa;
+        }
+        .graph-toolbar { margin-bottom: 10px; }
+        .graph-toolbar label { margin-right: 16px; }
+        .graph-body { display: flex; gap: 12px; align-items: stretch; }
+        #seriesBox {
+            flex: 0 0 240px;
+            max-height: 55vh;
+            overflow: auto;
+        }
+        #seriesBox label { display: block; margin: 4px 0; }
+        #chartWrap { flex: 1; height: 55vh; min-width: 0; }
+    </style>
+</head>
+<body>
+<div>
+    <h1>Графики</h1>
+    <div class="tab-buttons">
+        <div th:each="i : ${#numbers.sequence(0, tabCount - 1)}"
+             th:text="'Tab ' + ${i}"
+             th:attr="data-tab=${i}"
+             class="tab-button">
+        </div>
+    </div>
+    <div class="graph-panel">
+        <div class="graph-toolbar">
+            <label><input type="checkbox" id="logScale"> Логарифмическая шкала</label>
+            <span id="commandLabel"></span>
+        </div>
+        <div class="graph-body">
+            <div id="seriesBox"></div>
+            <div id="chartWrap">
+                <canvas id="liveChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+<div th:replace="fragments/footer :: footer"></div>
+<script th:inline="javascript">
+    const tabCount = /*[[${tabCount}]]*/ 0;
+    let activeTab = 0;
+    let since = 0;
+    let unitsKey = "";
+    const hidden = {};
+
+    const chart = new Chart(document.getElementById("liveChart"), {
+        type: "line",
+        data: { datasets: [] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            parsing: false,
+            interaction: { mode: "index", intersect: false },
+            scales: {
+                x: {
+                    type: "linear",
+                    ticks: {
+                        maxTicksLimit: 8,
+                        callback: function (value) {
+                            return new Date(value).toLocaleTimeString();
+                        }
+                    }
+                },
+                y: { type: "linear" }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    enabled: true,
+                    mode: "index",
+                    intersect: false,
+                    filter: function (item) {
+                        return item.parsed.y != null && !Number.isNaN(item.parsed.y);
+                    },
+                    callbacks: {
+                        title: function (items) {
+                            if (!items.length) {
+                                return "";
+                            }
+                            return new Date(items[0].parsed.x).toLocaleString();
+                        },
+                        label: function (item) {
+                            return item.dataset.label + ": " + item.parsed.y;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    function seriesName(index, unit) {
+        const name = unit && unit.trim() ? unit : ("значение " + index);
+        return "(" + index + ") " + name;
+    }
+
+    function rebuildSeries(units) {
+        const key = units.join("|");
+        if (key === unitsKey) {
+            return;
+        }
+        unitsKey = key;
+        chart.data.datasets = units.map(function (unit, index) {
+            const name = seriesName(index, unit);
+            return {
+                label: name,
+                hidden: !!hidden[name],
+                borderColor: "hsl(" + (index * 47 % 360) + " 70% 40%)",
+                pointRadius: 0,
+                tension: 0,
+                data: []
+            };
+        });
+        const box = $("#seriesBox").empty();
+        chart.data.datasets.forEach(function (dataset, index) {
+            const id = "series-" + index;
+            const label = $("<label>").append(
+                $("<input>", { type: "checkbox", id: id, checked: !dataset.hidden })
+                    .on("change", function () {
+                        dataset.hidden = !this.checked;
+                        hidden[dataset.label] = dataset.hidden;
+                        chart.update("none");
+                    }),
+                " " + dataset.label
+            );
+            box.append(label);
+        });
+        chart.update("none");
+    }
+
+    function appendPoints(points) {
+        points.forEach(function (point) {
+            const x = point.epochMilli;
+            chart.data.datasets.forEach(function (dataset, index) {
+                let y = point.values[index];
+                if (y === undefined || y === null || Number.isNaN(y)) {
+                    y = null;
+                } else if (chart.options.scales.y.type === "logarithmic" && y <= 0) {
+                    y = null;
+                }
+                dataset.data.push({ x: x, y: y });
+            });
+            since = Math.max(since, x);
+        });
+        chart.update("none");
+    }
+
+    function poll() {
+        if (tabCount <= 0) {
+            return;
+        }
+        $.get("/api/v1/apps/state/graph/" + activeTab + "?since=" + since)
+            .done(function (data) {
+                const units = data.units || [];
+                $("#commandLabel").text(data.command ? ("Команда: " + data.command) : "Нет устойчивой команды");
+                rebuildSeries(units);
+                appendPoints(data.points || []);
+            });
+    }
+
+    $(".tab-button").first().addClass("active");
+    $(".tab-button").click(function () {
+        $(".tab-button").removeClass("active");
+        $(this).addClass("active");
+        activeTab = Number($(this).attr("data-tab"));
+        since = 0;
+        unitsKey = "";
+        chart.data.datasets.forEach(function (dataset) { dataset.data = []; });
+        chart.update("none");
+        poll();
+    });
+
+    $("#logScale").on("change", function () {
+        chart.options.scales.y.type = this.checked ? "logarithmic" : "linear";
+        since = 0;
+        chart.data.datasets.forEach(function (dataset) { dataset.data = []; });
+        chart.update("none");
+        poll();
+    });
+
+    poll();
+    setInterval(poll, 500);
+</script>
+</body>
+</html>

@@ -22,7 +22,7 @@ public class MyUserDetailServiceOffline implements UserDetailsService {
         if ("offlineUser".equals(username)) {
             return User.withUsername("offlineUser")
                     .password(new BCryptPasswordEncoder().encode("offlinePassword"))
-                    .roles("USER")
+                    .roles("USER", "ADMIN")
                     .build();
         }else {
             throw new UsernameNotFoundException("В оффлайн режиме пользователь не найден");

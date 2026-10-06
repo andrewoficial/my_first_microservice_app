@@ -2,6 +2,7 @@ package org.example.services;
 
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
@@ -27,6 +28,21 @@ public class GraphDataRepository {
         if (history != null) {
             history.forEachPoint(consumer);
         }
+    }
+
+    public List<GraphSample> pointsAfter(Integer tabId, String command, long sinceExclusive, int limit) {
+        if (tabId == null || command == null) {
+            return List.of();
+        }
+        ConcurrentHashMap<String, GraphHistory> cmdHistories = histories.get(tabId);
+        if (cmdHistories == null) {
+            return List.of();
+        }
+        GraphHistory history = cmdHistories.get(command);
+        if (history == null) {
+            return List.of();
+        }
+        return history.pointsAfter(sinceExclusive, limit);
     }
 
     public int getTotalSampleCount(Integer tabId, String command) {

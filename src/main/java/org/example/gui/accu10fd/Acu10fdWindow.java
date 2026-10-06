@@ -4,6 +4,7 @@ import com.fazecast.jSerialComm.SerialPort;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import lombok.extern.slf4j.Slf4j;
+import org.example.device.protAcu10fd.AcuStatusLog;
 import org.example.gui.Rendeble;
 import org.example.gui.accu10fd.table.AcuTableCreator;
 import org.example.gui.accu10fd.table.AcuTableFileHandler;
@@ -58,7 +59,10 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
     private JButton jbSearch;
     private JTextArea jtaStatus;
     private JButton jbCmdCalculateZeroGas;
+    private JScrollPane jtaStatusScroll;
+    private JButton очиститьButton;
 
+    private final AcuStatusLog statusLog = new AcuStatusLog();
     private SerialPort comPort;
     private final AcuTableFileHandler acuTableFileHandler;
     private double calculatedCoefficient;
@@ -122,6 +126,13 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
         jcbBackgroundDataPool.addActionListener(this::changePoolState);
         jbSearch.addActionListener(this::testComPortSpeedsHandler);
         jbCmdCalculateZeroGas.addActionListener(this::calculateZeroGas);
+        очиститьButton.addActionListener(event -> {
+            statusLog.clear();
+            showStatus("");
+        });
+        jtaStatus.setEditable(false);
+        jtaStatus.setLineWrap(true);
+        jtaStatus.setWrapStyleWord(true);
         acu10fsCommander = new Acu10fsCommander(comPort);
 
         this.addWindowListener(new WindowAdapter() {
@@ -234,7 +245,7 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
             resultSecond = "\nТекущий мгновенный расход \nне был считан: \n(неизвестная ошибка)";
         }
 
-        jtaStatus.setText(resultOne + resultSecond);
+        showStatus(resultOne + resultSecond);
 
     }
 
@@ -242,11 +253,11 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
         Integer selectedBaudRate = null;
         Integer selectedParity = null;
 
-        jtaStatus.setText("Открываю");
+        showStatus("Открываю");
         if (comPort != null) {
             if (comPort.isOpen()) {
                 comPort.closePort();
-                jtaStatus.setText("Переоткрываю...");
+                showStatus("Переоткрываю...");
             }
         }
         try {
@@ -258,17 +269,17 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
 
             SerialPort[] ports = SerialPort.getCommPorts();
             if (ports.length == 0 || jcbComPortNumber.getSelectedIndex() >= ports.length) {
-                jtaStatus.setText("Выбранный порт не найден в системе о.о");
+                showStatus("Выбранный порт не найден в системе о.о");
                 return;
             }
 
             comPort = ports[jcbComPortNumber.getSelectedIndex()];
             if (comPort == null) {
-                jtaStatus.setText("Выбранный порт оказался null");
+                showStatus("Выбранный порт оказался null");
                 return;
             }
         } catch (Exception e) {
-            jtaStatus.setText("Ошибка разбора параметров");
+            showStatus("Ошибка разбора параметров");
             log.error("Ошибка разбора параметров", e);
             JOptionPane.showMessageDialog(
                     null,
@@ -305,12 +316,12 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
             boolean opened = comPort.openPort(readTimeout);
 
             if (opened) {
-                jtaStatus.setText("Порт " + comPort.getDescriptivePortName() + " открыт");
+                showStatus("Порт " + comPort.getDescriptivePortName() + " открыт");
             } else {
                 doErrorMessage("Не удалось открыть порт. Код ошибки: " + comPort.getLastErrorCode(), "Такое иногда случается...");
             }
         } catch (Exception e) {
-            jtaStatus.setText("Ошибка открытия порта");
+            showStatus("Ошибка открытия порта");
             log.error("Ошибка при открытии COM-порта", e);
             doErrorMessage("Ошибка открытия порта:" + e.getMessage(), "Такое иногда случается...");
         }
@@ -322,7 +333,7 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
     private void closePortActionHandler(ActionEvent actionEvent) {
         if (comPort != null && comPort.isOpen()) {
             comPort.closePort();
-            jtaStatus.setText("Порт закрыт");
+            showStatus("Порт закрыт");
             poolState = false;
             jcbBackgroundDataPool.setSelected(false);
         }
@@ -405,7 +416,7 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
             doErrorMessage(e.getMessage(), "Err");
             throw new RuntimeException(e);
         }
-        jtaStatus.setText("Мгновенный расход: \n" + result);
+        showStatus("Мгновенный расход: \n" + result);
     }
 
     private void readCumulativeFlow(ActionEvent actionEvent) {
@@ -416,7 +427,7 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
             doErrorMessage(e.getMessage(), "Err");
             throw new RuntimeException(e);
         }
-        jtaStatus.setText("Накопленный расход \n" + result);
+        showStatus("Накопленный расход \n" + result);
     }
 
     private void clearCumulativeFlow(ActionEvent actionEvent) {
@@ -426,7 +437,7 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
             doErrorMessage(e.getMessage(), "Err");
             throw new RuntimeException(e);
         }
-        jtaStatus.setText("Накопленный расход сброшен\n");
+        showStatus("Накопленный расход сброшен\n");
     }
 
     private void setControlMode(ActionEvent actionEvent) {
@@ -438,7 +449,7 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
                 doErrorMessage(e.getMessage(), "Err");
                 throw new RuntimeException(e);
             }
-            jtaStatus.setText("Установлен ANALOG режим работы\n");
+            showStatus("Установлен ANALOG режим работы\n");
         } else if (jcbControlMode.getSelectedItem().equals(ControlMod.DIGITAL.getName())) {
             log.info("Set " + ControlMod.DIGITAL + " mode");
             try {
@@ -447,7 +458,7 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
                 doErrorMessage(e.getMessage(), "Err");
                 throw new RuntimeException(e);
             }
-            jtaStatus.setText("Установлен DIGITAL режим работы\n");
+            showStatus("Установлен DIGITAL режим работы\n");
         } else {
             doErrorMessage("Неизвестный тип работы", "Ошибка");
         }
@@ -461,7 +472,7 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
             doErrorMessage(e.getMessage(), "Err");
             throw new RuntimeException(e);
         }
-        jtaStatus.setText("Установлен нулевой уровень расхода\n");
+        showStatus("Установлен нулевой уровень расхода\n");
     }
 
     private void cancelZeroPoint(ActionEvent actionEvent) {
@@ -472,7 +483,7 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
             doErrorMessage(e.getMessage(), "Err");
             throw new RuntimeException(e);
         }
-        jtaStatus.setText("Отменён нулевой уровень расхода\n");
+        showStatus("Отменён нулевой уровень расхода\n");
     }
 
 
@@ -498,13 +509,13 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
                 jcbComSpeed.setSelectedIndex(index);
             }
 
-            jtaStatus.setText("Найдена скорость: " + foundBaud + " бод");
+            showStatus("Найдена скорость: " + foundBaud + " бод");
             JOptionPane.showMessageDialog(this,
                     "Устройство найдено на скорости " + foundBaud + " бод",
                     "Успех",
                     JOptionPane.INFORMATION_MESSAGE);
         } else {
-            jtaStatus.setText("Устройство не найдено");
+            showStatus("Устройство не найдено");
             JOptionPane.showMessageDialog(this,
                     "Не удалось определить скорость подключения",
                     "Ошибка",
@@ -529,6 +540,11 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
             sb.append(String.format("%02X ", b));
         }
         return sb.toString().trim();
+    }
+
+    private void showStatus(String text) {
+        jtaStatus.setText(statusLog.append(text));
+        jtaStatus.setCaretPosition(jtaStatus.getDocument().getLength());
     }
 
     private void doErrorMessage(String message, String title) {
@@ -579,7 +595,7 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
         mainPane = new JPanel();
         mainPane.setLayout(new GridLayoutManager(14, 3, new Insets(0, 0, 0, 0), -1, -1));
         comConnection = new JPanel();
-        comConnection.setLayout(new GridLayoutManager(8, 3, new Insets(0, 0, 0, 0), -1, -1));
+        comConnection.setLayout(new GridLayoutManager(10, 3, new Insets(0, 0, 0, 0), -1, -1));
         mainPane.add(comConnection, new GridConstraints(0, 0, 14, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, new Dimension(400, -1), 0, false));
         jcbComPortNumber = new JComboBox();
         final DefaultComboBoxModel defaultComboBoxModel1 = new DefaultComboBoxModel();
@@ -596,13 +612,11 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
         jbCloseComPort.setText("Закрыть com-порт");
         comConnection.add(jbCloseComPort, new GridConstraints(4, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jpnColorStatus = new JPanel();
-        jpnColorStatus.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
-        comConnection.add(jpnColorStatus, new GridConstraints(7, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        jpnColorStatus.setLayout(new GridLayoutManager(1, 1, new Insets(0, 0, 0, 0), -1, -1));
+        comConnection.add(jpnColorStatus, new GridConstraints(9, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         jlbStatus = new JLabel();
         jlbStatus.setText("Готов");
-        jpnColorStatus.add(jlbStatus, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        jtaStatus = new JTextArea();
-        jpnColorStatus.add(jtaStatus, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(150, 50), null, 0, false));
+        jpnColorStatus.add(jlbStatus, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jcbControlMode = new JComboBox();
         jcbControlMode.setEnabled(false);
         comConnection.add(jcbControlMode, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -613,6 +627,13 @@ public class Acu10fdWindow extends JFrame implements Rendeble {
         jbSearch = new JButton();
         jbSearch.setText("Поиск устройства (определение скорости)");
         comConnection.add(jbSearch, new GridConstraints(5, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        jtaStatusScroll = new JScrollPane();
+        comConnection.add(jtaStatusScroll, new GridConstraints(7, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        jtaStatus = new JTextArea();
+        jtaStatusScroll.setViewportView(jtaStatus);
+        очиститьButton = new JButton();
+        очиститьButton.setText("Очистить");
+        comConnection.add(очиститьButton, new GridConstraints(8, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jbCmdReadInstantFlow = new JButton();
         jbCmdReadInstantFlow.setText("Считать мгновенный расход");
         mainPane.add(jbCmdReadInstantFlow, new GridConstraints(0, 1, 1, 2, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));

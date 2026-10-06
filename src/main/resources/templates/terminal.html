@@ -156,7 +156,9 @@
 
 
     <!-- Поле ввода команды и кнопка отправки -->
-    <div    th:each="i : ${#numbers.sequence(0, tabCount - 1)}"
+    <p th:unless="${canSend}" style="margin: 20px;">Отправка команд недоступна для этой роли. Доступен просмотр.</p>
+    <div    th:if="${canSend}"
+            th:each="i : ${#numbers.sequence(0, tabCount - 1)}"
             th:id="'input-div-' + ${i}"
             class="input-area">
         <input type="text" th:id="'input-' + ${i}" placeholder="Введите команду для отправки">

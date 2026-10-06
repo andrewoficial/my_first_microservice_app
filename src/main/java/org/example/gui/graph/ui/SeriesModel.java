@@ -11,6 +11,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SeriesModel {
     @Getter
     private Map<String, JCheckBox> jBoxes = new ConcurrentHashMap<>();
+    /**
+     * Логарифм по имени кривой. Сейчас все флаги одинаковые и питают одну ось Y.
+     * Позже по ним кривые можно разложить на линейную и логарифмическую оси.
+     */
+    private final Map<String, Boolean> logScale = new ConcurrentHashMap<>();
 
     public boolean containSeries(String seriesName) {
         if (isStrInvalid(seriesName, "containSeries")) {
@@ -36,6 +41,7 @@ public class SeriesModel {
 
 
         jBoxes.put(seriesName, checkBox);
+        logScale.put(seriesName, false);
         log.info("Добавлено серия " + seriesName);
     }
 
@@ -49,6 +55,7 @@ public class SeriesModel {
             return;
         }
         jBoxes.remove(seriesName);
+        logScale.remove(seriesName);
     }
 
     public void setVisibility(String seriesName, boolean state) {
@@ -76,6 +83,27 @@ public class SeriesModel {
             return false;
         }
         return checkBox.isSelected();
+    }
+
+    public void setLogScale(String seriesName, boolean logarithmic) {
+        if (isStrInvalid(seriesName, "setLogScale") || !containSeries(seriesName)) {
+            return;
+        }
+        logScale.put(seriesName, logarithmic);
+    }
+
+    public boolean isLogScale(String seriesName) {
+        if (isStrInvalid(seriesName, "isLogScale")) {
+            return false;
+        }
+        return Boolean.TRUE.equals(logScale.get(seriesName));
+    }
+
+    /** Пока шкала одна на окно, чекбокс записывает одно значение всем кривым. */
+    public void setLogScaleForAll(boolean logarithmic) {
+        for (String seriesName : jBoxes.keySet()) {
+            logScale.put(seriesName, logarithmic);
+        }
     }
 
     private boolean isStrInvalid(String seriesName, String method) {

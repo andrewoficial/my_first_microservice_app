@@ -17,6 +17,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Profile({ "srv-offline", "srv-online" })
@@ -46,9 +47,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain (HttpSecurity http) {
         return http.csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry -> authorizationManagerRequestMatcherRegistry.requestMatchers("/api/v1/apps/welcome", "/api/v1/apps/new-user").permitAll())
-                //.authorizeHttpRequests(authorizationManagerRequestMatcherRegistry -> authorizationManagerRequestMatcherRegistry.requestMatchers("/api/v1/apps/**").authenticated())
-                .authorizeHttpRequests(authorizationManagerRequestMatcherRegistry -> authorizationManagerRequestMatcherRegistry.requestMatchers("/**").authenticated())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/v1/apps/welcome", "/api/v1/apps/new-user").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/apps/state/send/**").hasRole("ADMIN")
+                        .requestMatchers("/**").authenticated())
                 .formLogin(AbstractAuthenticationFilterConfigurer::permitAll)
                 .formLogin(formLogin -> formLogin.loginProcessingUrl("/login")
                         .defaultSuccessUrl("/", true))

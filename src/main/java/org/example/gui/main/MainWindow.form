@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="org.example.gui.main.MainWindow">
   <grid id="cbd77" binding="jpMainPanel" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-    <margin top="10" left="10" bottom="10" right="10"/>
+    <margin top="2" left="2" bottom="2" right="2"/>
     <constraints>
       <xy x="48" y="54" width="885" height="807"/>
     </constraints>
     <properties>
       <font swing-font="Tree.font"/>
-      <maximumSize width="1200" height="1200"/>
+      <maximumSize width="-1" height="-1"/>
       <minimumSize width="530" height="530"/>
-      <preferredSize width="900" height="700"/>
+      <preferredSize width="800" height="650"/>
     </properties>
     <border type="none"/>
     <children>
@@ -23,36 +23,43 @@
         <rowspec value="center:max(d;4px):noGrow"/>
         <rowspec value="top:4dlu:noGrow"/>
         <rowspec value="center:max(d;4px):noGrow"/>
-        <colspec value="fill:max(d;4px):noGrow"/>
+        <colspec value="fill:d:grow"/>
         <colspec value="left:4dlu:noGrow"/>
         <colspec value="fill:d:grow"/>
         <constraints>
           <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="6" hsize-policy="6" anchor="0" fill="3" indent="0" use-parent-layout="false">
             <minimum-size width="450" height="400"/>
-            <preferred-size width="700" height="600"/>
+            <preferred-size width="800" height="600"/>
           </grid>
         </constraints>
         <properties/>
         <border type="none"/>
         <children>
-          <grid id="c38b8" binding="jpTerminalHistory" layout-manager="BorderLayout" hgap="0" vgap="0">
+          <grid id="c38b8" binding="jpTerminalHistory" layout-manager="BorderLayout" hgap="-1" vgap="-1">
             <constraints>
               <grid row="0" column="2" row-span="5" col-span="1" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="1" use-parent-layout="false">
                 <minimum-size width="250" height="400"/>
               </grid>
               <forms defaultalign-horz="false" defaultalign-vert="false"/>
             </constraints>
-            <properties/>
+            <properties>
+              <preferredSize width="8000" height="65"/>
+            </properties>
             <border type="none"/>
             <children>
               <grid id="5dd47" binding="jpSendInput" layout-manager="BorderLayout" hgap="0" vgap="0">
                 <constraints border-constraint="North"/>
-                <properties/>
+                <properties>
+                  <minimumSize width="450" height="70"/>
+                  <preferredSize width="450" height="70"/>
+                </properties>
                 <border type="none"/>
                 <children>
                   <grid id="a3656" binding="jpNonAsciCommandListPanel" layout-manager="BorderLayout" hgap="0" vgap="0">
                     <constraints border-constraint="West"/>
-                    <properties/>
+                    <properties>
+                      <minimumSize width="0" height="200"/>
+                    </properties>
                     <border type="none"/>
                     <children/>
                   </grid>
@@ -60,9 +67,9 @@
                     <margin top="0" left="0" bottom="0" right="0"/>
                     <constraints border-constraint="Center"/>
                     <properties>
-                      <minimumSize width="450" height="65"/>
+                      <minimumSize width="450" height="75"/>
                       <opaque value="true"/>
-                      <preferredSize width="450" height="65"/>
+                      <preferredSize width="450" height="75"/>
                     </properties>
                     <border type="none"/>
                     <children>
@@ -81,10 +88,14 @@
                       </component>
                       <component id="7fef2" class="javax.swing.JButton" binding="jbTerminalSend">
                         <constraints>
-                          <grid row="1" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                          <grid row="1" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="1" anchor="0" fill="0" indent="0" use-parent-layout="false">
+                            <minimum-size width="-1" height="35"/>
+                            <preferred-size width="-1" height="35"/>
+                            <maximum-size width="-1" height="35"/>
+                          </grid>
                         </constraints>
                         <properties>
-                          <margin top="5" left="5" bottom="5" right="5"/>
+                          <margin top="0" left="0" bottom="0" right="0"/>
                           <text value="Отправить"/>
                         </properties>
                       </component>
@@ -137,549 +148,572 @@
               </grid>
             </children>
           </grid>
-          <grid id="9b68c" binding="jpConnectionSettings" layout-manager="BorderLayout" hgap="0" vgap="0">
+          <scrollpane id="aa1bd" binding="jpConnectionSettingsScrollContainer">
             <constraints>
-              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="7" hsize-policy="1" anchor="1" fill="0" indent="0" use-parent-layout="false">
-                <minimum-size width="250" height="450"/>
-                <preferred-size width="255" height="500"/>
-                <maximum-size width="255" height="600"/>
-              </grid>
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="9" fill="0" indent="0" use-parent-layout="false"/>
               <forms defaultalign-horz="false" defaultalign-vert="false"/>
             </constraints>
             <properties>
-              <maximumSize width="275" height="2147483647"/>
-              <minimumSize width="275" height="594"/>
-              <preferredSize width="275" height="627"/>
+              <maximumSize width="300" height="650"/>
+              <minimumSize width="300" height="5"/>
+              <preferredSize width="300" height="650"/>
             </properties>
-            <border type="none"/>
+            <border type="empty"/>
             <children>
-              <grid id="46d07" binding="jpConnectionSetup" layout-manager="GridLayoutManager" row-count="13" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                <margin top="0" left="0" bottom="0" right="0"/>
-                <constraints border-constraint="Center"/>
+              <grid id="9b68c" binding="jpConnectionSettings" layout-manager="BorderLayout" hgap="0" vgap="0">
+                <constraints/>
                 <properties>
-                  <enabled value="true"/>
+                  <maximumSize width="280" height="600"/>
+                  <minimumSize width="280" height="100"/>
+                  <preferredSize width="280" height="600"/>
                 </properties>
                 <border type="none"/>
                 <children>
-                  <grid id="81ddc" binding="jpDataBits" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                  <grid id="46d07" binding="jpConnectionSetup" layout-manager="GridLayoutManager" row-count="14" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="0" vgap="0">
                     <margin top="0" left="0" bottom="0" right="0"/>
-                    <constraints>
-                      <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties/>
-                    <border type="none"/>
-                    <children>
-                      <component id="e474f" class="javax.swing.JLabel" binding="jlbComDataBits">
-                        <constraints>
-                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                        </constraints>
-                        <properties>
-                          <text value="Биты данных"/>
-                        </properties>
-                      </component>
-                      <component id="433c" class="javax.swing.JComboBox" binding="jcbDataBits">
-                        <constraints>
-                          <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                            <minimum-size width="160" height="-1"/>
-                            <preferred-size width="160" height="-1"/>
-                            <maximum-size width="160" height="-1"/>
-                          </grid>
-                        </constraints>
-                        <properties/>
-                      </component>
-                      <hspacer id="26dee">
-                        <constraints>
-                          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-                        </constraints>
-                      </hspacer>
-                    </children>
-                  </grid>
-                  <grid id="ab78" binding="jpParity" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                    <margin top="0" left="0" bottom="0" right="0"/>
-                    <constraints>
-                      <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties/>
-                    <border type="none"/>
-                    <children>
-                      <component id="b2fd0" class="javax.swing.JLabel" binding="jlbComParity">
-                        <constraints>
-                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                        </constraints>
-                        <properties>
-                          <text value="Чётность"/>
-                        </properties>
-                      </component>
-                      <component id="28d3a" class="javax.swing.JComboBox" binding="jcbParity">
-                        <constraints>
-                          <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                            <minimum-size width="160" height="-1"/>
-                            <preferred-size width="160" height="-1"/>
-                            <maximum-size width="160" height="-1"/>
-                          </grid>
-                        </constraints>
-                        <properties>
-                          <model/>
-                        </properties>
-                      </component>
-                      <hspacer id="c4407">
-                        <constraints>
-                          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-                        </constraints>
-                      </hspacer>
-                    </children>
-                  </grid>
-                  <grid id="c65c1" binding="jpComStopBit" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                    <margin top="0" left="0" bottom="0" right="0"/>
-                    <constraints>
-                      <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties/>
-                    <border type="none"/>
-                    <children>
-                      <component id="26c5" class="javax.swing.JLabel" binding="jlbComStopBit">
-                        <constraints>
-                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                        </constraints>
-                        <properties>
-                          <text value="Стоп бит"/>
-                        </properties>
-                      </component>
-                      <component id="5969e" class="javax.swing.JComboBox" binding="jcbStopBit">
-                        <constraints>
-                          <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                            <minimum-size width="160" height="-1"/>
-                            <preferred-size width="160" height="-1"/>
-                            <maximum-size width="160" height="-1"/>
-                          </grid>
-                        </constraints>
-                        <properties/>
-                      </component>
-                      <hspacer id="21b72">
-                        <constraints>
-                          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-                        </constraints>
-                      </hspacer>
-                    </children>
-                  </grid>
-                  <grid id="b0c05" binding="jpOpenClose" layout-manager="GridLayoutManager" row-count="1" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                    <margin top="0" left="0" bottom="0" right="0"/>
-                    <constraints>
-                      <grid row="9" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="7" anchor="0" fill="1" indent="0" use-parent-layout="false">
-                        <minimum-size width="240" height="29"/>
-                        <preferred-size width="240" height="29"/>
-                      </grid>
-                    </constraints>
-                    <properties/>
-                    <border type="none"/>
-                    <children>
-                      <component id="77ec1" class="javax.swing.JButton" binding="jbComOpen">
-                        <constraints>
-                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false">
-                            <minimum-size width="100" height="25"/>
-                            <preferred-size width="119" height="25"/>
-                            <maximum-size width="200" height="200"/>
-                          </grid>
-                        </constraints>
-                        <properties>
-                          <alignmentY value="0.0"/>
-                          <hideActionText value="false"/>
-                          <text value="Открыть"/>
-                        </properties>
-                      </component>
-                      <component id="2eab5" class="javax.swing.JButton" binding="jbComClose">
-                        <constraints>
-                          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false">
-                            <minimum-size width="100" height="25"/>
-                            <preferred-size width="119" height="25"/>
-                            <maximum-size width="200" height="200"/>
-                          </grid>
-                        </constraints>
-                        <properties>
-                          <alignmentY value="0.0"/>
-                          <text value="Закрыть"/>
-                        </properties>
-                      </component>
-                    </children>
-                  </grid>
-                  <grid id="6b85d" binding="jpComPorts" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                    <margin top="0" left="0" bottom="0" right="0"/>
-                    <constraints>
-                      <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties/>
-                    <border type="none"/>
-                    <children>
-                      <component id="7c6e0" class="javax.swing.JLabel" binding="jlbComPorts">
-                        <constraints>
-                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                        </constraints>
-                        <properties>
-                          <text value="Порт"/>
-                        </properties>
-                      </component>
-                      <component id="9415b" class="javax.swing.JComboBox" binding="jcbComPorts">
-                        <constraints>
-                          <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                            <minimum-size width="160" height="-1"/>
-                            <preferred-size width="160" height="-1"/>
-                            <maximum-size width="160" height="-1"/>
-                          </grid>
-                        </constraints>
-                        <properties>
-                          <editable value="false"/>
-                          <model/>
-                        </properties>
-                      </component>
-                      <hspacer id="94263">
-                        <constraints>
-                          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-                        </constraints>
-                      </hspacer>
-                    </children>
-                  </grid>
-                  <grid id="87933" binding="jpProtocol" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                    <margin top="0" left="0" bottom="0" right="0"/>
-                    <constraints>
-                      <grid row="5" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties/>
-                    <border type="none"/>
-                    <children>
-                      <component id="3169a" class="javax.swing.JLabel" binding="jlbComProtocol">
-                        <constraints>
-                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                        </constraints>
-                        <properties>
-                          <text value="Протокол"/>
-                        </properties>
-                      </component>
-                      <component id="e34a9" class="javax.swing.JComboBox" binding="jcbProtocol">
-                        <constraints>
-                          <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                            <minimum-size width="160" height="-1"/>
-                            <preferred-size width="160" height="-1"/>
-                            <maximum-size width="160" height="-1"/>
-                          </grid>
-                        </constraints>
-                        <properties>
-                          <model/>
-                        </properties>
-                      </component>
-                      <hspacer id="f622e">
-                        <constraints>
-                          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-                        </constraints>
-                      </hspacer>
-                    </children>
-                  </grid>
-                  <grid id="230ae" binding="jpNeedPool" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                    <margin top="0" left="0" bottom="0" right="0"/>
-                    <constraints>
-                      <grid row="11" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties/>
-                    <border type="none"/>
-                    <children>
-                      <component id="e638d" class="javax.swing.JCheckBox" binding="jCbNeedPool">
-                        <constraints>
-                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                        </constraints>
-                        <properties>
-                          <text value="Опрос  "/>
-                        </properties>
-                      </component>
-                      <component id="3c25c" class="javax.swing.JLabel">
-                        <constraints>
-                          <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                        </constraints>
-                        <properties>
-                          <text value="мс"/>
-                        </properties>
-                      </component>
-                      <component id="94d33" class="javax.swing.JTextField" binding="jtfPoolDelay">
-                        <constraints>
-                          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                            <preferred-size width="150" height="-1"/>
-                          </grid>
-                        </constraints>
-                        <properties>
-                          <text value="1000"/>
-                        </properties>
-                      </component>
-                    </children>
-                  </grid>
-                  <grid id="9bcd8" binding="jpAddRemove" layout-manager="GridLayoutManager" row-count="1" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                    <margin top="0" left="0" bottom="0" right="0"/>
-                    <constraints>
-                      <grid row="12" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="7" anchor="0" fill="1" indent="0" use-parent-layout="false">
-                        <minimum-size width="240" height="29"/>
-                        <preferred-size width="240" height="29"/>
-                      </grid>
-                    </constraints>
-                    <properties/>
-                    <border type="none"/>
-                    <children>
-                      <component id="dfd93" class="javax.swing.JButton" binding="jbAddDev">
-                        <constraints>
-                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false">
-                            <minimum-size width="100" height="25"/>
-                            <preferred-size width="119" height="25"/>
-                            <maximum-size width="200" height="200"/>
-                          </grid>
-                        </constraints>
-                        <properties>
-                          <alignmentX value="0.0"/>
-                          <alignmentY value="0.0"/>
-                          <text value="Добавить у-во"/>
-                        </properties>
-                      </component>
-                      <component id="bb745" class="javax.swing.JButton" binding="jbRemoveDev">
-                        <constraints>
-                          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false">
-                            <minimum-size width="100" height="25"/>
-                            <preferred-size width="119" height="25"/>
-                            <maximum-size width="200" height="200"/>
-                          </grid>
-                        </constraints>
-                        <properties>
-                          <alignmentX value="0.0"/>
-                          <alignmentY value="0.0"/>
-                          <autoscrolls value="false"/>
-                          <text value="Удалить тек."/>
-                        </properties>
-                      </component>
-                    </children>
-                  </grid>
-                  <grid id="7b4f4" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                    <margin top="0" left="0" bottom="0" right="0"/>
-                    <constraints>
-                      <grid row="8" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="1" indent="0" use-parent-layout="false">
-                        <minimum-size width="-1" height="100"/>
-                        <preferred-size width="-1" height="100"/>
-                        <maximum-size width="-1" height="100"/>
-                      </grid>
-                    </constraints>
-                    <properties/>
-                    <border type="none"/>
-                    <children>
-                      <component id="44c3" class="javax.swing.JButton" binding="jbComUpdateList">
-                        <constraints>
-                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false">
-                            <preferred-size width="260" height="25"/>
-                            <maximum-size width="400" height="200"/>
-                          </grid>
-                        </constraints>
-                        <properties>
-                          <hideActionText value="false"/>
-                          <text value="Обновить список портов"/>
-                        </properties>
-                      </component>
-                    </children>
-                  </grid>
-                  <grid id="6d855" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                    <margin top="0" left="0" bottom="0" right="0"/>
-                    <constraints>
-                      <grid row="10" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties/>
-                    <border type="none"/>
-                    <children>
-                      <component id="2110a" class="javax.swing.JButton" binding="jbComSearch">
-                        <constraints>
-                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false">
-                            <preferred-size width="260" height="25"/>
-                            <maximum-size width="400" height="200"/>
-                          </grid>
-                        </constraints>
-                        <properties>
-                          <alignmentY value="0.0"/>
-                          <autoscrolls value="false"/>
-                          <hideActionText value="false"/>
-                          <text value="Поиск сетевых адресов"/>
-                        </properties>
-                      </component>
-                    </children>
-                  </grid>
-                  <grid id="3ed9a" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                    <margin top="0" left="0" bottom="0" right="0"/>
-                    <constraints>
-                      <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-                    </constraints>
+                    <constraints border-constraint="Center"/>
                     <properties>
                       <enabled value="true"/>
+                      <maximumSize width="280" height="500"/>
+                      <minimumSize width="280" height="400"/>
+                      <preferredSize width="280" height="450"/>
                     </properties>
                     <border type="none"/>
                     <children>
-                      <component id="190c8" class="javax.swing.JLabel" binding="jlbComBaudRate">
-                        <constraints>
-                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                        </constraints>
-                        <properties>
-                          <background color="-11184811"/>
-                          <text value="Скорость   "/>
-                        </properties>
-                      </component>
-                      <component id="9f396" class="javax.swing.JComboBox" binding="jcbBaudRate">
-                        <constraints>
-                          <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                            <minimum-size width="160" height="-1"/>
-                            <preferred-size width="160" height="-1"/>
-                            <maximum-size width="160" height="-1"/>
-                          </grid>
-                        </constraints>
-                        <properties>
-                          <enabled value="true"/>
-                        </properties>
-                      </component>
-                      <hspacer id="be30d">
-                        <constraints>
-                          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-                        </constraints>
-                      </hspacer>
-                    </children>
-                  </grid>
-                  <grid id="179b6" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                    <margin top="0" left="0" bottom="0" right="0"/>
-                    <constraints>
-                      <grid row="6" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties/>
-                    <border type="none"/>
-                    <children>
-                      <component id="8fb5" class="javax.swing.JCheckBox" binding="jCbNeedLog">
-                        <constraints>
-                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                        </constraints>
-                        <properties>
-                          <enabled value="true"/>
-                          <text value="Лог"/>
-                        </properties>
-                      </component>
-                      <component id="62ff4" class="javax.swing.JCheckBox" binding="jCbAutoConnect">
-                        <constraints>
-                          <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                        </constraints>
-                        <properties>
-                          <enabled value="false"/>
-                          <text value="Автоподключение"/>
-                        </properties>
-                      </component>
-                      <grid id="42251" binding="jpFolderIconPanel" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                      <grid id="81ddc" binding="jpDataBits" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                         <margin top="0" left="0" bottom="0" right="0"/>
                         <constraints>
-                          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                          <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                        </constraints>
+                        <properties/>
+                        <border type="none"/>
+                        <children>
+                          <component id="e474f" class="javax.swing.JLabel" binding="jlbComDataBits">
+                            <constraints>
+                              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                            <properties>
+                              <text value="Биты данных"/>
+                            </properties>
+                          </component>
+                          <component id="433c" class="javax.swing.JComboBox" binding="jcbDataBits">
+                            <constraints>
+                              <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                                <minimum-size width="160" height="-1"/>
+                                <preferred-size width="160" height="-1"/>
+                                <maximum-size width="160" height="-1"/>
+                              </grid>
+                            </constraints>
+                            <properties/>
+                          </component>
+                          <hspacer id="26dee">
+                            <constraints>
+                              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                          </hspacer>
+                        </children>
+                      </grid>
+                      <grid id="ab78" binding="jpParity" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                        <margin top="0" left="0" bottom="0" right="0"/>
+                        <constraints>
+                          <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                        </constraints>
+                        <properties/>
+                        <border type="none"/>
+                        <children>
+                          <component id="b2fd0" class="javax.swing.JLabel" binding="jlbComParity">
+                            <constraints>
+                              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                            <properties>
+                              <text value="Чётность"/>
+                            </properties>
+                          </component>
+                          <component id="28d3a" class="javax.swing.JComboBox" binding="jcbParity">
+                            <constraints>
+                              <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                                <minimum-size width="160" height="-1"/>
+                                <preferred-size width="160" height="-1"/>
+                                <maximum-size width="160" height="-1"/>
+                              </grid>
+                            </constraints>
+                            <properties>
+                              <model/>
+                            </properties>
+                          </component>
+                          <hspacer id="c4407">
+                            <constraints>
+                              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                          </hspacer>
+                        </children>
+                      </grid>
+                      <grid id="c65c1" binding="jpComStopBit" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                        <margin top="0" left="0" bottom="0" right="0"/>
+                        <constraints>
+                          <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                        </constraints>
+                        <properties/>
+                        <border type="none"/>
+                        <children>
+                          <component id="26c5" class="javax.swing.JLabel" binding="jlbComStopBit">
+                            <constraints>
+                              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                            <properties>
+                              <text value="Стоп бит"/>
+                            </properties>
+                          </component>
+                          <component id="5969e" class="javax.swing.JComboBox" binding="jcbStopBit">
+                            <constraints>
+                              <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                                <minimum-size width="160" height="-1"/>
+                                <preferred-size width="160" height="-1"/>
+                                <maximum-size width="160" height="-1"/>
+                              </grid>
+                            </constraints>
+                            <properties/>
+                          </component>
+                          <hspacer id="21b72">
+                            <constraints>
+                              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                          </hspacer>
+                        </children>
+                      </grid>
+                      <grid id="b0c05" binding="jpOpenClose" layout-manager="GridLayoutManager" row-count="1" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                        <margin top="0" left="0" bottom="0" right="0"/>
+                        <constraints>
+                          <grid row="9" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="7" anchor="0" fill="1" indent="0" use-parent-layout="false">
+                            <minimum-size width="240" height="29"/>
+                            <preferred-size width="240" height="29"/>
+                          </grid>
+                        </constraints>
+                        <properties/>
+                        <border type="none"/>
+                        <children>
+                          <component id="77ec1" class="javax.swing.JButton" binding="jbComOpen">
+                            <constraints>
+                              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false">
+                                <minimum-size width="100" height="25"/>
+                                <preferred-size width="119" height="25"/>
+                                <maximum-size width="200" height="200"/>
+                              </grid>
+                            </constraints>
+                            <properties>
+                              <alignmentY value="0.0"/>
+                              <hideActionText value="false"/>
+                              <text value="Открыть"/>
+                            </properties>
+                          </component>
+                          <component id="2eab5" class="javax.swing.JButton" binding="jbComClose">
+                            <constraints>
+                              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false">
+                                <minimum-size width="100" height="25"/>
+                                <preferred-size width="119" height="25"/>
+                                <maximum-size width="200" height="200"/>
+                              </grid>
+                            </constraints>
+                            <properties>
+                              <alignmentY value="0.0"/>
+                              <text value="Закрыть"/>
+                            </properties>
+                          </component>
+                        </children>
+                      </grid>
+                      <grid id="6b85d" binding="jpComPorts" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                        <margin top="0" left="0" bottom="0" right="0"/>
+                        <constraints>
+                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                        </constraints>
+                        <properties/>
+                        <border type="none"/>
+                        <children>
+                          <component id="7c6e0" class="javax.swing.JLabel" binding="jlbComPorts">
+                            <constraints>
+                              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                            <properties>
+                              <text value="Порт"/>
+                            </properties>
+                          </component>
+                          <component id="9415b" class="javax.swing.JComboBox" binding="jcbComPorts">
+                            <constraints>
+                              <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                                <minimum-size width="160" height="-1"/>
+                                <preferred-size width="160" height="-1"/>
+                                <maximum-size width="160" height="-1"/>
+                              </grid>
+                            </constraints>
+                            <properties>
+                              <editable value="false"/>
+                              <model/>
+                            </properties>
+                          </component>
+                          <hspacer id="94263">
+                            <constraints>
+                              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                          </hspacer>
+                        </children>
+                      </grid>
+                      <grid id="87933" binding="jpProtocol" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                        <margin top="0" left="0" bottom="0" right="0"/>
+                        <constraints>
+                          <grid row="5" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                        </constraints>
+                        <properties/>
+                        <border type="none"/>
+                        <children>
+                          <component id="3169a" class="javax.swing.JLabel" binding="jlbComProtocol">
+                            <constraints>
+                              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                            <properties>
+                              <text value="Протокол"/>
+                            </properties>
+                          </component>
+                          <component id="e34a9" class="javax.swing.JComboBox" binding="jcbProtocol">
+                            <constraints>
+                              <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                                <minimum-size width="160" height="-1"/>
+                                <preferred-size width="160" height="-1"/>
+                                <maximum-size width="160" height="-1"/>
+                              </grid>
+                            </constraints>
+                            <properties>
+                              <model/>
+                            </properties>
+                          </component>
+                          <hspacer id="f622e">
+                            <constraints>
+                              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                          </hspacer>
+                        </children>
+                      </grid>
+                      <grid id="230ae" binding="jpNeedPool" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                        <margin top="0" left="0" bottom="0" right="0"/>
+                        <constraints>
+                          <grid row="11" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                        </constraints>
+                        <properties/>
+                        <border type="none"/>
+                        <children>
+                          <component id="e638d" class="javax.swing.JCheckBox" binding="jCbNeedPool">
+                            <constraints>
+                              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                            <properties>
+                              <text value="Опрос  "/>
+                            </properties>
+                          </component>
+                          <component id="3c25c" class="javax.swing.JLabel">
+                            <constraints>
+                              <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                            <properties>
+                              <text value="мс"/>
+                            </properties>
+                          </component>
+                          <component id="94d33" class="javax.swing.JTextField" binding="jtfPoolDelay">
+                            <constraints>
+                              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                                <preferred-size width="150" height="-1"/>
+                              </grid>
+                            </constraints>
+                            <properties>
+                              <text value="1000"/>
+                            </properties>
+                          </component>
+                        </children>
+                      </grid>
+                      <grid id="9bcd8" binding="jpAddRemove" layout-manager="GridLayoutManager" row-count="1" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                        <margin top="0" left="0" bottom="0" right="0"/>
+                        <constraints>
+                          <grid row="12" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="7" anchor="0" fill="1" indent="0" use-parent-layout="false">
+                            <minimum-size width="240" height="29"/>
+                            <preferred-size width="240" height="29"/>
+                          </grid>
+                        </constraints>
+                        <properties/>
+                        <border type="none"/>
+                        <children>
+                          <component id="dfd93" class="javax.swing.JButton" binding="jbAddDev">
+                            <constraints>
+                              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false">
+                                <minimum-size width="100" height="25"/>
+                                <preferred-size width="119" height="25"/>
+                                <maximum-size width="200" height="200"/>
+                              </grid>
+                            </constraints>
+                            <properties>
+                              <alignmentX value="0.0"/>
+                              <alignmentY value="0.0"/>
+                              <text value="Добавить у-во"/>
+                            </properties>
+                          </component>
+                          <component id="bb745" class="javax.swing.JButton" binding="jbRemoveDev">
+                            <constraints>
+                              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false">
+                                <minimum-size width="100" height="25"/>
+                                <preferred-size width="119" height="25"/>
+                                <maximum-size width="200" height="200"/>
+                              </grid>
+                            </constraints>
+                            <properties>
+                              <alignmentX value="0.0"/>
+                              <alignmentY value="0.0"/>
+                              <autoscrolls value="false"/>
+                              <text value="Удалить тек."/>
+                            </properties>
+                          </component>
+                        </children>
+                      </grid>
+                      <grid id="7b4f4" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                        <margin top="0" left="0" bottom="0" right="0"/>
+                        <constraints>
+                          <grid row="8" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                        </constraints>
+                        <properties/>
+                        <border type="none"/>
+                        <children>
+                          <component id="44c3" class="javax.swing.JButton" binding="jbComUpdateList">
+                            <constraints>
+                              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false">
+                                <preferred-size width="260" height="25"/>
+                                <maximum-size width="400" height="200"/>
+                              </grid>
+                            </constraints>
+                            <properties>
+                              <hideActionText value="false"/>
+                              <text value="Обновить список портов"/>
+                            </properties>
+                          </component>
+                        </children>
+                      </grid>
+                      <grid id="6d855" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                        <margin top="0" left="0" bottom="0" right="0"/>
+                        <constraints>
+                          <grid row="10" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                        </constraints>
+                        <properties/>
+                        <border type="none"/>
+                        <children>
+                          <component id="2110a" class="javax.swing.JButton" binding="jbComSearch">
+                            <constraints>
+                              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false">
+                                <preferred-size width="260" height="25"/>
+                                <maximum-size width="400" height="200"/>
+                              </grid>
+                            </constraints>
+                            <properties>
+                              <alignmentY value="0.0"/>
+                              <autoscrolls value="false"/>
+                              <hideActionText value="false"/>
+                              <text value="Поиск сетевых адресов"/>
+                            </properties>
+                          </component>
+                        </children>
+                      </grid>
+                      <grid id="3ed9a" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                        <margin top="0" left="0" bottom="0" right="0"/>
+                        <constraints>
+                          <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                         </constraints>
                         <properties>
                           <enabled value="true"/>
                         </properties>
                         <border type="none"/>
-                        <children/>
+                        <children>
+                          <component id="190c8" class="javax.swing.JLabel" binding="jlbComBaudRate">
+                            <constraints>
+                              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                            <properties>
+                              <background color="-11184811"/>
+                              <text value="Скорость   "/>
+                            </properties>
+                          </component>
+                          <component id="9f396" class="javax.swing.JComboBox" binding="jcbBaudRate">
+                            <constraints>
+                              <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                                <minimum-size width="160" height="-1"/>
+                                <preferred-size width="160" height="-1"/>
+                                <maximum-size width="160" height="-1"/>
+                              </grid>
+                            </constraints>
+                            <properties>
+                              <enabled value="true"/>
+                            </properties>
+                          </component>
+                          <hspacer id="be30d">
+                            <constraints>
+                              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                          </hspacer>
+                        </children>
                       </grid>
-                    </children>
-                  </grid>
-                  <grid id="dcf07" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                    <margin top="0" left="0" bottom="0" right="0"/>
-                    <constraints>
-                      <grid row="7" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties/>
-                    <border type="none"/>
-                    <children>
-                      <component id="b8dcd" class="javax.swing.JButton" binding="jbSetTypicalParametrs">
+                      <grid id="179b6" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                        <margin top="0" left="0" bottom="0" right="0"/>
                         <constraints>
-                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                          <grid row="6" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                        </constraints>
+                        <properties/>
+                        <border type="none"/>
+                        <children>
+                          <component id="8fb5" class="javax.swing.JCheckBox" binding="jCbNeedLog">
+                            <constraints>
+                              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                            <properties>
+                              <enabled value="true"/>
+                              <text value="Лог"/>
+                            </properties>
+                          </component>
+                          <component id="62ff4" class="javax.swing.JCheckBox" binding="jCbAutoConnect">
+                            <constraints>
+                              <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                            <properties>
+                              <enabled value="false"/>
+                              <text value="Автоподключение"/>
+                            </properties>
+                          </component>
+                          <grid id="42251" binding="jpFolderIconPanel" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                            <margin top="0" left="0" bottom="0" right="0"/>
+                            <constraints>
+                              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                            <properties>
+                              <enabled value="true"/>
+                            </properties>
+                            <border type="none"/>
+                            <children/>
+                          </grid>
+                        </children>
+                      </grid>
+                      <grid id="dcf07" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                        <margin top="0" left="0" bottom="0" right="0"/>
+                        <constraints>
+                          <grid row="7" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="1" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                        </constraints>
+                        <properties/>
+                        <border type="none"/>
+                        <children>
+                          <component id="b8dcd" class="javax.swing.JButton" binding="jbSetTypicalParametrs">
+                            <constraints>
+                              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false">
+                                <preferred-size width="260" height="25"/>
+                                <maximum-size width="400" height="200"/>
+                              </grid>
+                            </constraints>
+                            <properties>
+                              <horizontalTextPosition value="0"/>
+                              <text value="Задать стандартные параметры"/>
+                              <toolTipText value="Задает параметры скорости для выбранного протокола"/>
+                            </properties>
+                          </component>
+                        </children>
+                      </grid>
+                      <component id="d39c3" class="javax.swing.JButton" binding="cleanTerminalBtn">
+                        <constraints>
+                          <grid row="13" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false">
+                            <preferred-size width="260" height="25"/>
+                            <maximum-size width="400" height="200"/>
+                          </grid>
                         </constraints>
                         <properties>
-                          <horizontalTextPosition value="0"/>
-                          <text value="Задать стандартные параметры"/>
-                          <toolTipText value="Задает параметры скорости для выбранного протокола"/>
+                          <text value="Очистить терминал"/>
                         </properties>
                       </component>
                     </children>
                   </grid>
-                </children>
-              </grid>
-              <grid id="a6165" binding="clientSettings" layout-manager="GridLayoutManager" row-count="2" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                <margin top="0" left="0" bottom="0" right="0"/>
-                <constraints border-constraint="North"/>
-                <properties/>
-                <border type="none"/>
-                <children>
-                  <grid id="b4970" binding="jpConnectionType" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                  <grid id="a6165" binding="clientSettings" layout-manager="GridLayoutManager" row-count="2" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                     <margin top="0" left="0" bottom="0" right="0"/>
-                    <constraints>
-                      <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                    </constraints>
+                    <constraints border-constraint="North"/>
                     <properties>
-                      <enabled value="true"/>
+                      <minimumSize width="280" height="80"/>
+                      <preferredSize width="280" height="80"/>
                     </properties>
                     <border type="none"/>
                     <children>
-                      <component id="71b3d" class="javax.swing.JLabel" binding="jlbConnectionType">
+                      <grid id="b4970" binding="jpConnectionType" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                        <margin top="0" left="0" bottom="0" right="0"/>
                         <constraints>
-                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
                         </constraints>
                         <properties>
-                          <text value="Тип соединения"/>
+                          <enabled value="true"/>
                         </properties>
-                      </component>
-                      <component id="c0b5f" class="javax.swing.JComboBox" binding="jcbConnectionType">
+                        <border type="none"/>
+                        <children>
+                          <component id="71b3d" class="javax.swing.JLabel" binding="jlbConnectionType">
+                            <constraints>
+                              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                            <properties>
+                              <text value="Тип соединения"/>
+                            </properties>
+                          </component>
+                          <component id="c0b5f" class="javax.swing.JComboBox" binding="jcbConnectionType">
+                            <constraints>
+                              <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                                <minimum-size width="160" height="-1"/>
+                                <preferred-size width="160" height="-1"/>
+                                <maximum-size width="160" height="-1"/>
+                              </grid>
+                            </constraints>
+                            <properties>
+                              <model/>
+                            </properties>
+                          </component>
+                          <hspacer id="1a97e">
+                            <constraints>
+                              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                          </hspacer>
+                        </children>
+                      </grid>
+                      <grid id="9947a" binding="clientName" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                        <margin top="0" left="0" bottom="0" right="0"/>
                         <constraints>
-                          <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                            <minimum-size width="120" height="-1"/>
-                            <preferred-size width="120" height="-1"/>
-                            <maximum-size width="120" height="-1"/>
-                          </grid>
-                        </constraints>
-                        <properties>
-                          <model/>
-                        </properties>
-                      </component>
-                      <hspacer id="1a97e">
-                        <constraints>
-                          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-                        </constraints>
-                      </hspacer>
-                    </children>
-                  </grid>
-                  <grid id="9947a" binding="clientName" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
-                    <margin top="0" left="0" bottom="0" right="0"/>
-                    <constraints>
-                      <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
-                    </constraints>
-                    <properties/>
-                    <border type="none"/>
-                    <children>
-                      <component id="cf9e2" class="javax.swing.JLabel" binding="devName">
-                        <constraints>
-                          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                        </constraints>
-                        <properties>
-                          <text value="Имя вкладки"/>
-                        </properties>
-                      </component>
-                      <hspacer id="6e903">
-                        <constraints>
-                          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
-                        </constraints>
-                      </hspacer>
-                      <component id="9f611" class="javax.swing.JTextField" binding="jtfDevName">
-                        <constraints>
-                          <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
-                            <minimum-size width="160" height="-1"/>
-                            <preferred-size width="160" height="-1"/>
-                            <maximum-size width="160" height="-1"/>
-                          </grid>
+                          <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
                         </constraints>
                         <properties/>
-                      </component>
+                        <border type="none"/>
+                        <children>
+                          <component id="cf9e2" class="javax.swing.JLabel" binding="devName">
+                            <constraints>
+                              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                            <properties>
+                              <text value="Имя вкладки"/>
+                            </properties>
+                          </component>
+                          <hspacer id="6e903">
+                            <constraints>
+                              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                          </hspacer>
+                          <component id="9f611" class="javax.swing.JTextField" binding="jtfDevName">
+                            <constraints>
+                              <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                                <minimum-size width="160" height="-1"/>
+                                <preferred-size width="160" height="-1"/>
+                                <maximum-size width="160" height="-1"/>
+                              </grid>
+                            </constraints>
+                            <properties/>
+                          </component>
+                        </children>
+                      </grid>
                     </children>
                   </grid>
                 </children>
               </grid>
             </children>
-          </grid>
+          </scrollpane>
         </children>
       </grid>
     </children>

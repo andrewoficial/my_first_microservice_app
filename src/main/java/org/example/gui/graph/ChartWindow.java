@@ -57,6 +57,8 @@ public class ChartWindow extends JFrame implements Rendeble {
     private final JTextField lastReceivedValue = new JTextField();
     private final JCheckBox showTooltipCheckBox = new JCheckBox("Показывать значения всех кривых во всплывающем окне", true);
     private final JCheckBox limitDataCheckBox = new JCheckBox("Ограничивать набор данных", false);
+    /** Пока одна ось Y на все кривые. Флаги кривых копятся в SeriesModel для будущих двух осей. */
+    private final JCheckBox logScaleCheckBox = new JCheckBox("Логарифмическая шкала", false);
     private final JLabel sliderValueLabel = new JLabel("60");
     private int range = 0;
 
@@ -173,6 +175,8 @@ public class ChartWindow extends JFrame implements Rendeble {
         row3.add(limitDataCheckBox);
         showTooltipCheckBox.addActionListener(e -> showTooltip = showTooltipCheckBox.isSelected());
         row3.add(showTooltipCheckBox);
+        logScaleCheckBox.addActionListener(e -> applySharedLogAxis());
+        row3.add(logScaleCheckBox);
 
         controlPanel.add(row1);
         controlPanel.add(row2);
@@ -241,18 +245,7 @@ public class ChartWindow extends JFrame implements Rendeble {
                 "Graph", "Time", "Value", dataset, true, true, false);
         chart.setBackgroundPaint(Color.WHITE);
         XYPlot plot = chart.getXYPlot();
-        boolean useLogarithmicScale = false;
-        if (useLogarithmicScale) {
-            LogarithmicAxis yAxis = new LogarithmicAxis("Y");
-            yAxis.setAllowNegativesFlag(true);
-            yAxis.setExpTickLabelsFlag(true);
-            yAxis.setAutoRangeNextLogFlag(true);
-            plot.setRangeAxis(yAxis);
-        } else {
-            NumberAxis yAxis = new NumberAxis("Y");
-            yAxis.setAutoRangeIncludesZero(true);
-            plot.setRangeAxis(yAxis);
-        }
+        plot.setRangeAxis(linearRangeAxis());
 
         XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
         plot.setRenderer(renderer);
@@ -374,6 +367,7 @@ public class ChartWindow extends JFrame implements Rendeble {
             String nameForSeries = generateNameForSeries(tab, command, j, unitsInAnswer);
             if (!seriesVisibility.containSeries(nameForSeries)) {
                 seriesVisibility.addSeries(nameForSeries);
+                seriesVisibility.setLogScale(nameForSeries, logScaleCheckBox.isSelected());
                 seriesNameToTabId.put(nameForSeries, tab);
                 seriesNameToCommand.put(nameForSeries, command);
                 seriesVisibility.getJBoxes().get(nameForSeries).addActionListener(e -> {
@@ -465,6 +459,34 @@ public class ChartWindow extends JFrame implements Rendeble {
 
             lastProcessedTime.put(tab, maxTime[0]);
         }
+    }
+
+    /**
+     * Меняет общую ось Y и записывает тот же выбор в каждую кривую.
+     * Разнесение кривых по двум осям сюда не входит: для этого нужен отдельный набор данных на ось.
+     */
+    private void applySharedLogAxis() {
+        if (chartPanel == null || chartPanel.getChart() == null) {
+            return;
+        }
+        boolean logarithmic = logScaleCheckBox.isSelected();
+        seriesVisibility.setLogScaleForAll(logarithmic);
+        XYPlot plot = chartPanel.getChart().getXYPlot();
+        plot.setRangeAxis(logarithmic ? logarithmicRangeAxis() : linearRangeAxis());
+    }
+
+    private static NumberAxis linearRangeAxis() {
+        NumberAxis yAxis = new NumberAxis("Y");
+        yAxis.setAutoRangeIncludesZero(true);
+        return yAxis;
+    }
+
+    private static LogarithmicAxis logarithmicRangeAxis() {
+        LogarithmicAxis yAxis = new LogarithmicAxis("Y");
+        yAxis.setAllowNegativesFlag(true);
+        yAxis.setExpTickLabelsFlag(true);
+        yAxis.setAutoRangeNextLogFlag(true);
+        return yAxis;
     }
 
     private void applySeriesVisibility() {
