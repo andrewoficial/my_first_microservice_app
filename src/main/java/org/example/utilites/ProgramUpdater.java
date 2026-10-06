@@ -215,7 +215,7 @@ public class ProgramUpdater {
 
     public boolean isAvailableNewVersion(String foundVersion, String currentVersion) {
         // Отладочное сообщение
-        log.info("Проверка доступности новой версии.");
+        log.trace("Проверка доступности новой версии.");
         log.debug("Текущая версия: " + currentVersion);
         log.debug("Найденная версия: " + foundVersion);
 
@@ -254,10 +254,10 @@ public class ProgramUpdater {
             int foundNum = Integer.parseInt(foundParts[i]);
 
             if (foundNum > currentNum) {
-                log.info("Найдена новая версия.");
+                log.trace("Найдена новая версия.");
                 return true;
             } else if (foundNum < currentNum) {
-                log.info("Новая версия недоступна, текущая версия новее.");
+                log.trace("Новая версия недоступна, текущая версия новее.");
                 return false;
             }
         }
@@ -268,18 +268,18 @@ public class ProgramUpdater {
             String foundSuffix = (foundParts.length > 3) ? foundParts[3] : "";
 
             // Отладочное сообщение
-            log.info("Суффиксы: текущий - " + currentSuffix + ", найденный - " + foundSuffix);
+            log.trace("Суффиксы: текущий - " + currentSuffix + ", найденный - " + foundSuffix);
 
             if (!currentSuffix.isEmpty() && foundSuffix.isEmpty()) {
-                log.info("Найдена стабильная версия.");
+                log.trace("Найдена стабильная версия.");
                 return true;
             } else if (foundSuffix.compareTo(currentSuffix) < 0) {
-                log.info("Найдена новая версия без суффикса.");
+                log.trace("Найдена новая версия без суффикса.");
                 return true;
             }
         }
 
-        log.info("Версии совпадают.");
+        log.trace("Версии совпадают.");
         return false;
     }
 

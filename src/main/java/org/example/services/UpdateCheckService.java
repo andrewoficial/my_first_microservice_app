@@ -39,6 +39,9 @@ public class UpdateCheckService {
         FAILED
     }
 
+    /** Минимальный интервал между успешными проверками — 1 час. */
+    private static final long MIN_CHECK_INTERVAL_MS = 60L * 60L * 1000L;
+
     private final MyProperties properties;
     private final ProgramUpdater programUpdater = new ProgramUpdater();
     private final AtomicBoolean started = new AtomicBoolean(false);
@@ -65,19 +68,31 @@ public class UpdateCheckService {
         if (!started.compareAndSet(false, true)) {
             return;
         }
-        Thread worker = new Thread(this::runCheck, "update-check");
+        Thread worker = new Thread(() -> runCheck(false), "update-check");
         worker.setDaemon(true);
         worker.start();
     }
 
     /** Принудительная повторная проверка (например, после действий пользователя). */
     public void refreshAsync() {
-        Thread worker = new Thread(this::runCheck, "update-check-refresh");
+        Thread worker = new Thread(() -> runCheck(true), "update-check-refresh");
         worker.setDaemon(true);
         worker.start();
     }
 
-    private void runCheck() {
+    private void runCheck(boolean force) {
+        long now = System.currentTimeMillis();
+        if (!force && properties != null) {
+            long last = properties.getLastUpdateCheckEpochMs();
+            if (last > 0 && now - last < MIN_CHECK_INTERVAL_MS) {
+                long leftMin = (MIN_CHECK_INTERVAL_MS - (now - last)) / 60000L;
+                log.debug("Проверка обновлений программы пропущена (следующая через ~{} мин)", leftMin);
+                // Не оставляем IDLE, иначе UI-индикатор будет вечно ждать результата.
+                status = Status.UP_TO_DATE;
+                return;
+            }
+        }
+
         status = Status.CHECKING;
         try {
             String currentVersion = properties != null ? properties.getVersion() : null;
@@ -101,6 +116,10 @@ public class UpdateCheckService {
 
             latestVersion = anyNewer ? bestVersion : "";
             status = anyNewer ? Status.UPDATE_AVAILABLE : Status.UP_TO_DATE;
+            // Успех = был ответ. Запоминаем время, чтобы не долбить сервер чаще раза в час.
+            if (properties != null) {
+                properties.setLastUpdateCheckEpochMs(System.currentTimeMillis());
+            }
             if (anyNewer) {
                 log.info("Найдено обновление программы: {}", bestVersion);
             } else {

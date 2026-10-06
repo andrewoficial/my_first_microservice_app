@@ -2,6 +2,7 @@ package org.example.services;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.example.utilites.properties.MyProperties;
 import org.example.utilites.update.LauncherUpdater;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +29,10 @@ public class LauncherUpdateCheckService {
         FAILED
     }
 
+    /** Минимальный интервал между успешными проверками — 1 час. */
+    private static final long MIN_CHECK_INTERVAL_MS = 60L * 60L * 1000L;
+
+    private final MyProperties properties;
     private final LauncherUpdater launcherUpdater = new LauncherUpdater();
     private final AtomicBoolean started = new AtomicBoolean(false);
 
@@ -40,7 +45,8 @@ public class LauncherUpdateCheckService {
     @Getter
     private volatile Path installedLauncher;
 
-    public LauncherUpdateCheckService() {
+    public LauncherUpdateCheckService(MyProperties properties) {
+        this.properties = properties;
     }
 
     /** Идемпотентный запуск фоновой проверки. */
@@ -48,19 +54,31 @@ public class LauncherUpdateCheckService {
         if (!started.compareAndSet(false, true)) {
             return;
         }
-        Thread worker = new Thread(this::runCheck, "launcher-update-check");
+        Thread worker = new Thread(() -> runCheck(false), "launcher-update-check");
         worker.setDaemon(true);
         worker.start();
     }
 
     /** Принудительная повторная проверка. */
     public void refreshAsync() {
-        Thread worker = new Thread(this::runCheck, "launcher-update-check-refresh");
+        Thread worker = new Thread(() -> runCheck(true), "launcher-update-check-refresh");
         worker.setDaemon(true);
         worker.start();
     }
 
-    private void runCheck() {
+    private void runCheck(boolean force) {
+        long now = System.currentTimeMillis();
+        if (!force && properties != null) {
+            long last = properties.getLastLauncherUpdateCheckEpochMs();
+            if (last > 0 && now - last < MIN_CHECK_INTERVAL_MS) {
+                long leftMin = (MIN_CHECK_INTERVAL_MS - (now - last)) / 60000L;
+                log.debug("Проверка обновлений лаунчера пропущена (следующая через ~{} мин)", leftMin);
+                // Не оставляем IDLE, иначе UI-индикатор будет вечно ждать результата.
+                status = Status.UP_TO_DATE;
+                return;
+            }
+        }
+
         status = Status.CHECKING;
         try {
             LauncherUpdater.CheckResult result = launcherUpdater.checkForUpdate();
@@ -74,6 +92,10 @@ public class LauncherUpdateCheckService {
             }
 
             latestVersion = result.latest != null ? result.latest.version : "";
+            // Успех = был ответ. Запоминаем время, чтобы не долбить сервер чаще раза в час.
+            if (properties != null) {
+                properties.setLastLauncherUpdateCheckEpochMs(System.currentTimeMillis());
+            }
             if (result.updateAvailable) {
                 status = Status.UPDATE_AVAILABLE;
                 log.info("Найдено обновление лаунчера: {}", latestVersion);

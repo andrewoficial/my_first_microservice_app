@@ -108,6 +108,12 @@ public class MyProperties {
 
     private String updateSourceUrl = "";
 
+    /** Epoch ms последней УСПЕШНОЙ проверки обновления программы (0 = ещё не проверяли). */
+    private long lastUpdateCheckEpochMs = 0L;
+
+    /** Epoch ms последней УСПЕШНОЙ проверки обновления лаунчера (0 = ещё не проверяли). */
+    private long lastLauncherUpdateCheckEpochMs = 0L;
+
     private String gitflicToken = "";
     private String githubToken = "";
     private String giteaToken = "";
@@ -275,6 +281,8 @@ public class MyProperties {
         vegaPassword = settingsLoader.getString("vegaPassword", "123");
         vegaAddress = settingsLoader.getString("vegaAddress", "ws://127.0.0.1:8002");
         updateSourceUrl = settingsLoader.getString("updateSourceUrl", "");
+        lastUpdateCheckEpochMs = parseLongSafe(settingsLoader.getString("lastUpdateCheckEpochMs", "0"));
+        lastLauncherUpdateCheckEpochMs = parseLongSafe(settingsLoader.getString("lastLauncherUpdateCheckEpochMs", "0"));
         gitflicToken = settingsLoader.getString("gitflicToken", "1d691a01-16a4-45df-b9c3-b9f24c6a8bfb");
         githubToken = settingsLoader.getString("githubToken", "");
         giteaToken = settingsLoader.getString("giteaToken", "");
@@ -562,6 +570,34 @@ public class MyProperties {
         }
         this.updateSourceUrl = value;
         settingsLoader.setString("updateSourceUrl", value);
+    }
+
+    /** Epoch ms последней успешной проверки обновления программы (0 = не проверяли). */
+    public long getLastUpdateCheckEpochMs() {
+        return lastUpdateCheckEpochMs;
+    }
+
+    public void setLastUpdateCheckEpochMs(long value) {
+        this.lastUpdateCheckEpochMs = value;
+        settingsLoader.setString("lastUpdateCheckEpochMs", String.valueOf(value));
+    }
+
+    /** Epoch ms последней успешной проверки обновления лаунчера (0 = не проверяли). */
+    public long getLastLauncherUpdateCheckEpochMs() {
+        return lastLauncherUpdateCheckEpochMs;
+    }
+
+    public void setLastLauncherUpdateCheckEpochMs(long value) {
+        this.lastLauncherUpdateCheckEpochMs = value;
+        settingsLoader.setString("lastLauncherUpdateCheckEpochMs", String.valueOf(value));
+    }
+
+    private static long parseLongSafe(String value) {
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
     }
 
     public String getGitflicToken() { return gitflicToken; }
