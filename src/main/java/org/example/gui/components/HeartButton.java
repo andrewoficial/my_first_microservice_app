@@ -1,5 +1,8 @@
 package org.example.gui.components;
 
+import org.example.gui.theme.ThemeManager;
+import org.example.gui.theme.ThemePalette;
+
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicButtonUI;
 import java.awt.*;
@@ -8,20 +11,25 @@ import java.awt.event.MouseEvent;
 import java.awt.geom.Path2D;
 
 public class HeartButton extends JButton {
-    private Color normalColor = new Color(242, 242, 242);
-    private Color hoverColor = new Color(230, 230, 230);
-    private Color pressedColor = new Color(220, 220, 220);
+    private final Color normalColor;
+    private final Color hoverColor;
+    private final Color pressedColor;
     private int heartSize = 8;
 
     public HeartButton(String text) {
         super(text);
+        ThemePalette palette = ThemeManager.palette();
+        normalColor = palette.elementBackground();
+        hoverColor = normalColor.brighter();
+        pressedColor = normalColor.darker();
+
         setUI(new HeartButtonUI());
         setContentAreaFilled(false);
         setFocusPainted(false);
         setBorderPainted(false);
-        setForeground(Color.BLACK);
+        setForeground(palette.text());
         setFont(getFont().deriveFont(Font.PLAIN, 12f));
-        
+
         // Добавляем эффекты при наведении и нажатии
         addMouseListener(new MouseAdapter() {
             @Override
@@ -73,12 +81,12 @@ public class HeartButton extends JButton {
             } else {
                 g2.setColor(normalColor);
             }
-            
+
             // Закругленный прямоугольник для фона
             g2.fillRoundRect(0, 0, c.getWidth(), c.getHeight(), 10, 10);
-            
+
             // Рисуем обводку
-            g2.setColor(Color.BLACK);
+            g2.setColor(ThemeManager.palette().border());
             g2.setStroke(new BasicStroke(1));
             g2.drawRoundRect(0, 0, c.getWidth()-1, c.getHeight()-1, 10, 10);
 
@@ -92,10 +100,10 @@ public class HeartButton extends JButton {
                 FontMetrics fm = g2.getFontMetrics();
                 int textWidth = fm.stringWidth(b.getText());
                 int textHeight = fm.getHeight();
-                
+
                 g2.setColor(b.getForeground());
-                g2.drawString(b.getText(), 
-                    (c.getWidth() - textWidth) / 2, 
+                g2.drawString(b.getText(),
+                    (c.getWidth() - textWidth) / 2,
                     (c.getHeight() + textHeight) / 2 - fm.getDescent());
             }
 
@@ -113,7 +121,7 @@ public class HeartButton extends JButton {
 
             g2.fill(heart);
         }
-        
+
         @Override
         public Dimension getPreferredSize(JComponent c) {
             Dimension size = super.getPreferredSize(c);

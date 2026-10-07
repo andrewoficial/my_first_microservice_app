@@ -1,9 +1,10 @@
 package org.example;
 
-import com.formdev.flatlaf.FlatLightLaf;
 import lombok.extern.slf4j.Slf4j;
 import org.example.gui.MainLeftPanelStateCollection;
 import org.example.gui.main.MainWindow;
+import org.example.gui.theme.AppTheme;
+import org.example.gui.theme.ThemeManager;
 import org.example.gui.settings.server.ServerSettingsWindow;
 import org.example.services.AnswerStorage;
 import org.example.services.GraphDataRepository;
@@ -67,11 +68,8 @@ public class Main {
                 .run(args);
 
 
-        try {
-            UIManager.setLookAndFeel(new FlatLightLaf());
-        } catch (UnsupportedLookAndFeelException e) {
-            log.info("Error while set FlatLightLaf");
-        }
+        MyProperties startupProperties = context.getBean(MyProperties.class);
+        ThemeManager.apply(AppTheme.fromKey(startupProperties.getGuiTheme()));
         SwingUtilities.invokeLater(() -> {
             AnyPoolService anyPoolService = context.getBean(AnyPoolService.class);
             MyProperties myProperties = context.getBean(MyProperties.class);

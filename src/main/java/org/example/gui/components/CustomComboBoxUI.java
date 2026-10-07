@@ -1,5 +1,7 @@
 package org.example.gui.components;
 
+import org.example.gui.theme.ThemeManager;
+
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicComboBoxUI;
 import javax.swing.plaf.basic.BasicComboPopup;
@@ -9,14 +11,15 @@ import java.awt.geom.RoundRectangle2D;
 
 public class CustomComboBoxUI extends BasicComboBoxUI {
     private static final int ARC = 8;
-    private static final Color BORDER_COLOR = new Color(0x55, 0x55, 0x55);
 
     private final Color backgroundColor;
     private final Color foregroundColor;
     private final Color selectionColor;
 
     public CustomComboBoxUI() {
-        this(new Color(0x2D, 0x2D, 0x2D), Color.WHITE, new Color(118, 149, 110));
+        this(ThemeManager.palette().elementBackground(),
+                ThemeManager.palette().text(),
+                ThemeManager.palette().checkMark());
     }
 
     public CustomComboBoxUI(Color bgColor, Color fgColor, Color selColor) {
@@ -58,7 +61,7 @@ public class CustomComboBoxUI extends BasicComboBoxUI {
         g2.fill(new RoundRectangle2D.Float(0, 0, c.getWidth(), c.getHeight(), ARC, ARC));
 
         // Рисуем обводку
-        g2.setColor(BORDER_COLOR);
+        g2.setColor(ThemeManager.palette().border());
         g2.draw(new RoundRectangle2D.Float(0.5f, 0.5f, c.getWidth() - 1, c.getHeight() - 1, ARC, ARC));
 
         g2.dispose();
@@ -70,7 +73,7 @@ public class CustomComboBoxUI extends BasicComboBoxUI {
         BasicComboPopup popup = (BasicComboPopup) super.createPopup();
 
         // Настраиваем внешний вид выпадающего списка
-        popup.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
+        popup.setBorder(BorderFactory.createLineBorder(ThemeManager.palette().border(), 1));
         popup.setBackground(backgroundColor);
 
         // Применяем UI к scrollpane внутри popup
@@ -87,7 +90,7 @@ public class CustomComboBoxUI extends BasicComboBoxUI {
                     list.setBackground(backgroundColor);
                     list.setForeground(foregroundColor);
                     list.setSelectionBackground(selectionColor);
-                    list.setSelectionForeground(Color.WHITE);
+                    list.setSelectionForeground(ThemeManager.palette().text());
                 }
 
                 // Применяем кастомный UI для полос прокрутки
@@ -116,8 +119,8 @@ public class CustomComboBoxUI extends BasicComboBoxUI {
 
         @Override
         protected void configureScrollBarColors() {
-            this.thumbColor = new Color(0x55, 0x55, 0x55);
-            this.trackColor = new Color(0x2D, 0x2D, 0x2D);
+            this.thumbColor = ThemeManager.palette().scrollThumb();
+            this.trackColor = ThemeManager.palette().elementBackground();
         }
 
         @Override
@@ -142,7 +145,7 @@ public class CustomComboBoxUI extends BasicComboBoxUI {
         protected void paintThumb(Graphics g, JComponent c, Rectangle thumbBounds) {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(thumbColor);
+            g2.setColor(ThemeManager.palette().scrollThumb());
             g2.fillRoundRect(thumbBounds.x, thumbBounds.y, thumbBounds.width, thumbBounds.height, 4, 4);
             g2.dispose();
         }
@@ -151,7 +154,7 @@ public class CustomComboBoxUI extends BasicComboBoxUI {
         protected void paintTrack(Graphics g, JComponent c, Rectangle trackBounds) {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(trackColor);
+            g2.setColor(ThemeManager.palette().elementBackground());
             g2.fillRect(trackBounds.x, trackBounds.y, trackBounds.width, trackBounds.height);
             g2.dispose();
         }

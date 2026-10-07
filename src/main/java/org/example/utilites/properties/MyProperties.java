@@ -130,6 +130,9 @@ public class MyProperties {
 
     private String logLevel;
 
+    /** Выбранная тема интерфейса: "nimbus" или "flatlaf". */
+    private String guiTheme = "nimbus";
+
     private boolean needSyncSavingAnswer = true;
 
     @Getter
@@ -268,6 +271,7 @@ public class MyProperties {
 
         logLevel = settingsLoader.getString("logLevel", "WARN");
         updateLogLevel(logLevel);
+        guiTheme = settingsLoader.getString("guiTheme", "nimbus");
         needSyncSavingAnswer = settingsLoader.getBoolean("needSyncSavingAnswer", false);
         tabCounter = settingsLoader.getInt("tabCounter", 1);
         syncSavingAnswerTimerLimitMS = settingsLoader.getInt("syncSavingAnswerTimerLimitMS", 1000);
@@ -598,6 +602,19 @@ public class MyProperties {
         } catch (NumberFormatException e) {
             return 0L;
         }
+    }
+
+    /** Ключ выбранной темы интерфейса ("nimbus" / "flatlaf"). */
+    public String getGuiTheme() {
+        return guiTheme;
+    }
+
+    public void setGuiTheme(String value) {
+        if (value == null || value.isBlank()) {
+            value = "nimbus";
+        }
+        this.guiTheme = value;
+        settingsLoader.setString("guiTheme", value);
     }
 
     public String getGitflicToken() { return gitflicToken; }

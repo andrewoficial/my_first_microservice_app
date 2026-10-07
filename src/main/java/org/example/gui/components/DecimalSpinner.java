@@ -1,5 +1,6 @@
 package org.example.gui.components;
 
+import org.example.gui.theme.ThemeManager;
 import org.example.gui.utilites.GuiUtilities;
 
 import javax.swing.*;
@@ -22,7 +23,7 @@ public class DecimalSpinner extends JSpinner {
         // Отключение специфичных рендереров Nimbus для JSpinner и JFormattedTextField
         UIManager.put("Spinner[Enabled].backgroundPainter", null);
         UIManager.put("FormattedTextField[Enabled].backgroundPainter", null);
-        UIManager.put("Spinner:FormattedTextField[Enabled].background", NimbusCustomizer.defBackground);
+        UIManager.put("Spinner:FormattedTextField[Enabled].background", ThemeManager.palette().panelBackground());
         UIManager.put("Spinner:FormattedTextField[Enabled].opaque", true);
 
         // Редактор с форматом чисел

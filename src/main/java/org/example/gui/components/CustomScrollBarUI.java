@@ -1,5 +1,7 @@
 package org.example.gui.components;
 
+import org.example.gui.theme.ThemeManager;
+
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicScrollBarUI;
 import java.awt.*;
@@ -8,13 +10,11 @@ public class CustomScrollBarUI extends BasicScrollBarUI {
 
     private static final int SCROLL_BAR_WIDTH = 12; // Ширина всей полосы прокрутки
     private static final int THUMB_MARGIN = 2; // Отступ для бегунка (уменьшает длину)
-    private static final Color THUMB_COLOR = new Color(100, 100, 100);
-    private static final Color TRACK_COLOR = new Color(30, 30, 30);
 
     @Override
     protected void configureScrollBarColors() {
-        this.thumbColor = THUMB_COLOR;
-        this.trackColor = TRACK_COLOR;
+        this.thumbColor = ThemeManager.palette().scrollThumb();
+        this.trackColor = ThemeManager.palette().trackBackground();
     }
 
     @Override
@@ -52,19 +52,20 @@ public class CustomScrollBarUI extends BasicScrollBarUI {
             height = thumbBounds.height;
         }
 
-        g2.setColor(thumbColor);
+        Color thumb = ThemeManager.palette().scrollThumb();
+        g2.setColor(thumb);
         g2.fillRoundRect(x, y, width, height, 6, 6);
 
         // Рисуем риски (насечки) - например, три горизонтальные линии для вертикального скроллбара
         if (scrollbar.getOrientation() == JScrollBar.VERTICAL) {
-            g2.setColor(thumbColor.brighter());
+            g2.setColor(thumb.brighter());
             int lineY = y + height / 2;
             g2.drawLine(x + 3, lineY, x + width - 3, lineY);
             g2.drawLine(x + 3, lineY - 3, x + width - 3, lineY - 3);
             g2.drawLine(x + 3, lineY + 3, x + width - 3, lineY + 3);
         } else {
             // Для горизонтального скроллбара риски вертикальные
-            g2.setColor(thumbColor.brighter());
+            g2.setColor(thumb.brighter());
             int lineX = x + width / 2;
             g2.drawLine(lineX, y + 3, lineX, y + height - 3);
             g2.drawLine(lineX - 3, y + 3, lineX - 3, y + height - 3);
@@ -78,7 +79,7 @@ public class CustomScrollBarUI extends BasicScrollBarUI {
     protected void paintTrack(Graphics g, JComponent c, Rectangle trackBounds) {
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.setColor(trackColor);
+        g2.setColor(ThemeManager.palette().trackBackground());
         g2.fillRect(trackBounds.x, trackBounds.y, trackBounds.width, trackBounds.height);
         g2.dispose();
     }

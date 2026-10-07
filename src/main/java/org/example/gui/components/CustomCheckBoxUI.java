@@ -1,35 +1,32 @@
 package org.example.gui.components;
 
+import org.example.gui.theme.ThemeManager;
+import org.example.gui.theme.ThemePalette;
+
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicCheckBoxUI;
 import java.awt.*;
 
 public class CustomCheckBoxUI extends BasicCheckBoxUI {
-    private static final Color DISABLED_BACKGROUND = new Color(0x1E, 0x1E, 0x1E);
-    private static final Color DISABLED_FOREGROUND = new Color(0x66, 0x66, 0x66);
-    private static final Color BORDER_COLOR = new Color(0x55, 0x55, 0x55);
-    private static final Color CHECK_COLOR = new Color(118, 149, 110);
 
     @Override
     public void installUI(JComponent c) {
         super.installUI(c);
+        ThemePalette palette = ThemeManager.palette();
         c.setOpaque(true); // Делаем компонент непрозрачным
-        c.setBackground(DISABLED_BACKGROUND); // Устанавливаем черный фон по умолчанию
-        c.setForeground(Color.WHITE);
+        c.setBackground(palette.trackBackground()); // Фон по умолчанию
+        c.setForeground(palette.text());
     }
 
     @Override
     public void paint(Graphics g, JComponent c) {
         JCheckBox cb = (JCheckBox) c;
+        ThemePalette palette = ThemeManager.palette();
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         // Заливаем весь фон компонента
-        if (cb.isEnabled()) {
-            g2.setColor(cb.getBackground());
-        } else {
-            g2.setColor(DISABLED_BACKGROUND);
-        }
+        g2.setColor(cb.isEnabled() ? cb.getBackground() : palette.trackBackground());
         g2.fillRect(0, 0, cb.getWidth(), cb.getHeight());
 
         // Определяем позицию и размер квадратика
@@ -38,24 +35,16 @@ public class CustomCheckBoxUI extends BasicCheckBoxUI {
         int iconY = (cb.getHeight() - iconSize) / 2;
 
         // Рисуем фон квадратика
-        if (cb.isEnabled()) {
-            g2.setColor(cb.getBackground());
-        } else {
-            g2.setColor(DISABLED_BACKGROUND);
-        }
+        g2.setColor(cb.isEnabled() ? cb.getBackground() : palette.trackBackground());
         g2.fillRect(iconX, iconY, iconSize, iconSize);
 
         // Рисуем границу квадратика
-        g2.setColor(BORDER_COLOR);
+        g2.setColor(palette.border());
         g2.drawRect(iconX, iconY, iconSize, iconSize);
 
         // Если чекбокс выбран, рисуем галочку
         if (cb.isSelected()) {
-            if (cb.isEnabled()) {
-                g2.setColor(CHECK_COLOR);
-            } else {
-                g2.setColor(DISABLED_FOREGROUND);
-            }
+            g2.setColor(cb.isEnabled() ? palette.checkMark() : palette.disabledText());
             g2.setStroke(new BasicStroke(2));
             g2.drawLine(iconX + 3, iconY + 8, iconX + 6, iconY + 11);
             g2.drawLine(iconX + 6, iconY + 11, iconX + 13, iconY + 4);
@@ -64,11 +53,7 @@ public class CustomCheckBoxUI extends BasicCheckBoxUI {
         g2.dispose();
 
         // Устанавливаем цвет текста
-        if (cb.isEnabled()) {
-            cb.setForeground(Color.WHITE);
-        } else {
-            cb.setForeground(DISABLED_FOREGROUND);
-        }
+        cb.setForeground(cb.isEnabled() ? palette.text() : palette.disabledText());
 
         // Вызываем родительский метод для отрисовки текста
         super.paint(g, c);

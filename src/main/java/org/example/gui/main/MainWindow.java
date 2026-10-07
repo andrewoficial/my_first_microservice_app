@@ -30,6 +30,7 @@ import org.example.gui.mainWindowUtilites.TerminalLogTrimmer;
 import org.example.gui.mainWindowUtilites.GuiStateManager;
 import org.example.gui.mainWindowUtilites.CommandFieldFormatter;
 import org.example.gui.mainWindowUtilites.TabManager;
+import org.example.gui.theme.ThemeManager;
 import org.example.services.AnswerStorage;
 import org.example.services.ConnectionSettingsService;
 import org.example.services.LauncherUpdateCheckService;
@@ -502,7 +503,7 @@ public class MainWindow extends JFrame implements Rendeble {
         if (leftPanelStateCollection == null) {
             log.warn("В конструктор MainWindow передан null leftPanelStateCollection");
         }
-        NimbusCustomizer.customize();
+        ThemeManager.applyCurrent();
         $$$setupUI$$$();
         initConnectionTypeUi();
         log.debug("Подготовка к рендеру окна....");
@@ -1471,7 +1472,7 @@ public class MainWindow extends JFrame implements Rendeble {
         jpAsciiInput.add(label2, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         jpTerminalLogPanel = new JPanel();
         jpTerminalLogPanel.setLayout(new BorderLayout(0, 0));
-        jpTerminalLogPanel.setMinimumSize(new Dimension(450, 50));
+        jpTerminalLogPanel.setMinimumSize(new Dimension(450, 40));
         jpTerminalLogPanel.setPreferredSize(new Dimension(450, 100));
         jpTerminalHistory.add(jpTerminalLogPanel, cc.xy(1, 2, CellConstraints.FILL, CellConstraints.FILL));
         jtpDevicesTerminal = new JTabbedPane();

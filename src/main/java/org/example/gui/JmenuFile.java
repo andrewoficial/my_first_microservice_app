@@ -38,6 +38,7 @@ import org.example.gui.devices.tt5166.emulation.TT5166EmulatorFrame;
 import org.example.gui.graph.ChartWindow;
 import org.example.gui.graph.data.AnswerLoader;
 import org.example.gui.mgstest.MultigassensWindow;
+import org.example.gui.settings.appearance.AppearanceSettingsWindow;
 import org.example.gui.settings.server.ServerSettingsWindow;
 import org.example.gui.settings.updates.UpdateSettingsWindow;
 import org.example.gui.system.logs.ViewLogsWindow;
@@ -291,6 +292,7 @@ public class JmenuFile {
         JMenuItem server  = new JMenuItem("Сервер");
         JMenuItem updates  = new JMenuItem("Обновления");
         JMenuItem debugging = new JMenuItem("Отладка");
+        JMenuItem appearance = new JMenuItem("Внешний вид");
         JCheckBoxMenuItem showAllHid = new JCheckBoxMenuItem("Показывать все HID-устройства");
         showAllHid.setSelected(prop != null && prop.isShowAllHidDevices());
         showAllHid.setToolTipText("Полное перечисление HID (включая мышь/клавиатуру). "
@@ -309,6 +311,7 @@ public class JmenuFile {
         viewMenu.add(server);
         viewMenu.add(updates);
         viewMenu.add(debugging);
+        viewMenu.add(appearance);
         viewMenu.add(showAllHid);
         // разделитель можно создать и явно
         viewMenu.add( new JSeparator());
@@ -377,6 +380,14 @@ public class JmenuFile {
                 System.out.println("Update Settings Window");
                 UpdateSettingsWindow win = new UpdateSettingsWindow();
                 win.setTitle("Настройки обновлений");
+                win.setVisible(true);
+            }
+        });
+        appearance.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                AppearanceSettingsWindow win = new AppearanceSettingsWindow();
                 win.setVisible(true);
             }
         });

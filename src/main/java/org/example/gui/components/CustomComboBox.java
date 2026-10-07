@@ -1,12 +1,16 @@
 package org.example.gui.components;
 
+import org.example.gui.theme.ThemeManager;
+
 import javax.swing.*;
 import java.awt.*;
 
 public class CustomComboBox {
     
     public static <T> JComboBox<T> create() {
-        return create(new Color(0x2D, 0x2D, 0x2D), Color.WHITE, new Color(118, 149, 110));
+        return create(ThemeManager.palette().elementBackground(),
+                ThemeManager.palette().text(),
+                ThemeManager.palette().checkMark());
     }
     
     public static <T> JComboBox<T> create(Color backgroundColor, Color foregroundColor, Color selectionColor) {
@@ -49,7 +53,7 @@ public class CustomComboBox {
                 setForeground(foregroundColor);
             } else {
                 setBackground(selectionColor);
-                setForeground(Color.WHITE);
+                setForeground(ThemeManager.palette().text());
             }
             
             setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));

@@ -1,5 +1,8 @@
 package org.example.gui.components;
 
+import org.example.gui.theme.ThemeManager;
+import org.example.gui.theme.ThemePalette;
+
 import javax.swing.*;
 import javax.swing.border.LineBorder;
 import java.awt.*;
@@ -7,15 +10,17 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 public class SimpleButton extends JButton {
-    private final Color normalColor = new Color(249, 249, 249);
-    private final Color hoverColor = new Color(230, 230, 230);
-    private final Color pressedColor = new Color(220, 220, 220);
-    private final Color borderColor = new Color(200, 200, 200);
 
     public SimpleButton(String text) {
         super(text);
+        ThemePalette palette = ThemeManager.palette();
+        Color normalColor = palette.elementBackground();
+        Color hoverColor = normalColor.brighter();
+        Color pressedColor = normalColor.darker();
+        Color borderColor = palette.border();
+
         setBackground(normalColor);
-        setForeground(Color.BLACK);
+        setForeground(palette.text());
         setFont(getFont().deriveFont(Font.PLAIN, 12f));
         setBorder(new LineBorder(borderColor, 1));
         setFocusPainted(false);

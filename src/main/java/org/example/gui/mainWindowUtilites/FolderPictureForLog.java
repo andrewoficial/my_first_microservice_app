@@ -1,7 +1,7 @@
 package org.example.gui.mainWindowUtilites;
 
 import com.intellij.uiDesigner.core.GridConstraints;
-import org.example.gui.components.NimbusCustomizer;
+import org.example.gui.theme.ThemeManager;
 
 import javax.swing.*;
 import java.awt.*;
@@ -14,7 +14,7 @@ public class FolderPictureForLog {
 
     public JPanel getPicContainer(String lbl, boolean isPoolServiceFound, boolean isLogActive, File file) {
         JPanel container = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        container.setBackground(NimbusCustomizer.defBackground);
+        container.setBackground(ThemeManager.palette().panelBackground());
 
         if (isPoolServiceFound) {
             if (file == null) {
