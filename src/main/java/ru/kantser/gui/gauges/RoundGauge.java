@@ -204,6 +204,19 @@ public class RoundGauge extends JComponent {
     @Getter
     private Color accent = Theme.ACCENT_DEFAULT;
 
+    /**
+     * Формат подписи значения, которая рисуется под центром спидометра.
+     * Первый параметр — значение ({@code %1$.2f}), второй — единица ({@code %2$s}).
+     * По умолчанию {@code "Upper Limit %.2f%s"}.
+     */
+    private String captionFormat = "Upper Limit %.2f%s";
+
+    /**
+     * Разрешено ли пользователю менять значение через стрелки и поле ввода.
+     * Для измерительных (read-only) спидометров выставляется {@code false}.
+     */
+    private boolean valueEditable = true;
+
     // ============================================
     // КОНСТРУКТОРЫ
     // ============================================
@@ -254,6 +267,10 @@ public class RoundGauge extends JComponent {
             public void mousePressed(MouseEvent e) {
                 // Без модели менять нечего — просто игнорируем клик
                 if (model == null) {
+                    return;
+                }
+                // Спидометр только для отображения — стрелки не работают
+                if (!valueEditable) {
                     return;
                 }
 
@@ -342,8 +359,8 @@ public class RoundGauge extends JComponent {
              * нам здесь думать не о чём.
              */
             private void commit() {
-                if (updatingField || model == null) {
-                    return; // меняем текст программно или модели нет — пропускаем
+                if (updatingField || model == null || !valueEditable) {
+                    return; // меняем текст программно, модели нет или только чтение — пропускаем
                 }
                 String text = field.getText().trim().replace(',', '.');
                 if (text.isEmpty()) {
@@ -450,6 +467,32 @@ public class RoundGauge extends JComponent {
             this.accent = accent;
             repaint();
         }
+    }
+
+    /**
+     * Задать формат подписи значения под спидометром.
+     * Первый параметр — значение ({@code %1$.2f}), второй — единица ({@code %2$s}).
+     * Например: {@code setCaptionFormat("Текущая настройка %.2f %s")}.
+     */
+    public void setCaptionFormat(String format) {
+        this.captionFormat = (format == null || format.isEmpty()) ? "Upper Limit %.2f%s" : format;
+        repaint();
+    }
+
+    /**
+     * Разрешить или запретить изменение значения стрелками/полем ввода.
+     * Для измерительных (read-only) спидометров выставляется {@code false}:
+     * стрелки не рисуются, поле ввода не редактируется.
+     */
+    public void setValueEditable(boolean editable) {
+        this.valueEditable = editable;
+        valueField.setEditable(editable);
+        valueField.setFocusable(editable);
+        repaint();
+    }
+
+    public boolean isValueEditable() {
+        return valueEditable;
     }
 
     // ============================================
@@ -686,7 +729,7 @@ public class RoundGauge extends JComponent {
         g2.drawString(label, cx - fm.stringWidth(label) / 2, cy + 6);
 
         // Рисуем подпись значения (например, "Upper Limit 45.00км/ч")
-        String caption = String.format("Upper Limit %.2f%s", value, unit);
+        String caption = String.format(captionFormat, value, unit);
         // String.format - форматирует строку:
         // %.2f - число с 2 знаками после запятой
         // %s - строка (unit)
@@ -757,17 +800,20 @@ public class RoundGauge extends JComponent {
         // РИСОВАНИЕ СТРЕЛОК ВВЕРХ/ВНИЗ
         // ============================================
 
-        // Стрелка вверх (▲):
-        // - Подсвечивается cyan, если значение больше минимума
-        // - Серого цвета, если значение равно или больше максимума
-        g2.setColor(value < max ? Theme.ORANGE : Theme.TICK_MINOR);
-        g2.fill(geometry.upArrow);
+        // Для режима "только чтение" стрелки не рисуем — менять значение нельзя.
+        if (valueEditable) {
+            // Стрелка вверх (▲):
+            // - Подсвечивается cyan, если значение больше минимума
+            // - Серого цвета, если значение равно или больше максимума
+            g2.setColor(value < max ? Theme.ORANGE : Theme.TICK_MINOR);
+            g2.fill(geometry.upArrow);
 
-        // Стрелка вниз (▼):
-        // - Подсвечивается cyan, если значение меньше минимума
-        // - Серого цвета, если значение равно или меньше минимума (это же стрелка на уменьшение)
-        g2.setColor(value > min ? Theme.ORANGE : Theme.TICK_MINOR);
-        g2.fill(geometry.downArrow);
+            // Стрелка вниз (▼):
+            // - Подсвечивается cyan, если значение меньше минимума
+            // - Серого цвета, если значение равно или меньше минимума (это же стрелка на уменьшение)
+            g2.setColor(value > min ? Theme.ORANGE : Theme.TICK_MINOR);
+            g2.fill(geometry.downArrow);
+        }
 
         // ============================================
         // Лёгкая подсветка области ввода при фокусе

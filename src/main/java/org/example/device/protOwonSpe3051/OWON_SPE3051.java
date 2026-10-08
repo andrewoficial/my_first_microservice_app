@@ -5,17 +5,28 @@ import com.fazecast.jSerialComm.SerialPort;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.example.device.DeviceCommandListClass;
+import org.example.device.ProtocolComPort;
 import org.example.device.SomeDevice;
+import org.example.device.TemplatedAscii;
 import org.example.device.command.SingleCommand;
 import org.example.device.connectParameters.ComConnectParameters;
 import org.example.services.AnswerValues;
 import org.example.services.transport.serial.*;
 
 @Slf4j
-public class OWON_SPE3051 implements SomeDevice {
+public class OWON_SPE3051 implements SomeDevice, TemplatedAscii, ProtocolComPort {
     @Getter
     private final ComConnectParameters comParameters = new ComConnectParameters(); // Типовые параметры связи для прибора
     private final SerialPort comPort;
+
+    @Getter
+    private final DataBitsList defaultDataBit = DataBitsList.B8;
+    @Getter
+    private final ParityList defaultParity = ParityList.P_NO;
+    @Getter
+    private final BaudRatesList defaultBaudRate = BaudRatesList.B115200;
+    @Getter
+    private final StopBitsList defaultStopBit = StopBitsList.S1;
 
     private final DeviceCommandListClass commands;
     private final OwonSpe3051CommandRegistry commandRegistry;
@@ -42,13 +53,16 @@ public class OWON_SPE3051 implements SomeDevice {
         this.comPort = port;
         this.commandRegistry = new OwonSpe3051CommandRegistry();
         this.commands = commandRegistry.getCommandList();
-        comParameters.setDataBits(DataBitsList.B8);
-        comParameters.setParity(ParityList.P_EV);
-        comParameters.setBaudRate(BaudRatesList.B9600);
-        comParameters.setStopBits(StopBitsList.S1);
-        comParameters.setStringEndian(StringEndianList.CR);
-        comParameters.setMillisLimit(150);
-        comParameters.setRepeatWaitTime(60);
+        comParameters.setDataBits(defaultDataBit);
+        comParameters.setParity(defaultParity);
+        comParameters.setBaudRate(defaultBaudRate);
+        comParameters.setStopBits(defaultStopBit);
+        comParameters.setStringEndian(StringEndianList.CR_LF);
+        // Прибор отвечает не мгновенно (~200 мс после команды), поэтому даём запас на приём.
+        comParameters.setMillisLimit(1000);
+        comParameters.setRepeatWaitTime(250);
+        comParameters.setMillisReadLimit(250);
+        comParameters.setMillisWriteLimit(250);
         this.enable();
     }
 
@@ -165,6 +179,10 @@ public class OWON_SPE3051 implements SomeDevice {
                     for (int i = 0; i < answerValues.getValues().length; i++) {
                         lastAnswer.append(answerValues.getValues()[i]);
                         lastAnswer.append(" ");
+                        if (answerValues.getUnits()[i] != null) {
+                            lastAnswer.append(answerValues.getUnits()[i]);
+                            lastAnswer.append(" ");
+                        }
                     }
                 }else{
                     for (byte lastAnswerByte : lastAnswerBytes) {

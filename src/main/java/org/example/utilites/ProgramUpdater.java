@@ -3,6 +3,7 @@ package org.example.utilites;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -134,7 +135,7 @@ public class ProgramUpdater {
             throw new IOException("HTTP " + con.getResponseCode());
         }
 
-        try (BufferedReader r = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
+        try (BufferedReader r = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8))) {
             StringBuilder sb = new StringBuilder();
             String line;
             while ((line = r.readLine()) != null) sb.append(line);
@@ -153,7 +154,7 @@ public class ProgramUpdater {
             throw new IOException("HTTP " + con.getResponseCode() + " from " + listUrl);
         }
 
-        try (BufferedReader r = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
+        try (BufferedReader r = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8))) {
             StringBuilder sb = new StringBuilder();
             String line;
             while ((line = r.readLine()) != null) sb.append(line);

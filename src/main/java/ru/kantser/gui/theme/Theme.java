@@ -136,10 +136,13 @@ public final class Theme {
         }
         switch (unit) {
             case "V":
+            case "В":
                 return ACCENT_VOLTAGE;
             case "A":
+            case "А":
                 return ACCENT_CURRENT;
             case "W":
+            case "Вт":
                 return ACCENT_POWER;
             case "°C":
             case "C":

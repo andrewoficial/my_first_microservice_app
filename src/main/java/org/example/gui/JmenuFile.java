@@ -24,6 +24,8 @@ import org.example.gui.devices.boto120.serial.emulation.Boto120EmulatorFrame;
 import org.example.gui.devices.boto800.tcp.emulation.Boto800TcpEmulatorFrame;
 import org.example.gui.devices.fnirsi.dps150.control.FnirsiDps150Main;
 import org.example.gui.devices.fnirsi.dps150.emulation.FnirsiDps150EmulatorFrame;
+import org.example.gui.devices.owon.spe3051.control.OwonSpe3051Main;
+import org.example.gui.devices.owon.spe3051.debug.OwonSpe3051DebugFrame;
 import org.example.gui.devices.esp32.kantser.emu.ble.KantserBleMain;
 import org.example.gui.devices.edvards.d39730880.control.d39730880Main;
 import org.example.gui.devices.edvards.d39730880.emulation.EdwardsTicTestFrame;
@@ -899,6 +901,18 @@ public class JmenuFile {
         fnirsiMenu.add(dps150Menu);
         controlPanelsMenu.add(fnirsiMenu);
 
+        // OWON → SPE3051 (ASCII/SCPI, RS-232, 9600 8E1, CR)
+        JMenu owonMenu = new JMenu("OWON");
+        JMenu spe3051Menu = new JMenu("SPE3051");
+        JMenuItem spe3051Control = new JMenuItem("Панель управления");
+        JMenuItem spe3051Debug = new JMenuItem("Панель отладки");
+        JMenuItem spe3051Info = new JMenuItem("Справочная информация");
+        spe3051Menu.add(spe3051Control);
+        spe3051Menu.add(spe3051Debug);
+        spe3051Menu.add(spe3051Info);
+        owonMenu.add(spe3051Menu);
+        controlPanelsMenu.add(owonMenu);
+
         // Витрина кастомных виджетов ru.kantser.gui
         JMenuItem showcaseItem = new JMenuItem("Витрина виджетов ru.kantser.gui");
         controlPanelsMenu.add(showcaseItem);
@@ -1215,6 +1229,34 @@ public class JmenuFile {
                         "Запись: setVout (0..30.0 В, float LE), setIout (0..5.0 А, float LE),\n" +
                         "  setOutput (0/1), setBrightness (0..14).",
                 "FNIRSI DPS150 — справка",
+                JOptionPane.INFORMATION_MESSAGE));
+
+        spe3051Control.addActionListener(e -> {
+            System.out.println("OWON SPE3051 — панель управления");
+            new OwonSpe3051Main().setVisible(true);
+        });
+        spe3051Debug.addActionListener(e -> {
+            System.out.println("OWON SPE3051 — панель отладки");
+            new OwonSpe3051DebugFrame().setVisible(true);
+        });
+        spe3051Info.addActionListener(e -> JOptionPane.showMessageDialog(null,
+                "Источник питания OWON SPE3051 (RS-232, 115200 8E1, конец строки CR+LF).\n" +
+                        "ASCII/SCPI протокол:\n" +
+                        "  *IDN?        — идентификатор (OWON,<model>,<serial>,FV:X.XX.XX),\n" +
+                        "  *RST         — сброс к заводским настройкам,\n" +
+                        "  MEAS:VOLT?   — измеренное напряжение,\n" +
+                        "  MEAS:CURR?   — измеренный ток,\n" +
+                        "  MEAS:POW?    — измеренная мощность,\n" +
+                        "  OUTPut?      — состояние выхода (ON/OFF или 1/0),\n" +
+                        "  VOLT?        — уставка напряжения,\n" +
+                        "  CURR?        — уставка тока,\n" +
+                        "  VOLT:LIM?    — предел напряжения (OVP),\n" +
+                        "  CURR:LIM?    — предел тока (OCP).\n" +
+                        "Запись: OUTPut <ON|OFF|1|0>, VOLT <x.xx>, CURR <x.xx>,\n" +
+                        "  VOLT:LIM <x.xx>, CURR:LIM <x.xx>.\n" +
+                        "Панель управления автоматически опрашивает прибор;\n" +
+                        "панель отладки позволяет отправлять произвольные команды вручную.",
+                "OWON SPE3051 — справка",
                 JOptionPane.INFORMATION_MESSAGE));
 
         showcaseItem.addActionListener(e -> {
